@@ -1,0 +1,170 @@
+"use client";
+
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { FRANCHISES, STUDENTS, COURSE_INSTRUCTORS, ORDERS } from "@/lib/data";
+import {
+  Building2,
+  Users,
+  GraduationCap,
+  ShoppingCart,
+  Eye,
+  Plus,
+  Mail,
+  Phone,
+  MapPin,
+} from "lucide-react";
+import Link from "next/link";
+
+export default function AdminFranchises() {
+  const [selectedFranchise, setSelectedFranchise] = useState<string | null>(
+    null
+  );
+
+  const getFranchiseStats = (franchiseId: string) => {
+    const students = STUDENTS.filter(
+      (s) => s.franchiseId === franchiseId
+    ).length;
+    const courseInstructors = COURSE_INSTRUCTORS.filter(
+      (ci) => ci.franchiseId === franchiseId
+    ).length;
+    const orders = ORDERS.filter((o) => o.franchiseId === franchiseId).length;
+    const pendingOrders = ORDERS.filter(
+      (o) => o.franchiseId === franchiseId && o.status === "Pending"
+    ).length;
+
+    return { students, courseInstructors, orders, pendingOrders };
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Manage Franchises
+          </h1>
+          <p className="text-muted-foreground">
+            View and manage all franchises in the system
+          </p>
+        </div>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Add New Franchise
+        </Button>
+      </div>
+
+      <div className="grid gap-6">
+        {FRANCHISES.map((franchise) => {
+          const stats = getFranchiseStats(franchise.id);
+
+          return (
+            <Card key={franchise.id} className="w-full">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg">
+                      <Building2 className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">
+                        {franchise.name}
+                      </CardTitle>
+                      <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1">
+                        <div className="flex items-center">
+                          <MapPin className="h-4 w-4 mr-1" />
+                          {franchise.location}
+                        </div>
+                        <div className="flex items-center">
+                          <Mail className="h-4 w-4 mr-1" />
+                          {franchise.email}
+                        </div>
+                        <div className="flex items-center">
+                          <Phone className="h-4 w-4 mr-1" />
+                          {franchise.phone}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge
+                      variant={
+                        franchise.status === "Active" ? "default" : "secondary"
+                      }
+                    >
+                      {franchise.status}
+                    </Badge>
+                    <Link href={`/admin/franchises/${franchise.id}`}>
+                      <Button variant="outline" size="sm">
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <Users className="h-5 w-5 mx-auto mb-2 text-blue-600" />
+                    <div className="text-2xl font-bold">{stats.students}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Students
+                    </div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <GraduationCap className="h-5 w-5 mx-auto mb-2 text-green-600" />
+                    <div className="text-2xl font-bold">
+                      {stats.courseInstructors}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Course Instructors
+                    </div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <ShoppingCart className="h-5 w-5 mx-auto mb-2 text-purple-600" />
+                    <div className="text-2xl font-bold">{stats.orders}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Total Orders
+                    </div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <ShoppingCart className="h-5 w-5 mx-auto mb-2 text-orange-600" />
+                    <div className="text-2xl font-bold">
+                      {stats.pendingOrders}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Pending Orders
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t">
+                  <div className="flex items-center justify-between text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Owner: </span>
+                      <span className="font-medium">{franchise.owner}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Joined: </span>
+                      <span className="font-medium">{franchise.joinDate}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
