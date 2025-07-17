@@ -1,21 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ORDERS } from "@/lib/data";
-import fs from "fs";
-import path from "path";
 
-const dataFile = path.resolve(process.cwd(), "lib/data.ts");
+const BIN_ID = "6878f33c09704554f6be97d1";
+const API_KEY = "$2a$10$/xYWzfE8im1VpidHF3p4leL5j95jlURVNihEN9kiCtd3ByMJ2UvAG";
+const BASE_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+async function fetchOrders() {
+  const res = await fetch(`${BASE_URL}/latest`, {
+    headers: { "X-Master-Key": API_KEY },
+    cache: "no-store",
+  });
+  const data = await res.json();
+  return data.record || [];
+}
+
+async function saveOrders(orders: any[]) {
+  const res = await fetch(BASE_URL, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Master-Key": API_KEY,
+    },
+    body: JSON.stringify(orders),
+  });
+  return res.ok;
+}
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const franchiseId = searchParams.get("franchiseId");
-
+    const orders = await fetchOrders();
     if (franchiseId) {
-      const orders = ORDERS.filter((o) => o.franchiseId === franchiseId);
-      return NextResponse.json({ orders });
+      return NextResponse.json({
+        orders: orders.filter((o: any) => o.franchiseId === franchiseId),
+      });
     }
-
-    return NextResponse.json({ orders: ORDERS });
+    return NextResponse.json({ orders });
   } catch (error) {
     return NextResponse.json(
       { error: "Internal server error" },
@@ -27,7 +47,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    // Validate required fields
     if (
       !body.franchiseId ||
       !body.franchise ||
@@ -40,6 +59,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    const orders = await fetchOrders();
     const newOrder = {
       id: `ORD-${Date.now()}`,
       franchiseId: body.franchiseId,
@@ -51,20 +71,8 @@ export async function POST(request: NextRequest) {
       orderDate: new Date().toISOString().split("T")[0],
       expectedDelivery: body.expectedDelivery || "",
     };
-    let fileContent = fs.readFileSync(dataFile, "utf-8");
-    fileContent = fileContent.replace(
-      /(export const ORDERS: Order\[] = \[)([\s\S]*?)(\];)/,
-      (match, start, arr, end) => {
-        const arrTrimmed = arr.trim().replace(/\n?$/, "");
-        const needsComma = arrTrimmed && !arrTrimmed.endsWith(",");
-        const newArr =
-          arrTrimmed +
-          (needsComma ? "," : "") +
-          `\n  ${JSON.stringify(newOrder, null, 2)}`;
-        return `${start}${newArr}\n${end}`;
-      }
-    );
-    fs.writeFileSync(dataFile, fileContent, "utf-8");
+    orders.push(newOrder);
+    await saveOrders(orders);
     return NextResponse.json({ success: true, order: newOrder });
   } catch (error) {
     return NextResponse.json({ error: "Failed to add order" }, { status: 500 });

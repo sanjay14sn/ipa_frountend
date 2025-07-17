@@ -1,32 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
-import { COURSE_INSTRUCTORS } from "@/lib/data";
-import fs from "fs";
-import path from "path";
 
-const dataFile = path.resolve(process.cwd(), "lib/data.ts");
+const BIN_ID = "6878f3aedb4fa954e67c4fe1";
+const API_KEY = "$2a$10$/xYWzfE8im1VpidHF3p4leL5j95jlURVNihEN9kiCtd3ByMJ2UvAG";
+const BASE_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-// GET /api/course-instructors - List course instructors
+async function fetchCIs() {
+  const res = await fetch(`${BASE_URL}/latest`, {
+    headers: { "X-Master-Key": API_KEY },
+    cache: "no-store",
+  });
+  const data = await res.json();
+  return data.record || [];
+}
+
+async function saveCIs(cis: any[]) {
+  const res = await fetch(BASE_URL, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Master-Key": API_KEY,
+    },
+    body: JSON.stringify(cis),
+  });
+  return res.ok;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const franchiseId = searchParams.get("franchiseId");
-
   try {
-    let courseInstructors = COURSE_INSTRUCTORS;
-
-    // Filter by franchise if franchiseId provided
+    let cis = await fetchCIs();
     if (franchiseId) {
-      courseInstructors = COURSE_INSTRUCTORS.filter(
-        (ci) => ci.franchiseId === franchiseId
-      );
+      cis = cis.filter((ci: any) => ci.franchiseId === franchiseId);
     }
-
     return NextResponse.json({
       success: true,
-      courseInstructors,
-      total: courseInstructors.length,
+      courseInstructors: cis,
+      total: cis.length,
     });
   } catch (error) {
-    console.error("Error fetching course instructors:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch course instructors" },
       { status: 500 }
@@ -34,112 +46,37 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/course-instructors - Create new course instructor application
 export async function POST(request: NextRequest) {
   try {
-    let body;
-    let isJson = false;
-    try {
-      body = await request.json();
-      isJson = true;
-    } catch {
-      body = await request.formData();
+    const body = await request.json();
+    // Validate required fields (add more as needed)
+    if (!body.name || !body.centreName || !body.programName) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
     }
-    let newInstructor;
-    if (isJson) {
-      // Validate required fields
-      if (
-        !body.name ||
-        !body.centreName ||
-        !body.programName ||
-        !body.dob ||
-        !body.bloodGroup ||
-        !body.address ||
-        !body.pincode ||
-        !body.city ||
-        !body.phone ||
-        !body.email ||
-        !body.educationalQualification ||
-        !body.presentOccupation
-      ) {
-        return NextResponse.json(
-          { error: "Missing required fields" },
-          { status: 400 }
-        );
-      }
-      newInstructor = {
-        ...body,
-        id: `CI_${Date.now()}`,
-        date: new Date().toISOString().split("T")[0],
-        status: "Pending",
-        agreementGenerated: false,
-        uniqueCiCode: undefined,
-        ciFees: body.ciFees || 0,
-        dateOfPayment: body.dateOfPayment || "",
-        installment: body.installment || 1,
-        completedInstallments: body.completedInstallments || 0,
-        dateOfJoining: body.dateOfJoining || "",
-        ciShare: body.ciShare || 0,
-        expiryDateOfAgreement: body.expiryDateOfAgreement || "",
-        activeStatus: body.activeStatus || "Inactive",
-        trainingLevels: body.trainingLevels || [],
-        competitionRegn: body.competitionRegn || "",
-      };
-    } else {
-      // Legacy formData logic
-      newInstructor = {
-        id: `CI_${Date.now()}`,
-        name: body.get("name") as string,
-        photo: "",
-        date: new Date().toISOString().split("T")[0],
-        centreName: body.get("centreName") as string,
-        programName: body.get("programName") as string,
-        dob: body.get("dob") as string,
-        bloodGroup: body.get("bloodGroup") as string,
-        address: body.get("address") as string,
-        pincode: body.get("pincode") as string,
-        city: body.get("city") as string,
-        phone: body.get("phone") as string,
-        email: body.get("email") as string,
-        educationalQualification: body.get(
-          "educationalQualification"
-        ) as string,
-        presentOccupation: body.get("presentOccupation") as string,
-        reference: (body.get("reference") as string) || "",
-        paymentDetails: {
-          date: body.get("paymentDate") as string,
-          amount: Number(body.get("paymentAmount")) || 0,
-        },
-        status: "Pending",
-        uniqueCiCode: undefined,
-        agreementGenerated: false,
-        franchiseId: "1",
-        franchiseName: "Mumbai Central",
-        ciFees: Number(body.get("paymentAmount")) || 0,
-        dateOfPayment: body.get("paymentDate") as string,
-        installment: 1,
-        dateOfJoining: "",
-        ciShare: 0,
-        expiryDateOfAgreement: "",
-        activeStatus: "Inactive",
-        trainingLevels: [],
-        competitionRegn: "",
-      };
-    }
-    let fileContent = fs.readFileSync(dataFile, "utf-8");
-    fileContent = fileContent.replace(
-      /(export const COURSE_INSTRUCTORS: CourseInstructor\[] = \[)([\s\S]*?)(\];)/,
-      (match, start, arr, end) => {
-        const arrTrimmed = arr.trim().replace(/\n?$/, "");
-        const needsComma = arrTrimmed && !arrTrimmed.endsWith(",");
-        const newArr =
-          arrTrimmed +
-          (needsComma ? "," : "") +
-          `\n  ${JSON.stringify(newInstructor, null, 2)}`;
-        return `${start}${newArr}\n${end}`;
-      }
-    );
-    fs.writeFileSync(dataFile, fileContent, "utf-8");
+    const cis = await fetchCIs();
+    const newInstructor = {
+      ...body,
+      id: `CI_${Date.now()}`,
+      date: new Date().toISOString().split("T")[0],
+      status: "Pending",
+      agreementGenerated: false,
+      uniqueCiCode: undefined,
+      ciFees: body.ciFees || 0,
+      dateOfPayment: body.dateOfPayment || "",
+      installment: body.installment || 1,
+      completedInstallments: body.completedInstallments || 0,
+      dateOfJoining: body.dateOfJoining || "",
+      ciShare: body.ciShare || 0,
+      expiryDateOfAgreement: body.expiryDateOfAgreement || "",
+      activeStatus: body.activeStatus || "Inactive",
+      trainingLevels: body.trainingLevels || [],
+      competitionRegn: body.competitionRegn || "",
+    };
+    cis.push(newInstructor);
+    await saveCIs(cis);
     return NextResponse.json({ success: true, application: newInstructor });
   } catch (error) {
     return NextResponse.json(

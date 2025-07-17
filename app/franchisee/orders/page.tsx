@@ -612,7 +612,7 @@ export default function FranchiseeOrdersPage() {
                             {Object.entries(franchiseRates.tshirts).map(
                               ([size, price]) => (
                                 <SelectItem key={size} value={size}>
-                                  {size} (₹{price})
+                                  {size} (₹{price as number})
                                 </SelectItem>
                               )
                             )}
@@ -667,7 +667,7 @@ export default function FranchiseeOrdersPage() {
                             {Object.entries(franchiseRates.additionalItems).map(
                               ([item, price]) => (
                                 <SelectItem key={item} value={item}>
-                                  {item} (₹{price})
+                                  {item} (₹{price as number})
                                 </SelectItem>
                               )
                             )}

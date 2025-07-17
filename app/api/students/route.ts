@@ -1,21 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { STUDENTS } from "@/lib/data";
-import fs from "fs";
-import path from "path";
 
-const dataFile = path.resolve(process.cwd(), "lib/data.ts");
+const BIN_ID = "6878f36109704554f6be97e9";
+const API_KEY = "$2a$10$/xYWzfE8im1VpidHF3p4leL5j95jlURVNihEN9kiCtd3ByMJ2UvAG";
+const BASE_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+async function fetchStudents() {
+  const res = await fetch(`${BASE_URL}/latest`, {
+    headers: { "X-Master-Key": API_KEY },
+    cache: "no-store",
+  });
+  const data = await res.json();
+  return data.record || [];
+}
+
+async function saveStudents(students: any[]) {
+  const res = await fetch(BASE_URL, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Master-Key": API_KEY,
+    },
+    body: JSON.stringify(students),
+  });
+  return res.ok;
+}
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const franchiseId = searchParams.get("franchiseId");
-
+    const students = await fetchStudents();
     if (franchiseId) {
-      const students = STUDENTS.filter((s) => s.franchiseId === franchiseId);
-      return NextResponse.json({ students });
+      return NextResponse.json({
+        students: students.filter((s: any) => s.franchiseId === franchiseId),
+      });
     }
-
-    return NextResponse.json({ students: STUDENTS });
+    return NextResponse.json({ students });
   } catch (error) {
     return NextResponse.json(
       { error: "Internal server error" },
@@ -27,7 +47,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    // Validate required fields
     if (
       !body.name ||
       !body.age ||
@@ -40,6 +59,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    const students = await fetchStudents();
     const newStudent = {
       id: Date.now().toString(),
       name: body.name,
@@ -50,20 +70,8 @@ export async function POST(request: NextRequest) {
       enrollmentDate: new Date().toISOString().split("T")[0],
       status: body.status as "Active" | "Inactive",
     };
-    let fileContent = fs.readFileSync(dataFile, "utf-8");
-    fileContent = fileContent.replace(
-      /(export const STUDENTS: Student\[] = \[)([\s\S]*?)(\];)/,
-      (match, start, arr, end) => {
-        const arrTrimmed = arr.trim().replace(/\n?$/, "");
-        const needsComma = arrTrimmed && !arrTrimmed.endsWith(",");
-        const newArr =
-          arrTrimmed +
-          (needsComma ? "," : "") +
-          `\n  ${JSON.stringify(newStudent, null, 2)}`;
-        return `${start}${newArr}\n${end}`;
-      }
-    );
-    fs.writeFileSync(dataFile, fileContent, "utf-8");
+    students.push(newStudent);
+    await saveStudents(students);
     return NextResponse.json({ success: true, student: newStudent });
   } catch (error) {
     return NextResponse.json(
@@ -83,28 +91,11 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       );
     }
-    let fileContent = fs.readFileSync(dataFile, "utf-8");
-    // Find and update the student in the array
-    fileContent = fileContent.replace(
-      /(export const STUDENTS: Student\[] = \[)([\s\S]*?)(\];)/,
-      (match, start, arr, end) => {
-        let arrJson = `[${arr}]`;
-        let studentsArr = [];
-        try {
-          studentsArr = eval(arrJson);
-        } catch (e) {
-          studentsArr = [];
-        }
-        const updatedArr = studentsArr.map((student: any) =>
-          student.id === id ? { ...student, ...updates } : student
-        );
-        const newArrStr = updatedArr
-          .map((s: any) => `  ${JSON.stringify(s, null, 2)}`)
-          .join(",\n");
-        return `${start}${newArrStr}\n${end}`;
-      }
+    const students = await fetchStudents();
+    const updated = students.map((s: any) =>
+      s.id === id ? { ...s, ...updates } : s
     );
-    fs.writeFileSync(dataFile, fileContent, "utf-8");
+    await saveStudents(updated);
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
@@ -124,27 +115,9 @@ export async function DELETE(request: NextRequest) {
         { status: 400 }
       );
     }
-    let fileContent = fs.readFileSync(dataFile, "utf-8");
-    fileContent = fileContent.replace(
-      /(export const STUDENTS: Student\[] = \[)([\s\S]*?)(\];)/,
-      (match, start, arr, end) => {
-        let arrJson = `[${arr}]`;
-        let studentsArr = [];
-        try {
-          studentsArr = eval(arrJson);
-        } catch (e) {
-          studentsArr = [];
-        }
-        const updatedArr = studentsArr.filter(
-          (student: any) => student.id !== id
-        );
-        const newArrStr = updatedArr
-          .map((s: any) => `  ${JSON.stringify(s, null, 2)}`)
-          .join(",\n");
-        return `${start}${newArrStr}\n${end}`;
-      }
-    );
-    fs.writeFileSync(dataFile, fileContent, "utf-8");
+    const students = await fetchStudents();
+    const updated = students.filter((s: any) => s.id !== id);
+    await saveStudents(updated);
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
