@@ -137,8 +137,7 @@ export const FRANCHISES: Franchise[] = [
   },
 ];
 
-export const STUDENTS: Student[] = [
-  {
+export const STUDENTS: Student[] = [{
     id: "1",
     name: "Aarav Patel",
     age: 8,
@@ -188,10 +187,19 @@ export const STUDENTS: Student[] = [
     enrollmentDate: "2023-11-05",
     status: "Active",
   },
+  {
+  "id": "1752754053633",
+  "name": "Test",
+  "age": 12,
+  "level": "Beginner",
+  "franchiseId": "1",
+  "franchiseName": "Abacus 1",
+  "enrollmentDate": "2025-07-17",
+  "status": "Active"
+}
 ];
 
-export const ORDERS: Order[] = [
-  {
+export const ORDERS: Order[] = [{
     id: "ORD-001",
     franchiseId: "1",
     franchise: "Abacus 1",
@@ -235,6 +243,17 @@ export const ORDERS: Order[] = [
     orderDate: "2024-01-10",
     expectedDelivery: "2024-01-16",
   },
+  {
+  "id": "ORD-1752754154512",
+  "franchiseId": "1",
+  "franchise": "Abacus 1",
+  "type": "Materials",
+  "items": "Intermediate Level Book (1 students), T-Shirt (S), Workbook",
+  "amount": "₹761.6",
+  "status": "Pending",
+  "orderDate": "2025-07-17",
+  "expectedDelivery": ""
+}
 ];
 
 export const CONTESTS: Contest[] = [

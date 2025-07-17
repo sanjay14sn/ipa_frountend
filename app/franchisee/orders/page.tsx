@@ -47,7 +47,7 @@ import {
   Minus,
 } from "lucide-react";
 import { getUserFromStorage } from "@/lib/auth";
-import { ORDERS, STUDENTS } from "@/lib/data";
+import { ORDERS, STUDENTS, Order } from "@/lib/data";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
@@ -121,6 +121,8 @@ export default function FranchiseeOrdersPage() {
   const [user, setUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
 
   // Order form state
   const [currentOrder, setCurrentOrder] = useState<NewOrder>({
@@ -139,10 +141,31 @@ export default function FranchiseeOrdersPage() {
   const [additionalItem, setAdditionalItem] = useState("");
   const [additionalQuantity, setAdditionalQuantity] = useState(1);
 
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const userData = getUserFromStorage();
     setUser(userData);
+    if (userData) {
+      fetchOrders(userData);
+    }
   }, []);
+
+  const fetchOrders = async (userData: any) => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `/api/orders?franchiseId=${userData.franchiseId}`
+      );
+      const data = await response.json();
+      setOrders((data.orders || []) as Order[]);
+    } catch (error) {
+      // Optionally handle error
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const franchiseRates =
     MATERIAL_RATES[user?.franchiseId] || MATERIAL_RATES["1"];
@@ -177,9 +200,7 @@ export default function FranchiseeOrdersPage() {
   }
 
   // Filter orders for current franchise
-  const franchiseOrders = ORDERS.filter(
-    (order) => order.franchiseId === user.franchiseId
-  );
+  const franchiseOrders = orders;
 
   const filteredOrders = franchiseOrders.filter(
     (order) =>
@@ -328,19 +349,36 @@ export default function FranchiseeOrdersPage() {
       return;
     }
 
-    // Here you would submit to API
-    console.log("Submitting order:", currentOrder);
-
-    // Reset and close modal
-    setCurrentOrder({
-      items: [],
-      subtotal: 0,
-      royalty: 0,
-      total: 0,
+    if (!user) return;
+    // Prepare order payload
+    const payload = {
+      franchiseId: user.franchiseId,
+      franchise: user.franchiseName,
+      type: "Materials", // You may want to allow selection
+      items: currentOrder.items.map((i) => i.description).join(", "),
+      amount: `₹${currentOrder.total}`,
+      status: "Pending",
+      orderDate: new Date().toISOString().split("T")[0],
+      expectedDelivery: "", // Could be set by admin
+    };
+    const res = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
-    setIsOrderModalOpen(false);
-
-    alert("Order submitted successfully!");
+    if (res.ok) {
+      await fetchOrders(user);
+      setCurrentOrder({
+        items: [],
+        subtotal: 0,
+        royalty: 0,
+        total: 0,
+      });
+      setIsOrderModalOpen(false);
+      alert("Order submitted successfully!");
+    } else {
+      alert("Failed to submit order");
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -990,7 +1028,14 @@ export default function FranchiseeOrdersPage() {
                     {new Date(order.expectedDelivery).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedOrder(order);
+                        setIsOrderDetailsOpen(true);
+                      }}
+                    >
                       View Details
                     </Button>
                   </TableCell>
@@ -1011,6 +1056,339 @@ export default function FranchiseeOrdersPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Order Details Modal */}
+      <Dialog open={isOrderDetailsOpen} onOpenChange={setIsOrderDetailsOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl">
+              <ShoppingCart className="h-6 w-6 text-primary" />
+              Order Details
+            </DialogTitle>
+            <DialogDescription className="text-base">
+              Complete breakdown and information for this order
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedOrder && (
+            <div className="space-y-6">
+              {/* Order Header Info */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="border-l-4 border-l-blue-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <ShoppingCart className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Order ID
+                        </p>
+                        <p className="font-semibold">{selectedOrder.id}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-green-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <Calculator className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Total Amount
+                        </p>
+                        <p className="font-semibold text-lg">
+                          {selectedOrder.amount}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-purple-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <Badge className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Status</p>
+                        <Badge
+                          className={getStatusColor(selectedOrder.status)}
+                          variant="secondary"
+                        >
+                          {selectedOrder.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Order Details Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-muted-foreground" />
+                      Order Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">
+                          Order Type
+                        </Label>
+                        <p className="font-semibold">{selectedOrder.type}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">
+                          Franchise
+                        </Label>
+                        <p className="font-semibold">
+                          {selectedOrder.franchise}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">
+                          Order Date
+                        </Label>
+                        <p className="font-semibold">
+                          {new Date(selectedOrder.orderDate).toLocaleDateString(
+                            "en-US",
+                            {
+                              weekday: "short",
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            }
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">
+                          Expected Delivery
+                        </Label>
+                        <p className="font-semibold">
+                          {selectedOrder.expectedDelivery
+                            ? new Date(
+                                selectedOrder.expectedDelivery
+                              ).toLocaleDateString("en-US", {
+                                weekday: "short",
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : "TBD"}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Truck className="h-5 w-5 text-muted-foreground" />
+                      Order Status
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            selectedOrder.status === "Pending"
+                              ? "bg-red-500"
+                              : "bg-green-500"
+                          }`}
+                        ></div>
+                        <span className="text-sm">Order Placed</span>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {new Date(
+                            selectedOrder.orderDate
+                          ).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            ["Processing", "Shipped", "Delivered"].includes(
+                              selectedOrder.status
+                            )
+                              ? "bg-green-500"
+                              : "bg-gray-300"
+                          }`}
+                        ></div>
+                        <span className="text-sm">Processing</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            ["Shipped", "Delivered"].includes(
+                              selectedOrder.status
+                            )
+                              ? "bg-green-500"
+                              : "bg-gray-300"
+                          }`}
+                        ></div>
+                        <span className="text-sm">Shipped</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            selectedOrder.status === "Delivered"
+                              ? "bg-green-500"
+                              : "bg-gray-300"
+                          }`}
+                        ></div>
+                        <span className="text-sm">Delivered</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Order Items */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <ShoppingCart className="h-5 w-5 text-muted-foreground" />
+                    Order Items
+                  </CardTitle>
+                  <CardDescription>
+                    Complete breakdown of all items in this order
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {Array.isArray(selectedOrder.items) ? (
+                    <div className="space-y-4">
+                      {selectedOrder.items.map((item: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className="border rounded-lg p-4 bg-gray-50"
+                        >
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-lg">
+                                {item.description || "Unknown Item"}
+                              </h4>
+                              <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <span className="font-medium">Quantity:</span>{" "}
+                                  {item.quantity || "N/A"}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <span className="font-medium">Rate:</span>{" "}
+                                  {item.rate ? `₹${item.rate}` : "N/A"}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-xl font-bold text-green-600">
+                                {item.total ? `₹${item.total}` : "N/A"}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Total
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Item Details */}
+                          {(item.metadata?.level ||
+                            item.metadata?.size ||
+                            item.metadata?.students) && (
+                            <div className="border-t pt-3 mt-3">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {item.metadata?.level && (
+                                  <div>
+                                    <Label className="text-xs font-medium text-muted-foreground">
+                                      Level
+                                    </Label>
+                                    <p className="font-medium">
+                                      {item.metadata.level}
+                                    </p>
+                                  </div>
+                                )}
+                                {item.metadata?.size && (
+                                  <div>
+                                    <Label className="text-xs font-medium text-muted-foreground">
+                                      Size
+                                    </Label>
+                                    <p className="font-medium">
+                                      {item.metadata.size}
+                                    </p>
+                                  </div>
+                                )}
+                                {item.metadata?.students && (
+                                  <div>
+                                    <Label className="text-xs font-medium text-muted-foreground">
+                                      Students ({item.metadata.students.length})
+                                    </Label>
+                                    <div className="max-h-20 overflow-y-auto">
+                                      {item.metadata.students.map(
+                                        (student: any, studentIdx: number) => (
+                                          <div
+                                            key={studentIdx}
+                                            className="text-sm"
+                                          >
+                                            <span className="font-medium">
+                                              {student.name}
+                                            </span>
+                                            <span className="text-muted-foreground ml-2">
+                                              ({student.id})
+                                            </span>
+                                          </div>
+                                        )
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="text-muted-foreground whitespace-pre-line">
+                        {selectedOrder.items}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsOrderDetailsOpen(false)}
+                >
+                  Close
+                </Button>
+                {selectedOrder.status === "Pending" && (
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Cancel Order
+                  </Button>
+                )}
+                <Button variant="default">
+                  <Truck className="h-4 w-4 mr-2" />
+                  Track Order
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

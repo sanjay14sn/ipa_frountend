@@ -46,16 +46,17 @@ export default function CourseInstructorsPage() {
   }, []);
 
   const fetchCourseInstructors = async (userData: User) => {
+    setLoading(true);
     try {
-      // Filter course instructors based on user role
-      const filteredInstructors =
+      const franchiseParam =
         userData.role === "franchise"
-          ? COURSE_INSTRUCTORS.filter(
-              (ci) => ci.franchiseId === userData.franchiseId
-            )
-          : COURSE_INSTRUCTORS;
-
-      setCourseInstructors(filteredInstructors);
+          ? `?franchiseId=${userData.franchiseId}`
+          : "";
+      const response = await fetch(`/api/course-instructors${franchiseParam}`);
+      const data = await response.json();
+      setCourseInstructors(
+        (data.courseInstructors || []) as CourseInstructor[]
+      );
     } catch (error) {
       console.error("Error fetching course instructors:", error);
     } finally {
