@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FRANCHISES, STUDENTS, COURSE_INSTRUCTORS, ORDERS } from "@/lib/data";
 import {
   Building2,
   Users,
@@ -30,21 +29,78 @@ export default function AdminFranchises() {
   const [selectedFranchise, setSelectedFranchise] = useState<string | null>(
     null
   );
+  const [franchises, setFranchises] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [courseInstructors, setCourseInstructors] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [franchisesRes, studentsRes, cisRes, ordersRes] = await Promise.all(
+        [
+          fetch("/api/franchises"),
+          fetch("/api/students"),
+          fetch("/api/course-instructors"),
+          fetch("/api/orders"),
+        ]
+      );
+
+      const [franchisesData, studentsData, cisData, ordersData] =
+        await Promise.all([
+          franchisesRes.json(),
+          studentsRes.json(),
+          cisRes.json(),
+          ordersRes.json(),
+        ]);
+
+      setFranchises(franchisesData.franchises || []);
+      setStudents(studentsData.students || []);
+      setCourseInstructors(cisData.courseInstructors || []);
+      setOrders(ordersData.orders || []);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getFranchiseStats = (franchiseId: string) => {
-    const students = STUDENTS.filter(
-      (s) => s.franchiseId === franchiseId
+    const franchiseStudents = students.filter(
+      (s: any) => s.franchiseId === franchiseId
     ).length;
-    const courseInstructors = COURSE_INSTRUCTORS.filter(
-      (ci) => ci.franchiseId === franchiseId
+    const franchiseCIs = courseInstructors.filter(
+      (ci: any) => ci.franchiseId === franchiseId
     ).length;
-    const orders = ORDERS.filter((o) => o.franchiseId === franchiseId).length;
-    const pendingOrders = ORDERS.filter(
-      (o) => o.franchiseId === franchiseId && o.status === "Pending"
+    const franchiseOrders = orders.filter(
+      (o: any) => o.franchiseId === franchiseId
+    ).length;
+    const pendingOrders = orders.filter(
+      (o: any) => o.franchiseId === franchiseId && o.status === "Pending"
     ).length;
 
-    return { students, courseInstructors, orders, pendingOrders };
+    return {
+      students: franchiseStudents,
+      courseInstructors: franchiseCIs,
+      orders: franchiseOrders,
+      pendingOrders,
+    };
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -64,7 +120,7 @@ export default function AdminFranchises() {
       </div>
 
       <div className="grid gap-6">
-        {FRANCHISES.map((franchise) => {
+        {franchises.map((franchise: any) => {
           const stats = getFranchiseStats(franchise.id);
 
           return (

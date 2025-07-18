@@ -1,13 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  FRANCHISES,
-  STUDENTS,
-  COURSE_INSTRUCTORS,
-  ORDERS,
-  CONTESTS,
-} from "@/lib/data";
 import {
   Building2,
   Users,
@@ -17,20 +11,78 @@ import {
 } from "lucide-react";
 
 export default function AdminDashboard() {
-  const totalFranchises = FRANCHISES.length;
-  const totalStudents = STUDENTS.length;
-  const totalCourseInstructors = COURSE_INSTRUCTORS.length;
-  const totalOrders = ORDERS.length;
-  const totalContests = CONTESTS.length;
+  const [data, setData] = useState({
+    franchises: [],
+    students: [],
+    courseInstructors: [],
+    orders: [],
+    contests: [],
+  });
+  const [loading, setLoading] = useState(true);
 
-  const pendingOrders = ORDERS.filter(
-    (order) => order.status === "Pending"
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [franchisesRes, studentsRes, cisRes, ordersRes, contestsRes] =
+        await Promise.all([
+          fetch("/api/franchises"),
+          fetch("/api/students"),
+          fetch("/api/course-instructors"),
+          fetch("/api/orders"),
+          fetch("/api/contests"),
+        ]);
+
+      const [franchisesData, studentsData, cisData, ordersData, contestsData] =
+        await Promise.all([
+          franchisesRes.json(),
+          studentsRes.json(),
+          cisRes.json(),
+          ordersRes.json(),
+          contestsRes.json(),
+        ]);
+
+      setData({
+        franchises: franchisesData.franchises || [],
+        students: studentsData.students || [],
+        courseInstructors: cisData.courseInstructors || [],
+        orders: ordersData.orders || [],
+        contests: contestsData.contests || [],
+      });
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      </div>
+    );
+  }
+
+  const totalFranchises = data.franchises.length;
+  const totalStudents = data.students.length;
+  const totalCourseInstructors = data.courseInstructors.length;
+  const totalOrders = data.orders.length;
+  const totalContests = data.contests.length;
+
+  const pendingOrders = data.orders.filter(
+    (order: any) => order.status === "Pending"
   ).length;
-  const pendingCourseInstructors = COURSE_INSTRUCTORS.filter(
-    (ci) => ci.status === "Pending"
+  const pendingCourseInstructors = data.courseInstructors.filter(
+    (ci: any) => ci.status === "Pending"
   ).length;
-  const upcomingContests = CONTESTS.filter(
-    (contest) =>
+  const upcomingContests = data.contests.filter(
+    (contest: any) =>
       contest.status === "Upcoming" || contest.status === "Registration Open"
   ).length;
 
@@ -123,7 +175,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {ORDERS.slice(0, 5).map((order) => (
+              {data.orders.slice(0, 5).map((order: any) => (
                 <div
                   key={order.id}
                   className="flex items-center justify-between"
@@ -160,9 +212,10 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {COURSE_INSTRUCTORS.filter((ci) => ci.status === "Pending")
+              {data.courseInstructors
+                .filter((ci: any) => ci.status === "Pending")
                 .slice(0, 5)
-                .map((ci) => (
+                .map((ci: any) => (
                   <div
                     key={ci.id}
                     className="flex items-center justify-between"
@@ -179,8 +232,9 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 ))}
-              {COURSE_INSTRUCTORS.filter((ci) => ci.status === "Pending")
-                .length === 0 && (
+              {data.courseInstructors.filter(
+                (ci: any) => ci.status === "Pending"
+              ).length === 0 && (
                 <p className="text-sm text-muted-foreground">
                   No pending approvals
                 </p>

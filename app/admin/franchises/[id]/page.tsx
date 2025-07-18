@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,13 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  FRANCHISES,
-  STUDENTS,
-  COURSE_INSTRUCTORS,
-  ORDERS,
-  CONTESTS,
-} from "@/lib/data";
 import {
   Building2,
   Users,
@@ -38,16 +31,73 @@ import { useParams } from "next/navigation";
 export default function FranchiseDetails() {
   const params = useParams();
   const franchiseId = params.id as string;
+  const [franchise, setFranchise] = useState<any>(null);
+  const [franchiseStudents, setFranchiseStudents] = useState([]);
+  const [franchiseCourseInstructors, setFranchiseCourseInstructors] = useState(
+    []
+  );
+  const [franchiseOrders, setFranchiseOrders] = useState([]);
+  const [franchiseContests, setFranchiseContests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const franchise = FRANCHISES.find((f) => f.id === franchiseId);
-  const franchiseStudents = STUDENTS.filter(
-    (s) => s.franchiseId === franchiseId
-  );
-  const franchiseCourseInstructors = COURSE_INSTRUCTORS.filter(
-    (ci) => ci.franchiseId === franchiseId
-  );
-  const franchiseOrders = ORDERS.filter((o) => o.franchiseId === franchiseId);
-  const franchiseContests = CONTESTS; // All contests for now
+  useEffect(() => {
+    fetchData();
+  }, [franchiseId]);
+
+  const fetchData = async () => {
+    try {
+      const [franchisesRes, studentsRes, cisRes, ordersRes, contestsRes] =
+        await Promise.all([
+          fetch(`/api/franchises?franchiseId=${franchiseId}`),
+          fetch("/api/students"),
+          fetch("/api/course-instructors"),
+          fetch("/api/orders"),
+          fetch("/api/contests"),
+        ]);
+
+      const [franchisesData, studentsData, cisData, ordersData, contestsData] =
+        await Promise.all([
+          franchisesRes.json(),
+          studentsRes.json(),
+          cisRes.json(),
+          ordersRes.json(),
+          contestsRes.json(),
+        ]);
+
+      setFranchise(franchisesData.franchise || null);
+      setFranchiseStudents(
+        (studentsData.students || []).filter(
+          (s: any) => s.franchiseId === franchiseId
+        )
+      );
+      setFranchiseCourseInstructors(
+        (cisData.courseInstructors || []).filter(
+          (ci: any) => ci.franchiseId === franchiseId
+        )
+      );
+      setFranchiseOrders(
+        (ordersData.orders || []).filter(
+          (o: any) => o.franchiseId === franchiseId
+        )
+      );
+      setFranchiseContests(contestsData.contests || []); // All contests for now
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      </div>
+    );
+  }
 
   if (!franchise) {
     return (
@@ -205,7 +255,7 @@ export default function FranchiseDetails() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {franchiseStudents.map((student) => (
+                  {franchiseStudents.map((student: any) => (
                     <TableRow key={student.id}>
                       <TableCell className="font-medium">
                         {student.name}
@@ -245,33 +295,25 @@ export default function FranchiseDetails() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Program</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {franchiseCourseInstructors.map((instructor) => (
-                    <TableRow key={instructor.id}>
-                      <TableCell className="font-medium">
-                        {instructor.name}
-                      </TableCell>
-                      <TableCell>{instructor.programName}</TableCell>
-                      <TableCell>{instructor.email}</TableCell>
-                      <TableCell>{instructor.phone}</TableCell>
+                  {franchiseCourseInstructors.map((ci: any) => (
+                    <TableRow key={ci.id}>
+                      <TableCell className="font-medium">{ci.name}</TableCell>
+                      <TableCell>{ci.programName}</TableCell>
                       <TableCell>
                         <Badge
                           variant={
-                            instructor.status === "Approved"
-                              ? "default"
-                              : instructor.status === "Pending"
-                              ? "secondary"
-                              : "destructive"
+                            ci.status === "Approved" ? "default" : "secondary"
                           }
                         >
-                          {instructor.status}
+                          {ci.status}
                         </Badge>
                       </TableCell>
+                      <TableCell>{ci.date}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -291,18 +333,16 @@ export default function FranchiseDetails() {
                   <TableRow>
                     <TableHead>Order ID</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Items</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Order Date</TableHead>
+                    <TableHead>Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {franchiseOrders.map((order) => (
+                  {franchiseOrders.map((order: any) => (
                     <TableRow key={order.id}>
                       <TableCell className="font-medium">{order.id}</TableCell>
                       <TableCell>{order.type}</TableCell>
-                      <TableCell>{order.items}</TableCell>
                       <TableCell>{order.amount}</TableCell>
                       <TableCell>
                         <Badge
@@ -329,32 +369,32 @@ export default function FranchiseDetails() {
         <TabsContent value="contests" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Contests ({franchiseContests.length})</CardTitle>
+              <CardTitle>
+                Available Contests ({franchiseContests.length})
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Contest Name</TableHead>
+                    <TableHead>Level</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Participants</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {franchiseContests.map((contest) => (
+                  {franchiseContests.map((contest: any) => (
                     <TableRow key={contest.id}>
                       <TableCell className="font-medium">
                         {contest.name}
                       </TableCell>
+                      <TableCell>{contest.level}</TableCell>
                       <TableCell>{contest.date}</TableCell>
-                      <TableCell>{contest.location}</TableCell>
-                      <TableCell>{contest.participants}</TableCell>
                       <TableCell>
                         <Badge
                           variant={
-                            contest.status === "Completed"
+                            contest.status === "Registration Open"
                               ? "default"
                               : contest.status === "Upcoming"
                               ? "secondary"
