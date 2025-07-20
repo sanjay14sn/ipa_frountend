@@ -30,61 +30,62 @@ async function updateFranchises(franchises: any[]) {
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const franchiseId = searchParams.get("franchiseId");
-
-    const franchises = await fetchFranchises();
-
-    if (franchiseId) {
-      // Return specific franchise
-      const franchise = franchises.find((f: any) => f.id === franchiseId);
-      if (!franchise) {
-        return NextResponse.json(
-          { error: "Franchise not found" },
-          { status: 404 }
-        );
-      }
-      return NextResponse.json({ franchise });
-    }
-
-    // Return all franchises
-    return NextResponse.json({ franchises });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const franchises = await fetchFranchises();
+    const {
+      franchiseId,
+      agreementAccepted,
+      paymentCompleted,
+      onboardingCompleted,
+    } = body;
 
-    const newFranchise = {
-      id: body.id || `FC${Date.now()}`,
-      ...body,
-      createdAt: new Date().toISOString(),
+    if (!franchiseId) {
+      return NextResponse.json(
+        { error: "Franchise ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const franchises = await fetchFranchises();
+    const franchiseIndex = franchises.findIndex(
+      (franchise: any) => franchise.id === franchiseId
+    );
+
+    if (franchiseIndex === -1) {
+      return NextResponse.json(
+        { error: "Franchise not found" },
+        { status: 404 }
+      );
+    }
+
+    // Update franchise onboarding status
+    franchises[franchiseIndex] = {
+      ...franchises[franchiseIndex],
+      agreementAccepted,
+      paymentCompleted,
+      onboardingCompleted,
+      onboardingCompletedAt: onboardingCompleted
+        ? new Date().toISOString()
+        : null,
+      updatedAt: new Date().toISOString(),
     };
 
-    franchises.push(newFranchise);
     const success = await updateFranchises(franchises);
 
     if (success) {
       return NextResponse.json({
-        message: "Franchise created successfully",
-        franchise: newFranchise,
+        message: "Franchise onboarding completed successfully",
+        franchise: franchises[franchiseIndex],
       });
     } else {
       return NextResponse.json(
-        { error: "Failed to create franchise" },
+        { error: "Failed to update franchise status" },
         { status: 500 }
       );
     }
   } catch (error) {
+    console.error("Error completing franchise onboarding:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

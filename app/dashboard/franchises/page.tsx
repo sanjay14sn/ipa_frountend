@@ -205,16 +205,13 @@ export default function FranchisesPage() {
             <TableHeader>
               <TableRow className="border-gray-100">
                 <TableHead className="text-gray-700 font-medium">
-                  Franchise Name
+                  Franchise Details
+                </TableHead>
+                <TableHead className="text-gray-700 font-medium">
+                  Owner & Contact
                 </TableHead>
                 <TableHead className="text-gray-700 font-medium">
                   Location
-                </TableHead>
-                <TableHead className="text-gray-700 font-medium">
-                  Owner
-                </TableHead>
-                <TableHead className="text-gray-700 font-medium">
-                  Contact
                 </TableHead>
                 <TableHead className="text-gray-700 font-medium">
                   Students
@@ -240,41 +237,73 @@ export default function FranchisesPage() {
                   className="border-gray-100 hover:bg-gray-50"
                 >
                   <TableCell className="font-medium text-gray-900">
-                    {franchise.name}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center text-gray-700">
-                      <MapPin className="mr-1 h-3 w-3 text-gray-400" />
-                      {franchise.location}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{franchise.name}</span>
+                        {franchise.franchiseCode && (
+                          <Badge variant="outline" className="text-xs">
+                            {franchise.franchiseCode}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {franchise.type ||
+                          franchise.franchiseeType ||
+                          "Standard Franchise"}
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-gray-700">
-                    {franchise.owner}
+
+                  <TableCell>
+                    <div className="space-y-2">
+                      <div className="text-gray-700 font-medium">
+                        {franchise.contactPerson ||
+                          franchise.owner ||
+                          "Not specified"}
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center text-sm text-gray-700">
+                          <Phone className="mr-1 h-3 w-3 text-gray-400" />
+                          {franchise.phone}
+                        </div>
+                        <div className="flex items-center text-sm text-gray-500">
+                          <Mail className="mr-1 h-3 w-3 text-gray-400" />
+                          <span className="truncate max-w-[200px]">
+                            {franchise.email}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </TableCell>
+
                   <TableCell>
                     <div className="space-y-1">
-                      <div className="flex items-center text-sm text-gray-700">
-                        <Phone className="mr-1 h-3 w-3 text-gray-400" />
-                        {franchise.phone}
+                      <div className="flex items-center text-gray-700">
+                        <MapPin className="mr-1 h-3 w-3 text-gray-400" />
+                        {franchise.city || franchise.location}
                       </div>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Mail className="mr-1 h-3 w-3 text-gray-400" />
-                        {franchise.email}
-                      </div>
+                      {franchise.pincode && (
+                        <div className="text-sm text-gray-500">
+                          PIN: {franchise.pincode}
+                        </div>
+                      )}
                     </div>
                   </TableCell>
+
                   <TableCell>
                     <div className="flex items-center text-gray-700">
                       <Users className="mr-1 h-3 w-3 text-gray-400" />
-                      {franchise.students}
+                      {franchise.students || 0}
                     </div>
                   </TableCell>
+
                   <TableCell>
                     <div className="flex items-center text-gray-700">
                       <Users className="mr-1 h-3 w-3 text-gray-400" />
-                      {franchise.courseInstructors}
+                      {franchise.courseInstructors || 0}
                     </div>
                   </TableCell>
+
                   <TableCell>
                     <Badge
                       variant="outline"
@@ -283,9 +312,23 @@ export default function FranchisesPage() {
                       {franchise.status}
                     </Badge>
                   </TableCell>
+
                   <TableCell className="text-gray-600">
-                    {new Date(franchise.joinDate).toLocaleDateString()}
+                    <div className="space-y-1">
+                      <div>
+                        {franchise.joinDate
+                          ? new Date(franchise.joinDate).toLocaleDateString()
+                          : "Not specified"}
+                      </div>
+                      {franchise.expiryDate && (
+                        <div className="text-sm text-orange-600">
+                          Expires:{" "}
+                          {new Date(franchise.expiryDate).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
                   </TableCell>
+
                   <TableCell>
                     <div className="flex space-x-2">
                       <Button

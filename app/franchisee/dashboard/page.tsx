@@ -10,16 +10,29 @@ import {
   Trophy,
   Calendar,
   TrendingUp,
+  Plus,
+  UserPlus,
+  Package,
 } from "lucide-react";
 import { getUserFromStorage } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function FranchiseeDashboard() {
+  const router = useRouter();
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     const userData = getUserFromStorage();
     setUser(userData);
-  }, []);
+
+    // Redirect to agreement if onboarding not completed
+    if (userData?.role === "franchise" && !userData?.onboardingCompleted) {
+      router.push("/franchisee/agreement");
+      return;
+    }
+  }, [router]);
 
   if (!user || !user.franchiseId) {
     return <div>Loading...</div>;
@@ -66,6 +79,56 @@ export default function FranchiseeDashboard() {
         </p>
       </div>
 
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5" />
+            Quick Actions
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Link href="/franchisee/students/add">
+              <Button
+                className="w-full h-auto p-4 flex-col space-y-2"
+                variant="outline"
+              >
+                <UserPlus className="w-6 h-6 text-blue-600" />
+                <span className="text-sm font-medium">Register Student</span>
+              </Button>
+            </Link>
+            <Link href="/franchisee/course-instructors/add">
+              <Button
+                className="w-full h-auto p-4 flex-col space-y-2"
+                variant="outline"
+              >
+                <GraduationCap className="w-6 h-6 text-green-600" />
+                <span className="text-sm font-medium">Add Instructor</span>
+              </Button>
+            </Link>
+            <Link href="/franchisee/orders">
+              <Button
+                className="w-full h-auto p-4 flex-col space-y-2"
+                variant="outline"
+              >
+                <Package className="w-6 h-6 text-purple-600" />
+                <span className="text-sm font-medium">Place Order</span>
+              </Button>
+            </Link>
+            <Link href="/franchisee/students">
+              <Button
+                className="w-full h-auto p-4 flex-col space-y-2"
+                variant="outline"
+              >
+                <Users className="w-6 h-6 text-orange-600" />
+                <span className="text-sm font-medium">Manage Students</span>
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Main Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -100,25 +163,27 @@ export default function FranchiseeDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalOrders}</div>
             <p className="text-xs text-muted-foreground">
-              {pendingOrders} pending orders
+              {pendingOrders} pending
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Contests</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Available Contests
+            </CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{CONTESTS.length}</div>
-            <p className="text-xs text-muted-foreground">Available contests</p>
+            <p className="text-xs text-muted-foreground">Participate now</p>
           </CardContent>
         </Card>
       </div>
@@ -130,20 +195,131 @@ export default function FranchiseeDashboard() {
             <CardTitle className="text-base">Student Levels</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {["Beginner", "Intermediate", "Advanced"].map((level) => {
-                const count = franchiseStudents.filter(
-                  (s) => s.level === level
-                ).length;
-                return (
-                  <div key={level} className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      {level}
-                    </span>
-                    <span className="text-sm font-medium">{count}</span>
+            <div className="space-y-3">
+              {/* Elementary Levels (EL1-EL6) */}
+              <div>
+                <h4 className="text-xs font-semibold text-green-700 mb-1">
+                  Elementary (EL)
+                </h4>
+                <div className="space-y-1">
+                  {["EL1", "EL2", "EL3", "EL4", "EL5", "EL6"].map((level) => {
+                    const count = franchiseStudents.filter(
+                      (s) => s.level === level
+                    ).length;
+                    if (count > 0) {
+                      return (
+                        <div key={level} className="flex justify-between pl-2">
+                          <span className="text-xs text-muted-foreground">
+                            {level}
+                          </span>
+                          <span className="text-xs font-medium">{count}</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              </div>
+
+              {/* Regular Levels (RL1-RL10) */}
+              <div>
+                <h4 className="text-xs font-semibold text-blue-700 mb-1">
+                  Regular (RL)
+                </h4>
+                <div className="space-y-1">
+                  {[
+                    "RL1",
+                    "RL2",
+                    "RL3",
+                    "RL4",
+                    "RL5",
+                    "RL6",
+                    "RL7",
+                    "RL8",
+                    "RL9",
+                    "RL10",
+                  ].map((level) => {
+                    const count = franchiseStudents.filter(
+                      (s) => s.level === level
+                    ).length;
+                    if (count > 0) {
+                      return (
+                        <div key={level} className="flex justify-between pl-2">
+                          <span className="text-xs text-muted-foreground">
+                            {level}
+                          </span>
+                          <span className="text-xs font-medium">{count}</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              </div>
+
+              {/* Grand Master Levels (GML1-GML3) */}
+              <div>
+                <h4 className="text-xs font-semibold text-purple-700 mb-1">
+                  Grand Master (GML)
+                </h4>
+                <div className="space-y-1">
+                  {["GML1", "GML2", "GML3"].map((level) => {
+                    const count = franchiseStudents.filter(
+                      (s) => s.level === level
+                    ).length;
+                    if (count > 0) {
+                      return (
+                        <div key={level} className="flex justify-between pl-2">
+                          <span className="text-xs text-muted-foreground">
+                            {level}
+                          </span>
+                          <span className="text-xs font-medium">{count}</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              </div>
+
+              {/* Legacy levels (for backward compatibility) */}
+              {franchiseStudents.some((s) =>
+                ["Beginner", "Intermediate", "Advanced"].includes(s.level)
+              ) && (
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-600 mb-1">
+                    Legacy
+                  </h4>
+                  <div className="space-y-1">
+                    {["Beginner", "Intermediate", "Advanced"].map((level) => {
+                      const count = franchiseStudents.filter(
+                        (s) => s.level === level
+                      ).length;
+                      if (count > 0) {
+                        return (
+                          <div
+                            key={level}
+                            className="flex justify-between pl-2"
+                          >
+                            <span className="text-xs text-muted-foreground">
+                              {level}
+                            </span>
+                            <span className="text-xs font-medium">{count}</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              )}
+
+              {/* Show message if no students */}
+              {franchiseStudents.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-2">
+                  No students enrolled yet
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

@@ -7,6 +7,10 @@ export interface User {
   role: UserRole;
   franchiseId?: string;
   franchiseName?: string;
+  // Franchise onboarding status
+  agreementAccepted?: boolean;
+  paymentCompleted?: boolean;
+  onboardingCompleted?: boolean;
 }
 
 export const USERS = {
@@ -25,6 +29,10 @@ export const USERS = {
     role: "franchise" as UserRole,
     franchiseId: "1",
     franchiseName: "Abacus 1",
+    // Demo user is already onboarded
+    agreementAccepted: false,
+    paymentCompleted: false,
+    onboardingCompleted: false,
   },
 };
 
@@ -45,24 +53,43 @@ export async function authenticateUser(
     return user;
   }
 
+  // For dynamically created franchise users, we'll need to check via API endpoint
+  // This will be handled in the API route itself
   return null;
 }
 
+// Helper function to create franchise user object
+export function createFranchiseUser(franchiseData: any): User {
+  return {
+    id: franchiseData.id,
+    email: franchiseData.email || franchiseData.loginEmail,
+    name: franchiseData.contactPerson || franchiseData.name,
+    role: "franchise" as UserRole,
+    franchiseId: franchiseData.id,
+    franchiseName: franchiseData.name,
+    // Check onboarding status - for new franchises, these should be false
+    agreementAccepted: franchiseData.agreementAccepted || false,
+    paymentCompleted: franchiseData.paymentCompleted || false,
+    onboardingCompleted: franchiseData.onboardingCompleted || false,
+  };
+}
+
+export function saveUserToStorage(user: User) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("user", JSON.stringify(user));
+  }
+}
+
 export function getUserFromStorage(): User | null {
-  if (typeof window === "undefined") return null;
-
-  const userData = localStorage.getItem("user");
-  return userData ? JSON.parse(userData) : null;
+  if (typeof window !== "undefined") {
+    const userStr = localStorage.getItem("user");
+    return userStr ? JSON.parse(userStr) : null;
+  }
+  return null;
 }
 
-export function saveUserToStorage(user: User): void {
-  if (typeof window === "undefined") return;
-
-  localStorage.setItem("user", JSON.stringify(user));
-}
-
-export function removeUserFromStorage(): void {
-  if (typeof window === "undefined") return;
-
-  localStorage.removeItem("user");
+export function removeUserFromStorage() {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("user");
+  }
 }

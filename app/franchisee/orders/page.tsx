@@ -35,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
 import {
   Search,
   Plus,
@@ -45,282 +46,251 @@ import {
   Trash2,
   Calculator,
   Minus,
+  CreditCard,
+  IndianRupee,
+  Package,
+  AlertTriangle,
 } from "lucide-react";
 import { getUserFromStorage } from "@/lib/auth";
 import { ORDERS, STUDENTS, Order } from "@/lib/data";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import { Check, ChevronsUpDown } from "lucide-react";
-
-// Material pricing structure (would normally come from API)
-const MATERIAL_RATES = {
-  "1": {
-    // franchise ID
-    levelBooks: {
-      Beginner: 250,
-      Intermediate: 300,
-      Advanced: 350,
-    },
-    tshirts: {
-      XS: 180,
-      S: 180,
-      M: 200,
-      L: 200,
-      XL: 220,
-      XXL: 240,
-    },
-    additionalItems: {
-      Abacus: 150,
-      "Practice Book": 80,
-      "Flash Cards": 120,
-      Calculator: 200,
-      Workbook: 100,
-      "Certificate Folder": 50,
-    },
-    royaltyRate: 0.12, // 12% royalty
-  },
-};
+  FranchisePricingConfig,
+  StudentLevel,
+  calculateOrderTotal,
+  OrderCalculation,
+  getDefaultPricingConfig,
+} from "@/lib/pricing";
+import { toast } from "sonner";
 
 interface OrderItem {
   id: string;
-  type: "levelBook" | "tshirt" | "additional";
-  description: string;
+  level: StudentLevel;
   quantity: number;
-  rate: number;
-  total: number;
-  metadata?: {
-    level?: string;
-    size?: string;
-    students?: Array<{
-      id: string;
-      rollNo: string;
-      name: string;
-    }>;
-  };
+  calculation: OrderCalculation;
+  students?: Array<{
+    id: string;
+    rollNo: string;
+    name: string;
+  }>;
+  extraItems?: Array<{
+    name: string;
+    quantity: number;
+    baseCost: number;
+    discountAmount: number;
+    gstAmount: number;
+    finalCost: number;
+  }>;
 }
 
 interface NewOrder {
   items: OrderItem[];
   subtotal: number;
-  royalty: number;
-  total: number;
+  totalDiscount: number;
+  totalGst: number;
+  grandTotal: number;
+  paymentMethod?: string;
 }
 
 export default function FranchiseeOrdersPage() {
   const [user, setUser] = useState<any>(null);
+  const [pricingConfig, setPricingConfig] =
+    useState<FranchisePricingConfig | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   // Order form state
   const [currentOrder, setCurrentOrder] = useState<NewOrder>({
     items: [],
     subtotal: 0,
-    royalty: 0,
-    total: 0,
+    totalDiscount: 0,
+    totalGst: 0,
+    grandTotal: 0,
   });
 
   // Form fields
-  const [studentLevel, setStudentLevel] = useState("");
+  const [selectedLevel, setSelectedLevel] = useState<StudentLevel>("Level1");
   const [quantity, setQuantity] = useState(1);
-  const [tshirtSize, setTshirtSize] = useState("");
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
-  const [isStudentDropdownOpen, setIsStudentDropdownOpen] = useState(false);
-  const [additionalItem, setAdditionalItem] = useState("");
-  const [additionalQuantity, setAdditionalQuantity] = useState(1);
+  const [selectedExtraItems, setSelectedExtraItems] = useState<{
+    [key: string]: number;
+  }>({});
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [calculationLoading, setCalculationLoading] = useState(false);
 
   useEffect(() => {
     const userData = getUserFromStorage();
     setUser(userData);
-    if (userData) {
-      fetchOrders(userData);
+    if (userData?.franchiseId) {
+      fetchData(userData);
     }
   }, []);
 
-  const fetchOrders = async (userData: any) => {
+  const fetchData = async (userData: any) => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `/api/orders?franchiseId=${userData.franchiseId}`
+      const [ordersRes, pricingRes] = await Promise.all([
+        fetch(`/api/orders?franchiseId=${userData.franchiseId}`),
+        fetch(`/api/franchise-pricing?franchiseId=${userData.franchiseId}`),
+      ]);
+
+      const [ordersData, pricingData] = await Promise.all([
+        ordersRes.json(),
+        pricingRes.json(),
+      ]);
+
+      setOrders(ordersData.orders || []);
+      setPricingConfig(
+        pricingData.config ||
+          getDefaultPricingConfig(userData.franchiseId, userData.franchiseName)
       );
-      const data = await response.json();
-      setOrders((data.orders || []) as Order[]);
     } catch (error) {
-      // Optionally handle error
+      console.error("Error fetching data:", error);
+      toast.error("Failed to load data");
     } finally {
       setLoading(false);
     }
   };
-
-  const franchiseRates =
-    MATERIAL_RATES[user?.franchiseId] || MATERIAL_RATES["1"];
 
   // Get students for current franchise
   const franchiseStudents = user?.franchiseId
     ? STUDENTS.filter((student) => student.franchiseId === user.franchiseId)
     : [];
 
-  const calculateOrderTotal = () => {
-    const subtotal = currentOrder.items.reduce(
-      (sum, item) => sum + item.total,
-      0
-    );
-    const royalty = subtotal * franchiseRates.royaltyRate;
-    const total = subtotal + royalty;
+  const calculateOrderTotals = () => {
+    if (!currentOrder.items.length) {
+      setCurrentOrder((prev) => ({
+        ...prev,
+        subtotal: 0,
+        totalDiscount: 0,
+        totalGst: 0,
+        grandTotal: 0,
+      }));
+      return;
+    }
+
+    let subtotal = 0;
+    let totalDiscount = 0;
+    let totalGst = 0;
+    let grandTotal = 0;
+
+    currentOrder.items.forEach((item) => {
+      subtotal += item.calculation.subtotal;
+      totalDiscount += item.calculation.totalDiscount;
+      totalGst += item.calculation.totalGst;
+      grandTotal += item.calculation.grandTotal;
+
+      // Add extra items
+      if (item.extraItems) {
+        item.extraItems.forEach((extra) => {
+          subtotal += extra.baseCost - extra.discountAmount;
+          totalDiscount += extra.discountAmount;
+          totalGst += extra.gstAmount;
+          grandTotal += extra.finalCost;
+        });
+      }
+    });
 
     setCurrentOrder((prev) => ({
       ...prev,
       subtotal,
-      royalty,
-      total,
+      totalDiscount,
+      totalGst,
+      grandTotal,
     }));
   };
 
   useEffect(() => {
-    calculateOrderTotal();
+    calculateOrderTotals();
   }, [currentOrder.items]);
 
-  if (!user || !user.franchiseId) {
-    return <div>Loading...</div>;
-  }
+  const addItemToOrder = async () => {
+    if (!pricingConfig || !selectedLevel || quantity <= 0) {
+      toast.error("Please select level and quantity");
+      return;
+    }
 
-  // Filter orders for current franchise
-  const franchiseOrders = orders;
+    if (selectedStudents.length === 0) {
+      toast.error("Please select at least one student");
+      return;
+    }
 
-  const filteredOrders = franchiseOrders.filter(
-    (order) =>
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.items.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const toggleStudentSelection = (studentId: string) => {
-    setSelectedStudents((prev) =>
-      prev.includes(studentId)
-        ? prev.filter((id) => id !== studentId)
-        : [...prev, studentId]
-    );
-  };
-
-  const getSelectedStudentsText = () => {
-    if (selectedStudents.length === 0) return "Select students";
-    if (selectedStudents.length === 1) {
-      const student = franchiseStudents.find(
-        (s) => s.id === selectedStudents[0]
+    setCalculationLoading(true);
+    try {
+      // Calculate base pricing
+      const calculation = calculateOrderTotal(
+        pricingConfig,
+        selectedLevel,
+        quantity * selectedStudents.length,
+        true,
+        true
       );
-      return student ? `${student.name} (${student.id})` : "1 student selected";
-    }
-    return `${selectedStudents.length} students selected`;
-  };
 
-  const addLevelBookToOrder = () => {
-    if (!studentLevel || selectedStudents.length === 0 || quantity <= 0) {
-      alert("Please select student level, students, and quantity");
-      return;
-    }
+      // Add extra items calculation
+      const extraItems = Object.entries(selectedExtraItems)
+        .filter(([_, qty]) => qty > 0)
+        .map(([itemName, qty]) => {
+          const itemConfig =
+            pricingConfig.materialCosts.extraMaterials[itemName];
+          const baseCost = itemConfig.baseCost * qty;
+          const discountAmount =
+            (baseCost * itemConfig.discountPercentage) / 100;
+          const afterDiscount = baseCost - discountAmount;
+          const gstAmount = pricingConfig.gst.includeInMaterialCost
+            ? (afterDiscount * pricingConfig.gst.rate) / 100
+            : 0;
+          const finalCost = afterDiscount + gstAmount;
 
-    const rate = franchiseRates.levelBooks[studentLevel];
-    const selectedStudentData = selectedStudents.map((studentId) => {
-      const student = franchiseStudents.find((s) => s.id === studentId);
-      return {
-        id: studentId,
-        rollNo: studentId, // Using ID as roll number for now
-        name: student?.name || "Unknown Student",
-      };
-    });
+          return {
+            name: itemName,
+            quantity: qty,
+            baseCost,
+            discountAmount,
+            gstAmount,
+            finalCost,
+          };
+        });
 
-    const newItem: OrderItem = {
-      id: `book-${Date.now()}`,
-      type: "levelBook",
-      description: `${studentLevel} Level Book (${selectedStudents.length} students)`,
-      quantity: quantity * selectedStudents.length, // Multiply by number of students
-      rate,
-      total: rate * quantity * selectedStudents.length,
-      metadata: {
-        level: studentLevel,
+      const selectedStudentData = selectedStudents.map((studentId) => {
+        const student = franchiseStudents.find((s) => s.id === studentId);
+        return {
+          id: studentId,
+          rollNo: studentId,
+          name: student?.name || "Unknown Student",
+        };
+      });
+
+      const newItem: OrderItem = {
+        id: `item-${Date.now()}`,
+        level: selectedLevel,
+        quantity: quantity * selectedStudents.length,
+        calculation,
         students: selectedStudentData,
-      },
-    };
+        extraItems: extraItems.length > 0 ? extraItems : undefined,
+      };
 
-    setCurrentOrder((prev) => ({
-      ...prev,
-      items: [...prev.items, newItem],
-    }));
+      setCurrentOrder((prev) => ({
+        ...prev,
+        items: [...prev.items, newItem],
+      }));
 
-    // Reset form
-    setStudentLevel("");
-    setQuantity(1);
-    setSelectedStudents([]);
-  };
-
-  const addTshirtToOrder = () => {
-    if (!tshirtSize || quantity <= 0) {
-      alert("Please select T-shirt size and quantity");
-      return;
+      // Reset form
+      setSelectedLevel("Level1");
+      setQuantity(1);
+      setSelectedStudents([]);
+      setSelectedExtraItems({});
+      toast.success("Item added to order");
+    } catch (error) {
+      console.error("Error calculating order:", error);
+      toast.error("Failed to calculate order");
+    } finally {
+      setCalculationLoading(false);
     }
-
-    const rate = franchiseRates.tshirts[tshirtSize];
-    const newItem: OrderItem = {
-      id: `tshirt-${Date.now()}`,
-      type: "tshirt",
-      description: `T-Shirt (${tshirtSize})`,
-      quantity,
-      rate,
-      total: rate * quantity,
-      metadata: {
-        size: tshirtSize,
-      },
-    };
-
-    setCurrentOrder((prev) => ({
-      ...prev,
-      items: [...prev.items, newItem],
-    }));
-
-    // Reset form
-    setTshirtSize("");
-    setQuantity(1);
-  };
-
-  const addAdditionalItemToOrder = () => {
-    if (!additionalItem || additionalQuantity <= 0) {
-      alert("Please select additional item and quantity");
-      return;
-    }
-
-    const rate = franchiseRates.additionalItems[additionalItem];
-    const newItem: OrderItem = {
-      id: `additional-${Date.now()}`,
-      type: "additional",
-      description: additionalItem,
-      quantity: additionalQuantity,
-      rate,
-      total: rate * additionalQuantity,
-    };
-
-    setCurrentOrder((prev) => ({
-      ...prev,
-      items: [...prev.items, newItem],
-    }));
-
-    // Reset form
-    setAdditionalItem("");
-    setAdditionalQuantity(1);
   };
 
   const removeItemFromOrder = (itemId: string) => {
@@ -328,56 +298,83 @@ export default function FranchiseeOrdersPage() {
       ...prev,
       items: prev.items.filter((item) => item.id !== itemId),
     }));
+    toast.success("Item removed from order");
   };
 
-  const updateItemQuantity = (itemId: string, newQuantity: number) => {
-    if (newQuantity < 1) return; // Prevent quantity less than 1
-
-    setCurrentOrder((prev) => ({
-      ...prev,
-      items: prev.items.map((item) =>
-        item.id === itemId
-          ? { ...item, quantity: newQuantity, total: item.rate * newQuantity }
-          : item
-      ),
-    }));
+  const proceedToPayment = () => {
+    if (currentOrder.items.length === 0) {
+      toast.error("Please add at least one item to the order");
+      return;
+    }
+    setIsPaymentModalOpen(true);
   };
 
   const submitOrder = async () => {
-    if (currentOrder.items.length === 0) {
-      alert("Please add at least one item to the order");
+    if (!user || !currentOrder.paymentMethod) {
+      toast.error("Please select a payment method");
       return;
     }
 
-    if (!user) return;
-    // Prepare order payload
-    const payload = {
-      franchiseId: user.franchiseId,
-      franchise: user.franchiseName,
-      type: "Materials", // You may want to allow selection
-      items: currentOrder.items.map((i) => i.description).join(", "),
-      amount: `₹${currentOrder.total}`,
-      status: "Pending",
-      orderDate: new Date().toISOString().split("T")[0],
-      expectedDelivery: "", // Could be set by admin
-    };
-    const res = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (res.ok) {
-      await fetchOrders(user);
-      setCurrentOrder({
-        items: [],
-        subtotal: 0,
-        royalty: 0,
-        total: 0,
+    try {
+      // Prepare order description
+      const itemsDescription = currentOrder.items
+        .map((item) => {
+          let desc = `${item.level} (${item.students?.length || 0} students)`;
+          if (item.extraItems) {
+            const extraDesc = item.extraItems
+              .map((extra) => `${extra.name} (${extra.quantity})`)
+              .join(", ");
+            desc += ` + ${extraDesc}`;
+          }
+          return desc;
+        })
+        .join("; ");
+
+      const payload = {
+        franchiseId: user.franchiseId,
+        franchise: user.franchiseName,
+        type: "Materials",
+        items: itemsDescription,
+        amount: `₹${currentOrder.grandTotal.toFixed(2)}`,
+        status: "Pending",
+        orderDate: new Date().toISOString().split("T")[0],
+        expectedDelivery: "",
+        paymentMethod: currentOrder.paymentMethod,
+        orderDetails: {
+          items: currentOrder.items,
+          pricing: {
+            subtotal: currentOrder.subtotal,
+            totalDiscount: currentOrder.totalDiscount,
+            totalGst: currentOrder.totalGst,
+            grandTotal: currentOrder.grandTotal,
+          },
+        },
+      };
+
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
-      setIsOrderModalOpen(false);
-      alert("Order submitted successfully!");
-    } else {
-      alert("Failed to submit order");
+
+      if (res.ok) {
+        await fetchData(user);
+        setCurrentOrder({
+          items: [],
+          subtotal: 0,
+          totalDiscount: 0,
+          totalGst: 0,
+          grandTotal: 0,
+        });
+        setIsOrderModalOpen(false);
+        setIsPaymentModalOpen(false);
+        toast.success("Order submitted successfully!");
+      } else {
+        throw new Error("Failed to submit order");
+      }
+    } catch (error) {
+      console.error("Error submitting order:", error);
+      toast.error("Failed to submit order");
     }
   };
 
@@ -396,16 +393,74 @@ export default function FranchiseeOrdersPage() {
     }
   };
 
-  const pendingOrders = franchiseOrders.filter(
+  const toggleStudentSelection = (studentId: string) => {
+    setSelectedStudents((prev) =>
+      prev.includes(studentId)
+        ? prev.filter((id) => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const getSelectedStudentsText = () => {
+    if (selectedStudents.length === 0) return "Select students";
+    if (selectedStudents.length === 1) {
+      const student = franchiseStudents.find(
+        (s) => s.id === selectedStudents[0]
+      );
+      return student
+        ? `${student.name} (${student.rollNo || student.id})`
+        : "1 student selected";
+    }
+    return `${selectedStudents.length} students selected`;
+  };
+
+  if (!user || !user.franchiseId) {
+    return <div>Loading...</div>;
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading order data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!pricingConfig) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold">Pricing Not Configured</h2>
+          <p className="text-muted-foreground">
+            Please contact the administrator to configure pricing for your
+            franchise.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const filteredOrders = orders.filter(
+    (order) =>
+      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.items.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const pendingOrders = orders.filter(
     (order) => order.status === "Pending"
   ).length;
-  const processingOrders = franchiseOrders.filter(
+  const processingOrders = orders.filter(
     (order) => order.status === "Processing"
   ).length;
-  const shippedOrders = franchiseOrders.filter(
+  const shippedOrders = orders.filter(
     (order) => order.status === "Shipped"
   ).length;
-  const deliveredOrders = franchiseOrders.filter(
+  const deliveredOrders = orders.filter(
     (order) => order.status === "Delivered"
   ).length;
 
@@ -413,584 +468,569 @@ export default function FranchiseeOrdersPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Orders</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
           <p className="text-muted-foreground">
-            Manage your franchise orders - {user.franchiseName}
+            Manage and track your material orders
           </p>
         </div>
-
         <Dialog open={isOrderModalOpen} onOpenChange={setIsOrderModalOpen}>
           <DialogTrigger asChild>
             <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Material Order
+              <Plus className="h-4 w-4 mr-1" />
+              New Order
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create New Material Order</DialogTitle>
+              <DialogTitle>Create New Order</DialogTitle>
               <DialogDescription>
-                Submit your material requirements. Fill in the details below to
-                add items to your order.
+                Add materials and calculate pricing for your franchise
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column - Form Sections */}
-              <div className="lg:col-span-2 space-y-6">
-                {/* Level Books Section */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Level Books</CardTitle>
-                    <CardDescription>
-                      Select student level, choose students, and specify
-                      quantity per student
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="student-level">Student Level *</Label>
-                        <Select
-                          value={studentLevel}
-                          onValueChange={setStudentLevel}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select level" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Beginner">
-                              Beginner (₹{franchiseRates.levelBooks.Beginner})
-                            </SelectItem>
-                            <SelectItem value="Intermediate">
-                              Intermediate (₹
-                              {franchiseRates.levelBooks.Intermediate})
-                            </SelectItem>
-                            <SelectItem value="Advanced">
-                              Advanced (₹{franchiseRates.levelBooks.Advanced})
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
+            <div className="space-y-6">
+              {/* Pricing Configuration Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IndianRupee className="h-5 w-5" />
+                    Pricing Configuration
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <Label className="text-xs text-blue-600">
+                        Base Royalty
+                      </Label>
+                      <div className="font-semibold">
+                        ₹{pricingConfig.royalty.baseRoyaltyPerMonth}/month
                       </div>
-                      <div>
-                        <Label htmlFor="quantity">Books per Student *</Label>
-                        <Input
-                          id="quantity"
-                          type="number"
-                          min="1"
-                          value={quantity}
-                          onChange={(e) =>
-                            setQuantity(parseInt(e.target.value) || 1)
-                          }
-                        />
-                        <div className="text-xs text-gray-500 mt-1">
-                          Total books: {quantity} × {selectedStudents.length}{" "}
-                          students = {quantity * selectedStudents.length}
+                      {pricingConfig.royalty.discountPercentage > 0 && (
+                        <div className="text-green-600 text-xs">
+                          -{pricingConfig.royalty.discountPercentage}% discount
                         </div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="roll-no">Select Students *</Label>
-                        <Popover
-                          open={isStudentDropdownOpen}
-                          onOpenChange={setIsStudentDropdownOpen}
-                        >
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              aria-expanded={isStudentDropdownOpen}
-                              className="w-full justify-between"
-                            >
-                              {getSelectedStudentsText()}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
-                            <Command>
-                              <CommandInput placeholder="Search students..." />
-                              <CommandEmpty>No students found.</CommandEmpty>
-                              <CommandGroup className="max-h-64 overflow-auto">
-                                {franchiseStudents.map((student) => (
-                                  <CommandItem
-                                    key={student.id}
-                                    onSelect={() =>
-                                      toggleStudentSelection(student.id)
-                                    }
-                                    className="flex items-center space-x-2"
-                                  >
-                                    <Checkbox
-                                      checked={selectedStudents.includes(
-                                        student.id
-                                      )}
-                                      onChange={() =>
-                                        toggleStudentSelection(student.id)
-                                      }
-                                    />
-                                    <div className="flex-1">
-                                      <div className="font-medium">
-                                        {student.name}
-                                      </div>
-                                      <div className="text-sm text-gray-500">
-                                        ID: {student.id} • Age: {student.age} •
-                                        Level: {student.level}
-                                      </div>
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      <div>
-                        <Label htmlFor="selected-count">
-                          Selected Students
-                        </Label>
-                        <div className="flex items-center h-10 px-3 py-2 border border-input bg-background rounded-md">
-                          <span className="text-sm">
-                            {selectedStudents.length} student
-                            {selectedStudents.length !== 1 ? "s" : ""} selected
-                          </span>
-                        </div>
-                        {selectedStudents.length > 0 && (
-                          <div className="mt-2 max-h-24 overflow-y-auto">
-                            <div className="text-xs text-gray-600 space-y-1">
-                              {selectedStudents.map((studentId) => {
-                                const student = franchiseStudents.find(
-                                  (s) => s.id === studentId
-                                );
-                                return student ? (
-                                  <div
-                                    key={studentId}
-                                    className="flex justify-between"
-                                  >
-                                    <span>{student.name}</span>
-                                    <span>ID: {student.id}</span>
-                                  </div>
-                                ) : null;
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <Button onClick={addLevelBookToOrder} className="w-full">
-                      Add Level Books to Order
-                      {selectedStudents.length > 0 && (
-                        <span className="ml-2 text-xs">
-                          ({quantity * selectedStudents.length} books for{" "}
-                          {selectedStudents.length} student
-                          {selectedStudents.length !== 1 ? "s" : ""})
-                        </span>
                       )}
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                {/* T-Shirts Section */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">T-Shirts</CardTitle>
-                    <CardDescription>
-                      Select T-shirt size and quantity
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="tshirt-size">T-Shirt Size</Label>
-                        <Select
-                          value={tshirtSize}
-                          onValueChange={setTshirtSize}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select size" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(franchiseRates.tshirts).map(
-                              ([size, price]) => (
-                                <SelectItem key={size} value={size}>
-                                  {size} (₹{price as number})
-                                </SelectItem>
-                              )
-                            )}
-                          </SelectContent>
-                        </Select>
+                    </div>
+                    <div className="bg-green-50 p-3 rounded-lg">
+                      <Label className="text-xs text-green-600">Kit Cost</Label>
+                      <div className="font-semibold">
+                        ₹{pricingConfig.materialCosts.kitCost.baseCost}
                       </div>
-                      <div>
-                        <Label htmlFor="tshirt-quantity">Quantity</Label>
-                        <Input
-                          id="tshirt-quantity"
-                          type="number"
-                          min="1"
-                          value={quantity}
-                          onChange={(e) =>
-                            setQuantity(parseInt(e.target.value) || 1)
+                      {pricingConfig.materialCosts.kitCost.discountPercentage >
+                        0 && (
+                        <div className="text-green-600 text-xs">
+                          -
+                          {
+                            pricingConfig.materialCosts.kitCost
+                              .discountPercentage
                           }
-                        />
+                          % discount
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-purple-50 p-3 rounded-lg">
+                      <Label className="text-xs text-purple-600">
+                        Material Cost
+                      </Label>
+                      <div className="font-semibold">
+                        ₹
+                        {
+                          pricingConfig.materialCosts.level2PlusMaterialCost
+                            .baseCost
+                        }
+                      </div>
+                      {pricingConfig.materialCosts.level2PlusMaterialCost
+                        .discountPercentage > 0 && (
+                        <div className="text-green-600 text-xs">
+                          -
+                          {
+                            pricingConfig.materialCosts.level2PlusMaterialCost
+                              .discountPercentage
+                          }
+                          % discount
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-orange-50 p-3 rounded-lg">
+                      <Label className="text-xs text-orange-600">
+                        GST Rate
+                      </Label>
+                      <div className="font-semibold">
+                        {pricingConfig.gst.rate}%
                       </div>
                     </div>
-                    <Button
-                      onClick={addTshirtToOrder}
-                      className="w-full"
-                      variant="outline"
-                    >
-                      Add T-Shirt to Order
-                    </Button>
-                  </CardContent>
-                </Card>
+                  </div>
+                </CardContent>
+              </Card>
 
-                {/* Additional Materials Section */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      Additional Material Details
-                    </CardTitle>
-                    <CardDescription>
-                      Add any additional materials you require
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="additional-item">Additional Item</Label>
-                        <Select
-                          value={additionalItem}
-                          onValueChange={setAdditionalItem}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select item" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(franchiseRates.additionalItems).map(
-                              ([item, price]) => (
-                                <SelectItem key={item} value={item}>
-                                  {item} (₹{price as number})
-                                </SelectItem>
-                              )
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="additional-quantity">Quantity</Label>
-                        <Input
-                          id="additional-quantity"
-                          type="number"
-                          min="1"
-                          value={additionalQuantity}
-                          onChange={(e) =>
-                            setAdditionalQuantity(parseInt(e.target.value) || 1)
-                          }
-                        />
-                      </div>
+              {/* Level and Students Selection */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Course Level & Students</CardTitle>
+                  <CardDescription>
+                    Select the course level and students for this order
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Student Level *</Label>
+                      <Select
+                        value={selectedLevel}
+                        onValueChange={(value: StudentLevel) =>
+                          setSelectedLevel(value)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Level1">
+                            Level 1 (4 months royalty + Kit)
+                          </SelectItem>
+                          <SelectItem value="Level2">
+                            Level 2 (3 months royalty + Material)
+                          </SelectItem>
+                          <SelectItem value="Level3">
+                            Level 3 (3 months royalty + Material)
+                          </SelectItem>
+                          <SelectItem value="Level4">
+                            Level 4 (3 months royalty + Material)
+                          </SelectItem>
+                          <SelectItem value="Level5">
+                            Level 5 (3 months royalty + Material)
+                          </SelectItem>
+                          <SelectItem value="GrandLevel1">
+                            Grand Level 1 (3 months royalty + Material)
+                          </SelectItem>
+                          <SelectItem value="GrandLevel2">
+                            Grand Level 2 (3 months royalty + Material)
+                          </SelectItem>
+                          <SelectItem value="GrandLevel3">
+                            Grand Level 3 (3 months royalty + Material)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Button
-                      onClick={addAdditionalItemToOrder}
-                      className="w-full"
-                      variant="outline"
-                    >
-                      Add Additional Item to Order
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Right Column - Order Summary Cart */}
-              <div className="lg:col-span-1">
-                <div className="sticky top-0">
-                  <Card className="border-2 border-gray-200">
-                    <CardHeader className="bg-gray-100">
-                      <CardTitle className="text-lg flex items-center">
-                        <ShoppingCart className="mr-2 h-5 w-5 text-gray-800" />
-                        Order Cart
-                        {currentOrder.items.length > 0 && (
-                          <span className="ml-2 px-2 py-1 bg-black text-white text-xs rounded-full">
-                            {currentOrder.items.length}
-                          </span>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4">
-                      <div className="space-y-4">
-                        {/* Cart Items */}
-                        <div className="space-y-3 max-h-64 overflow-y-auto">
-                          {currentOrder.items.length === 0 ? (
-                            <div className="text-center py-8 text-gray-500">
-                              <ShoppingCart className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-                              <p className="text-sm">Your cart is empty</p>
-                              <p className="text-xs">
-                                Add items to see them here
-                              </p>
-                            </div>
-                          ) : (
-                            currentOrder.items.map((item) => (
-                              <div
-                                key={item.id}
-                                className="border rounded-lg p-3 bg-gray-50"
+                    <div className="space-y-2">
+                      <Label>Quantity per Student</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={quantity}
+                        onChange={(e) =>
+                          setQuantity(parseInt(e.target.value) || 1)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Selected Students</Label>
+                      <div className="relative">
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                          onClick={() => {}}
+                        >
+                          {getSelectedStudentsText()}
+                        </Button>
+                        <div className="absolute top-full left-0 right-0 z-10 mt-1 max-h-60 overflow-y-auto bg-white border border-gray-300 rounded-md shadow-lg">
+                          {franchiseStudents.map((student) => (
+                            <div
+                              key={student.id}
+                              className="flex items-center space-x-2 p-2 hover:bg-gray-50"
+                            >
+                              <Checkbox
+                                id={student.id}
+                                checked={selectedStudents.includes(student.id)}
+                                onCheckedChange={() =>
+                                  toggleStudentSelection(student.id)
+                                }
+                              />
+                              <Label
+                                htmlFor={student.id}
+                                className="flex-1 cursor-pointer"
                               >
-                                <div className="flex justify-between items-start mb-2">
-                                  <div className="flex-1">
-                                    <h4 className="font-medium text-sm">
-                                      {item.description}
-                                    </h4>
-                                    {item.metadata?.students &&
-                                      item.metadata.students.length > 0 && (
-                                        <div className="text-xs text-gray-600 mt-1">
-                                          <div className="font-medium">
-                                            Students:
-                                          </div>
-                                          {item.metadata.students
-                                            .slice(0, 2)
-                                            .map((student) => (
-                                              <div key={student.id}>
-                                                {student.name}
-                                              </div>
-                                            ))}
-                                          {item.metadata.students.length >
-                                            2 && (
-                                            <div className="text-xs">
-                                              +
-                                              {item.metadata.students.length -
-                                                2}{" "}
-                                              more
-                                            </div>
-                                          )}
-                                          <div className="text-xs text-black mt-1">
-                                            Total: {item.quantity} ÷{" "}
-                                            {item.metadata.students.length} ={" "}
-                                            {Math.round(
-                                              item.quantity /
-                                                item.metadata.students.length
-                                            )}
-                                            per student
-                                          </div>
-                                        </div>
-                                      )}
-                                    {item.metadata?.size && (
-                                      <div className="text-xs text-gray-600">
-                                        Size: {item.metadata.size}
-                                      </div>
-                                    )}
+                                {student.name} ({student.rollNo || student.id})
+                                - {student.level}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Extra Items */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Additional Items</CardTitle>
+                  <CardDescription>
+                    Select any additional materials needed
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {Object.entries(
+                      pricingConfig.materialCosts.extraMaterials
+                    ).map(([itemName, itemConfig]) => (
+                      <div key={itemName} className="space-y-2">
+                        <Label className="text-sm font-medium">
+                          {itemName}
+                        </Label>
+                        <div className="text-xs text-muted-foreground">
+                          ₹{itemConfig.baseCost}
+                          {itemConfig.discountPercentage > 0 && (
+                            <span className="text-green-600">
+                              {" "}
+                              (-{itemConfig.discountPercentage}%)
+                            </span>
+                          )}
+                        </div>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={selectedExtraItems[itemName] || 0}
+                          onChange={(e) =>
+                            setSelectedExtraItems((prev) => ({
+                              ...prev,
+                              [itemName]: parseInt(e.target.value) || 0,
+                            }))
+                          }
+                          placeholder="Qty"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Current Order Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ShoppingCart className="h-5 w-5" />
+                    Current Order
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {currentOrder.items.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-8">
+                        No items added yet. Add items using the form above.
+                      </p>
+                    ) : (
+                      <div className="space-y-4">
+                        {currentOrder.items.map((item) => (
+                          <div key={item.id} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <h4 className="font-semibold">
+                                  {item.level} - {item.students?.length || 0}{" "}
+                                  students
+                                </h4>
+                                <p className="text-sm text-muted-foreground">
+                                  Quantity: {item.quantity}
+                                </p>
+                                {item.students && (
+                                  <p className="text-sm text-muted-foreground">
+                                    Students:{" "}
+                                    {item.students
+                                      .map((s) => s.name)
+                                      .join(", ")}
+                                  </p>
+                                )}
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeItemFromOrder(item.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                              {item.calculation.kitCost && (
+                                <div className="bg-blue-50 p-3 rounded">
+                                  <div className="font-medium text-blue-900">
+                                    Kit Cost
                                   </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeItemFromOrder(item.id)}
-                                    className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
+                                  <div className="text-sm">
+                                    ₹{item.calculation.kitCost.finalCost}
+                                  </div>
                                 </div>
-                                <div className="flex justify-between items-center text-sm">
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-xs text-gray-500">
-                                      Qty:
-                                    </span>
-                                    <div className="flex items-center border rounded">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() =>
-                                          updateItemQuantity(
-                                            item.id,
-                                            item.quantity - 1
-                                          )
-                                        }
-                                        disabled={item.quantity <= 1}
-                                        className="h-6 w-6 p-0 hover:bg-gray-100"
-                                      >
-                                        <Minus className="h-3 w-3" />
-                                      </Button>
-                                      <Input
-                                        type="number"
-                                        value={item.quantity}
-                                        onChange={(e) => {
-                                          const value =
-                                            parseInt(e.target.value) || 1;
-                                          updateItemQuantity(item.id, value);
-                                        }}
-                                        className="h-6 w-12 text-center border-0 text-xs p-0"
-                                        min="1"
-                                      />
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() =>
-                                          updateItemQuantity(
-                                            item.id,
-                                            item.quantity + 1
-                                          )
-                                        }
-                                        className="h-6 w-6 p-0 hover:bg-gray-100"
-                                      >
-                                        <Plus className="h-3 w-3" />
-                                      </Button>
-                                    </div>
+                              )}
+                              {item.calculation.materialCost && (
+                                <div className="bg-green-50 p-3 rounded">
+                                  <div className="font-medium text-green-900">
+                                    Material Cost
                                   </div>
-                                  <div className="text-right">
-                                    <div className="font-medium">
-                                      ₹{item.total}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      @ ₹{item.rate} each
-                                    </div>
+                                  <div className="text-sm">
+                                    ₹{item.calculation.materialCost.finalCost}
+                                  </div>
+                                </div>
+                              )}
+                              <div className="bg-purple-50 p-3 rounded">
+                                <div className="font-medium text-purple-900">
+                                  Royalty
+                                </div>
+                                <div className="text-sm">
+                                  ₹{item.calculation.royalty.finalRoyalty}
+                                  <div className="text-xs">
+                                    ({item.calculation.royalty.months} months)
                                   </div>
                                 </div>
                               </div>
-                            ))
-                          )}
-                        </div>
+                            </div>
 
-                        {/* Order Total - Always Visible */}
-                        <div className="border-t pt-4 space-y-2">
-                          <div className="flex justify-between text-sm">
+                            {item.extraItems && item.extraItems.length > 0 && (
+                              <div className="mt-3 pt-3 border-t">
+                                <div className="font-medium text-sm mb-2">
+                                  Additional Items:
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                  {item.extraItems.map((extra, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="bg-gray-50 p-2 rounded text-xs"
+                                    >
+                                      <div className="font-medium">
+                                        {extra.name}
+                                      </div>
+                                      <div>Qty: {extra.quantity}</div>
+                                      <div>₹{extra.finalCost}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="mt-3 pt-3 border-t bg-gray-50 p-3 rounded">
+                              <div className="flex justify-between font-semibold">
+                                <span>Item Total:</span>
+                                <span>
+                                  ₹
+                                  {item.calculation.grandTotal +
+                                    (item.extraItems?.reduce(
+                                      (sum, extra) => sum + extra.finalCost,
+                                      0
+                                    ) || 0)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {currentOrder.items.length > 0 && (
+                      <div className="bg-gray-900 text-white p-4 rounded-lg">
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
                             <span>Subtotal:</span>
                             <span>₹{currentOrder.subtotal.toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between text-sm">
-                            <span>
-                              Royalty (
-                              {(franchiseRates.royaltyRate * 100).toFixed(0)}%):
-                            </span>
-                            <span>₹{currentOrder.royalty.toFixed(2)}</span>
+                          {currentOrder.totalDiscount > 0 && (
+                            <div className="flex justify-between text-green-400">
+                              <span>Total Discount:</span>
+                              <span>
+                                -₹{currentOrder.totalDiscount.toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span>Total GST ({pricingConfig.gst.rate}%):</span>
+                            <span>₹{currentOrder.totalGst.toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between font-bold text-lg border-t pt-2">
-                            <span>Total:</span>
-                            <span>₹{currentOrder.total.toFixed(2)}</span>
+                          <Separator className="bg-gray-600" />
+                          <div className="flex justify-between text-lg font-bold">
+                            <span>Grand Total:</span>
+                            <span>₹{currentOrder.grandTotal.toFixed(2)}</span>
                           </div>
                         </div>
-
-                        {/* Submit Button */}
-                        <Button
-                          onClick={submitOrder}
-                          className="w-full mt-4"
-                          size="lg"
-                          disabled={currentOrder.items.length === 0}
-                        >
-                          {currentOrder.items.length === 0
-                            ? "Add items to continue"
-                            : `Submit Order - ₹${currentOrder.total.toFixed(
-                                2
-                              )}`}
-                        </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={addItemToOrder}
+                        disabled={
+                          calculationLoading || selectedStudents.length === 0
+                        }
+                        className="flex-1"
+                      >
+                        {calculationLoading ? "Calculating..." : "Add to Order"}
+                      </Button>
+                      {currentOrder.items.length > 0 && (
+                        <Button
+                          onClick={proceedToPayment}
+                          className="flex-1"
+                          variant="default"
+                        >
+                          Proceed to Payment
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{franchiseOrders.length}</div>
-            <p className="text-xs text-muted-foreground">All time orders</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Clock className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{pendingOrders}</div>
-            <p className="text-xs text-muted-foreground">Awaiting processing</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Transit</CardTitle>
-            <Truck className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {processingOrders + shippedOrders}
+      {/* Payment Modal */}
+      <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Select Payment Method
+            </DialogTitle>
+            <DialogDescription>
+              Choose how you want to pay for this order
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="flex justify-between text-lg font-bold">
+                <span>Total Amount:</span>
+                <span>₹{currentOrder.grandTotal.toFixed(2)}</span>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Processing + Shipped
-            </p>
+
+            <div className="space-y-2">
+              <Label>Payment Method</Label>
+              <div className="space-y-2">
+                {Object.entries(pricingConfig.paymentOptions)
+                  .filter(([_, enabled]) => enabled)
+                  .map(([method]) => (
+                    <div key={method} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={method}
+                        checked={currentOrder.paymentMethod === method}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setCurrentOrder((prev) => ({
+                              ...prev,
+                              paymentMethod: method,
+                            }));
+                          }
+                        }}
+                      />
+                      <Label
+                        htmlFor={method}
+                        className="capitalize cursor-pointer"
+                      >
+                        {method === "gpay"
+                          ? "GPay"
+                          : method === "paytm"
+                          ? "Paytm"
+                          : method === "netBanking"
+                          ? "Net Banking"
+                          : method === "debitCard"
+                          ? "Debit Card"
+                          : method === "creditCard"
+                          ? "Credit Card"
+                          : method}
+                      </Label>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsPaymentModalOpen(false)}
+                className="flex-1"
+              >
+                Back
+              </Button>
+              <Button
+                onClick={submitOrder}
+                disabled={!currentOrder.paymentMethod}
+                className="flex-1"
+              >
+                Submit Order
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="flex items-center p-6">
+            <div className="p-2 bg-red-100 rounded-lg mr-4">
+              <Clock className="h-6 w-6 text-red-600" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold">{pendingOrders}</div>
+              <p className="text-sm text-muted-foreground">Pending Orders</p>
+            </div>
           </CardContent>
         </Card>
+
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Delivered</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{deliveredOrders}</div>
-            <p className="text-xs text-muted-foreground">Completed orders</p>
+          <CardContent className="flex items-center p-6">
+            <div className="p-2 bg-yellow-100 rounded-lg mr-4">
+              <Package className="h-6 w-6 text-yellow-600" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold">{processingOrders}</div>
+              <p className="text-sm text-muted-foreground">Processing</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center p-6">
+            <div className="p-2 bg-blue-100 rounded-lg mr-4">
+              <Truck className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold">{shippedOrders}</div>
+              <p className="text-sm text-muted-foreground">Shipped</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center p-6">
+            <div className="p-2 bg-green-100 rounded-lg mr-4">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold">{deliveredOrders}</div>
+              <p className="text-sm text-muted-foreground">Delivered</p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Order Types Overview */}
+      {/* Search */}
       <Card>
         <CardHeader>
-          <CardTitle>Orders by Type</CardTitle>
+          <CardTitle>Your Orders</CardTitle>
+          <CardDescription>Track the status of your orders</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            {["Materials", "Contest Certificates", "Grading Certificates"].map(
-              (type) => {
-                const count = franchiseOrders.filter(
-                  (order) => order.type === type
-                ).length;
-                const totalAmount = franchiseOrders
-                  .filter((order) => order.type === type)
-                  .reduce((sum, order) => {
-                    const amount = parseInt(order.amount.replace(/[^\d]/g, ""));
-                    return sum + amount;
-                  }, 0);
-
-                return (
-                  <div
-                    key={type}
-                    className="text-center p-4 bg-gray-50 rounded-lg"
-                  >
-                    <div className="text-xl font-bold">{count}</div>
-                    <div className="text-sm text-muted-foreground">{type}</div>
-                    <div className="text-xs text-muted-foreground">
-                      ₹{totalAmount.toLocaleString()}
-                    </div>
-                  </div>
-                );
-              }
-            )}
+          <div className="flex items-center space-x-2 mb-4">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search orders..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-sm"
+            />
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Orders Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Orders List</CardTitle>
-              <CardDescription>Your franchise orders</CardDescription>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search orders..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
@@ -1001,7 +1041,6 @@ export default function FranchiseeOrdersPage() {
                 <TableHead>Status</TableHead>
                 <TableHead>Order Date</TableHead>
                 <TableHead>Expected Delivery</TableHead>
-                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1025,25 +1064,15 @@ export default function FranchiseeOrdersPage() {
                     {new Date(order.orderDate).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    {new Date(order.expectedDelivery).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setIsOrderDetailsOpen(true);
-                      }}
-                    >
-                      View Details
-                    </Button>
+                    {order.expectedDelivery
+                      ? new Date(order.expectedDelivery).toLocaleDateString()
+                      : "TBD"}
                   </TableCell>
                 </TableRow>
               ))}
               {filteredOrders.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <div className="text-muted-foreground">
                       {searchTerm
                         ? "No orders found matching your search."
@@ -1056,339 +1085,6 @@ export default function FranchiseeOrdersPage() {
           </Table>
         </CardContent>
       </Card>
-
-      {/* Order Details Modal */}
-      <Dialog open={isOrderDetailsOpen} onOpenChange={setIsOrderDetailsOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl">
-              <ShoppingCart className="h-6 w-6 text-primary" />
-              Order Details
-            </DialogTitle>
-            <DialogDescription className="text-base">
-              Complete breakdown and information for this order
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedOrder && (
-            <div className="space-y-6">
-              {/* Order Header Info */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="border-l-4 border-l-blue-500">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <ShoppingCart className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Order ID
-                        </p>
-                        <p className="font-semibold">{selectedOrder.id}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-green-500">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-green-100 rounded-lg">
-                        <Calculator className="h-4 w-4 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Total Amount
-                        </p>
-                        <p className="font-semibold text-lg">
-                          {selectedOrder.amount}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-purple-500">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-purple-100 rounded-lg">
-                        <Badge className="h-4 w-4 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Status</p>
-                        <Badge
-                          className={getStatusColor(selectedOrder.status)}
-                          variant="secondary"
-                        >
-                          {selectedOrder.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Order Details Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-muted-foreground" />
-                      Order Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">
-                          Order Type
-                        </Label>
-                        <p className="font-semibold">{selectedOrder.type}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">
-                          Franchise
-                        </Label>
-                        <p className="font-semibold">
-                          {selectedOrder.franchise}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">
-                          Order Date
-                        </Label>
-                        <p className="font-semibold">
-                          {new Date(selectedOrder.orderDate).toLocaleDateString(
-                            "en-US",
-                            {
-                              weekday: "short",
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            }
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">
-                          Expected Delivery
-                        </Label>
-                        <p className="font-semibold">
-                          {selectedOrder.expectedDelivery
-                            ? new Date(
-                                selectedOrder.expectedDelivery
-                              ).toLocaleDateString("en-US", {
-                                weekday: "short",
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              })
-                            : "TBD"}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Truck className="h-5 w-5 text-muted-foreground" />
-                      Order Status
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-3 h-3 rounded-full ${
-                            selectedOrder.status === "Pending"
-                              ? "bg-red-500"
-                              : "bg-green-500"
-                          }`}
-                        ></div>
-                        <span className="text-sm">Order Placed</span>
-                        <span className="text-xs text-muted-foreground ml-auto">
-                          {new Date(
-                            selectedOrder.orderDate
-                          ).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-3 h-3 rounded-full ${
-                            ["Processing", "Shipped", "Delivered"].includes(
-                              selectedOrder.status
-                            )
-                              ? "bg-green-500"
-                              : "bg-gray-300"
-                          }`}
-                        ></div>
-                        <span className="text-sm">Processing</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-3 h-3 rounded-full ${
-                            ["Shipped", "Delivered"].includes(
-                              selectedOrder.status
-                            )
-                              ? "bg-green-500"
-                              : "bg-gray-300"
-                          }`}
-                        ></div>
-                        <span className="text-sm">Shipped</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-3 h-3 rounded-full ${
-                            selectedOrder.status === "Delivered"
-                              ? "bg-green-500"
-                              : "bg-gray-300"
-                          }`}
-                        ></div>
-                        <span className="text-sm">Delivered</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Order Items */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <ShoppingCart className="h-5 w-5 text-muted-foreground" />
-                    Order Items
-                  </CardTitle>
-                  <CardDescription>
-                    Complete breakdown of all items in this order
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {Array.isArray(selectedOrder.items) ? (
-                    <div className="space-y-4">
-                      {selectedOrder.items.map((item: any, idx: number) => (
-                        <div
-                          key={idx}
-                          className="border rounded-lg p-4 bg-gray-50"
-                        >
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-lg">
-                                {item.description || "Unknown Item"}
-                              </h4>
-                              <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <span className="font-medium">Quantity:</span>{" "}
-                                  {item.quantity || "N/A"}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <span className="font-medium">Rate:</span>{" "}
-                                  {item.rate ? `₹${item.rate}` : "N/A"}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-xl font-bold text-green-600">
-                                {item.total ? `₹${item.total}` : "N/A"}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                Total
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Item Details */}
-                          {(item.metadata?.level ||
-                            item.metadata?.size ||
-                            item.metadata?.students) && (
-                            <div className="border-t pt-3 mt-3">
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {item.metadata?.level && (
-                                  <div>
-                                    <Label className="text-xs font-medium text-muted-foreground">
-                                      Level
-                                    </Label>
-                                    <p className="font-medium">
-                                      {item.metadata.level}
-                                    </p>
-                                  </div>
-                                )}
-                                {item.metadata?.size && (
-                                  <div>
-                                    <Label className="text-xs font-medium text-muted-foreground">
-                                      Size
-                                    </Label>
-                                    <p className="font-medium">
-                                      {item.metadata.size}
-                                    </p>
-                                  </div>
-                                )}
-                                {item.metadata?.students && (
-                                  <div>
-                                    <Label className="text-xs font-medium text-muted-foreground">
-                                      Students ({item.metadata.students.length})
-                                    </Label>
-                                    <div className="max-h-20 overflow-y-auto">
-                                      {item.metadata.students.map(
-                                        (student: any, studentIdx: number) => (
-                                          <div
-                                            key={studentIdx}
-                                            className="text-sm"
-                                          >
-                                            <span className="font-medium">
-                                              {student.name}
-                                            </span>
-                                            <span className="text-muted-foreground ml-2">
-                                              ({student.id})
-                                            </span>
-                                          </div>
-                                        )
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="text-muted-foreground whitespace-pre-line">
-                        {selectedOrder.items}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsOrderDetailsOpen(false)}
-                >
-                  Close
-                </Button>
-                {selectedOrder.status === "Pending" && (
-                  <Button variant="destructive" size="sm">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Cancel Order
-                  </Button>
-                )}
-                <Button variant="default">
-                  <Truck className="h-4 w-4 mr-2" />
-                  Track Order
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

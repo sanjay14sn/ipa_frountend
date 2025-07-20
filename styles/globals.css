@@ -1,10 +1,9 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100;200;300;400;500;600;700;800&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
 
 @layer utilities {
   .text-balance {
@@ -88,7 +87,47 @@ body {
   * {
     @apply border-border;
   }
+
+  html {
+    /* Improve font rendering */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    /* Better line height for readability */
+    line-height: 1.6;
+    /* Improve text layout */
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Enhanced typography for headings */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+  }
+
+  /* Better input and button fonts */
+  input,
+  textarea,
+  select,
+  button {
+    font-family: inherit;
+  }
+
+  /* Improve code readability */
+  code,
+  pre {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Monaco,
+      Consolas, "Liberation Mono", "Courier New", monospace;
   }
 }

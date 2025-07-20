@@ -13,13 +13,53 @@ export interface Franchise {
 
 export interface Student {
   id: string;
-  name: string;
-  age: number;
+  rollNo?: string; // System generated
+
+  // Basic Information
+  registrationType?: "new" | "existing";
+  studentName: string;
+  dob?: string;
+  sex?: string;
+  standard?: string;
   level: string;
+  stream?: "regular" | "summer_camp";
+  status: "Active" | "Inactive" | "active" | "inactive";
+
+  // Parent Details
+  fatherName?: string;
+  fatherQualification?: string;
+  fatherOccupation?: string;
+  fatherContactNo?: string;
+
+  motherName?: string;
+  motherQualification?: string;
+  motherOccupation?: string;
+  motherContactNo?: string;
+
+  // Contact Information
+  residentialAddress?: string;
+  mailId?: string;
+
+  // Status Management
+  isDiscontinued?: boolean;
+  discontinueReason?: string;
+  canRequestCertificate?: boolean;
+
+  // Franchise Information
   franchiseId: string;
   franchiseName: string;
+
+  // System Generated
   enrollmentDate: string;
-  status: "Active" | "Inactive";
+  createdAt?: string;
+  updatedAt?: string;
+
+  // Photo
+  photoPath?: string;
+
+  // Legacy fields for compatibility
+  name: string; // Keep for backward compatibility
+  age: number;
 }
 
 export interface Order {
@@ -137,69 +177,266 @@ export const FRANCHISES: Franchise[] = [
   },
 ];
 
-export const STUDENTS: Student[] = [{
+export const STUDENTS: Student[] = [
+  {
     id: "1",
-    name: "Aarav Patel",
-    age: 8,
-    level: "Beginner",
+    rollNo: "ABA24001",
+
+    // Basic Information
+    registrationType: "new",
+    studentName: "Aarav Patel",
+    dob: "2016-03-15",
+    sex: "Male",
+    standard: "3rd",
+    level: "EL2",
+    stream: "regular",
+    status: "active",
+
+    // Parent Details
+    fatherName: "Rajesh Patel",
+    fatherQualification: "B.Com",
+    fatherOccupation: "Business Owner",
+    fatherContactNo: "9876543210",
+
+    motherName: "Priya Patel",
+    motherQualification: "M.A. English",
+    motherOccupation: "Teacher",
+    motherContactNo: "9876543211",
+
+    // Contact Information
+    residentialAddress:
+      "A-123, Shanti Nagar, Andheri West, Mumbai, Maharashtra - 400058",
+    mailId: "rajesh.patel@email.com",
+
+    // Status Management
+    isDiscontinued: false,
+    discontinueReason: "",
+    canRequestCertificate: true,
+
+    // Franchise Information
     franchiseId: "1",
     franchiseName: "Abacus 1",
+
+    // System Generated
     enrollmentDate: "2024-01-15",
-    status: "Active",
+    createdAt: "2024-01-15T10:30:00Z",
+    updatedAt: "2024-01-15T10:30:00Z",
+
+    // Photo
+    photoPath: "students/ABA24001_photo.jpg",
+
+    // Legacy fields
+    name: "Aarav Patel",
+    age: 8,
   },
   {
     id: "2",
-    name: "Diya Sharma",
-    age: 10,
-    level: "Intermediate",
+    rollNo: "ABA24002",
+
+    // Basic Information
+    registrationType: "new",
+    studentName: "Diya Sharma",
+    dob: "2014-07-22",
+    sex: "Female",
+    standard: "5th",
+    level: "RL3",
+    stream: "regular",
+    status: "active",
+
+    // Parent Details
+    fatherName: "Amit Sharma",
+    fatherQualification: "B.Tech Computer Science",
+    fatherOccupation: "Software Engineer",
+    fatherContactNo: "9876543212",
+
+    motherName: "Sunita Sharma",
+    motherQualification: "B.Sc. Mathematics",
+    motherOccupation: "Bank Manager",
+    motherContactNo: "9876543213",
+
+    // Contact Information
+    residentialAddress:
+      "B-456, Green Valley Society, Borivali East, Mumbai, Maharashtra - 400066",
+    mailId: "amit.sharma@email.com",
+
+    // Status Management
+    isDiscontinued: false,
+    discontinueReason: "",
+    canRequestCertificate: true,
+
+    // Franchise Information
     franchiseId: "1",
     franchiseName: "Abacus 1",
+
+    // System Generated
     enrollmentDate: "2023-09-20",
-    status: "Active",
+    createdAt: "2023-09-20T14:15:00Z",
+    updatedAt: "2023-09-20T14:15:00Z",
+
+    // Photo
+    photoPath: "students/ABA24002_photo.jpg",
+
+    // Legacy fields
+    name: "Diya Sharma",
+    age: 10,
   },
   {
     id: "3",
-    name: "Arjun Singh",
-    age: 12,
-    level: "Advanced",
+    rollNo: "ABA24003",
+
+    // Basic Information
+    registrationType: "new",
+    studentName: "Arjun Singh",
+    dob: "2012-11-08",
+    sex: "Male",
+    standard: "7th",
+    level: "RL8",
+    stream: "regular",
+    status: "active",
+
+    // Parent Details
+    fatherName: "Vikram Singh",
+    fatherQualification: "MBA Finance",
+    fatherOccupation: "Financial Advisor",
+    fatherContactNo: "9876543214",
+
+    motherName: "Kavita Singh",
+    motherQualification: "M.A. Psychology",
+    motherOccupation: "Counselor",
+    motherContactNo: "9876543215",
+
+    // Contact Information
+    residentialAddress:
+      "C-789, Royal Heights, Powai, Mumbai, Maharashtra - 400076",
+    mailId: "vikram.singh@email.com",
+
+    // Status Management
+    isDiscontinued: false,
+    discontinueReason: "",
+    canRequestCertificate: true,
+
+    // Franchise Information
     franchiseId: "1",
     franchiseName: "Abacus 1",
+
+    // System Generated
     enrollmentDate: "2023-07-10",
-    status: "Active",
+    createdAt: "2023-07-10T11:20:00Z",
+    updatedAt: "2023-07-10T11:20:00Z",
+
+    // Photo
+    photoPath: "students/ABA24003_photo.jpg",
+
+    // Legacy fields
+    name: "Arjun Singh",
+    age: 12,
   },
   {
     id: "4",
-    name: "Ananya Gupta",
-    age: 9,
-    level: "Beginner",
+    rollNo: "ABA24004",
+
+    // Basic Information
+    registrationType: "new",
+    studentName: "Ananya Gupta",
+    dob: "2015-05-12",
+    sex: "Female",
+    standard: "4th",
+    level: "EL4",
+    stream: "regular",
+    status: "active",
+
+    // Parent Details
+    fatherName: "Suresh Gupta",
+    fatherQualification: "CA",
+    fatherOccupation: "Chartered Accountant",
+    fatherContactNo: "9876543216",
+
+    motherName: "Meera Gupta",
+    motherQualification: "B.A. Arts",
+    motherOccupation: "Homemaker",
+    motherContactNo: "9876543217",
+
+    // Contact Information
+    residentialAddress:
+      "D-321, Sunrise Apartments, Malad West, Mumbai, Maharashtra - 400064",
+    mailId: "suresh.gupta@email.com",
+
+    // Status Management
+    isDiscontinued: false,
+    discontinueReason: "",
+    canRequestCertificate: true,
+
+    // Franchise Information
     franchiseId: "1",
     franchiseName: "Abacus 1",
+
+    // System Generated
     enrollmentDate: "2024-02-01",
-    status: "Active",
+    createdAt: "2024-02-01T09:45:00Z",
+    updatedAt: "2024-02-01T09:45:00Z",
+
+    // Photo
+    photoPath: "students/ABA24004_photo.jpg",
+
+    // Legacy fields
+    name: "Ananya Gupta",
+    age: 9,
   },
   {
     id: "5",
-    name: "Karthik Reddy",
-    age: 11,
-    level: "Intermediate",
+    rollNo: "ABA24005",
+
+    // Basic Information
+    registrationType: "new",
+    studentName: "Karthik Reddy",
+    dob: "2013-09-30",
+    sex: "Male",
+    standard: "6th",
+    level: "RL5",
+    stream: "regular",
+    status: "active",
+
+    // Parent Details
+    fatherName: "Ramesh Reddy",
+    fatherQualification: "B.E. Mechanical",
+    fatherOccupation: "Engineer",
+    fatherContactNo: "9876543218",
+
+    motherName: "Lakshmi Reddy",
+    motherQualification: "M.Sc. Chemistry",
+    motherOccupation: "Lab Technician",
+    motherContactNo: "9876543219",
+
+    // Contact Information
+    residentialAddress:
+      "E-654, Ocean View, Versova, Mumbai, Maharashtra - 400061",
+    mailId: "ramesh.reddy@email.com",
+
+    // Status Management
+    isDiscontinued: false,
+    discontinueReason: "",
+    canRequestCertificate: true,
+
+    // Franchise Information
     franchiseId: "1",
     franchiseName: "Abacus 1",
+
+    // System Generated
     enrollmentDate: "2023-11-05",
-    status: "Active",
+    createdAt: "2023-11-05T13:30:00Z",
+    updatedAt: "2023-11-05T13:30:00Z",
+
+    // Photo
+    photoPath: "students/ABA24005_photo.jpg",
+
+    // Legacy fields
+    name: "Karthik Reddy",
+    age: 11,
   },
-  {
-  "id": "1752754053633",
-  "name": "Test",
-  "age": 12,
-  "level": "Beginner",
-  "franchiseId": "1",
-  "franchiseName": "Abacus 1",
-  "enrollmentDate": "2025-07-17",
-  "status": "Active"
-}
 ];
 
-export const ORDERS: Order[] = [{
+export const ORDERS: Order[] = [
+  {
     id: "ORD-001",
     franchiseId: "1",
     franchise: "Abacus 1",
@@ -244,16 +481,16 @@ export const ORDERS: Order[] = [{
     expectedDelivery: "2024-01-16",
   },
   {
-  "id": "ORD-1752754154512",
-  "franchiseId": "1",
-  "franchise": "Abacus 1",
-  "type": "Materials",
-  "items": "Intermediate Level Book (1 students), T-Shirt (S), Workbook",
-  "amount": "₹761.6",
-  "status": "Pending",
-  "orderDate": "2025-07-17",
-  "expectedDelivery": ""
-}
+    id: "ORD-1752754154512",
+    franchiseId: "1",
+    franchise: "Abacus 1",
+    type: "Materials",
+    items: "Intermediate Level Book (1 students), T-Shirt (S), Workbook",
+    amount: "₹761.6",
+    status: "Pending",
+    orderDate: "2025-07-17",
+    expectedDelivery: "",
+  },
 ];
 
 export const CONTESTS: Contest[] = [

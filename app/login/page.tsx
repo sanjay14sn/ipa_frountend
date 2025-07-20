@@ -17,6 +17,7 @@ import {
 import { Calculator, Eye, EyeOff } from "lucide-react";
 import { saveUserToStorage } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -50,11 +51,17 @@ export default function LoginPage() {
       // Save user to localStorage
       saveUserToStorage(data.user);
 
-      // Redirect to appropriate dashboard based on role
+      // Redirect to appropriate dashboard based on role and onboarding status
       if (data.user.role === "admin") {
         router.push("/admin/dashboard");
-      } else {
-        router.push("/franchisee/dashboard");
+      } else if (data.user.role === "franchise") {
+        // Check if franchise has completed onboarding
+        if (data.user.onboardingCompleted) {
+          router.push("/franchisee/dashboard");
+        } else {
+          // New franchisee needs to complete agreement and payment
+          router.push("/franchisee/agreement");
+        }
       }
     } catch (err) {
       setError("Something went wrong. Please try again.");
@@ -188,6 +195,18 @@ export default function LoginPage() {
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
+
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-600">
+              Interested in becoming a franchise partner?{" "}
+              <Link
+                href="/franchise-application"
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Apply now
+              </Link>
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

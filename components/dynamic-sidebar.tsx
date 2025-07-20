@@ -14,6 +14,9 @@ import {
   Settings,
   LogOut,
   Store,
+  Clock,
+  AlertCircle,
+  IndianRupee,
 } from "lucide-react";
 
 import {
@@ -51,6 +54,16 @@ const adminNavigation = {
           title: "Manage Franchises",
           url: "/admin/franchises",
           icon: Building2,
+        },
+        {
+          title: "Pending Approvals",
+          url: "/admin/pending-approvals",
+          icon: Clock,
+        },
+        {
+          title: "Pricing Management",
+          url: "/admin/pricing-management",
+          icon: IndianRupee,
         },
       ],
     },
@@ -97,6 +110,22 @@ const franchiseNavigation = {
   ],
 };
 
+// Navigation for franchisees who haven't completed onboarding
+const onboardingNavigation = {
+  navMain: [
+    {
+      title: "Setup",
+      items: [
+        {
+          title: "Franchise Agreement",
+          url: "/franchisee/agreement",
+          icon: FileText,
+        },
+      ],
+    },
+  ],
+};
+
 export function DynamicSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
@@ -112,14 +141,24 @@ export function DynamicSidebar({
     window.location.href = "/login";
   };
 
-  const navigation =
-    user?.role === "admin" ? adminNavigation : franchiseNavigation;
-  const sidebarTitle =
-    user?.role === "admin" ? "Abacus Admin" : "Franchise Portal";
-  const sidebarSubtitle =
-    user?.role === "admin"
-      ? "Admin Dashboard"
-      : user?.franchiseName || "Franchise Dashboard";
+  // Determine navigation based on user role and onboarding status
+  let navigation = adminNavigation;
+  let sidebarTitle = "Abacus Admin";
+  let sidebarSubtitle = "Admin Dashboard";
+
+  if (user?.role === "franchise") {
+    // Check if franchisee has completed onboarding
+    if (user.onboardingCompleted) {
+      navigation = franchiseNavigation;
+      sidebarTitle = "Franchise Portal";
+      sidebarSubtitle = user?.franchiseName || "Franchise Dashboard";
+    } else {
+      // Show limited navigation for incomplete onboarding
+      navigation = onboardingNavigation;
+      sidebarTitle = "Franchise Setup";
+      sidebarSubtitle = "Complete your agreement";
+    }
+  }
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -131,14 +170,18 @@ export function DynamicSidebar({
                 href={
                   user?.role === "admin"
                     ? "/admin/dashboard"
-                    : "/franchisee/dashboard"
+                    : user?.onboardingCompleted
+                    ? "/franchisee/dashboard"
+                    : "/franchisee/agreement"
                 }
               >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-blue-600 text-white">
                   {user?.role === "admin" ? (
                     <Calculator className="size-4" />
-                  ) : (
+                  ) : user?.onboardingCompleted ? (
                     <Store className="size-4" />
+                  ) : (
+                    <FileText className="size-4" />
                   )}
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
@@ -150,10 +193,36 @@ export function DynamicSidebar({
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+
+      {/* Onboarding Alert for incomplete franchisees */}
+      {user?.role === "franchise" && !user?.onboardingCompleted && (
+        <div className="px-3 py-2">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="text-xs">
+                <p className="font-medium text-amber-800">Setup Required</p>
+                <p className="text-amber-700 mt-1">
+                  Complete your franchise agreement to access all features.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <SidebarContent>
         {navigation.navMain.map((item) => (
           <SidebarGroup key={item.title}>
-            <SidebarGroupLabel>{item.title}</SidebarGroupLabel>
+            <SidebarGroupLabel
+              className={
+                user?.role === "franchise" && !user?.onboardingCompleted
+                  ? "text-amber-700 font-medium"
+                  : ""
+              }
+            >
+              {item.title}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {item.items.map((item) => (
@@ -171,16 +240,9 @@ export function DynamicSidebar({
           </SidebarGroup>
         ))}
       </SidebarContent>
+
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link href="/dashboard/settings">
-                <Settings />
-                <span>Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleLogout}>
               <LogOut />
