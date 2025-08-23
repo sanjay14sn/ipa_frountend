@@ -84,15 +84,6 @@ export async function getAllStudents(): Promise<StudentsResponse> {
   return response.data;
 }
 
-// export async function getStudentsByFranchise(
-//   franchiseId: number
-// ): Promise<StudentsResponse> {
-//   const response = await api.get<StudentsResponse>(
-//     `/students/franchise/${franchiseId}`
-//   );
-//   return response.data;
-// }
-
 export async function getStudentById(studentId: number): Promise<StudentData> {
   const response = await api.get<StudentData>(`/students/${studentId}`);
   return response.data;

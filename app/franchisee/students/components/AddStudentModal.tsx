@@ -24,12 +24,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   User,
   Users,
-  Phone,
-  Mail,
-  MapPin,
-  Calendar,
-  Camera,
-  GraduationCap,
   ArrowRight,
   Save,
   AlertCircle,
@@ -65,14 +59,43 @@ const FORM_STEPS = [
 ];
 
 const LEVELS = [
-  "EL1", "EL2", "EL3", "EL4", "EL5", "EL6",
-  "RL1", "RL2", "RL3", "RL4", "RL5", "RL6", "RL7", "RL8", "RL9", "RL10",
-  "GML1", "GML2", "GML3",
+  "EL1",
+  "EL2",
+  "EL3",
+  "EL4",
+  "EL5",
+  "EL6",
+  "RL1",
+  "RL2",
+  "RL3",
+  "RL4",
+  "RL5",
+  "RL6",
+  "RL7",
+  "RL8",
+  "RL9",
+  "RL10",
+  "GML1",
+  "GML2",
+  "GML3",
 ];
 
 const STANDARDS = [
-  "Pre-KG", "LKG", "UKG", "1st", "2nd", "3rd", "4th", "5th", "6th",
-  "7th", "8th", "9th", "10th", "11th", "12th",
+  "Pre-KG",
+  "LKG",
+  "UKG",
+  "1st",
+  "2nd",
+  "3rd",
+  "4th",
+  "5th",
+  "6th",
+  "7th",
+  "8th",
+  "9th",
+  "10th",
+  "11th",
+  "12th",
 ];
 
 // Stepper Component
@@ -100,7 +123,7 @@ const Stepper = ({
               >
                 {currentStep > step.id ? "✓" : step.id}
               </div>
-              <div className="mt-2 text-center max-w-[80px]">
+              <div className="mt-2 text-center max-w-[100px]">
                 <p
                   className={`text-xs font-medium leading-tight ${
                     currentStep >= step.id ? "text-gray-900" : "text-gray-400"
@@ -242,12 +265,14 @@ export default function AddStudentModal({
         if (!formData.fatherContactNo.trim()) {
           newErrors.fatherContactNo = "Father's contact number is required";
         } else if (!/^\d{10}$/.test(formData.fatherContactNo)) {
-          newErrors.fatherContactNo = "Please enter a valid 10-digit contact number";
+          newErrors.fatherContactNo =
+            "Please enter a valid 10-digit contact number";
         }
         if (!formData.motherContactNo.trim()) {
           newErrors.motherContactNo = "Mother's contact number is required";
         } else if (!/^\d{10}$/.test(formData.motherContactNo)) {
-          newErrors.motherContactNo = "Please enter a valid 10-digit contact number";
+          newErrors.motherContactNo =
+            "Please enter a valid 10-digit contact number";
         }
         break;
 
@@ -264,7 +289,8 @@ export default function AddStudentModal({
 
       case 4:
         if (formData.isDiscontinued && !formData.discontinueReason.trim()) {
-          newErrors.discontinueReason = "Please provide reason for discontinuation";
+          newErrors.discontinueReason =
+            "Please provide reason for discontinuation";
         }
         break;
     }
@@ -427,7 +453,9 @@ export default function AddStudentModal({
                   id="studentName"
                   type="text"
                   value={formData.studentName}
-                  onChange={(e) => handleInputChange("studentName", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("studentName", e.target.value)
+                  }
                   className={errors.studentName ? "border-red-500" : ""}
                   placeholder="Enter student's full name"
                 />
@@ -496,9 +524,13 @@ export default function AddStudentModal({
                 <Label htmlFor="standard">Standard *</Label>
                 <Select
                   value={formData.standard}
-                  onValueChange={(value) => handleInputChange("standard", value)}
+                  onValueChange={(value) =>
+                    handleInputChange("standard", value)
+                  }
                 >
-                  <SelectTrigger className={errors.standard ? "border-red-500" : ""}>
+                  <SelectTrigger
+                    className={errors.standard ? "border-red-500" : ""}
+                  >
                     <SelectValue placeholder="Select standard" />
                   </SelectTrigger>
                   <SelectContent>
@@ -523,7 +555,9 @@ export default function AddStudentModal({
                   value={formData.level}
                   onValueChange={(value) => handleInputChange("level", value)}
                 >
-                  <SelectTrigger className={errors.level ? "border-red-500" : ""}>
+                  <SelectTrigger
+                    className={errors.level ? "border-red-500" : ""}
+                  >
                     <SelectValue placeholder="Select level" />
                   </SelectTrigger>
                   <SelectContent>
@@ -615,7 +649,9 @@ export default function AddStudentModal({
                     id="fatherName"
                     type="text"
                     value={formData.fatherName}
-                    onChange={(e) => handleInputChange("fatherName", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("fatherName", e.target.value)
+                    }
                     className={errors.fatherName ? "border-red-500" : ""}
                     placeholder="Enter father's full name"
                   />
@@ -628,12 +664,16 @@ export default function AddStudentModal({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="fatherContactNo">Father's Contact Number *</Label>
+                  <Label htmlFor="fatherContactNo">
+                    Father's Contact Number *
+                  </Label>
                   <Input
                     id="fatherContactNo"
                     type="tel"
                     value={formData.fatherContactNo}
-                    onChange={(e) => handleInputChange("fatherContactNo", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("fatherContactNo", e.target.value)
+                    }
                     className={errors.fatherContactNo ? "border-red-500" : ""}
                     placeholder="Enter 10-digit contact number"
                   />
@@ -646,12 +686,16 @@ export default function AddStudentModal({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="fatherQualification">Father's Qualification</Label>
+                  <Label htmlFor="fatherQualification">
+                    Father's Qualification
+                  </Label>
                   <Input
                     id="fatherQualification"
                     type="text"
                     value={formData.fatherQualification}
-                    onChange={(e) => handleInputChange("fatherQualification", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("fatherQualification", e.target.value)
+                    }
                     placeholder="e.g., B.Tech, MBA, etc."
                   />
                 </div>
@@ -662,7 +706,9 @@ export default function AddStudentModal({
                     id="fatherOccupation"
                     type="text"
                     value={formData.fatherOccupation}
-                    onChange={(e) => handleInputChange("fatherOccupation", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("fatherOccupation", e.target.value)
+                    }
                     placeholder="e.g., Software Engineer, Teacher, etc."
                   />
                 </div>
@@ -682,7 +728,9 @@ export default function AddStudentModal({
                     id="motherName"
                     type="text"
                     value={formData.motherName}
-                    onChange={(e) => handleInputChange("motherName", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("motherName", e.target.value)
+                    }
                     className={errors.motherName ? "border-red-500" : ""}
                     placeholder="Enter mother's full name"
                   />
@@ -695,12 +743,16 @@ export default function AddStudentModal({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="motherContactNo">Mother's Contact Number *</Label>
+                  <Label htmlFor="motherContactNo">
+                    Mother's Contact Number *
+                  </Label>
                   <Input
                     id="motherContactNo"
                     type="tel"
                     value={formData.motherContactNo}
-                    onChange={(e) => handleInputChange("motherContactNo", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("motherContactNo", e.target.value)
+                    }
                     className={errors.motherContactNo ? "border-red-500" : ""}
                     placeholder="Enter 10-digit contact number"
                   />
@@ -713,12 +765,16 @@ export default function AddStudentModal({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="motherQualification">Mother's Qualification</Label>
+                  <Label htmlFor="motherQualification">
+                    Mother's Qualification
+                  </Label>
                   <Input
                     id="motherQualification"
                     type="text"
                     value={formData.motherQualification}
-                    onChange={(e) => handleInputChange("motherQualification", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("motherQualification", e.target.value)
+                    }
                     placeholder="e.g., B.A., M.Sc., etc."
                   />
                 </div>
@@ -729,7 +785,9 @@ export default function AddStudentModal({
                     id="motherOccupation"
                     type="text"
                     value={formData.motherOccupation}
-                    onChange={(e) => handleInputChange("motherOccupation", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("motherOccupation", e.target.value)
+                    }
                     placeholder="e.g., Homemaker, Doctor, etc."
                   />
                 </div>
@@ -746,7 +804,9 @@ export default function AddStudentModal({
               <Textarea
                 id="residentialAddress"
                 value={formData.residentialAddress}
-                onChange={(e) => handleInputChange("residentialAddress", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("residentialAddress", e.target.value)
+                }
                 className={errors.residentialAddress ? "border-red-500" : ""}
                 placeholder="Enter complete residential address"
                 rows={3}
@@ -796,7 +856,10 @@ export default function AddStudentModal({
                       handleInputChange("isDiscontinued", checked as boolean)
                     }
                   />
-                  <Label htmlFor="isDiscontinued" className="text-sm font-medium">
+                  <Label
+                    htmlFor="isDiscontinued"
+                    className="text-sm font-medium"
+                  >
                     Mark as discontinued
                   </Label>
                 </div>
@@ -809,8 +872,12 @@ export default function AddStudentModal({
                     <Textarea
                       id="discontinueReason"
                       value={formData.discontinueReason}
-                      onChange={(e) => handleInputChange("discontinueReason", e.target.value)}
-                      className={errors.discontinueReason ? "border-red-500" : ""}
+                      onChange={(e) =>
+                        handleInputChange("discontinueReason", e.target.value)
+                      }
+                      className={
+                        errors.discontinueReason ? "border-red-500" : ""
+                      }
                       placeholder="Please provide reason for discontinuation"
                       rows={3}
                     />
@@ -821,8 +888,8 @@ export default function AddStudentModal({
                       </p>
                     )}
                     <p className="text-sm text-orange-600">
-                      ⚠️ Discontinued students cannot request certificates and will
-                      need admin approval for reactivation.
+                      ⚠️ Discontinued students cannot request certificates and
+                      will need admin approval for reactivation.
                     </p>
                   </div>
                 )}
@@ -848,7 +915,8 @@ export default function AddStudentModal({
               Student Registered Successfully!
             </DialogTitle>
             <DialogDescription className="text-center">
-              The student has been registered successfully. You can now view and manage the student from the students list.
+              The student has been registered successfully. You can now view and
+              manage the student from the students list.
             </DialogDescription>
           </DialogHeader>
           <div className="pt-4">
@@ -963,5 +1031,3 @@ export default function AddStudentModal({
     </Dialog>
   );
 }
-
-
