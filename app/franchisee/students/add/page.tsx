@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,23 +14,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   User,
-  Users,
-  Phone,
-  Mail,
-  MapPin,
-  Calendar,
-  Camera,
-  GraduationCap,
   ArrowLeft,
   Save,
   AlertCircle,
+  MapPin,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
-import { getUserFromStorage } from "@/lib/auth";
+import { useUser } from "@/context/user-context";
 
 const LEVELS = [
   "EL1",
@@ -74,9 +68,10 @@ const STANDARDS = [
 
 export default function AddStudentPage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const { user } = useUser();
 
   const [formData, setFormData] = useState({
     // Basic Information
@@ -113,11 +108,6 @@ export default function AddStudentPage() {
     // File Upload
     photoImage: null as File | null,
   });
-
-  useEffect(() => {
-    const userData = getUserFromStorage();
-    setUser(userData);
-  }, []);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({
@@ -235,8 +225,8 @@ export default function AddStudentPage() {
       });
 
       // Add franchise information
-      submitData.append("franchiseId", user.franchiseId);
-      submitData.append("franchiseName", user.franchiseName);
+      submitData.append("franchiseId", user.franchiseId?.toString() || "");
+      submitData.append("franchiseName", user.franchiseName || "");
 
       const response = await fetch("/api/students", {
         method: "POST",

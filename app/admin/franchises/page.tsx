@@ -1,47 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Building2,
-  Users,
-  GraduationCap,
-  ShoppingCart,
-  Eye,
-  Plus,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  User,
-  CreditCard,
-  BookOpen,
-  Briefcase,
-  IdCard,
-  Home,
-  IndianRupee,
-} from "lucide-react";
-import Link from "next/link";
+import { Building2, Plus } from "lucide-react";
+import FranchiseTable from "./components/FranchiseTable";
+import { FranchiseData, getAllFranchise } from "@/services/franchisee.service";
+import { bulkUploadFranchises } from "@/services/franchise.service";
+import { toast } from "sonner";
 
 export default function AdminFranchises() {
-  const [selectedFranchise, setSelectedFranchise] = useState<string | null>(
-    null
-  );
-  const [franchises, setFranchises] = useState([]);
+  const [franchises, setFranchises] = useState<FranchiseData[] | undefined>();
   const [students, setStudents] = useState([]);
   const [courseInstructors, setCourseInstructors] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -49,31 +22,83 @@ export default function AdminFranchises() {
 
   const fetchData = async () => {
     try {
-      const [franchisesRes, studentsRes, cisRes, ordersRes] = await Promise.all(
-        [
-          fetch("/api/franchises"),
-          fetch("/api/students"),
-          fetch("/api/course-instructors"),
-          fetch("/api/orders"),
-        ]
-      );
-
-      const [franchisesData, studentsData, cisData, ordersData] =
-        await Promise.all([
-          franchisesRes.json(),
-          studentsRes.json(),
-          cisRes.json(),
-          ordersRes.json(),
-        ]);
-
-      setFranchises(franchisesData.franchises || []);
-      setStudents(studentsData.students || []);
-      setCourseInstructors(cisData.courseInstructors || []);
-      setOrders(ordersData.orders || []);
+      const result = await getAllFranchise();
+      setFranchises(result.result);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadTemplate = () => {
+    try {
+      const headers = [
+        "Franchisee Name",
+        "Blood Group",
+        "Date of Birth",
+        "Password",
+        "Address",
+        "Communication Address",
+        "City",
+        "Phone",
+        "Email",
+        "Education",
+        "Occupation",
+        "Reference",
+        "Franchise Name",
+        "Franchise Type",
+        "Program ID",
+        "Franchise Fee",
+        "Kit Cost",
+        "Material Cost",
+        "Monthly Fee",
+        "CI Share",
+        "Franchise Share",
+        "Royalty",
+        "Installment",
+        "Total Amount",
+        "Last Renewal Date",
+        "Renewal Count",
+        "Next Renewal Date",
+        "Renew Tenure",
+        "Payment Status",
+      ];
+
+      const csv = headers.join(",") + "\r\n";
+      const blob = new Blob([csv], {
+        type: "text/csv;charset=utf-8;",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "franchise_bulk_upload_template.csv";
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Template downloaded");
+    } catch (error) {
+      console.error("Error generating template:", error);
+      toast.error("Failed to generate template");
+    }
+  };
+
+  const openFilePicker = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      await bulkUploadFranchises(file);
+      toast.success("Franchises uploaded successfully");
+      await fetchData();
+    } catch (error) {
+      console.error("Bulk upload failed:", error);
+      toast.error("Bulk upload failed");
+    } finally {
+      // Reset the input so the same file can be selected again if needed
+      e.target.value = "";
     }
   };
 
@@ -98,316 +123,177 @@ export default function AdminFranchises() {
     };
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "active":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "pending":
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "inactive":
+        return "bg-gray-100 text-gray-600 border-gray-200";
+      case "suspended":
+        return "bg-red-100 text-red-700 border-red-200";
+      default:
+        return "bg-gray-100 text-gray-600 border-gray-200";
+    }
+  };
+
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+      <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+        <div className="animate-pulse space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <div className="h-8 bg-gray-200 rounded-lg w-64"></div>
+              <div className="h-4 bg-gray-200 rounded w-96"></div>
+            </div>
+            <div className="h-10 bg-gray-200 rounded-lg w-32"></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-64 bg-gray-200 rounded-xl"></div>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
+  const activeCount = franchises?.filter(
+    (f: any) => f.status === "Active"
+  ).length;
+  const pendingCount = franchises?.filter(
+    (f: any) => f.status === "Pending"
+  ).length;
+  const totalStudents = students.length;
+  const totalOrders = orders.length;
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-6 space-y-6 bg-gray-50 min-h-full">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Manage Franchises
+          <h1 className="text-2xl font-bold text-gray-900">
+            Franchise Management
           </h1>
-          <p className="text-muted-foreground">
-            View and manage all franchises in the system ({franchises.length}{" "}
-            total)
+          <p className="text-sm text-gray-600">
+            Comprehensive franchise network oversight and administration
           </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Franchise
-        </Button>
+        <div className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={handleBulkUpload}
+          />
+          <Button
+            variant="outline"
+            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            onClick={handleDownloadTemplate}
+          >
+            Download CSV template
+          </Button>
+          <Button
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={openFilePicker}
+          >
+            Bulk upload CSV
+          </Button>
+          <Button
+            variant="outline"
+            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            onClick={fetchData}
+          >
+            Refresh
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-6">
-        {franchises.map((franchise: any) => {
-          const stats = getFranchiseStats(franchise.id);
-
-          return (
-            <Card key={franchise.id} className="w-full">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg">
-                      <Building2 className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-3">
-                        <CardTitle className="text-xl">
-                          {franchise.name}
-                        </CardTitle>
-                        {franchise.franchiseCode && (
-                          <Badge variant="outline" className="text-xs">
-                            <IdCard className="w-3 h-3 mr-1" />
-                            {franchise.franchiseCode}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                        <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-1" />
-                          {franchise.city || franchise.location}
-                        </div>
-                        <div className="flex items-center">
-                          <Mail className="h-4 w-4 mr-1" />
-                          {franchise.email}
-                        </div>
-                        <div className="flex items-center">
-                          <Phone className="h-4 w-4 mr-1" />
-                          {franchise.phone}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge
-                      variant={
-                        franchise.status === "Active" ? "default" : "secondary"
-                      }
-                    >
-                      {franchise.status}
-                    </Badge>
-                    <Link href={`/admin/franchises/${franchise.id}`}>
-                      <Button variant="outline" size="sm">
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Details
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-6">
-                {/* Enhanced Owner & Contact Information */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-semibold text-gray-900 flex items-center">
-                      <User className="w-4 h-4 mr-2" />
-                      Owner Information
-                    </h4>
-                    <div className="space-y-2">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Name</p>
-                        <p className="font-medium">
-                          {franchise.contactPerson ||
-                            franchise.owner ||
-                            "Not specified"}
-                        </p>
-                      </div>
-                      {franchise.educationalQualification && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Education
-                          </p>
-                          <p className="text-sm">
-                            {franchise.educationalQualification}
-                          </p>
-                        </div>
-                      )}
-                      {franchise.presentOccupation && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Occupation
-                          </p>
-                          <p className="text-sm">
-                            {franchise.presentOccupation}
-                          </p>
-                        </div>
-                      )}
+      {/* Franchise Grid */}
+      <div className="flex flex-row gap-4">
+        <div className="w-full">
+          <FranchiseTable clients={franchises} />
+        </div>
+        {/* <div>
+          <Card className="bg-white border-primary max-w-[400px] p-1 rounded-md">
+            <CardHeader className=" border border-black rounded-t-md p-0 mb-3 ">
+              <CardTitle className="text-sm font-medium tracking-wider text-gray-800 p-2 bg-primary/80 rounded-t-md">
+                Activity Log
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {[
+                  {
+                    time: "25/06/2025 09:29",
+                    franchise: "IPA Madpipakkam",
+                    action: "Applied",
+                  },
+                  {
+                    time: "25/06/2025 08:12",
+                    franchise: "IPA Madpipakkam",
+                    action: "Paid Monthly Fee",
+                  },
+                  {
+                    time: "24/06/2025 22:55",
+                    franchise: "IPA Madpipakkam",
+                    action: "Paid Monthly Fee",
+                  },
+                  {
+                    time: "24/06/2025 21:33",
+                    franchise: "IPA Madpipakkam",
+                    action: "Paid Monthly Fee",
+                  },
+                  {
+                    time: "24/06/2025 19:45",
+                    franchise: "IPA Madpipakkam",
+                    action: "Paid Monthly Fee",
+                  },
+                ].map((log, index) => (
+                  <div
+                    key={index}
+                    className="text-xs border-l-2 border-primary pl-3 p-2 rounded transition-colors"
+                  >
+                    <div className="text-neutral-500 font-mono">{log.time}</div>
+                    <div className="text-black">
+                      Franchise{" "}
+                      <span className="text-primary font-mono">
+                        {log.franchise}
+                      </span>{" "}
+                      {log.action}{" "}
                     </div>
                   </div>
-
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-semibold text-gray-900 flex items-center">
-                      <Home className="w-4 h-4 mr-2" />
-                      Address Details
-                    </h4>
-                    <div className="space-y-2">
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Centre Address
-                        </p>
-                        <p className="text-sm">
-                          {franchise.address || "Not provided"}
-                        </p>
-                        {franchise.pincode && (
-                          <p className="text-sm text-muted-foreground">
-                            PIN: {franchise.pincode}
-                          </p>
-                        )}
-                      </div>
-                      {franchise.communicationAddress && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Communication Address
-                          </p>
-                          <p className="text-sm">
-                            {franchise.communicationAddress}
-                          </p>
-                          {franchise.communicationPincode && (
-                            <p className="text-sm text-muted-foreground">
-                              PIN: {franchise.communicationPincode}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-semibold text-gray-900 flex items-center">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Timeline & Details
-                    </h4>
-                    <div className="space-y-2">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Joined</p>
-                        <p className="font-medium">
-                          {franchise.joinDate
-                            ? new Date(franchise.joinDate).toLocaleDateString()
-                            : "Not specified"}
-                        </p>
-                      </div>
-                      {franchise.expiryDate && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Expires
-                          </p>
-                          <p className="text-sm">
-                            {new Date(
-                              franchise.expiryDate
-                            ).toLocaleDateString()}
-                          </p>
-                        </div>
-                      )}
-                      {franchise.reference && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Reference
-                          </p>
-                          <p className="text-sm">{franchise.reference}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Payment Information */}
-                {franchise.paymentDetails && (
-                  <div className="border-t pt-6">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Payment Details
-                    </h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {franchise.paymentDetails.franchiseeFee && (
-                        <div className="text-center p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <IndianRupee className="w-4 h-4 mx-auto mb-1 text-green-600" />
-                          <div className="text-lg font-bold text-green-700">
-                            ₹
-                            {parseFloat(
-                              franchise.paymentDetails.franchiseeFee
-                            ).toLocaleString()}
-                          </div>
-                          <div className="text-xs text-green-600">
-                            Franchise Fee
-                          </div>
-                        </div>
-                      )}
-                      {franchise.paymentDetails.kitCost && (
-                        <div className="text-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <BookOpen className="w-4 h-4 mx-auto mb-1 text-blue-600" />
-                          <div className="text-lg font-bold text-blue-700">
-                            ₹
-                            {parseFloat(
-                              franchise.paymentDetails.kitCost
-                            ).toLocaleString()}
-                          </div>
-                          <div className="text-xs text-blue-600">Kit Cost</div>
-                        </div>
-                      )}
-                      {franchise.paymentDetails.monthlyFee && (
-                        <div className="text-center p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                          <Calendar className="w-4 h-4 mx-auto mb-1 text-purple-600" />
-                          <div className="text-lg font-bold text-purple-700">
-                            ₹
-                            {parseFloat(
-                              franchise.paymentDetails.monthlyFee
-                            ).toLocaleString()}
-                          </div>
-                          <div className="text-xs text-purple-600">
-                            Monthly Fee
-                          </div>
-                        </div>
-                      )}
-                      {franchise.paymentDetails.installments && (
-                        <div className="text-center p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                          <CreditCard className="w-4 h-4 mx-auto mb-1 text-orange-600" />
-                          <div className="text-lg font-bold text-orange-700">
-                            {franchise.paymentDetails.installments}
-                          </div>
-                          <div className="text-xs text-orange-600">
-                            Installments
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Statistics */}
-                <div className="border-t pt-6">
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                    Performance Statistics
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <Users className="h-5 w-5 mx-auto mb-2 text-blue-600" />
-                      <div className="text-2xl font-bold">{stats.students}</div>
-                      <div className="text-xs text-muted-foreground">
-                        Students
-                      </div>
-                    </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <GraduationCap className="h-5 w-5 mx-auto mb-2 text-green-600" />
-                      <div className="text-2xl font-bold">
-                        {stats.courseInstructors}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Course Instructors
-                      </div>
-                    </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <ShoppingCart className="h-5 w-5 mx-auto mb-2 text-purple-600" />
-                      <div className="text-2xl font-bold">{stats.orders}</div>
-                      <div className="text-xs text-muted-foreground">
-                        Total Orders
-                      </div>
-                    </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <ShoppingCart className="h-5 w-5 mx-auto mb-2 text-orange-600" />
-                      <div className="text-2xl font-bold">
-                        {stats.pendingOrders}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Pending Orders
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          </div> */}
       </div>
+
+      {franchises?.length === 0 && (
+        <div className="text-center py-16">
+          <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <Building2 className="h-12 w-12 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No franchises found
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Get started by adding your first franchise to the network
+          </p>
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Plus className="h-4 w-4 mr-2" />
+            Add First Franchise
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

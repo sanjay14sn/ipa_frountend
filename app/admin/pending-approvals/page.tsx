@@ -1,1337 +1,602 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Building2,
-  Eye,
   CheckCircle,
-  XCircle,
-  Clock,
-  CreditCard,
-  FileText,
-  User,
-  MapPin,
-  AlertCircle,
-  CheckCircle2,
-  Calendar,
   IndianRupee,
-  Package,
+  Calculator,
   Users,
+  GraduationCap,
+  Building2,
+  Calendar,
   Percent,
-  RefreshCw,
-  Gift,
+  Settings,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import {
+  getPendingFranchise,
+  createPayrollDetails,
+  type FranchiseData,
+} from "@/services/franchisee.service";
+import { PayrollDetails } from "./types";
+import PendingApprovalsTable from "./components/PendingApprovalsTable";
+
+// Calculation functions for payroll
+const calculateFranchisePayments = (
+  payrollDetails: PayrollDetails,
+  numStudents: number
+) => {
+  const franchiseFee = payrollDetails.franchiseFee || 0;
+  const monthlyFee = payrollDetails.monthlyFee || 0;
+  const installment = payrollDetails.installment || 0;
+  const royaltyPercent = payrollDetails.royalty || 0;
+  const trainingFeePerCI = payrollDetails.ciShare || 0;
+  const numCIs = payrollDetails.franchiseShare || 0;
+
+  // Royalty calculations (percentage of monthly fee)
+  const royaltyPerStudent = (monthlyFee * royaltyPercent) / 100;
+  const monthlyRoyaltyTotal = royaltyPerStudent * numStudents;
+  const yearlyRoyaltyTotal = monthlyRoyaltyTotal * 12;
+
+  // Training cost (one-time)
+  const totalTrainingCost = trainingFeePerCI * numCIs;
+
+  // Initial costs
+  const initialCosts = franchiseFee + installment;
+
+  return {
+    initialCosts,
+    royaltyPerStudent,
+    monthlyRoyaltyTotal,
+    yearlyRoyaltyTotal,
+    totalTrainingCost,
+    firstYearTotal: yearlyRoyaltyTotal + totalTrainingCost + initialCosts,
+    monthlyFeePerStudent: monthlyFee,
+    royaltyPercent,
+    trainingFeePerCI,
+    numCIs,
+  };
+};
 
 export default function PendingApprovals() {
-  const [applications, setApplications] = useState<any[]>([]);
+  const [allApplications, setAllApplications] = useState<FranchiseData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedApplication, setSelectedApplication] = useState<any>(null);
-  const [paymentDetails, setPaymentDetails] = useState({
-    franchiseeFee: "",
+  const [selectedApplication, setSelectedApplication] =
+    useState<FranchiseData | null>(null);
+  const [showPayrollDialog, setShowPayrollDialog] = useState(false);
+  const [payrollDetails, setPayrollDetails] = useState<PayrollDetails>({
+    franchiseId: 0,
+    franchiseFee: 0.0,
     dateOfPayment: "",
     dateOfJoining: "",
-    kitCost: "",
-    materialCost: "",
-    monthlyFee: "",
-    ciShare: "",
-    franchiseeShare: "",
-    royaltyGst: "",
-    installments: "4",
-    expiryDate: "",
-    renewal: "",
-    renewalDate: "",
-    renewalAmount: "",
-    promotionalMaterials: "",
+    monthlyFee: 0.0,
+    ciShare: 0.0,
+    franchiseShare: 0.0,
+    royalty: 0.0,
+    totalAmount: 0,
+    installment: 0,
   });
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
-    fetchData();
+    fetchAllApplications();
   }, []);
 
-  const fetchData = async () => {
+  const fetchAllApplications = async () => {
     try {
-      const [applicationsRes] = await Promise.all([
-        fetch("/api/franchise-application"),
-      ]);
-
-      const [applicationsData] = await Promise.all([applicationsRes.json()]);
-
-      setApplications(applicationsData.applications || []);
+      setLoading(true);
+      const response = await getPendingFranchise();
+      setAllApplications(response.result || []);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching applications:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApplicationAction = async (
-    applicationId: string,
-    action: string
-  ) => {
-    if (action === "approve") {
-      setSelectedApplication(
-        applications.find((app: any) => app.id === applicationId)
-      );
-      setShowPaymentDialog(true);
-    } else if (action === "reject") {
-      await updateApplicationStatus(applicationId, "rejected");
-    }
+  const handleApprove = (application: FranchiseData) => {
+    setSelectedApplication(application);
+    setPayrollDetails({
+      ...payrollDetails,
+      franchiseId: application.id,
+    });
+    setShowPayrollDialog(true);
   };
 
-  const updateApplicationStatus = async (
-    applicationId: string,
-    status: string,
-    details?: any
-  ) => {
-    try {
-      const response = await fetch("/api/franchise-application", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          applicationId,
-          status,
-          paymentDetails: details,
-        }),
-      });
-
-      if (response.ok) {
-        // If approved, create the franchise in the main franchise list
-        if (status === "approved" && details) {
-          await createFranchise(applicationId, details);
-        }
-        await fetchData();
-        setShowPaymentDialog(false);
-        setSelectedApplication(null);
-        resetPaymentDetails();
-      }
-    } catch (error) {
-      console.error("Error updating application:", error);
-    }
+  const handleReject = async (application: FranchiseData) => {
+    // TODO: Implement rejection logic
+    console.log("Rejecting application:", application);
+    // You would typically call an API endpoint to reject the application
   };
 
-  const createFranchise = async (
-    applicationId: string,
-    paymentDetails: any
-  ) => {
-    try {
-      const application = applications.find(
-        (app: any) => app.id === applicationId
-      );
-      if (!application) return;
-
-      // Generate unique franchise code
-      const franchiseCode = `FC${Date.now()}`;
-
-      const franchiseData = {
-        id: franchiseCode,
-        name: application.franchiseeName,
-        email: application.emailId,
-        phone: application.phoneNo,
-        address: application.centreAddress,
-        city: application.city,
-        pincode: application.centrePincode,
-        type: application.franchiseeType,
-        program: application.programName,
-        status: "Active",
-        joinDate: paymentDetails.dateOfJoining,
-        expiryDate: paymentDetails.expiryDate,
-        paymentDetails,
-        applicationId,
-        // Additional franchise details
-        franchiseCode,
-        contactPerson: application.name,
-        communicationAddress: application.communicationAddress,
-        communicationPincode: application.communicationPincode,
-        dob: application.dob,
-        bloodGroup: application.bloodGroup,
-        educationalQualification: application.educationalQualification,
-        presentOccupation: application.presentOccupation,
-        reference: application.reference,
-        totalStudents: 0,
-        totalInstructors: 0,
-        totalOrders: 0,
-        revenue: 0,
-        // Login credentials
-        loginEmail: application.emailId,
-        loginPassword: `${franchiseCode}@123`, // Generate a default password
-        role: "franchise",
-        createdAt: new Date().toISOString(),
-        // Onboarding status - new franchisees need to complete agreement/payment
-        agreementAccepted: false,
-        paymentCompleted: false,
-        onboardingCompleted: false,
-      };
-
-      // Create franchise via API
-      const response = await fetch("/api/franchises", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(franchiseData),
-      });
-
-      if (response.ok) {
-        // Show success message with login credentials
-        alert(
-          `Franchise created successfully!\n\nFranchise Code: ${franchiseCode}\nLogin Email: ${application.emailId}\nLogin Password: ${franchiseCode}@123\n\nPlease share these credentials with the franchise owner.`
-        );
-        console.log("Franchise created successfully");
-      } else {
-        console.error("Failed to create franchise");
-        alert("Failed to create franchise. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error creating franchise:", error);
-      alert("Error creating franchise. Please try again.");
-    }
-  };
-
-  const handlePaymentSubmit = async () => {
+  const submitPayrollDetails = async () => {
     if (!selectedApplication) return;
 
-    await updateApplicationStatus(
-      selectedApplication.id,
-      "approved",
-      paymentDetails
-    );
-  };
+    try {
+      const payrollData = {
+        franchiseFee: Number(payrollDetails.franchiseFee) || 0,
+        dateOfPayment: new Date(payrollDetails.dateOfPayment),
+        kitCost: Number(payrollDetails.ciShare) || 0,
+        materialCost: Number(payrollDetails.franchiseShare) || 0,
+        dateOfJoining: new Date(payrollDetails.dateOfJoining),
+        monthlyFee: Number(payrollDetails.monthlyFee) || 0,
+        ciShare: 0,
+        franchiseShare: 0,
+        royalty: Number(payrollDetails.royalty) || 0,
+        installment: Number(payrollDetails.installment) || 0,
+        totalAmount:
+          ((Number(payrollDetails.monthlyFee) || 0) *
+            (Number(payrollDetails.royalty) || 0)) /
+          100,
+      };
 
-  const resetPaymentDetails = () => {
-    setPaymentDetails({
-      franchiseeFee: "",
-      dateOfPayment: "",
-      dateOfJoining: "",
-      kitCost: "",
-      materialCost: "",
-      monthlyFee: "",
-      ciShare: "",
-      franchiseeShare: "",
-      royaltyGst: "",
-      installments: "4",
-      expiryDate: "",
-      renewal: "",
-      renewalDate: "",
-      renewalAmount: "",
-      promotionalMaterials: "",
-    });
-  };
+      await createPayrollDetails(selectedApplication.id, payrollData);
 
-  const PaymentDetailsView = ({ paymentDetails }: { paymentDetails: any }) => {
-    const totalFees =
-      (parseFloat(paymentDetails.franchiseeFee) || 0) +
-      (parseFloat(paymentDetails.kitCost) || 0) +
-      (parseFloat(paymentDetails.materialCost) || 0);
-
-    return (
-      <div className="space-y-6">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="border-l-4 border-l-blue-500">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <IndianRupee className="h-4 w-4 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Fees</p>
-                  <p className="text-xl font-bold text-blue-600">
-                    ₹{totalFees.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-green-500">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Calendar className="h-4 w-4 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Join Date</p>
-                  <p className="font-semibold">
-                    {paymentDetails.dateOfJoining
-                      ? new Date(
-                          paymentDetails.dateOfJoining
-                        ).toLocaleDateString()
-                      : "Not set"}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-purple-500">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Package className="h-4 w-4 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Installments</p>
-                  <p className="font-semibold">
-                    {paymentDetails.installments} Parts
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-orange-500">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <RefreshCw className="h-4 w-4 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Renewal</p>
-                  <p className="font-semibold">
-                    {paymentDetails.renewal === "yes" ? "Yes" : "No"}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Detailed Breakdown */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Fee Structure */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <IndianRupee className="w-5 h-5 text-green-600" />
-                Fee Structure
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="font-medium">Franchisee Fee</span>
-                  <span className="font-bold text-green-600">
-                    ₹
-                    {parseFloat(
-                      paymentDetails.franchiseeFee || 0
-                    ).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="font-medium">Kit Cost</span>
-                  <span className="font-bold text-green-600">
-                    ₹{parseFloat(paymentDetails.kitCost || 0).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="font-medium">Material Cost (L2+)</span>
-                  <span className="font-bold text-green-600">
-                    ₹
-                    {parseFloat(
-                      paymentDetails.materialCost || 0
-                    ).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="font-medium">Monthly Fee</span>
-                  <span className="font-bold text-green-600">
-                    ₹
-                    {parseFloat(
-                      paymentDetails.monthlyFee || 0
-                    ).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Revenue Sharing */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Percent className="w-5 h-5 text-blue-600" />
-                Revenue Sharing
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                  <span className="font-medium">CI Share</span>
-                  <span className="font-bold text-blue-600">
-                    {paymentDetails.ciShare}%
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                  <span className="font-medium">Franchisee Share</span>
-                  <span className="font-bold text-blue-600">
-                    {paymentDetails.franchiseeShare}%
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                  <span className="font-medium">Royalty + 18% GST</span>
-                  <span className="font-bold text-blue-600">
-                    ₹
-                    {parseFloat(
-                      paymentDetails.royaltyGst || 0
-                    ).toLocaleString()}
-                    /student
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Additional Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="w-5 h-5 text-gray-600" />
-              Additional Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div>
-                <Label className="text-sm font-medium text-gray-600">
-                  Payment Date
-                </Label>
-                <p className="font-medium mt-1">
-                  {paymentDetails.dateOfPayment
-                    ? new Date(
-                        paymentDetails.dateOfPayment
-                      ).toLocaleDateString()
-                    : "Not set"}
-                </p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-600">
-                  Expiry Date
-                </Label>
-                <p className="font-medium mt-1">
-                  {paymentDetails.expiryDate
-                    ? new Date(paymentDetails.expiryDate).toLocaleDateString()
-                    : "Not set"}
-                </p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-600">
-                  Promotional Materials
-                </Label>
-                <Badge variant="outline" className="mt-1">
-                  {paymentDetails.promotionalMaterials || "None"}
-                </Badge>
-              </div>
-              {paymentDetails.renewal === "yes" && (
-                <>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Renewal Date
-                    </Label>
-                    <p className="font-medium mt-1">
-                      {paymentDetails.renewalDate
-                        ? new Date(
-                            paymentDetails.renewalDate
-                          ).toLocaleDateString()
-                        : "Not set"}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Renewal Amount
-                    </Label>
-                    <p className="font-medium mt-1 text-green-600">
-                      ₹
-                      {parseFloat(
-                        paymentDetails.renewalAmount || 0
-                      ).toLocaleString()}
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "pending":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-yellow-50 text-yellow-700 border-yellow-300"
-          >
-            <Clock className="w-3 h-3 mr-1" />
-            Pending
-          </Badge>
-        );
-      case "pending_approval":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-blue-50 text-blue-700 border-blue-300"
-          >
-            <Clock className="w-3 h-3 mr-1" />
-            Pending Approval
-          </Badge>
-        );
-      case "approved":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-green-50 text-green-700 border-green-300"
-          >
-            <CheckCircle className="w-3 h-3 mr-1" />
-            Approved
-          </Badge>
-        );
-      case "rejected":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-red-50 text-red-700 border-red-300"
-          >
-            <XCircle className="w-3 h-3 mr-1" />
-            Rejected
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+      console.log("Payroll details submitted successfully");
+      setShowPayrollDialog(false);
+      setSelectedApplication(null);
+      await fetchAllApplications(); // Refresh the list
+    } catch (error) {
+      console.error("Error submitting payroll details:", error);
+      // You might want to show a toast notification here
     }
   };
 
-  const ApplicationDetailsDialog = ({ application }: { application: any }) => (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Eye className="w-4 h-4 mr-1" />
-          View Details
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl flex items-center gap-2">
-            <FileText className="w-6 h-6 text-primary" />
-            Application Details
-          </DialogTitle>
-          <p className="text-muted-foreground">
-            Complete franchise application information
-          </p>
-        </DialogHeader>
-
-        <div className="space-y-8">
-          {/* Profile Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <User className="w-5 h-5" />
-                Personal Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Owner Name
-                    </Label>
-                    <p className="text-lg font-semibold text-gray-900">
-                      {application.name || "Not provided"}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Franchisee Name
-                    </Label>
-                    <p className="font-medium">{application.franchiseeName}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Date of Birth
-                    </Label>
-                    <p className="font-medium">
-                      {application.dob
-                        ? new Date(application.dob).toLocaleDateString()
-                        : "Not provided"}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Blood Group
-                    </Label>
-                    <p className="font-medium">
-                      {application.bloodGroup || "Not provided"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Email Address
-                    </Label>
-                    <p className="font-medium">{application.emailId}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Phone Number
-                    </Label>
-                    <p className="font-medium">{application.phoneNo}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      City
-                    </Label>
-                    <p className="font-medium">{application.city}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Reference
-                    </Label>
-                    <p className="font-medium">
-                      {application.reference || "Not provided"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Application Date
-                    </Label>
-                    <p className="font-medium">
-                      {application.date
-                        ? new Date(application.date).toLocaleDateString()
-                        : "Not provided"}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Submitted At
-                    </Label>
-                    <p className="font-medium">
-                      {new Date(application.submittedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Status
-                    </Label>
-                    <Badge
-                      variant={
-                        application.status === "approved"
-                          ? "default"
-                          : application.status === "rejected"
-                          ? "destructive"
-                          : "secondary"
-                      }
-                      className="mt-1"
-                    >
-                      {application.status?.charAt(0).toUpperCase() +
-                        application.status?.slice(1) || "Pending"}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Franchise Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Building2 className="w-5 h-5" />
-                Franchise Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Franchise Type
-                    </Label>
-                    <p className="font-medium">{application.franchiseeType}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Program Name
-                    </Label>
-                    <p className="font-medium">{application.programName}</p>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Educational Qualification
-                    </Label>
-                    <p className="font-medium">
-                      {application.educationalQualification || "Not provided"}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">
-                      Present Occupation
-                    </Label>
-                    <p className="font-medium">
-                      {application.presentOccupation || "Not provided"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Address Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
-                Address Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">
-                    Centre Address
-                  </Label>
-                  <div className="mt-2 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm">{application.centreAddress}</p>
-                    {application.centrePincode && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        PIN: {application.centrePincode}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">
-                    Communication Address
-                  </Label>
-                  <div className="mt-2 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm">
-                      {application.communicationAddress ||
-                        "Same as centre address"}
-                    </p>
-                    {application.communicationPincode && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        PIN: {application.communicationPincode}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Payment Details (if approved) */}
-          {application.status === "approved" && application.paymentDetails && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <CreditCard className="w-5 h-5" />
-                  Payment Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <PaymentDetailsView
-                  paymentDetails={application.paymentDetails}
-                />
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+  const handlePayrollChange = (field: keyof PayrollDetails, value: string) => {
+    setPayrollDetails((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+      <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+        <div className="animate-pulse space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <div className="h-8 bg-gray-200 rounded-lg w-64"></div>
+              <div className="h-4 bg-gray-200 rounded w-96"></div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-64 bg-gray-200 rounded-xl"></div>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-6 space-y-6 bg-gray-50 min-h-full">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Pending Applications
+            Franchise Applications
           </h1>
-          <p className="text-gray-600">
-            Review and approve franchise applications (
-            {
-              applications.filter(
-                (app: any) => app.status === "pending_approval"
-              ).length
-            }{" "}
-            pending)
+          <p className="text-sm text-gray-600">
+            Review and manage franchise applications with filtering and search
+            capabilities
           </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            onClick={fetchAllApplications}
+          >
+            Refresh
+          </Button>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Franchise Applications
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Program</TableHead>
-                <TableHead>City</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Submitted</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {applications.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-gray-500">
-                    No applications found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                applications.map((application: any) => (
-                  <TableRow key={application.id}>
-                    <TableCell className="font-medium">
-                      {application.franchiseeName}
-                    </TableCell>
-                    <TableCell>{application.emailId}</TableCell>
-                    <TableCell>{application.franchiseeType}</TableCell>
-                    <TableCell>{application.programName}</TableCell>
-                    <TableCell>{application.city}</TableCell>
-                    <TableCell>{getStatusBadge(application.status)}</TableCell>
-                    <TableCell>
-                      {new Date(application.submittedAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <ApplicationDetailsDialog application={application} />
-                        {application.status === "pending_approval" && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                handleApplicationAction(
-                                  application.id,
-                                  "approve"
-                                )
-                              }
-                              className="text-green-600 border-green-300 hover:bg-green-50"
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Approve
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                handleApplicationAction(
-                                  application.id,
-                                  "reject"
-                                )
-                              }
-                              className="text-red-600 border-red-300 hover:bg-red-50"
-                            >
-                              <XCircle className="w-4 h-4 mr-1" />
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {/* Overview Stats */}
 
-      {/* Payment Details Dialog */}
-      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl flex items-center gap-2">
-              <CreditCard className="w-6 h-6 text-primary" />
-              Payment & Franchise Setup
+      {/* Applications Table */}
+      <div className="w-full">
+        <PendingApprovalsTable
+          applications={allApplications}
+          onApprove={handleApprove}
+          onReject={handleReject}
+        />
+      </div>
+
+      {/* Empty State */}
+      {allApplications.length === 0 && (
+        <div className="text-center py-16">
+          <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <CheckCircle className="h-12 w-12 text-green-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            All caught up!
+          </h3>
+          <p className="text-gray-600 mb-6">
+            There are no franchise applications to review at this time.
+          </p>
+        </div>
+      )}
+
+      {/* Payroll Details Dialog */}
+      <Dialog open={showPayrollDialog} onOpenChange={setShowPayrollDialog}>
+        <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="pb-3 border-b">
+            <DialogTitle className="flex items-center gap-2 text-lg font-medium">
+              <Settings className="h-4 w-4 text-green-600" />
+              Configure Payroll - {selectedApplication?.franchisee.name}
             </DialogTitle>
-            <p className="text-muted-foreground">
-              Complete payment details to approve and create the franchise
-              account
-            </p>
           </DialogHeader>
 
-          <div className="space-y-8">
-            {/* Application Summary */}
-            {selectedApplication && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <User className="w-5 h-5" />
-                    Applicant Summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="text-center p-3 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-blue-600 font-medium">
-                        Owner Name
-                      </p>
-                      <p className="font-semibold">
-                        {selectedApplication.name ||
-                          selectedApplication.franchiseeName}
-                      </p>
-                    </div>
-                    <div className="text-center p-3 bg-green-50 rounded-lg">
-                      <p className="text-sm text-green-600 font-medium">
-                        Franchise Type
-                      </p>
-                      <p className="font-semibold">
-                        {selectedApplication.franchiseeType}
-                      </p>
-                    </div>
-                    <div className="text-center p-3 bg-purple-50 rounded-lg">
-                      <p className="text-sm text-purple-600 font-medium">
-                        Program
-                      </p>
-                      <p className="font-semibold">
-                        {selectedApplication.programName}
-                      </p>
-                    </div>
-                    <div className="text-center p-3 bg-orange-50 rounded-lg">
-                      <p className="text-sm text-orange-600 font-medium">
-                        City
-                      </p>
-                      <p className="font-semibold">
-                        {selectedApplication.city}
-                      </p>
-                    </div>
+          {selectedApplication && (
+            <div className="py-4 space-y-5">
+              {/* Franchise Info Header */}
+              {/* <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg p-3 border">
+                <div className="grid grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-slate-500 text-xs">Franchisee</span>
+                    <p className="font-medium">
+                      {selectedApplication.franchisee.name}
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Fee Structure */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <IndianRupee className="w-5 h-5 text-green-600" />
-                    Fee Structure
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="franchiseeFee">Franchisee Fee *</Label>
-                      <Input
-                        id="franchiseeFee"
-                        type="number"
-                        value={paymentDetails.franchiseeFee}
-                        onChange={(e) =>
-                          setPaymentDetails((prev) => ({
-                            ...prev,
-                            franchiseeFee: e.target.value,
-                          }))
-                        }
-                        placeholder="Enter franchisee fee"
-                        className="text-lg font-medium"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="kitCost">Kit Cost *</Label>
-                      <Input
-                        id="kitCost"
-                        type="number"
-                        value={paymentDetails.kitCost}
-                        onChange={(e) =>
-                          setPaymentDetails((prev) => ({
-                            ...prev,
-                            kitCost: e.target.value,
-                          }))
-                        }
-                        placeholder="Enter kit cost"
-                        className="text-lg font-medium"
-                      />
-                    </div>
+                  <div>
+                    <span className="text-slate-500 text-xs">Type</span>
+                    <p className="font-medium">{selectedApplication.type}</p>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="materialCost">Material Cost (L2+)</Label>
-                      <Input
-                        id="materialCost"
-                        type="number"
-                        value={paymentDetails.materialCost}
-                        onChange={(e) =>
-                          setPaymentDetails((prev) => ({
-                            ...prev,
-                            materialCost: e.target.value,
-                          }))
-                        }
-                        placeholder="Enter material cost"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="monthlyFee">Monthly Fee</Label>
-                      <Input
-                        id="monthlyFee"
-                        type="number"
-                        value={paymentDetails.monthlyFee}
-                        onChange={(e) =>
-                          setPaymentDetails((prev) => ({
-                            ...prev,
-                            monthlyFee: e.target.value,
-                          }))
-                        }
-                        placeholder="Enter monthly fee"
-                      />
-                    </div>
+                  <div>
+                    <span className="text-slate-500 text-xs">City</span>
+                    <p className="font-medium">
+                      {selectedApplication.franchisee.city}
+                    </p>
                   </div>
-
-                  {/* Total Calculation */}
-                  <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-semibold text-green-800">
-                        Total Initial Fee
-                      </span>
-                      <span className="text-2xl font-bold text-green-600">
-                        ₹
-                        {(
-                          (parseFloat(paymentDetails.franchiseeFee) || 0) +
-                          (parseFloat(paymentDetails.kitCost) || 0) +
-                          (parseFloat(paymentDetails.materialCost) || 0)
-                        ).toLocaleString()}
-                      </span>
-                    </div>
+                  <div>
+                    <span className="text-slate-500 text-xs">Email</span>
+                    <p className="font-medium text-xs">
+                      {selectedApplication.franchisee.mail}
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div> */}
 
-              {/* Revenue Sharing & Dates */}
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Percent className="w-5 h-5 text-blue-600" />
-                      Revenue Sharing
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="ciShare">CI Share (%)</Label>
-                        <Input
-                          id="ciShare"
-                          type="number"
-                          value={paymentDetails.ciShare}
-                          onChange={(e) =>
-                            setPaymentDetails((prev) => ({
-                              ...prev,
-                              ciShare: e.target.value,
-                            }))
-                          }
-                          placeholder="Enter CI share"
-                        />
+              {/* Two Column Layout */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  {/* Financial Terms */}
+                  <div className="border rounded-lg p-4 bg-green-50/30">
+                    <h3 className="font-medium text-sm mb-3 flex items-center gap-2">
+                      <IndianRupee className="h-4 w-4 text-green-600" />
+                      Financial Terms
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">
+                          Franchise Fee
+                        </Label>
+                        <div className="relative">
+                          <IndianRupee className="absolute left-2 top-2.5 h-3 w-3 text-gray-400" />
+                          <Input
+                            type="number"
+                            value={payrollDetails.franchiseFee}
+                            onChange={(e) =>
+                              handlePayrollChange(
+                                "franchiseFee",
+                                e.target.value
+                              )
+                            }
+                            className="pl-7 h-8 text-sm"
+                            placeholder="0"
+                          />
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="franchiseeShare">
-                          Franchisee Share (%)
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">
+                          Monthly Fee/Student
+                        </Label>
+                        <div className="relative">
+                          <IndianRupee className="absolute left-2 top-2.5 h-3 w-3 text-gray-400" />
+                          <Input
+                            type="number"
+                            value={payrollDetails.monthlyFee}
+                            onChange={(e) =>
+                              handlePayrollChange("monthlyFee", e.target.value)
+                            }
+                            className="pl-7 h-8 text-sm"
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">
+                          Installment
+                        </Label>
+                        <div className="relative">
+                          <IndianRupee className="absolute left-2 top-2.5 h-3 w-3 text-gray-400" />
+                          <Input
+                            type="number"
+                            value={payrollDetails.installment}
+                            onChange={(e) =>
+                              handlePayrollChange("installment", e.target.value)
+                            }
+                            className="pl-7 h-8 text-sm"
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">
+                          Royalty/Student (%)
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={payrollDetails.royalty}
+                            onChange={(e) =>
+                              handlePayrollChange("royalty", e.target.value)
+                            }
+                            className="pr-7 h-8 text-sm"
+                            placeholder="0"
+                          />
+                          <span className="absolute right-2 top-2.5 text-xs text-gray-400">
+                            %
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          Franchise pays admin per student
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">Kit Cost</Label>
+                        <div className="relative">
+                          <IndianRupee className="absolute left-2 top-2.5 h-3 w-3 text-gray-400" />
+                          <Input
+                            type="number"
+                            value={payrollDetails.ciShare}
+                            onChange={(e) =>
+                              handlePayrollChange("ciShare", e.target.value)
+                            }
+                            className="pl-7 h-8 text-sm"
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">
+                          Material Cost
+                        </Label>
+                        <div className="relative">
+                          <IndianRupee className="absolute left-2 top-2.5 h-3 w-3 text-gray-400" />
+                          <Input
+                            type="number"
+                            value={payrollDetails.franchiseShare}
+                            onChange={(e) =>
+                              handlePayrollChange(
+                                "franchiseShare",
+                                e.target.value
+                              )
+                            }
+                            className="pl-7 h-8 text-sm"
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Renewal Details */}
+                  <div className="border rounded-lg p-4 bg-purple-50/30">
+                    <h3 className="font-medium text-sm mb-3 flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-purple-600" />
+                      Renewal Details
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">
+                          Renewal Fee
+                        </Label>
+                        <div className="relative">
+                          <IndianRupee className="absolute left-2 top-2.5 h-3 w-3 text-gray-400" />
+                          <Input
+                            type="number"
+                            value={payrollDetails.renewalAmount || ""}
+                            onChange={(e) =>
+                              handlePayrollChange(
+                                "renewalAmount",
+                                e.target.value
+                              )
+                            }
+                            className="pl-7 h-8 text-sm"
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">
+                          Renewal Date
                         </Label>
                         <Input
-                          id="franchiseeShare"
-                          type="number"
-                          value={paymentDetails.franchiseeShare}
+                          type="date"
+                          value={payrollDetails.renewalDate || ""}
                           onChange={(e) =>
-                            setPaymentDetails((prev) => ({
-                              ...prev,
-                              franchiseeShare: e.target.value,
-                            }))
+                            handlePayrollChange("renewalDate", e.target.value)
                           }
-                          placeholder="Enter franchisee share"
+                          className="h-8 text-sm"
                         />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="royaltyGst">
-                        Royalty + 18% GST (per student)
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium">
+                        Renewal Amount
                       </Label>
-                      <Input
-                        id="royaltyGst"
-                        type="number"
-                        value={paymentDetails.royaltyGst}
-                        onChange={(e) =>
-                          setPaymentDetails((prev) => ({
-                            ...prev,
-                            royaltyGst: e.target.value,
-                          }))
-                        }
-                        placeholder="Enter royalty + GST"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-purple-600" />
-                      Important Dates
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="dateOfPayment">Date of Payment *</Label>
+                      <div className="relative">
+                        <IndianRupee className="absolute left-2 top-2.5 h-3 w-3 text-gray-400" />
                         <Input
-                          id="dateOfPayment"
-                          type="date"
-                          value={paymentDetails.dateOfPayment}
+                          type="number"
+                          value={payrollDetails.renewalAmount || ""}
                           onChange={(e) =>
-                            setPaymentDetails((prev) => ({
-                              ...prev,
-                              dateOfPayment: e.target.value,
-                            }))
+                            handlePayrollChange("renewalAmount", e.target.value)
                           }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="dateOfJoining">Date of Joining *</Label>
-                        <Input
-                          id="dateOfJoining"
-                          type="date"
-                          value={paymentDetails.dateOfJoining}
-                          onChange={(e) =>
-                            setPaymentDetails((prev) => ({
-                              ...prev,
-                              dateOfJoining: e.target.value,
-                            }))
-                          }
+                          className="pl-7 h-8 text-sm"
+                          placeholder="0"
                         />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="expiryDate">Expiry Date</Label>
-                      <Input
-                        id="expiryDate"
-                        type="date"
-                        value={paymentDetails.expiryDate}
-                        onChange={(e) =>
-                          setPaymentDetails((prev) => ({
-                            ...prev,
-                            expiryDate: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {/* Additional Options */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Package className="w-5 h-5 text-orange-600" />
-                  Additional Options
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="installments">Payment Installments</Label>
-                    <Select
-                      value={paymentDetails.installments}
-                      onValueChange={(value) =>
-                        setPaymentDetails((prev) => ({
-                          ...prev,
-                          installments: value,
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">
-                          1 Installment (Full Payment)
-                        </SelectItem>
-                        <SelectItem value="2">2 Installments</SelectItem>
-                        <SelectItem value="3">3 Installments</SelectItem>
-                        <SelectItem value="4">4 Installments</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="renewal">Renewal</Label>
-                    <Select
-                      value={paymentDetails.renewal}
-                      onValueChange={(value) =>
-                        setPaymentDetails((prev) => ({
-                          ...prev,
-                          renewal: value,
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select renewal option" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="yes">Yes</SelectItem>
-                        <SelectItem value="no">No</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="promotionalMaterials">
-                      Promotional Materials
-                    </Label>
-                    <Select
-                      value={paymentDetails.promotionalMaterials}
-                      onValueChange={(value) =>
-                        setPaymentDetails((prev) => ({
-                          ...prev,
-                          promotionalMaterials: value,
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select materials" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="bag">Bag</SelectItem>
-                        <SelectItem value="level1_kit">Level 1 Kit</SelectItem>
-                        <SelectItem value="banners">Banners</SelectItem>
-                        <SelectItem value="all">All Materials</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
                 </div>
 
-                {/* Renewal Details */}
-                {paymentDetails.renewal === "yes" && (
-                  <div className="mt-6 p-4 border border-dashed border-gray-300 rounded-lg">
-                    <h4 className="font-medium mb-4 text-gray-900">
-                      Renewal Details
-                    </h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="renewalDate">Renewal Date</Label>
+                {/* Right Column */}
+                <div className="space-y-4">
+                  {/* Dates & Terms */}
+                  <div className="border rounded-lg p-4 bg-blue-50/30">
+                    <h3 className="font-medium text-sm mb-3 flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                      Dates & Terms
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">
+                          Date of Joining
+                        </Label>
                         <Input
-                          id="renewalDate"
                           type="date"
-                          value={paymentDetails.renewalDate}
+                          value={payrollDetails.dateOfJoining}
                           onChange={(e) =>
-                            setPaymentDetails((prev) => ({
-                              ...prev,
-                              renewalDate: e.target.value,
-                            }))
+                            handlePayrollChange("dateOfJoining", e.target.value)
                           }
+                          className="h-8 text-sm"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="renewalAmount">Renewal Amount</Label>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">
+                          Payment Date
+                        </Label>
                         <Input
-                          id="renewalAmount"
-                          type="number"
-                          value={paymentDetails.renewalAmount}
+                          type="date"
+                          value={payrollDetails.dateOfPayment}
                           onChange={(e) =>
-                            setPaymentDetails((prev) => ({
-                              ...prev,
-                              renewalAmount: e.target.value,
-                            }))
+                            handlePayrollChange("dateOfPayment", e.target.value)
                           }
-                          placeholder="Enter renewal amount"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">
+                          Contract Expiry
+                        </Label>
+                        <Input
+                          type="date"
+                          value={payrollDetails.renewalDate || ""}
+                          onChange={(e) =>
+                            handlePayrollChange("renewalDate", e.target.value)
+                          }
+                          className="h-8 text-sm"
                         />
                       </div>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
 
-            {/* Action Buttons */}
-            <div className="flex justify-between items-center pt-6 border-t">
-              <div className="text-sm text-gray-600">
-                <p>* Required fields</p>
-                <p>
-                  This will create a new franchise account and send login
-                  credentials to the applicant.
-                </p>
+                  {/* Payment Calculations */}
+                  <div className="border rounded-lg p-4 bg-orange-50/30">
+                    <h3 className="font-medium text-sm mb-3 flex items-center gap-2">
+                      <Calculator className="h-4 w-4 text-orange-600" />
+                      Payment Summary
+                    </h3>
+
+                    {/* Franchise to Admin Payments */}
+                    {(() => {
+                      const monthlyFee = Number(payrollDetails.monthlyFee) || 0;
+                      const royaltyPercent =
+                        Number(payrollDetails.royalty) || 0;
+
+                      const royaltyPerStudent =
+                        (monthlyFee * royaltyPercent) / 100;
+                      const totalYearlyRoyalty = royaltyPerStudent * 12;
+
+                      return (
+                        <div className="space-y-4">
+                          {/* Recurring Payments */}
+                          <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                            <h4 className="font-medium text-xs flex items-center gap-1 mb-2 text-blue-900">
+                              <Users className="h-3 w-3" />
+                              Royalty Payment (Per Student)
+                            </h4>
+                            <div className="space-y-1.5 text-xs">
+                              <div className="flex justify-between">
+                                <span>Monthly Fee per Student:</span>
+                                <span className="font-semibold">
+                                  ₹{monthlyFee.toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Royalty Rate:</span>
+                                <span className="font-semibold">
+                                  {royaltyPercent}%
+                                </span>
+                              </div>
+                              <div className="border-t border-blue-200 pt-1.5">
+                                <div className="flex justify-between">
+                                  <span className="font-medium">
+                                    Royalty per Student (Monthly):
+                                  </span>
+                                  <span className="font-bold text-blue-900">
+                                    ₹{royaltyPerStudent.toLocaleString()}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="font-medium">
+                                    Royalty per Student (Yearly):
+                                  </span>
+                                  <span className="font-bold text-blue-900">
+                                    ₹{totalYearlyRoyalty.toLocaleString()}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
               </div>
-              <div className="flex gap-4">
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-3 border-t">
+                <Button
+                  onClick={submitPayrollDetails}
+                  className="bg-green-600 hover:bg-green-700 text-white h-9 text-sm flex-1"
+                >
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Approve & Setup Payroll
+                </Button>
                 <Button
                   variant="outline"
-                  onClick={() => setShowPaymentDialog(false)}
-                  size="lg"
+                  onClick={() => setShowPayrollDialog(false)}
+                  className="h-9 text-sm px-6"
                 >
                   Cancel
                 </Button>
-                <Button
-                  onClick={handlePaymentSubmit}
-                  className="bg-green-600 hover:bg-green-700"
-                  size="lg"
-                >
-                  <CheckCircle2 className="w-5 h-5 mr-2" />
-                  Approve & Create Franchise
-                </Button>
               </div>
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

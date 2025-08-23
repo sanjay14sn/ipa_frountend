@@ -1,7 +1,6 @@
 "use client";
 
 import type * as React from "react";
-import { useEffect, useState } from "react";
 import {
   Calculator,
   LayoutDashboard,
@@ -11,12 +10,10 @@ import {
   GraduationCap,
   Trophy,
   FileText,
-  Settings,
   LogOut,
   Store,
   Clock,
   AlertCircle,
-  IndianRupee,
 } from "lucide-react";
 
 import {
@@ -33,7 +30,10 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import Link from "next/link";
-import { User, getUserFromStorage, removeUserFromStorage } from "@/lib/auth";
+import { useUser } from "@/context/user-context";
+import { franchiseeLogout, logout } from "@/services/auth.service";
+import { useRouter, usePathname } from "next/navigation";
+import { useState } from "react";
 
 const adminNavigation = {
   navMain: [
@@ -59,11 +59,6 @@ const adminNavigation = {
           title: "Pending Approvals",
           url: "/admin/pending-approvals",
           icon: Clock,
-        },
-        {
-          title: "Pricing Management",
-          url: "/admin/pricing-management",
-          icon: IndianRupee,
         },
       ],
     },
@@ -129,36 +124,31 @@ const onboardingNavigation = {
 export function DynamicSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const userData = getUserFromStorage();
-    setUser(userData);
-  }, []);
-
-  const handleLogout = () => {
-    removeUserFromStorage();
-    window.location.href = "/login";
-  };
+  const { user } = useUser();
+  const router = useRouter();
+  const pathname = usePathname();
 
   // Determine navigation based on user role and onboarding status
   let navigation = adminNavigation;
   let sidebarTitle = "Abacus Admin";
   let sidebarSubtitle = "Admin Dashboard";
 
-  if (user?.role === "franchise") {
-    // Check if franchisee has completed onboarding
-    if (user.onboardingCompleted) {
+  if (user?.role === "franchisee") {
+    if (user.franchiseStatus === "Active") {
       navigation = franchiseNavigation;
       sidebarTitle = "Franchise Portal";
       sidebarSubtitle = user?.franchiseName || "Franchise Dashboard";
     } else {
-      // Show limited navigation for incomplete onboarding
       navigation = onboardingNavigation;
       sidebarTitle = "Franchise Setup";
       sidebarSubtitle = "Complete your agreement";
     }
   }
+
+  // Helper function to check if a menu item is active
+  const isActive = (url: string) => {
+    return pathname === url;
+  };
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -170,23 +160,27 @@ export function DynamicSidebar({
                 href={
                   user?.role === "admin"
                     ? "/admin/dashboard"
-                    : user?.onboardingCompleted
+                    : user?.franchiseStatus === "Active"
                     ? "/franchisee/dashboard"
                     : "/franchisee/agreement"
                 }
               >
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-blue-600 text-white">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-brand-yellow-400 text-brand-green-500 shadow-md">
                   {user?.role === "admin" ? (
                     <Calculator className="size-4" />
-                  ) : user?.onboardingCompleted ? (
+                  ) : user?.franchiseStatus === "Active" ? (
                     <Store className="size-4" />
                   ) : (
                     <FileText className="size-4" />
                   )}
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{sidebarTitle}</span>
-                  <span className="truncate text-xs">{sidebarSubtitle}</span>
+                  <span className="truncate font-semibold text-sidebar-foreground">
+                    {sidebarTitle}
+                  </span>
+                  <span className="truncate text-xs text-sidebar-foreground/70">
+                    {sidebarSubtitle}
+                  </span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -195,14 +189,16 @@ export function DynamicSidebar({
       </SidebarHeader>
 
       {/* Onboarding Alert for incomplete franchisees */}
-      {user?.role === "franchise" && !user?.onboardingCompleted && (
+      {user?.role === "franchisee" && user?.franchiseStatus === "Pending" && (
         <div className="px-3 py-2">
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <div className="bg-brand-yellow-50 border border-brand-yellow-200 rounded-lg p-3">
             <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <AlertCircle className="h-4 w-4 text-brand-yellow-600 mt-0.5 flex-shrink-0" />
               <div className="text-xs">
-                <p className="font-medium text-amber-800">Setup Required</p>
-                <p className="text-amber-700 mt-1">
+                <p className="font-medium text-brand-yellow-800">
+                  Setup Required
+                </p>
+                <p className="text-brand-yellow-700 mt-1">
                   Complete your franchise agreement to access all features.
                 </p>
               </div>
@@ -216,25 +212,43 @@ export function DynamicSidebar({
           <SidebarGroup key={item.title}>
             <SidebarGroupLabel
               className={
-                user?.role === "franchise" && !user?.onboardingCompleted
-                  ? "text-amber-700 font-medium"
-                  : ""
+                user?.role === "franchisee" &&
+                user?.franchiseStatus === "Pending"
+                  ? "text-brand-yellow-400 font-medium"
+                  : "text-sidebar-foreground/80 font-medium"
               }
             >
               {item.title}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {item.items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <Link href={item.url}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {item.items.map((item) => {
+                  const active = isActive(item.url);
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={active}
+                        className={`transition-colors ${
+                          active
+                            ? "!bg-primary !text-white hover:!bg-brand-green-600 data-[active=true]:!bg-primary data-[active=true]:!text-white"
+                            : "text-sidebar-foreground hover:bg-secondary/50 hover:text-brand-green-500"
+                        }`}
+                      >
+                        <Link href={item.url}>
+                          <item.icon
+                            className={
+                              active
+                                ? "!text-secondary"
+                                : "text-brand-green-500"
+                            }
+                          />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -244,8 +258,19 @@ export function DynamicSidebar({
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout}>
-              <LogOut />
+            <SidebarMenuButton
+              onClick={() => {
+                if (user?.role === "admin") {
+                  logout();
+                  router.push("/admin-login");
+                } else {
+                  franchiseeLogout();
+                  router.push("/login");
+                }
+              }}
+              className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-brand-green-500 transition-colors"
+            >
+              <LogOut className="text-brand-green-500" />
               <span>Logout</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

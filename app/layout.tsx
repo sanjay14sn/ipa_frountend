@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { Fira_Sans } from "next/font/google";
+import { UserProvider } from "@/context/user-context";
+
+const firaSans = Fira_Sans({
+  subsets: ["latin"],
+  variable: "--font-fira-sans",
+  display: "swap",
+  weight: ["400", "700"],
+});
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
-  generator: "v0.dev",
+  title: "Abacus Portal",
+  description: "Franchise management portal for Abacus education centers",
+  generator: "Next.js",
 };
 
 export default function RootLayout({
@@ -14,10 +23,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${firaSans.variable}`}>
       <body>
-        {children}
-        <Toaster />
+        <UserProvider>
+          {children}
+          <Toaster />
+        </UserProvider>
       </body>
     </html>
   );

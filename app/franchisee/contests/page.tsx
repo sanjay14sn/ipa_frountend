@@ -22,8 +22,10 @@ import {
 import { Search, Trophy, Calendar, MapPin, Users, Clock } from "lucide-react";
 import { getUserFromStorage } from "@/lib/auth";
 import { CONTESTS } from "@/lib/data";
+import { useUser } from "@/context/user-context";
 
 export default function FranchiseeContestsPage() {
+  const { user: contextUser } = useUser();
   const [user, setUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -76,7 +78,14 @@ export default function FranchiseeContestsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Contests</h1>
           <p className="text-muted-foreground">
-            Participate in contests and competitions - {user.franchiseName}
+            Participate in contests and competitions -{" "}
+            {contextUser?.profile?.franchise?.name || user?.franchiseName}
+            {contextUser?.profile && (
+              <span className="block text-sm text-muted-foreground mt-1">
+                Franchisee: {contextUser.profile.name} •{" "}
+                {contextUser.profile.phone} • {contextUser.profile.city}
+              </span>
+            )}
           </p>
         </div>
       </div>

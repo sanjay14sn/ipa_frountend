@@ -4,66 +4,128 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
+import { CheckCircle } from "lucide-react";
+import { useUser } from "@/context/user-context";
 import {
-  Calculator,
-  IndianRupee,
-  Calendar,
-  MapPin,
-  User,
-  Phone,
-  Mail,
-  FileText,
-  CheckCircle,
-  CreditCard,
-  Building2,
-} from "lucide-react";
-import { getUserFromStorage, saveUserToStorage } from "@/lib/auth";
+  getProcessedAgreementContent,
+  AgreementContent,
+} from "@/lib/agreementContent";
+import FranchiseeInformation from "./components/FranchiseeInformation";
+import LocationDetails from "./components/LocationDetails";
+import FranchiseDetails from "./components/FranchiseDetails";
+import PaymentBreakdown from "./components/PaymentBreakdown";
+import AgreementTerms from "./components/AgreementTerms";
+import PaymentAction from "./components/PaymentAction";
+import { onboardingPayment } from "@/services/franchisee.service";
 
 export default function FranchiseAgreementPage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [franchiseData, setFranchiseData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, setUser } = useUser();
+  const [pageLoading, setPageLoading] = useState(true);
   const [agreementAccepted, setAgreementAccepted] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
+  const [agreementContent, setAgreementContent] =
+    useState<AgreementContent | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    new Set()
+  );
 
   useEffect(() => {
-    const userData = getUserFromStorage();
-    setUser(userData);
-
-    if (userData?.role === "admin") {
-      // Admins shouldn't be here
+    if (user?.role === "admin") {
       router.push("/admin/dashboard");
       return;
     }
 
-    if (userData?.onboardingCompleted) {
-      // Already onboarded, redirect to dashboard
+    if (user?.franchiseStatus === "Active") {
       router.push("/franchisee/dashboard");
       return;
     }
 
-    if (userData?.franchiseId) {
-      fetchFranchiseData(userData.franchiseId);
+    // Use profile data if available, otherwise show loading
+    if (user?.profile) {
+      initializeAgreementContent();
+    } else {
+      setPageLoading(false);
     }
-  }, []);
+  }, [user]);
 
-  const fetchFranchiseData = async (franchiseId: string) => {
-    try {
-      const response = await fetch(
-        `/api/franchises?franchiseId=${franchiseId}`
-      );
-      const data = await response.json();
-      setFranchiseData(data.franchise);
-    } catch (error) {
-      console.error("Error fetching franchise data:", error);
-    } finally {
-      setLoading(false);
+  const initializeAgreementContent = () => {
+    if (!user?.profile) return;
+
+    // Create franchise data object from profile
+    const franchiseData = {
+      name: user.profile.franchise.name,
+      contactPerson: user.profile.name,
+      email: user.profile.mail,
+      phone: user.profile.phone,
+      dob: user.profile.dob,
+      bloodGroup: user.profile.bloodGroup,
+      educationalQualification: user.profile.education,
+      presentOccupation: user.profile.occupation,
+      address: user.profile.address,
+      city: user.profile.city,
+      communicationAddress: user.profile.communicationAddress,
+      franchiseCode: `FR-${user.profile.franchise.id}`,
+      program: "ABACUS", // Default program
+      franchiseType: user.profile.franchise.type,
+      reference: user.profile.reference,
+      date: user.profile.franchise.createdAt,
+      paymentDetails: user.profile.franchise.franchisePayroll || {
+        franchiseFee: 0,
+        monthlyFee: 0,
+        royalty: 0,
+        kitCost: 0,
+        materialCost: 0,
+        installment: 0,
+        ciShare: 0,
+        franchiseShare: 0,
+        totalAmount: 0,
+        dateOfJoining: undefined,
+        dateOfPayment: undefined,
+      },
+    } as any;
+
+    // Process agreement content with franchise data
+    const processedContent = getProcessedAgreementContent(franchiseData);
+    setAgreementContent(processedContent);
+
+    // Expand first two sections by default
+    setExpandedSections(new Set(["basic-terms", "financial-terms"]));
+    setPageLoading(false);
+  };
+
+  const handleCheckboxChange = (checked: boolean | "indeterminate") => {
+    setAgreementAccepted(checked === true);
+  };
+
+  const toggleSection = (sectionId: string) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(sectionId)) {
+      newExpanded.delete(sectionId);
+    } else {
+      newExpanded.add(sectionId);
     }
+    setExpandedSections(newExpanded);
+  };
+
+  const expandAllSections = () => {
+    if (agreementContent) {
+      setExpandedSections(new Set(agreementContent.sections.map((s) => s.id)));
+    }
+  };
+
+  const collapseAllSections = () => {
+    setExpandedSections(new Set());
+  };
+
+  const handleDownloadPDF = () => {
+    const link = document.createElement("a");
+    link.href = "/franchisee agreement pdf.pdf";
+    link.download = "Franchisee_Agreement.pdf";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handlePaymentSubmit = async () => {
@@ -72,36 +134,23 @@ export default function FranchiseAgreementPage() {
       return;
     }
 
+    if (!user?.franchiseId) {
+      alert("Missing franchise information. Please re-login.");
+      return;
+    }
+
     setIsProcessingPayment(true);
 
     try {
       // Simulate payment processing
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const response = await onboardingPayment(user.franchiseId);
 
-      // Update franchise onboarding status
-      const response = await fetch("/api/franchises/onboard", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          franchiseId: user.franchiseId,
-          agreementAccepted: true,
-          paymentCompleted: true,
-          onboardingCompleted: true,
-        }),
-      });
-
-      if (response.ok) {
-        // Update user data in localStorage
-        const updatedUser = {
+      if (response.statusCode === 201) {
+        // Update user in context/localStorage
+        setUser({
           ...user,
-          agreementAccepted: true,
-          paymentCompleted: true,
-          onboardingCompleted: true,
-        };
-        saveUserToStorage(updatedUser);
-        setUser(updatedUser);
+          franchiseStatus: "Active",
+        });
         setShowPaymentSuccess(true);
 
         // Redirect to dashboard after a short delay
@@ -119,7 +168,7 @@ export default function FranchiseAgreementPage() {
     }
   };
 
-  if (loading) {
+  if (pageLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -130,7 +179,7 @@ export default function FranchiseAgreementPage() {
     );
   }
 
-  if (!user || !franchiseData) {
+  if (!user || !user.profile || !agreementContent) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -144,6 +193,39 @@ export default function FranchiseAgreementPage() {
       </div>
     );
   }
+
+  // Create franchise data object from profile for components
+  const franchiseData = {
+    name: user.profile.franchise.name,
+    contactPerson: user.profile.name,
+    email: user.profile.mail,
+    phone: user.profile.phone,
+    dob: user.profile.dob,
+    bloodGroup: user.profile.bloodGroup,
+    educationalQualification: user.profile.education,
+    presentOccupation: user.profile.occupation,
+    address: user.profile.address,
+    city: user.profile.city,
+    communicationAddress: user.profile.communicationAddress,
+    franchiseCode: `FR-${user.profile.franchise.id}`,
+    program: "ABACUS", // Default program
+    franchiseType: user.profile.franchise.type,
+    reference: user.profile.reference,
+    date: user.profile.franchise.createdAt,
+    paymentDetails: user.profile.franchise.franchisePayroll || {
+      franchiseFee: 0,
+      monthlyFee: 0,
+      royalty: 0,
+      kitCost: 0,
+      materialCost: 0,
+      installment: 0,
+      ciShare: 0,
+      franchiseShare: 0,
+      totalAmount: 0,
+      dateOfJoining: undefined,
+      dateOfPayment: undefined,
+    },
+  } as any;
 
   if (showPaymentSuccess) {
     return (
@@ -173,295 +255,53 @@ export default function FranchiseAgreementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <Calculator className="h-12 w-12 text-blue-600" />
+    <div className="min-h-screen  p-8 bg-background">
+      <div className="w-full">
+        {/* Professional Header */}
+        <div className="border rounded-lg border-primary shadow-lg bg-background/80">
+          <div className=" p-6 border-b border-primary rounded-t-lg">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold mb-2 underline">
+                Franchisee Agreement
+              </h1>
+              <p className="text-sm">
+                Please review your franchise details and complete the payment to
+                get started
+              </p>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Franchise Agreement
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Please review your franchise details and complete the payment to get
-            started
-          </p>
-        </div>
 
-        <div className="space-y-6">
-          {/* Franchise Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Franchise Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">
-                      Franchise Name
-                    </label>
-                    <p className="font-semibold text-lg">
-                      {franchiseData.name}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">
-                      Franchise Code
-                    </label>
-                    <Badge variant="outline" className="ml-2">
-                      {franchiseData.franchiseCode}
-                    </Badge>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">
-                      Program Type
-                    </label>
-                    <p className="font-medium">{franchiseData.program}</p>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">
-                      Contact Person
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-gray-400" />
-                      <span>{franchiseData.contactPerson}</span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">
-                      Email
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      <span>{franchiseData.email}</span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">
-                      Phone
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-gray-400" />
-                      <span>{franchiseData.phone}</span>
-                    </div>
-                  </div>
-                </div>
+          {/* Multi-column professional layout */}
+          <div className=" grid grid-cols-5 gap-8">
+            {/* Column 1 - All Details */}
+            <div className="space-y-6 col-span-2 p-8">
+              <FranchiseeInformation franchiseData={franchiseData} />
+              <LocationDetails franchiseData={franchiseData} />
+              <FranchiseDetails franchiseData={franchiseData} />
+              <PaymentBreakdown paymentDetails={franchiseData.paymentDetails} />
+            </div>
+
+            {/* Column 2 - Agreement Terms & Payment */}
+            <div className="space-y-6 h-full flex flex-col col-span-3 border-l border-primary pl-8 pr-8">
+              <AgreementTerms
+                agreementContent={agreementContent}
+                expandedSections={expandedSections}
+                agreementAccepted={agreementAccepted}
+                onToggleSection={toggleSection}
+                onExpandAll={expandAllSections}
+                onCollapseAll={collapseAllSections}
+                onDownloadPDF={handleDownloadPDF}
+                onAgreementChange={handleCheckboxChange}
+              />
+              <div className="pb-8">
+                <PaymentAction
+                  agreementAccepted={agreementAccepted}
+                  isProcessingPayment={isProcessingPayment}
+                  onPaymentSubmit={handlePaymentSubmit}
+                />
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Location Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Location Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="text-sm font-medium text-gray-600">
-                    Centre Address
-                  </label>
-                  <p className="font-medium">{franchiseData.address}</p>
-                  <p className="text-sm text-gray-500">
-                    {franchiseData.city}, {franchiseData.pincode}
-                  </p>
-                </div>
-                {franchiseData.communicationAddress && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">
-                      Communication Address
-                    </label>
-                    <p className="font-medium">
-                      {franchiseData.communicationAddress}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {franchiseData.communicationPincode}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Payment Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <IndianRupee className="h-5 w-5" />
-                Payment Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {franchiseData.paymentDetails && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <label className="text-sm font-medium text-gray-600">
-                        Franchise Fee
-                      </label>
-                      <p className="text-2xl font-bold text-green-600">
-                        ₹
-                        {Number(
-                          franchiseData.paymentDetails.franchiseeFee
-                        ).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <label className="text-sm font-medium text-gray-600">
-                        Kit Cost
-                      </label>
-                      <p className="text-2xl font-bold">
-                        ₹
-                        {Number(
-                          franchiseData.paymentDetails.kitCost
-                        ).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <label className="text-sm font-medium text-gray-600">
-                        Material Cost
-                      </label>
-                      <p className="text-2xl font-bold">
-                        ₹
-                        {Number(
-                          franchiseData.paymentDetails.materialCost
-                        ).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <Separator />
-
-                <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
-                  <span className="text-lg font-semibold">
-                    Total Amount Due
-                  </span>
-                  <span className="text-3xl font-bold text-blue-600">
-                    ₹
-                    {franchiseData.paymentDetails
-                      ? (
-                          Number(franchiseData.paymentDetails.franchiseeFee) +
-                          Number(franchiseData.paymentDetails.kitCost) +
-                          Number(franchiseData.paymentDetails.materialCost)
-                        ).toLocaleString()
-                      : "0"}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Agreement Terms */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Agreement Terms & Conditions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 bg-gray-50 rounded-lg max-h-64 overflow-y-auto">
-                  <h4 className="font-semibold mb-2">
-                    Franchise Agreement Terms:
-                  </h4>
-                  <ul className="space-y-2 text-sm text-gray-700">
-                    <li>
-                      • This franchise agreement is valid for 2 years from the
-                      date of joining
-                    </li>
-                    <li>
-                      • Monthly royalty of{" "}
-                      {franchiseData.paymentDetails?.royaltyGst}% on gross
-                      revenue
-                    </li>
-                    <li>
-                      • Franchisee share:{" "}
-                      {franchiseData.paymentDetails?.franchiseeShare}%
-                    </li>
-                    <li>
-                      • Agreement expires on:{" "}
-                      {new Date(franchiseData.expiryDate).toLocaleDateString()}
-                    </li>
-                    <li>
-                      • Payment can be made in{" "}
-                      {franchiseData.paymentDetails?.installments} installments
-                    </li>
-                    <li>
-                      • All training materials and support will be provided as
-                      per agreement
-                    </li>
-                    <li>
-                      • Franchisee must maintain quality standards as defined by
-                      Abacus
-                    </li>
-                    <li>• Regular audits and assessments will be conducted</li>
-                    <li>
-                      • Renewal terms will be discussed 3 months before expiry
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="agreement"
-                    checked={agreementAccepted}
-                    onCheckedChange={setAgreementAccepted}
-                  />
-                  <label htmlFor="agreement" className="text-sm font-medium">
-                    I have read and agree to all the terms and conditions
-                    mentioned above
-                  </label>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Payment Action */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-gray-600 mb-4">
-                  Once you complete the payment, you will have full access to
-                  your franchise dashboard where you can manage students, course
-                  instructors, orders, and participate in contests.
-                </p>
-                <Button
-                  onClick={handlePaymentSubmit}
-                  disabled={!agreementAccepted || isProcessingPayment}
-                  size="lg"
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {isProcessingPayment ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Processing Payment...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="h-5 w-5 mr-2" />
-                      Complete Payment & Start Your Journey
-                    </>
-                  )}
-                </Button>
-                {!agreementAccepted && (
-                  <p className="text-sm text-gray-500 mt-2">
-                    Please accept the terms and conditions to proceed
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>

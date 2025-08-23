@@ -47,49 +47,55 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { getUserFromStorage } from "@/lib/auth";
-import { STUDENTS, Student } from "@/lib/data";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/context/user-context";
+import {
+  StudentData,
+  getAllStudents,
+  StudentLevel,
+  StudentStream,
+  StudentIdStatus,
+} from "@/services/student.service";
+import AddStudentModal from "./components/AddStudentModal";
 
 export default function FranchiseeStudentsPage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const { user: contextUser } = useUser();
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<StudentData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<StudentData | null>(
+    null
+  );
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [editStudent, setEditStudent] = useState<Student | null>(null);
+  const [editStudent, setEditStudent] = useState<StudentData | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [deleteStudentId, setDeleteStudentId] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const { user } = useUser();
 
   useEffect(() => {
-    const userData = getUserFromStorage();
-    setUser(userData);
-
     // Redirect to agreement if onboarding not completed
-    if (userData?.role === "franchise" && !userData?.onboardingCompleted) {
-      router.push("/franchisee/agreement");
-      return;
-    }
+    // if (user?.role === "franchisee") {
+    //   router.push("/franchisee/agreement");
+    //   return;
+    // }
 
-    if (userData) {
-      fetchStudents(userData);
+    if (user) {
+      fetchAllStudents();
     }
-  }, [router]);
+  }, []);
 
-  const fetchStudents = async (userData: any) => {
+  const fetchAllStudents = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `/api/students?franchiseId=${userData.franchiseId}`
-      );
-      const data = await response.json();
-      setStudents((data.students || []) as Student[]);
+      const response = await getAllStudents();
+      setStudents(response.result || []);
     } catch (error) {
-      // Optionally handle error
+      console.error("Error fetching students:", error);
     } finally {
       setLoading(false);
     }
@@ -99,59 +105,32 @@ export default function FranchiseeStudentsPage() {
     return <div>Loading...</div>;
   }
 
-  // Filter students for current franchise
-  const franchiseStudents = students.filter(
-    (s) => s.franchiseId === user.franchiseId
-  );
-
-  const filteredStudents = franchiseStudents.filter(
+  const filteredStudents = students.filter(
     (student) =>
-      (student.name || student.studentName)
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
+      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.level.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (student.rollNo || "")
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      (student.fatherName || "")
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      (student.motherName || "")
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase())
+      student.rollNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.fatherName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.motherName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getLevelColor = (level: string) => {
+  const getLevelColor = (level: StudentLevel) => {
     if (level.startsWith("EL")) return "bg-green-100 text-green-800";
     if (level.startsWith("RL")) return "bg-blue-100 text-blue-800";
     if (level.startsWith("GML")) return "bg-purple-100 text-purple-800";
-
-    // Legacy levels
-    switch (level) {
-      case "Beginner":
-        return "bg-green-100 text-green-800";
-      case "Intermediate":
-        return "bg-yellow-100 text-yellow-800";
-      case "Advanced":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+    return "bg-gray-100 text-gray-800";
   };
 
-  const getStatusColor = (status: string) => {
-    const normalizedStatus = status?.toLowerCase();
-    return normalizedStatus === "active"
+  const getStatusColor = (isActive: boolean) => {
+    return isActive
       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
       : "bg-gray-50 text-gray-600 border-gray-200";
   };
 
-  const activeStudents = franchiseStudents.filter(
-    (s) => s.status?.toLowerCase() === "active"
-  ).length;
+  const activeStudents = students.filter((s) => s.isActive).length;
 
-  const newThisMonth = franchiseStudents.filter((s) => {
-    const enrollmentDate = new Date(s.enrollmentDate);
+  const newThisMonth = students.filter((s) => {
+    const enrollmentDate = new Date(s.createdAt);
     const thisMonth = new Date();
     return (
       enrollmentDate.getMonth() === thisMonth.getMonth() &&
@@ -159,7 +138,24 @@ export default function FranchiseeStudentsPage() {
     );
   }).length;
 
-  const StudentCard = ({ student }: { student: Student }) => (
+  // Helper function to calculate age
+  const calculateAge = (dateOfBirth: Date): number => {
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+
+    return age;
+  };
+
+  const StudentCard = ({ student }: { student: StudentData }) => (
     <Card className="w-full hover:shadow-lg transition-shadow duration-200">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
@@ -168,18 +164,14 @@ export default function FranchiseeStudentsPage() {
               <User className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <CardTitle className="text-lg">
-                {student.studentName || student.name}
-              </CardTitle>
+              <CardTitle className="text-lg">{student.name}</CardTitle>
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                {student.rollNo && (
-                  <Badge variant="outline" className="text-xs">
-                    {student.rollNo}
-                  </Badge>
-                )}
-                <span>Age {student.age}</span>
-                {student.standard && <span>• {student.standard}</span>}
-                {student.sex && <span>• {student.sex}</span>}
+                <Badge variant="outline" className="text-xs">
+                  {student.rollNo}
+                </Badge>
+                <span>Age {calculateAge(student.dateOfBirth)}</span>
+                <span>• {student.standard}</span>
+                <span>• {student.sex}</span>
               </div>
             </div>
           </div>
@@ -188,10 +180,10 @@ export default function FranchiseeStudentsPage() {
               {student.level}
             </Badge>
             <Badge
-              className={getStatusColor(student.status || "active")}
+              className={getStatusColor(student.isActive)}
               variant="outline"
             >
-              {student.status || "Active"}
+              {student.isActive ? "Active" : "Inactive"}
             </Badge>
           </div>
         </div>
@@ -208,20 +200,16 @@ export default function FranchiseeStudentsPage() {
             <div className="text-sm space-y-1">
               <p>
                 <span className="text-muted-foreground">Name:</span>{" "}
-                {student.fatherName || "Not provided"}
+                {student.fatherName}
               </p>
-              {student.fatherOccupation && (
-                <p>
-                  <span className="text-muted-foreground">Occupation:</span>{" "}
-                  {student.fatherOccupation}
-                </p>
-              )}
-              {student.fatherContactNo && (
-                <p className="flex items-center">
-                  <Phone className="w-3 h-3 mr-1 text-muted-foreground" />
-                  {student.fatherContactNo}
-                </p>
-              )}
+              <p>
+                <span className="text-muted-foreground">Occupation:</span>{" "}
+                {student.fatherOccupation}
+              </p>
+              <p className="flex items-center">
+                <Phone className="w-3 h-3 mr-1 text-muted-foreground" />
+                {student.fatherContactNo}
+              </p>
             </div>
           </div>
 
@@ -233,76 +221,62 @@ export default function FranchiseeStudentsPage() {
             <div className="text-sm space-y-1">
               <p>
                 <span className="text-muted-foreground">Name:</span>{" "}
-                {student.motherName || "Not provided"}
+                {student.motherName}
               </p>
-              {student.motherOccupation && (
-                <p>
-                  <span className="text-muted-foreground">Occupation:</span>{" "}
-                  {student.motherOccupation}
-                </p>
-              )}
-              {student.motherContactNo && (
-                <p className="flex items-center">
-                  <Phone className="w-3 h-3 mr-1 text-muted-foreground" />
-                  {student.motherContactNo}
-                </p>
-              )}
+              <p>
+                <span className="text-muted-foreground">Occupation:</span>{" "}
+                {student.motherOccupation}
+              </p>
+              <p className="flex items-center">
+                <Phone className="w-3 h-3 mr-1 text-muted-foreground" />
+                {student.motherContactNo}
+              </p>
             </div>
           </div>
         </div>
 
         {/* Contact Information */}
-        {(student.mailId || student.residentialAddress) && (
-          <div className="border-t pt-4">
-            <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
-              <MapPin className="w-4 h-4 mr-2" />
-              Contact Information
-            </h4>
-            <div className="text-sm space-y-1">
-              {student.mailId && (
-                <p className="flex items-center">
-                  <Mail className="w-3 h-3 mr-1 text-muted-foreground" />
-                  {student.mailId}
-                </p>
-              )}
-              {student.residentialAddress && (
-                <p>
-                  <span className="text-muted-foreground">Address:</span>{" "}
-                  {student.residentialAddress}
-                </p>
-              )}
-            </div>
+        <div className="border-t pt-4">
+          <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+            <MapPin className="w-4 h-4 mr-2" />
+            Contact Information
+          </h4>
+          <div className="text-sm space-y-1">
+            <p className="flex items-center">
+              <Mail className="w-3 h-3 mr-1 text-muted-foreground" />
+              {student.mail}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Address:</span>{" "}
+              {student.residentialAddress}
+            </p>
           </div>
-        )}
+        </div>
 
         {/* Academic & Status */}
         <div className="border-t pt-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div className="text-center p-2 bg-blue-50 rounded-lg">
               <BookOpen className="w-4 h-4 mx-auto mb-1 text-blue-600" />
-              <div className="text-sm font-medium">
-                {student.stream || "Regular"}
-              </div>
+              <div className="text-sm font-medium">{student.stream}</div>
               <div className="text-xs text-muted-foreground">Stream</div>
             </div>
             <div className="text-center p-2 bg-green-50 rounded-lg">
               <Calendar className="w-4 h-4 mx-auto mb-1 text-green-600" />
               <div className="text-sm font-medium">
-                {new Date(student.enrollmentDate).toLocaleDateString()}
+                {new Date(student.createdAt).toLocaleDateString()}
               </div>
               <div className="text-xs text-muted-foreground">Enrolled</div>
             </div>
             <div className="text-center p-2 bg-purple-50 rounded-lg">
               <CreditCard className="w-4 h-4 mx-auto mb-1 text-purple-600" />
-              <div className="text-sm font-medium">
-                {student.canRequestCertificate ? "Yes" : "No"}
-              </div>
-              <div className="text-xs text-muted-foreground">Cert Eligible</div>
+              <div className="text-sm font-medium">{student.idIssued}</div>
+              <div className="text-xs text-muted-foreground">ID Status</div>
             </div>
-            {student.isDiscontinued && (
+            {!student.isActive && (
               <div className="text-center p-2 bg-orange-50 rounded-lg">
                 <AlertCircle className="w-4 h-4 mx-auto mb-1 text-orange-600" />
-                <div className="text-sm font-medium">Discontinued</div>
+                <div className="text-sm font-medium">Inactive</div>
                 <div className="text-xs text-muted-foreground">Status</div>
               </div>
             )}
@@ -337,7 +311,7 @@ export default function FranchiseeStudentsPage() {
             variant="destructive"
             size="sm"
             onClick={() => {
-              setDeleteStudentId(student.id);
+              setDeleteStudentId(student.id.toString());
               setIsDeleteModalOpen(true);
             }}
           >
@@ -355,7 +329,14 @@ export default function FranchiseeStudentsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">My Students</h1>
           <p className="text-muted-foreground">
-            Manage your franchise students - {user.franchiseName}
+            Manage your franchise students -{" "}
+            {contextUser?.profile?.franchise?.name || user?.franchiseName}
+            {contextUser?.profile && (
+              <span className="block text-sm text-muted-foreground mt-1">
+                Franchisee: {contextUser.profile.name} •{" "}
+                {contextUser.profile.phone} • {contextUser.profile.city}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -375,12 +356,10 @@ export default function FranchiseeStudentsPage() {
               Table
             </Button>
           </div>
-          <Link href="/franchisee/students/add">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Student
-            </Button>
-          </Link>
+          <Button onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Student
+          </Button>
         </div>
       </div>
 
@@ -394,7 +373,7 @@ export default function FranchiseeStudentsPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{franchiseStudents.length}</div>
+            <div className="text-2xl font-bold">{students.length}</div>
             <p className="text-xs text-muted-foreground">In your franchise</p>
           </CardContent>
         </Card>
@@ -479,27 +458,23 @@ export default function FranchiseeStudentsPage() {
                   <TableRow key={student.id}>
                     <TableCell>
                       <div className="space-y-1">
-                        <div className="font-medium">
-                          {student.studentName || student.name}
-                        </div>
+                        <div className="font-medium">{student.name}</div>
                         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          {student.rollNo && (
-                            <Badge variant="outline" className="text-xs">
-                              {student.rollNo}
-                            </Badge>
-                          )}
-                          <span>Age {student.age}</span>
-                          {student.sex && <span>• {student.sex}</span>}
+                          <Badge variant="outline" className="text-xs">
+                            {student.rollNo}
+                          </Badge>
+                          <span>Age {calculateAge(student.dateOfBirth)}</span>
+                          <span>• {student.sex}</span>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm space-y-1">
                         <div>
-                          <strong>F:</strong> {student.fatherName || "N/A"}
+                          <strong>F:</strong> {student.fatherName}
                         </div>
                         <div>
-                          <strong>M:</strong> {student.motherName || "N/A"}
+                          <strong>M:</strong> {student.motherName}
                         </div>
                       </div>
                     </TableCell>
@@ -520,28 +495,24 @@ export default function FranchiseeStudentsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm space-y-1">
-                        {student.mailId && (
-                          <div className="flex items-center">
-                            <Mail className="w-3 h-3 mr-1" />
-                            <span className="truncate max-w-[150px]">
-                              {student.mailId}
-                            </span>
-                          </div>
-                        )}
-                        {student.fatherContactNo && (
-                          <div className="flex items-center">
-                            <Phone className="w-3 h-3 mr-1" />
-                            {student.fatherContactNo}
-                          </div>
-                        )}
+                        <div className="flex items-center">
+                          <Mail className="w-3 h-3 mr-1" />
+                          <span className="truncate max-w-[150px]">
+                            {student.mail}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <Phone className="w-3 h-3 mr-1" />
+                          {student.fatherContactNo}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge
-                        className={getStatusColor(student.status || "active")}
+                        className={getStatusColor(student.isActive)}
                         variant="outline"
                       >
-                        {student.status || "Active"}
+                        {student.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -570,7 +541,7 @@ export default function FranchiseeStudentsPage() {
                           variant="destructive"
                           size="sm"
                           onClick={() => {
-                            setDeleteStudentId(student.id);
+                            setDeleteStudentId(student.id.toString());
                             setIsDeleteModalOpen(true);
                           }}
                         >
@@ -603,8 +574,7 @@ export default function FranchiseeStudentsPage() {
           <DialogHeader>
             <DialogTitle>Student Details</DialogTitle>
             <DialogDescription>
-              Complete information for{" "}
-              {selectedStudent?.studentName || selectedStudent?.name}
+              Complete information for {selectedStudent?.name}
             </DialogDescription>
           </DialogHeader>
           {selectedStudent && (
@@ -618,31 +588,25 @@ export default function FranchiseeStudentsPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Roll Number</p>
-                    <p className="font-medium">
-                      {selectedStudent.rollNo || "Not assigned"}
-                    </p>
+                    <p className="font-medium">{selectedStudent.rollNo}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">
                       Date of Birth
                     </p>
                     <p className="font-medium">
-                      {selectedStudent.dob
-                        ? new Date(selectedStudent.dob).toLocaleDateString()
-                        : "Not provided"}
+                      {new Date(
+                        selectedStudent.dateOfBirth
+                      ).toLocaleDateString()}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Gender</p>
-                    <p className="font-medium">
-                      {selectedStudent.sex || "Not specified"}
-                    </p>
+                    <p className="font-medium">{selectedStudent.sex}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Standard</p>
-                    <p className="font-medium">
-                      {selectedStudent.standard || "Not specified"}
-                    </p>
+                    <p className="font-medium">{selectedStudent.standard}</p>
                   </div>
                 </div>
               </div>
@@ -664,7 +628,7 @@ export default function FranchiseeStudentsPage() {
                       <div>
                         <p className="text-sm text-muted-foreground">Name</p>
                         <p className="font-medium">
-                          {selectedStudent.fatherName || "Not provided"}
+                          {selectedStudent.fatherName}
                         </p>
                       </div>
                       <div>
@@ -672,8 +636,7 @@ export default function FranchiseeStudentsPage() {
                           Qualification
                         </p>
                         <p className="font-medium">
-                          {selectedStudent.fatherQualification ||
-                            "Not provided"}
+                          {selectedStudent.fatherQualification}
                         </p>
                       </div>
                       <div>
@@ -681,7 +644,7 @@ export default function FranchiseeStudentsPage() {
                           Occupation
                         </p>
                         <p className="font-medium">
-                          {selectedStudent.fatherOccupation || "Not provided"}
+                          {selectedStudent.fatherOccupation}
                         </p>
                       </div>
                       <div>
@@ -689,7 +652,7 @@ export default function FranchiseeStudentsPage() {
                           Contact Number
                         </p>
                         <p className="font-medium">
-                          {selectedStudent.fatherContactNo || "Not provided"}
+                          {selectedStudent.fatherContactNo}
                         </p>
                       </div>
                     </CardContent>
@@ -705,7 +668,7 @@ export default function FranchiseeStudentsPage() {
                       <div>
                         <p className="text-sm text-muted-foreground">Name</p>
                         <p className="font-medium">
-                          {selectedStudent.motherName || "Not provided"}
+                          {selectedStudent.motherName}
                         </p>
                       </div>
                       <div>
@@ -713,8 +676,7 @@ export default function FranchiseeStudentsPage() {
                           Qualification
                         </p>
                         <p className="font-medium">
-                          {selectedStudent.motherQualification ||
-                            "Not provided"}
+                          {selectedStudent.motherQualification}
                         </p>
                       </div>
                       <div>
@@ -722,7 +684,7 @@ export default function FranchiseeStudentsPage() {
                           Occupation
                         </p>
                         <p className="font-medium">
-                          {selectedStudent.motherOccupation || "Not provided"}
+                          {selectedStudent.motherOccupation}
                         </p>
                       </div>
                       <div>
@@ -730,7 +692,7 @@ export default function FranchiseeStudentsPage() {
                           Contact Number
                         </p>
                         <p className="font-medium">
-                          {selectedStudent.motherContactNo || "Not provided"}
+                          {selectedStudent.motherContactNo}
                         </p>
                       </div>
                     </CardContent>
@@ -749,16 +711,14 @@ export default function FranchiseeStudentsPage() {
                     <p className="text-sm text-muted-foreground">
                       Email Address
                     </p>
-                    <p className="font-medium">
-                      {selectedStudent.mailId || "Not provided"}
-                    </p>
+                    <p className="font-medium">{selectedStudent.mail}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">
                       Residential Address
                     </p>
                     <p className="font-medium">
-                      {selectedStudent.residentialAddress || "Not provided"}
+                      {selectedStudent.residentialAddress}
                     </p>
                   </div>
                 </div>
@@ -785,34 +745,29 @@ export default function FranchiseeStudentsPage() {
                   </div>
                   <div className="text-center p-4 bg-purple-50 rounded-lg">
                     <div className="font-semibold text-purple-700">
-                      {selectedStudent.canRequestCertificate
-                        ? "Eligible"
-                        : "Not Eligible"}
+                      {selectedStudent.idIssued}
                     </div>
-                    <div className="text-xs text-purple-600">Certificate</div>
+                    <div className="text-xs text-purple-600">ID Status</div>
                   </div>
                   <div className="text-center p-4 bg-orange-50 rounded-lg">
                     <div className="font-semibold text-orange-700">
-                      {selectedStudent.isDiscontinued
-                        ? "Discontinued"
-                        : "Active"}
+                      {selectedStudent.isActive ? "Active" : "Inactive"}
                     </div>
                     <div className="text-xs text-orange-600">Status</div>
                   </div>
                 </div>
               </div>
 
-              {selectedStudent.isDiscontinued &&
-                selectedStudent.discontinueReason && (
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                    <h4 className="font-medium text-orange-800 mb-2">
-                      Discontinuation Reason
-                    </h4>
-                    <p className="text-sm text-orange-700">
-                      {selectedStudent.discontinueReason}
-                    </p>
-                  </div>
-                )}
+              {!selectedStudent.isActive && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <h4 className="font-medium text-orange-800 mb-2">
+                    Student Status
+                  </h4>
+                  <p className="text-sm text-orange-700">
+                    This student is currently inactive
+                  </p>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
@@ -844,10 +799,9 @@ export default function FranchiseeStudentsPage() {
                 if (!user || !editStudent) return;
                 const payload = {
                   id: editStudent.id,
-                  studentName: editStudent.studentName || editStudent.name,
-                  age: editStudent.age,
+                  name: editStudent.name,
                   level: editStudent.level,
-                  status: editStudent.status,
+                  isActive: editStudent.isActive,
                 };
                 const res = await fetch("/api/students", {
                   method: "PATCH",
@@ -855,7 +809,7 @@ export default function FranchiseeStudentsPage() {
                   body: JSON.stringify(payload),
                 });
                 if (res.ok) {
-                  await fetchStudents(user);
+                  await fetchAllStudents();
                   setIsEditModalOpen(false);
                   setEditStudent(null);
                 } else {
@@ -867,16 +821,10 @@ export default function FranchiseeStudentsPage() {
                 <label className="block text-sm font-medium mb-1">Name</label>
                 <Input
                   required
-                  value={editStudent.studentName || editStudent.name}
+                  value={editStudent.name}
                   onChange={(e) =>
                     setEditStudent((s) =>
-                      s
-                        ? {
-                            ...s,
-                            studentName: e.target.value,
-                            name: e.target.value,
-                          }
-                        : s
+                      s ? { ...s, name: e.target.value } : s
                     )
                   }
                   placeholder="Student Name"
@@ -889,7 +837,7 @@ export default function FranchiseeStudentsPage() {
                   value={editStudent.level}
                   onChange={(e) =>
                     setEditStudent((s) =>
-                      s ? { ...s, level: e.target.value } : s
+                      s ? { ...s, level: e.target.value as StudentLevel } : s
                     )
                   }
                 >
@@ -910,13 +858,13 @@ export default function FranchiseeStudentsPage() {
                 <label className="block text-sm font-medium mb-1">Status</label>
                 <select
                   className="w-full border rounded px-2 py-1 bg-white"
-                  value={editStudent.status}
+                  value={editStudent.isActive ? "active" : "inactive"}
                   onChange={(e) =>
                     setEditStudent((s) =>
                       s
                         ? {
                             ...s,
-                            status: e.target.value as "Active" | "Inactive",
+                            isActive: e.target.value === "active",
                           }
                         : s
                     )
@@ -962,7 +910,7 @@ export default function FranchiseeStudentsPage() {
                   method: "DELETE",
                 });
                 if (res.ok) {
-                  await fetchStudents(user);
+                  await fetchAllStudents();
                   setIsDeleteModalOpen(false);
                   setDeleteStudentId(null);
                 } else {
@@ -984,6 +932,13 @@ export default function FranchiseeStudentsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add Student Modal */}
+      <AddStudentModal
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        onSuccess={fetchAllStudents}
+      />
     </div>
   );
 }

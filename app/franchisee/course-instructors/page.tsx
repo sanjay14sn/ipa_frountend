@@ -24,9 +24,11 @@ import {
 import { Search, Plus, Users, UserCheck, Clock, Eye } from "lucide-react";
 import { User, getUserFromStorage } from "@/lib/auth";
 import { CourseInstructor, COURSE_INSTRUCTORS } from "@/lib/data";
+import { useUser } from "@/context/user-context";
 
 export default function CourseInstructorsPage() {
   const router = useRouter();
+  const { user: contextUser } = useUser();
   const [user, setUser] = useState<User | null>(null);
   const [courseInstructors, setCourseInstructors] = useState<
     CourseInstructor[]
@@ -162,6 +164,12 @@ export default function CourseInstructorsPage() {
             {user?.role === "admin"
               ? "Manage course instructors across all franchises"
               : "Manage your franchise course instructors"}
+            {contextUser?.profile && (
+              <span className="block text-sm text-gray-500 mt-1">
+                Franchisee: {contextUser.profile.name} •{" "}
+                {contextUser.profile.phone} • {contextUser.profile.city}
+              </span>
+            )}
           </p>
         </div>
         {user?.role === "franchise" && (

@@ -14,7 +14,8 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: [
-          "DM Sans",
+          "var(--font-fira-sans)",
+          "Inter",
           "ui-sans-serif",
           "system-ui",
           "-apple-system",
@@ -44,55 +45,94 @@ const config: Config = {
         ],
       },
       colors: {
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        // Custom brand colors
+        brand: {
+          green: {
+            50: "#f0f9f3",
+            100: "#dcf0e3",
+            200: "#bbe1cb",
+            300: "#8bcaa7",
+            400: "#55ad7d",
+            500: "#064e3b", // Updated to new green
+            600: "#064e3b",
+            700: "#064e3b",
+            800: "#064e3b",
+            900: "#064e3b",
+          },
+          yellow: {
+            50: "#fafafa",
+            100: "#fafafa",
+            200: "#fafafa",
+            300: "#fafafa",
+            400: "#fafafa", // Updated to white
+            500: "#fafafa",
+            600: "#fafafa",
+            700: "#fafafa",
+            800: "#fafafa",
+            900: "#fafafa",
+          },
+          white: {
+            50: "#fafafa",
+            100: "#fafafa",
+            200: "#fafafa",
+            300: "#fafafa",
+            400: "#fafafa",
+            500: "#fafafa",
+            600: "#fafafa",
+            700: "#fafafa",
+            800: "#fafafa",
+            900: "#fafafa",
+          },
+        },
+        background: "#fafafa",
+        foreground: "#064e3b",
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: "#fafafa",
+          foreground: "#064e3b",
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: "#fafafa",
+          foreground: "#064e3b",
         },
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "#064e3b",
+          foreground: "#fafafa",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: "#a3a3a3",
+          foreground: "#064e3b",
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: "#a3a3a3",
+          foreground: "#064e3b",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: "#a3a3a3",
+          foreground: "#064e3b",
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: "#064e3b",
+          foreground: "#fafafa",
         },
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
+        border: "#a3a3a3",
+        input: "#a3a3a3",
+        ring: "#064e3b",
         chart: {
-          "1": "hsl(var(--chart-1))",
-          "2": "hsl(var(--chart-2))",
-          "3": "hsl(var(--chart-3))",
-          "4": "hsl(var(--chart-4))",
-          "5": "hsl(var(--chart-5))",
+          "1": "#064e3b",
+          "2": "#a3a3a3",
+          "3": "#064e3b",
+          "4": "#a3a3a3",
+          "5": "#064e3b",
         },
         sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
+          DEFAULT: "#fafafa",
+          foreground: "#064e3b",
+          primary: "#a3a3a3",
+          "primary-foreground": "#064e3b",
+          accent: "#a3a3a3",
+          "accent-foreground": "#064e3b",
+          border: "#a3a3a3",
+          ring: "#064e3b",
         },
       },
       borderRadius: {
@@ -124,6 +164,42 @@ const config: Config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    function ({ addUtilities }: any) {
+      const newUtilities = {
+        ".scrollbar-thin": {
+          "scrollbar-width": "thin",
+          "scrollbar-color": "#064e3b #fafafa",
+        },
+        ".scrollbar-none": {
+          "scrollbar-width": "none",
+          "&::-webkit-scrollbar": {
+            display: "none",
+          },
+        },
+        ".scrollbar-green": {
+          "scrollbar-color": "#064e3b #fafafa",
+          "&::-webkit-scrollbar": {
+            width: "6px",
+            height: "6px",
+          },
+          "&::-webkit-scrollbar-track": {
+            background: "#fafafa",
+            borderRadius: "3px",
+          },
+          "&::-webkit-scrollbar-thumb": {
+            background: "#064e3b",
+            borderRadius: "3px",
+            transition: "background-color 0.2s ease",
+          },
+          "&::-webkit-scrollbar-thumb:hover": {
+            background: "#064e3b",
+          },
+        },
+      };
+      addUtilities(newUtilities);
+    },
+  ],
 };
 export default config;

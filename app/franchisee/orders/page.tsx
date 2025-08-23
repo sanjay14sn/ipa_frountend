@@ -53,6 +53,7 @@ import {
 } from "lucide-react";
 import { getUserFromStorage } from "@/lib/auth";
 import { ORDERS, STUDENTS, Order } from "@/lib/data";
+import { useUser } from "@/context/user-context";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   FranchisePricingConfig,
@@ -93,6 +94,7 @@ interface NewOrder {
 }
 
 export default function FranchiseeOrdersPage() {
+  const { user: contextUser } = useUser();
   const [user, setUser] = useState<any>(null);
   const [pricingConfig, setPricingConfig] =
     useState<FranchisePricingConfig | null>(null);
@@ -471,6 +473,12 @@ export default function FranchiseeOrdersPage() {
           <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
           <p className="text-muted-foreground">
             Manage and track your material orders
+            {contextUser?.profile && (
+              <span className="block text-sm text-muted-foreground mt-1">
+                Franchisee: {contextUser.profile.name} •{" "}
+                {contextUser.profile.phone} • {contextUser.profile.city}
+              </span>
+            )}
           </p>
         </div>
         <Dialog open={isOrderModalOpen} onOpenChange={setIsOrderModalOpen}>

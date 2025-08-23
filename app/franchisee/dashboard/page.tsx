@@ -14,21 +14,19 @@ import {
   UserPlus,
   Package,
 } from "lucide-react";
-import { getUserFromStorage } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/context/user-context";
+import { MetricCard } from "@/components/metric-card";
 
 export default function FranchiseeDashboard() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const { user } = useUser();
 
   useEffect(() => {
-    const userData = getUserFromStorage();
-    setUser(userData);
-
     // Redirect to agreement if onboarding not completed
-    if (userData?.role === "franchise" && !userData?.onboardingCompleted) {
+    if (user?.role === "franchisee" && user?.franchiseStatus === "Pending") {
       router.push("/franchisee/agreement");
       return;
     }
@@ -40,13 +38,13 @@ export default function FranchiseeDashboard() {
 
   // Filter data for current franchise
   const franchiseStudents = STUDENTS.filter(
-    (s) => s.franchiseId === user.franchiseId
+    (s) => s.franchiseId === user.franchiseId?.toString()
   );
   const franchiseCourseInstructors = COURSE_INSTRUCTORS.filter(
-    (ci) => ci.franchiseId === user.franchiseId
+    (ci) => ci.franchiseId === user.franchiseId?.toString()
   );
   const franchiseOrders = ORDERS.filter(
-    (o) => o.franchiseId === user.franchiseId
+    (o) => o.franchiseId === user.franchiseId?.toString()
   );
 
   // Calculate stats
@@ -67,6 +65,44 @@ export default function FranchiseeDashboard() {
   const recentOrders = franchiseOrders.slice(0, 3);
   const recentStudents = franchiseStudents.slice(0, 3);
 
+  const stats = [
+    {
+      label: "Total Students",
+      value: totalStudents.toString(),
+      delta: "Active enrollment",
+      positive: true,
+      icon: Users,
+      accent: "emerald" as const,
+    },
+    {
+      label: "Course Instructors",
+      value: approvedCourseInstructors.toString(),
+      delta:
+        pendingCourseInstructors > 0
+          ? `${pendingCourseInstructors} pending`
+          : "All approved",
+      positive: pendingCourseInstructors === 0,
+      icon: GraduationCap,
+      accent: "emerald" as const,
+    },
+    {
+      label: "Total Orders",
+      value: totalOrders.toString(),
+      delta: pendingOrders > 0 ? `${pendingOrders} pending` : "All processed",
+      positive: pendingOrders === 0,
+      icon: ShoppingCart,
+      accent: "emerald" as const,
+    },
+    {
+      label: "Available Contests",
+      value: CONTESTS.length.toString(),
+      delta: "Ready to participate",
+      positive: true,
+      icon: Trophy,
+      accent: "emerald" as const,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -78,6 +114,169 @@ export default function FranchiseeDashboard() {
           activities
         </p>
       </div>
+
+      {/* Profile Information */}
+      {user.profile && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Franchisee Profile
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-muted-foreground">
+                    Personal Information
+                  </h4>
+                  <div className="space-y-2 mt-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Name:
+                      </span>
+                      <span className="text-sm font-medium">
+                        {user.profile.name}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Phone:
+                      </span>
+                      <span className="text-sm font-medium">
+                        {user.profile.phone}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Email:
+                      </span>
+                      <span className="text-sm font-medium">
+                        {user.profile.mail}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        City:
+                      </span>
+                      <span className="text-sm font-medium">
+                        {user.profile.city}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-muted-foreground">
+                    Franchise Details
+                  </h4>
+                  <div className="space-y-2 mt-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Franchise Name:
+                      </span>
+                      <span className="text-sm font-medium">
+                        {user.profile.franchise.name}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Type:
+                      </span>
+                      <span className="text-sm font-medium">
+                        {user.profile.franchise.type}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Status:
+                      </span>
+                      <span
+                        className={`text-sm font-medium ${
+                          ["Active", "Approved"].includes(
+                            user.profile.franchise.status
+                          )
+                            ? "text-green-600"
+                            : "text-yellow-600"
+                        }`}
+                      >
+                        {user.profile.franchise.status}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Approved:
+                      </span>
+                      <span className="text-sm font-medium">
+                        {new Date(
+                          user.profile.franchise.approvedAt
+                        ).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        DOB:
+                      </span>
+                      <span className="text-sm font-medium">
+                        {new Date(user.profile.dob).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {user.profile.franchise.franchisePayroll?.dateOfJoining && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          DOJ:
+                        </span>
+                        <span className="text-sm font-medium">
+                          {new Date(
+                            user.profile.franchise.franchisePayroll.dateOfJoining
+                          ).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {user.profile.franchise.franchisePayroll && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-muted-foreground">
+                      Payroll
+                    </h4>
+                    <div className="space-y-2 mt-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          Franchise Fee:
+                        </span>
+                        <span className="text-sm font-medium">
+                          ₹
+                          {user.profile.franchise.franchisePayroll.franchiseFee.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          Monthly Fee:
+                        </span>
+                        <span className="text-sm font-medium">
+                          ₹
+                          {user.profile.franchise.franchisePayroll.monthlyFee.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          Royalty:
+                        </span>
+                        <span className="text-sm font-medium">
+                          {user.profile.franchise.franchisePayroll.royalty}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <Card>
@@ -130,62 +329,18 @@ export default function FranchiseeDashboard() {
       </Card>
 
       {/* Main Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Students
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalStudents}</div>
-            <p className="text-xs text-muted-foreground">Enrolled students</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Course Instructors
-            </CardTitle>
-            <GraduationCap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {approvedCourseInstructors}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {pendingCourseInstructors} pending approval
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              {pendingOrders} pending
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Available Contests
-            </CardTitle>
-            <Trophy className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{CONTESTS.length}</div>
-            <p className="text-xs text-muted-foreground">Participate now</p>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <MetricCard
+            key={stat.label}
+            label={stat.label}
+            value={stat.value}
+            delta={stat.delta}
+            positive={stat.positive}
+            icon={stat.icon}
+            accent={stat.accent}
+          />
+        ))}
       </div>
 
       {/* Quick Stats */}

@@ -1,0 +1,670 @@
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calculator, ArrowRight, CheckCircle } from "lucide-react";
+import React from "react";
+import { applyFranchisee } from "@/services/franchisee.service";
+import {
+  FranchiseeApplication,
+  Franchisee,
+  Franchise,
+} from "@/services/franchisee.service";
+
+// Define the steps for the form
+const FORM_STEPS = [
+  {
+    id: 1,
+    title: "Personal Information",
+  },
+  {
+    id: 2,
+    title: "Address Information",
+  },
+  {
+    id: 3,
+    title: "Contact & Professional",
+  },
+  {
+    id: 4,
+    title: "Franchise Details",
+  },
+];
+
+// Stepper Component
+const Stepper = ({
+  currentStep,
+  steps,
+}: {
+  currentStep: number;
+  steps: typeof FORM_STEPS;
+}) => {
+  return (
+    <div className="w-full">
+      <div className="flex items-center justify-between">
+        {steps.map((step, index) => (
+          <React.Fragment key={step.id}>
+            <div className="flex flex-col items-center flex-1">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-all duration-200 ${
+                  currentStep === step.id
+                    ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                    : currentStep > step.id
+                    ? "bg-green-600 text-white border-green-600"
+                    : "bg-white text-gray-400 border-gray-300"
+                }`}
+              >
+                {currentStep > step.id ? "✓" : step.id}
+              </div>
+              <div className="mt-2 text-center max-w-[80px]">
+                <p
+                  className={`text-xs font-medium leading-tight ${
+                    currentStep >= step.id ? "text-gray-900" : "text-gray-400"
+                  }`}
+                >
+                  {step.title}
+                </p>
+              </div>
+            </div>
+            {index < steps.length - 1 && (
+              <div className="flex items-center justify-center flex-1 max-w-[60px] px-2">
+                <div
+                  className={`h-0.5 w-full transition-all duration-200 ${
+                    currentStep > step.id ? "bg-green-600" : "bg-gray-300"
+                  }`}
+                />
+              </div>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+interface FranchiseApplicationModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function FranchiseApplicationModal({
+  open,
+  onOpenChange,
+}: FranchiseApplicationModalProps) {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState<FranchiseeApplication>({
+    franchisee: {
+      name: "",
+      dob: new Date(),
+      bloodGroup: "",
+      address: "",
+      communicationAddress: "",
+      city: "",
+      phone: "",
+      mail: "",
+      education: "",
+      occupation: "",
+      reference: "",
+    } as Franchisee,
+    franchise: {
+      name: "",
+      type: "",
+      status: "PENDING",
+      programId: 0,
+      franchiseeId: 0,
+    } as Franchise,
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateCurrentStep = () => {
+    const newErrors: Record<string, string> = {};
+
+    switch (currentStep) {
+      case 1:
+        if (!formData.franchisee.name.trim()) {
+          newErrors.name = "Name is required";
+        }
+        if (!formData.franchisee.dob) {
+          newErrors.dob = "Date of birth is required";
+        }
+        break;
+
+      case 2:
+        if (!formData.franchisee.address.trim()) {
+          newErrors.address = "Centre address is required";
+        }
+        if (!formData.franchisee.city.trim()) {
+          newErrors.city = "City is required";
+        }
+        break;
+
+      case 3:
+        if (!formData.franchisee.phone.trim()) {
+          newErrors.phone = "Phone number is required";
+        }
+        if (!formData.franchisee.mail.trim()) {
+          newErrors.mail = "Email is required";
+        } else if (!/\S+@\S+\.\S+/.test(formData.franchisee.mail)) {
+          newErrors.mail = "Please enter a valid email address";
+        }
+        break;
+
+      case 4:
+        if (!formData.franchise.name.trim()) {
+          newErrors.franchiseName = "Franchise name is required";
+        }
+        if (!formData.franchise.type.trim()) {
+          newErrors.franchiseType = "Franchise type is required";
+        }
+        if (
+          !formData.franchise.programId ||
+          formData.franchise.programId === 0
+        ) {
+          newErrors.programId = "Program selection is required";
+        }
+        break;
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateCurrentStep()) {
+      setCurrentStep((prev) => Math.min(prev + 1, FORM_STEPS.length));
+    }
+  };
+
+  const handlePrevious = () => {
+    setCurrentStep((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateCurrentStep()) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await applyFranchisee(formData as FranchiseeApplication);
+
+      if (response.status === 201) {
+        setSubmitted(true);
+      }
+    } catch (error) {
+      console.error("Error submitting application:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    const [object, property] = field.includes(".")
+      ? field.split(".")
+      : ["franchisee", field];
+
+    setFormData((prev) => {
+      let convertedValue: any = value;
+
+      // Handle special conversions
+      if (property === "dob" && value) {
+        convertedValue = new Date(value);
+      } else if (property === "programId") {
+        convertedValue = parseInt(value, 10) || 0;
+      }
+
+      return {
+        ...prev,
+        [object]: {
+          ...(prev[object as keyof FranchiseeApplication] as any),
+          [property]: convertedValue,
+        },
+      };
+    });
+
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: "",
+      }));
+    }
+  };
+
+  const handleClose = () => {
+    setCurrentStep(1);
+    setFormData({
+      franchisee: {
+        name: "",
+        dob: new Date(),
+        bloodGroup: "",
+        address: "",
+        communicationAddress: "",
+        city: "",
+        phone: "",
+        mail: "",
+        education: "",
+        occupation: "",
+        reference: "",
+        refreshToken: "",
+      } as Franchisee,
+      franchise: {
+        name: "",
+        type: "",
+        status: "PENDING",
+        programId: 0,
+        franchiseeId: 0,
+      } as Franchise,
+    });
+    setErrors({});
+    setSubmitted(false);
+    setIsLoading(false);
+    onOpenChange(false);
+  };
+
+  const handleModalOpenChange = (open: boolean) => {
+    if (!open) {
+      handleClose();
+    } else {
+      onOpenChange(open);
+    }
+  };
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name *</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={formData.franchisee.name}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  className={errors.name ? "border-red-500" : ""}
+                />
+                {errors.name && (
+                  <p className="text-red-500 text-sm">{errors.name}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dob">Date of Birth *</Label>
+                <Input
+                  id="dob"
+                  type="date"
+                  value={
+                    formData.franchisee.dob instanceof Date
+                      ? formData.franchisee.dob.toISOString().split("T")[0]
+                      : formData.franchisee.dob
+                  }
+                  onChange={(e) => handleInputChange("dob", e.target.value)}
+                  className={errors.dob ? "border-red-500" : ""}
+                />
+                {errors.dob && (
+                  <p className="text-red-500 text-sm">{errors.dob}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bloodGroup">Blood Group</Label>
+              <Select
+                value={formData.franchisee.bloodGroup}
+                onValueChange={(value) =>
+                  handleInputChange("bloodGroup", value)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select blood group" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A+">A+</SelectItem>
+                  <SelectItem value="A-">A-</SelectItem>
+                  <SelectItem value="B+">B+</SelectItem>
+                  <SelectItem value="B-">B-</SelectItem>
+                  <SelectItem value="AB+">AB+</SelectItem>
+                  <SelectItem value="AB-">AB-</SelectItem>
+                  <SelectItem value="O+">O+</SelectItem>
+                  <SelectItem value="O-">O-</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="address">Centre Address *</Label>
+              <Textarea
+                id="address"
+                value={formData.franchisee.address}
+                onChange={(e) => handleInputChange("address", e.target.value)}
+                className={errors.address ? "border-red-500" : ""}
+                rows={3}
+              />
+              {errors.address && (
+                <p className="text-red-500 text-sm">{errors.address}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="communicationAddress">
+                Communication Address
+              </Label>
+              <Textarea
+                id="communicationAddress"
+                value={formData.franchisee.communicationAddress}
+                onChange={(e) =>
+                  handleInputChange("communicationAddress", e.target.value)
+                }
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="city">City *</Label>
+              <Input
+                id="city"
+                type="text"
+                value={formData.franchisee.city}
+                onChange={(e) => handleInputChange("city", e.target.value)}
+                className={errors.city ? "border-red-500" : ""}
+              />
+              {errors.city && (
+                <p className="text-red-500 text-sm">{errors.city}</p>
+              )}
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number *</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={formData.franchisee.phone}
+                  onChange={(e) => handleInputChange("phone", e.target.value)}
+                  className={errors.phone ? "border-red-500" : ""}
+                />
+                {errors.phone && (
+                  <p className="text-red-500 text-sm">{errors.phone}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mail">Email ID *</Label>
+                <Input
+                  id="mail"
+                  type="email"
+                  value={formData.franchisee.mail}
+                  onChange={(e) => handleInputChange("mail", e.target.value)}
+                  className={errors.mail ? "border-red-500" : ""}
+                />
+                {errors.mail && (
+                  <p className="text-red-500 text-sm">{errors.mail}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="education">Educational Qualification</Label>
+              <Input
+                id="education"
+                type="text"
+                value={formData.franchisee.education}
+                onChange={(e) => handleInputChange("education", e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="occupation">Present Occupation</Label>
+              <Input
+                id="occupation"
+                type="text"
+                value={formData.franchisee.occupation}
+                onChange={(e) =>
+                  handleInputChange("occupation", e.target.value)
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reference">Reference</Label>
+              <Input
+                id="reference"
+                type="text"
+                value={formData.franchisee.reference}
+                onChange={(e) => handleInputChange("reference", e.target.value)}
+              />
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="franchiseName">Franchise Name *</Label>
+              <Input
+                id="franchiseName"
+                type="text"
+                value={formData.franchise.name}
+                onChange={(e) =>
+                  handleInputChange("franchise.name", e.target.value)
+                }
+                className={errors.franchiseName ? "border-red-500" : ""}
+                placeholder="Enter your desired franchise center name"
+              />
+              {errors.franchiseName && (
+                <p className="text-red-500 text-sm">{errors.franchiseName}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="franchiseType">Franchise Type *</Label>
+              <Select
+                value={formData.franchise.type}
+                onValueChange={(value) =>
+                  handleInputChange("franchise.type", value)
+                }
+              >
+                <SelectTrigger
+                  className={errors.franchiseType ? "border-red-500" : ""}
+                >
+                  <SelectValue placeholder="Select franchise type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Area">Area Franchise</SelectItem>
+                  <SelectItem value="Master">Master Franchise</SelectItem>
+                  <SelectItem value="School">School Franchise</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.franchiseType && (
+                <p className="text-red-500 text-sm">{errors.franchiseType}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="programId">Program *</Label>
+              <Select
+                value={formData.franchise.programId.toString()}
+                onValueChange={(value) =>
+                  handleInputChange("franchise.programId", value)
+                }
+              >
+                <SelectTrigger
+                  className={errors.programId ? "border-red-500" : ""}
+                >
+                  <SelectValue placeholder="Select program" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Abacus</SelectItem>
+                  <SelectItem value="2">Brain Tree</SelectItem>
+                  <SelectItem value="3">Phonics</SelectItem>
+                  <SelectItem value="4">Brite</SelectItem>
+                  <SelectItem value="5">Handwriting</SelectItem>
+                  <SelectItem value="6">Creative Arts India</SelectItem>
+                  <SelectItem value="7">Vedic Maths</SelectItem>
+                  <SelectItem value="8">Arka Kids</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.programId && (
+                <p className="text-red-500 text-sm">{errors.programId}</p>
+              )}
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  if (submitted) {
+    return (
+      <Dialog open={false} onOpenChange={handleModalOpenChange}>
+        <DialogContent className="max-w-md w-full mx-4">
+          <DialogHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <CheckCircle className="h-12 w-12 text-green-600" />
+            </div>
+            <DialogTitle className="text-2xl font-bold text-gray-900">
+              Application Submitted!
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Your franchise application has been submitted successfully. Our
+              admin team will review your application and contact you with the
+              next steps.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="pt-4">
+            <Button
+              className="w-full bg-blue-600 hover:bg-blue-700"
+              onClick={handleClose}
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleModalOpenChange}>
+      <DialogContent className="max-w-4xl w-full mx-4 max-h-[95vh] overflow-hidden flex flex-col">
+        <DialogHeader className="text-center border-b border-gray-200 pb-4 flex-shrink-0">
+          <div className="flex justify-center mb-4">
+            <Calculator className="h-8 w-8 text-gray-700" />
+          </div>
+          <DialogTitle className="text-xl font-bold text-gray-900">
+            Franchise Application Form
+          </DialogTitle>
+          <DialogDescription>
+            Complete your franchise application step by step
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-6">
+            {/* Progress Stepper with clear separation */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <Stepper currentStep={currentStep} steps={FORM_STEPS} />
+            </div>
+
+            {/* Form Content with clear separation */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">
+                    {FORM_STEPS[currentStep - 1].title}
+                  </h3>
+                  <div className="space-y-4">{renderStepContent()}</div>
+                </div>
+                {currentStep < FORM_STEPS.length ? (
+                  <div className="flex gap-4 pt-6">
+                    <div className="flex gap-2">
+                      {currentStep > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handlePrevious}
+                        >
+                          Previous
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="flex-1" />
+
+                    <Button
+                      type="button"
+                      onClick={handleNext}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      Next
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit}>
+                    <div className="flex gap-4 pt-6">
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handlePrevious}
+                        >
+                          Previous
+                        </Button>
+                      </div>
+
+                      <div className="flex-1" />
+
+                      <Button
+                        type="submit"
+                        className="bg-blue-600 hover:bg-blue-700"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? "Submitting..." : "Submit Application"}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
