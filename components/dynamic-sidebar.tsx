@@ -60,6 +60,11 @@ const adminNavigation = {
           url: "/admin/pending-approvals",
           icon: Clock,
         },
+        {
+          title: "ID Requests",
+          url: "/admin/students/id-requests",
+          icon: Users,
+        },
       ],
     },
   ],

@@ -52,20 +52,24 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@/context/user-context";
 import {
   StudentData,
-  getAllStudents,
   StudentLevel,
   StudentStream,
   StudentIdStatus,
 } from "@/services/student.service";
+import {
+  useStudents,
+  deleteStudentWithRevalidation,
+  updateStudentWithRevalidation,
+} from "@/hooks/use-students";
 import AddStudentModal from "./components/AddStudentModal";
+import StudentsTable from "./components/StudentsTable";
+import RequestIdModal from "./components/RequestIdModal";
+import RequestedIdStudentsModal from "./components/RequestedIdStudentsModal";
 
 export default function FranchiseeStudentsPage() {
   const router = useRouter();
   const { user: contextUser } = useUser();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
-  const [students, setStudents] = useState<StudentData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [selectedStudent, setSelectedStudent] = useState<StudentData | null>(
     null
   );
@@ -75,44 +79,21 @@ export default function FranchiseeStudentsPage() {
   const [deleteStudentId, setDeleteStudentId] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isRequestIdModalOpen, setIsRequestIdModalOpen] = useState(false);
+  const [isRequestedIdStudentsModalOpen, setIsRequestedIdStudentsModalOpen] =
+    useState(false);
   const { user } = useUser();
 
-  useEffect(() => {
-    // Redirect to agreement if onboarding not completed
-    // if (user?.role === "franchisee") {
-    //   router.push("/franchisee/agreement");
-    //   return;
-    // }
-
-    if (user) {
-      fetchAllStudents();
-    }
-  }, []);
-
-  const fetchAllStudents = async () => {
-    setLoading(true);
-    try {
-      const response = await getAllStudents();
-      setStudents(response.result || []);
-    } catch (error) {
-      console.error("Error fetching students:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Use SWR for data fetching
+  const { students, isLoading, revalidate } = useStudents();
 
   if (!user || !user.franchiseId) {
     return <div>Loading...</div>;
   }
 
-  const filteredStudents = students.filter(
-    (student) =>
-      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.level.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.rollNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.fatherName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.motherName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  if (isLoading) {
+    return <div>Loading students...</div>;
+  }
 
   const getLevelColor = (level: StudentLevel) => {
     if (level.startsWith("EL")) return "bg-green-100 text-green-800";
@@ -285,6 +266,17 @@ export default function FranchiseeStudentsPage() {
 
         {/* Actions */}
         <div className="flex justify-end space-x-2 pt-2 border-t">
+          {student.idIssued === StudentIdStatus.NOT_ISSUED && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsRequestIdModalOpen(true)}
+              className="border-primary/20 text-primary hover:bg-primary/10"
+            >
+              <CreditCard className="h-4 w-4 mr-1" />
+              Request ID
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -364,7 +356,7 @@ export default function FranchiseeStudentsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -401,171 +393,84 @@ export default function FranchiseeStudentsPage() {
             <p className="text-xs text-muted-foreground">Recently enrolled</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Need ID Cards</CardTitle>
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-primary" />
+              <Button size="sm" onClick={() => setIsRequestIdModalOpen(true)}>
+                Request IDs
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {
+                students.filter(
+                  (s) => s.idIssued === StudentIdStatus.NOT_ISSUED
+                ).length
+              }
+            </div>
+            <p className="text-xs text-muted-foreground">Without ID cards</p>
+            {students.filter((s) => s.idIssued === StudentIdStatus.REQUESTED)
+              .length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full"
+                onClick={() => setIsRequestedIdStudentsModalOpen(true)}
+              >
+                View{" "}
+                {
+                  students.filter(
+                    (s) => s.idIssued === StudentIdStatus.REQUESTED
+                  ).length
+                }{" "}
+                Requested
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       </div>
-
-      {/* Search */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, roll number, level, or parent name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Students Display */}
       {viewMode === "cards" ? (
-        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-          {filteredStudents.map((student) => (
-            <StudentCard key={student.id} student={student} />
-          ))}
-          {filteredStudents.length === 0 && (
-            <div className="col-span-full text-center py-12">
-              <Users className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-semibold text-gray-900">
-                No students found
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {searchTerm
-                  ? "Try adjusting your search terms."
-                  : "Get started by adding your first student."}
-              </p>
-            </div>
-          )}
+        <div className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            {students.map((student) => (
+              <StudentCard key={student.id} student={student} />
+            ))}
+            {students.length === 0 && (
+              <div className="col-span-full text-center py-12">
+                <Users className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-semibold text-gray-900">
+                  No students found
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Get started by adding your first student.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
-        // Table View
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student Details</TableHead>
-                  <TableHead>Parents</TableHead>
-                  <TableHead>Level & Standard</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredStudents.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="font-medium">{student.name}</div>
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <Badge variant="outline" className="text-xs">
-                            {student.rollNo}
-                          </Badge>
-                          <span>Age {calculateAge(student.dateOfBirth)}</span>
-                          <span>• {student.sex}</span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm space-y-1">
-                        <div>
-                          <strong>F:</strong> {student.fatherName}
-                        </div>
-                        <div>
-                          <strong>M:</strong> {student.motherName}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <Badge
-                          className={getLevelColor(student.level)}
-                          variant="secondary"
-                        >
-                          {student.level}
-                        </Badge>
-                        {student.standard && (
-                          <div className="text-sm text-muted-foreground">
-                            {student.standard}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm space-y-1">
-                        <div className="flex items-center">
-                          <Mail className="w-3 h-3 mr-1" />
-                          <span className="truncate max-w-[150px]">
-                            {student.mail}
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <Phone className="w-3 h-3 mr-1" />
-                          {student.fatherContactNo}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        className={getStatusColor(student.isActive)}
-                        variant="outline"
-                      >
-                        {student.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedStudent(student);
-                            setIsDetailModalOpen(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditStudent(student);
-                            setIsEditModalOpen(true);
-                          }}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            setDeleteStudentId(student.id.toString());
-                            setIsDeleteModalOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredStudents.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      <div className="text-muted-foreground">
-                        {searchTerm
-                          ? "No students found matching your search."
-                          : "No students enrolled yet."}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        // Tree View Table
+        <StudentsTable
+          students={students}
+          onStudentUpdate={(updatedStudent) => {
+            // SWR will automatically revalidate, but we can trigger it manually if needed
+            revalidate();
+          }}
+          onStudentDelete={(studentId) => {
+            setDeleteStudentId(studentId);
+            setIsDeleteModalOpen(true);
+          }}
+          onStudentEdit={(student) => {
+            setEditStudent(student);
+            setIsEditModalOpen(true);
+          }}
+          onRequestIds={() => setIsRequestIdModalOpen(true)}
+        />
       )}
 
       {/* Student Detail Modal */}
@@ -797,22 +702,16 @@ export default function FranchiseeStudentsPage() {
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (!user || !editStudent) return;
-                const payload = {
-                  id: editStudent.id,
-                  name: editStudent.name,
-                  level: editStudent.level,
-                  isActive: editStudent.isActive,
-                };
-                const res = await fetch("/api/students", {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(payload),
-                });
-                if (res.ok) {
-                  await fetchAllStudents();
+                try {
+                  await updateStudentWithRevalidation(editStudent.id, {
+                    name: editStudent.name,
+                    level: editStudent.level,
+                    isActive: editStudent.isActive,
+                  });
                   setIsEditModalOpen(false);
                   setEditStudent(null);
-                } else {
+                } catch (error) {
+                  console.error("Error updating student:", error);
                   alert("Failed to update student");
                 }
               }}
@@ -906,14 +805,12 @@ export default function FranchiseeStudentsPage() {
               variant="destructive"
               onClick={async () => {
                 if (!user || !deleteStudentId) return;
-                const res = await fetch(`/api/students?id=${deleteStudentId}`, {
-                  method: "DELETE",
-                });
-                if (res.ok) {
-                  await fetchAllStudents();
+                try {
+                  await deleteStudentWithRevalidation(Number(deleteStudentId));
                   setIsDeleteModalOpen(false);
                   setDeleteStudentId(null);
-                } else {
+                } catch (error) {
+                  console.error("Error deleting student:", error);
                   alert("Failed to delete student");
                 }
               }}
@@ -937,7 +834,28 @@ export default function FranchiseeStudentsPage() {
       <AddStudentModal
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
-        onSuccess={fetchAllStudents}
+        onSuccess={() => {
+          setIsAddModalOpen(false);
+          revalidate(); // SWR will automatically refresh the data
+        }}
+      />
+
+      {/* Request ID Modal */}
+      <RequestIdModal
+        open={isRequestIdModalOpen}
+        onOpenChange={setIsRequestIdModalOpen}
+        students={students}
+        onSuccess={() => {
+          setIsRequestIdModalOpen(false);
+          revalidate(); // SWR will automatically refresh the data
+        }}
+      />
+
+      {/* Requested ID Students Modal */}
+      <RequestedIdStudentsModal
+        open={isRequestedIdStudentsModalOpen}
+        onOpenChange={setIsRequestedIdStudentsModalOpen}
+        students={students}
       />
     </div>
   );

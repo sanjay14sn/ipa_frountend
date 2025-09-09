@@ -12,6 +12,7 @@ import {
   FileText,
   Settings,
   LogOut,
+  CreditCard,
 } from "lucide-react";
 
 import {
@@ -53,6 +54,11 @@ const data = {
           title: "Students",
           url: "/dashboard/students",
           icon: Users,
+        },
+        {
+          title: "ID Requests",
+          url: "/admin/students/id-requests",
+          icon: CreditCard,
         },
         {
           title: "Course Instructors",

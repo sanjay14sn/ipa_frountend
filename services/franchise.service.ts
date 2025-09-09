@@ -16,3 +16,18 @@ export async function bulkUploadFranchises(file: File) {
   });
   return response.data;
 }
+
+export interface FranchiseListItem {
+  id: number;
+  name: string;
+}
+
+export async function getFranchiseList(): Promise<FranchiseListItem[]> {
+  const response = await api.get("/franchise/list");
+  const data = response.data as any;
+  if (Array.isArray(data)) return data as FranchiseListItem[];
+  if (Array.isArray(data?.result)) return data.result as FranchiseListItem[];
+  if (Array.isArray(data?.franchises))
+    return data.franchises as FranchiseListItem[];
+  return [];
+}

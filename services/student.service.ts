@@ -136,3 +136,60 @@ export async function issueStudentId(studentId: number): Promise<StudentData> {
   );
   return response.data;
 }
+
+export async function requestStudentIds(
+  studentIds: number[]
+): Promise<Response> {
+  const response = await api.post<Response>("/students/request-id", {
+    ids: studentIds,
+  });
+  return response.data;
+}
+
+export interface RequestedIdDetail {
+  id?: number; // Student ID for issuing
+  name: string;
+  rollNo: string;
+  dateOfBirth?: string;
+  residentialAddress?: string;
+  fatherContactNo?: string;
+  motherContactNo?: string;
+  franchiseName: string;
+  franchiseeAddress?: string;
+  idIssueDate?: string; // Only present in issued IDs
+}
+
+export interface RequestedIdDetailsByFranchise {
+  [franchiseName: string]: RequestedIdDetail[];
+}
+
+export async function getAllRequestedIdDetails(): Promise<RequestedIdDetailsByFranchise> {
+  const response = await api.get("/students/id-details");
+  const data = response.data as any;
+  if (
+    data?.result &&
+    typeof data.result === "object" &&
+    !Array.isArray(data.result)
+  ) {
+    return data.result as RequestedIdDetailsByFranchise;
+  }
+  return {};
+}
+
+export async function issueIdCard(studentId: number): Promise<any> {
+  const response = await api.patch(`/students/issue-id/${studentId}`);
+  return response.data;
+}
+
+export async function getIssuedIdDetails(): Promise<RequestedIdDetailsByFranchise> {
+  const response = await api.get("/students/issued-ids");
+  const data = response.data as any;
+  if (
+    data?.result &&
+    typeof data.result === "object" &&
+    !Array.isArray(data.result)
+  ) {
+    return data.result as RequestedIdDetailsByFranchise;
+  }
+  return {};
+}

@@ -27,6 +27,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import RequestedIdDetailsModal from "./components/RequestedIdDetailsModal";
+import {
+  getRequestedIdDetailsByFranchise,
+  RequestedIdDetail,
+} from "@/services/student.service";
 
 export default function FranchiseDetails() {
   const params = useParams();
@@ -39,6 +44,9 @@ export default function FranchiseDetails() {
   const [franchiseOrders, setFranchiseOrders] = useState([]);
   const [franchiseContests, setFranchiseContests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [idModalOpen, setIdModalOpen] = useState(false);
+  const [idDetails, setIdDetails] = useState<RequestedIdDetail[]>([]);
+  const [idLoading, setIdLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -85,6 +93,22 @@ export default function FranchiseDetails() {
       console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openIdDetails = async () => {
+    try {
+      setIdLoading(true);
+      setIdModalOpen(true);
+      const details = await getRequestedIdDetailsByFranchise(
+        Number(franchiseId)
+      );
+      setIdDetails(details);
+    } catch (e) {
+      console.error(e);
+      setIdDetails([]);
+    } finally {
+      setIdLoading(false);
     }
   };
 
@@ -138,11 +162,16 @@ export default function FranchiseDetails() {
             </p>
           </div>
         </div>
-        <Badge
-          variant={franchise.status === "Active" ? "default" : "secondary"}
-        >
-          {franchise.status}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={openIdDetails}>
+            View Requested ID Cards
+          </Button>
+          <Badge
+            variant={franchise.status === "Active" ? "default" : "secondary"}
+          >
+            {franchise.status}
+          </Badge>
+        </div>
       </div>
 
       {/* Franchise Info Card */}
@@ -412,6 +441,13 @@ export default function FranchiseDetails() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <RequestedIdDetailsModal
+        open={idModalOpen}
+        onOpenChange={setIdModalOpen}
+        loading={idLoading}
+        details={idDetails}
+      />
     </div>
   );
 }
