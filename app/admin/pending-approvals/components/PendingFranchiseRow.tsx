@@ -51,7 +51,7 @@ export default function PendingFranchiseRow({
           </div>
         </div>
         <div className="flex-1 text-gray-700 text-center flex items-center justify-center">
-          {application.programName}
+          {application.franchisePrograms?.map((fp) => fp.program.name).join(", ") || "N/A"}
         </div>
         <div className="flex-1 text-gray-700 text-center flex items-center justify-center">
           {application.type}

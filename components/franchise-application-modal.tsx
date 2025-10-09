@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -114,7 +115,6 @@ export function FranchiseApplicationModal({
       name: "",
       dob: new Date(),
       bloodGroup: "",
-      address: "",
       communicationAddress: "",
       city: "",
       phone: "",
@@ -127,7 +127,8 @@ export function FranchiseApplicationModal({
       name: "",
       type: "",
       status: "PENDING",
-      programId: 0,
+      address: "",
+      programIds: [],
       franchiseeId: 0,
     } as Franchise,
   });
@@ -149,7 +150,7 @@ export function FranchiseApplicationModal({
         break;
 
       case 2:
-        if (!formData.franchisee.address.trim()) {
+        if (!formData.franchise.address.trim()) {
           newErrors.address = "Centre address is required";
         }
         if (!formData.franchisee.city.trim()) {
@@ -176,10 +177,10 @@ export function FranchiseApplicationModal({
           newErrors.franchiseType = "Franchise type is required";
         }
         if (
-          !formData.franchise.programId ||
-          formData.franchise.programId === 0
+          !formData.franchise.programIds ||
+          formData.franchise.programIds.length === 0
         ) {
-          newErrors.programId = "Program selection is required";
+          newErrors.programIds = "At least one program must be selected";
         }
         break;
     }
@@ -231,8 +232,6 @@ export function FranchiseApplicationModal({
       // Handle special conversions
       if (property === "dob" && value) {
         convertedValue = new Date(value);
-      } else if (property === "programId") {
-        convertedValue = parseInt(value, 10) || 0;
       }
 
       return {
@@ -253,6 +252,31 @@ export function FranchiseApplicationModal({
     }
   };
 
+  const handleProgramToggle = (programId: number) => {
+    setFormData((prev) => {
+      const currentIds = prev.franchise.programIds || [];
+      const newIds = currentIds.includes(programId)
+        ? currentIds.filter((id) => id !== programId)
+        : [...currentIds, programId];
+
+      return {
+        ...prev,
+        franchise: {
+          ...prev.franchise,
+          programIds: newIds,
+        },
+      };
+    });
+
+    // Clear error when user selects a program
+    if (errors.programIds) {
+      setErrors((prev) => ({
+        ...prev,
+        programIds: "",
+      }));
+    }
+  };
+
   const handleClose = () => {
     setCurrentStep(1);
     setFormData({
@@ -260,7 +284,6 @@ export function FranchiseApplicationModal({
         name: "",
         dob: new Date(),
         bloodGroup: "",
-        address: "",
         communicationAddress: "",
         city: "",
         phone: "",
@@ -274,7 +297,8 @@ export function FranchiseApplicationModal({
         name: "",
         type: "",
         status: "PENDING",
-        programId: 0,
+        address: "",
+        programIds: [],
         franchiseeId: 0,
       } as Franchise,
     });
@@ -363,8 +387,8 @@ export function FranchiseApplicationModal({
               <Label htmlFor="address">Centre Address *</Label>
               <Textarea
                 id="address"
-                value={formData.franchisee.address}
-                onChange={(e) => handleInputChange("address", e.target.value)}
+                value={formData.franchise.address}
+                onChange={(e) => handleInputChange("franchise.address", e.target.value)}
                 className={errors.address ? "border-red-500" : ""}
                 rows={3}
               />
@@ -514,31 +538,41 @@ export function FranchiseApplicationModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="programId">Program *</Label>
-              <Select
-                value={formData.franchise.programId.toString()}
-                onValueChange={(value) =>
-                  handleInputChange("franchise.programId", value)
-                }
+              <Label>Programs * (Select one or more)</Label>
+              <div
+                className={`border rounded-md p-4 space-y-3 ${
+                  errors.programIds ? "border-red-500" : "border-gray-200"
+                }`}
               >
-                <SelectTrigger
-                  className={errors.programId ? "border-red-500" : ""}
-                >
-                  <SelectValue placeholder="Select program" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Abacus</SelectItem>
-                  <SelectItem value="2">Brain Tree</SelectItem>
-                  <SelectItem value="3">Phonics</SelectItem>
-                  <SelectItem value="4">Brite</SelectItem>
-                  <SelectItem value="5">Handwriting</SelectItem>
-                  <SelectItem value="6">Creative Arts India</SelectItem>
-                  <SelectItem value="7">Vedic Maths</SelectItem>
-                  <SelectItem value="8">Arka Kids</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.programId && (
-                <p className="text-red-500 text-sm">{errors.programId}</p>
+                {[
+                  { id: 1, name: "Abacus" },
+                  { id: 2, name: "Brain Tree" },
+                  { id: 3, name: "Phonics" },
+                  { id: 4, name: "Brite" },
+                  { id: 5, name: "Handwriting" },
+                  { id: 6, name: "Creative Arts India" },
+                  { id: 7, name: "Vedic Maths" },
+                  { id: 8, name: "Arka Kids" },
+                ].map((program) => (
+                  <div key={program.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`program-${program.id}`}
+                      checked={formData.franchise.programIds.includes(
+                        program.id
+                      )}
+                      onCheckedChange={() => handleProgramToggle(program.id)}
+                    />
+                    <label
+                      htmlFor={`program-${program.id}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {program.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              {errors.programIds && (
+                <p className="text-red-500 text-sm">{errors.programIds}</p>
               )}
             </div>
           </div>

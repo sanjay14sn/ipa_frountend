@@ -24,7 +24,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     const storedUser = localStorage.getItem("user");
     if (storedUser && storedUser !== "{}") {
       const user = JSON.parse(storedUser);
-      console.log("Loaded user from storage:", user);
       setUser(user);
     }
   }, []);

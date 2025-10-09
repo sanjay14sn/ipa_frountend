@@ -6,11 +6,11 @@ export default function LocationDetails({
   franchiseData,
 }: LocationDetailsProps) {
   return (
-    <div className="pb-4 border-b border-primary">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3 underline">
+    <div className="border-2 border-primary rounded-lg p-5 bg-white shadow-sm">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b-2 border-primary">
         Location Details
       </h3>
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div>
           <span className="text-sm font-medium text-gray-600 block mb-1">
             Centre Address:

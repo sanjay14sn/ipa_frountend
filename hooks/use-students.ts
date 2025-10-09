@@ -8,8 +8,19 @@ import {
   issueIdCard,
   getAllRequestedIdDetails,
   getIssuedIdDetails,
+  getAllRequestedCertificateDetails,
+  getIssuedCertificateDetails,
+  issueCertificate,
+  getEligibleStudents,
+  getAllAdminCertificateRequests,
+  approveCertificateRequest,
+  rejectCertificateRequest,
   StudentData,
   RequestedIdDetailsByFranchise,
+  RequestedCertificateDetailsByFranchise,
+  EligibleStudent,
+  AdminCertificateRequest,
+  AdminCertificateRequestsByFranchise,
 } from "@/services/student.service";
 
 // SWR fetchers
@@ -26,10 +37,32 @@ const fetchIssuedIdDetails = async () => {
   return await getIssuedIdDetails();
 };
 
+const fetchRequestedCertificateDetails = async () => {
+  return await getAllRequestedCertificateDetails();
+};
+
+const fetchIssuedCertificateDetails = async () => {
+  return await getIssuedCertificateDetails();
+};
+
+const fetchEligibleStudents = async () => {
+  const response = await getEligibleStudents();
+  return response.result || [];
+};
+
+const fetchAdminCertificateRequests = async () => {
+  const response = await getAllAdminCertificateRequests();
+  return response.result || {};
+};
+
 // SWR keys
 export const STUDENTS_KEY = "/students/all";
 export const REQUESTED_IDS_KEY = "/students/id-details";
 export const ISSUED_IDS_KEY = "/students/issued-ids";
+export const REQUESTED_CERTIFICATES_KEY = "/students/certificate-details";
+export const ISSUED_CERTIFICATES_KEY = "/students/issued-certificates";
+export const ELIGIBLE_STUDENTS_KEY = "/certificate/eligible-students";
+export const ADMIN_CERTIFICATE_REQUESTS_KEY = "/certificate/all-admin";
 
 // Custom hooks
 export function useStudents() {
@@ -74,6 +107,76 @@ export function useIssuedIdDetails() {
 
   return {
     issuedIds: data || {},
+    isLoading,
+    error,
+    revalidate,
+  };
+}
+
+export function useRequestedCertificateDetails() {
+  const {
+    data,
+    error,
+    isLoading,
+    mutate: revalidate,
+  } = useSWR(REQUESTED_CERTIFICATES_KEY, fetchRequestedCertificateDetails);
+
+  return {
+    requestedCertificates: data || {},
+    isLoading,
+    error,
+    revalidate,
+  };
+}
+
+export function useIssuedCertificateDetails() {
+  const {
+    data,
+    error,
+    isLoading,
+    mutate: revalidate,
+  } = useSWR(ISSUED_CERTIFICATES_KEY, fetchIssuedCertificateDetails);
+
+  return {
+    issuedCertificates: data || {},
+    isLoading,
+    error,
+    revalidate,
+  };
+}
+
+export function useEligibleStudents() {
+  const {
+    data,
+    error,
+    isLoading,
+    mutate: revalidate,
+  } = useSWR(ELIGIBLE_STUDENTS_KEY, fetchEligibleStudents, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+  });
+
+  return {
+    eligibleStudents: data || [],
+    isLoading,
+    error,
+    revalidate,
+  };
+}
+
+export function useAdminCertificateRequests() {
+  const {
+    data,
+    error,
+    isLoading,
+    mutate: revalidate,
+  } = useSWR(ADMIN_CERTIFICATE_REQUESTS_KEY, fetchAdminCertificateRequests, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+  });
+
+  return {
+    certificateRequestsByFranchise: data || {},
     isLoading,
     error,
     revalidate,
@@ -140,5 +243,35 @@ export async function issueIdCardWithRevalidation(studentId: number) {
     mutate(REQUESTED_IDS_KEY),
     mutate(ISSUED_IDS_KEY),
   ]);
+  return result;
+}
+
+export async function issueCertificateWithRevalidation(studentId: number) {
+  const result = await issueCertificate(studentId);
+  // Revalidate all related data
+  await Promise.all([
+    mutate(STUDENTS_KEY),
+    mutate(REQUESTED_CERTIFICATES_KEY),
+    mutate(ISSUED_CERTIFICATES_KEY),
+    mutate(ELIGIBLE_STUDENTS_KEY),
+  ]);
+  return result;
+}
+
+export async function approveCertificateRequestWithRevalidation(
+  certificateRequestId: number
+) {
+  const result = await approveCertificateRequest(certificateRequestId);
+  // Revalidate admin certificate requests
+  await mutate(ADMIN_CERTIFICATE_REQUESTS_KEY);
+  return result;
+}
+
+export async function rejectCertificateRequestWithRevalidation(
+  certificateRequestId: number
+) {
+  const result = await rejectCertificateRequest(certificateRequestId);
+  // Revalidate admin certificate requests
+  await mutate(ADMIN_CERTIFICATE_REQUESTS_KEY);
   return result;
 }

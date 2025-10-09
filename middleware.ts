@@ -6,8 +6,6 @@ import type { NextRequest } from "next/server";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  console.log(pathname);
-
   // only run for /franchisee routes
   if (pathname.startsWith("/franchisee")) {
     try {

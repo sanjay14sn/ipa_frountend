@@ -44,6 +44,7 @@ export enum StudentIdStatus {
 export interface StudentData {
   id: number;
   franchiseId: number;
+  programId: number;
   name: string;
   rollNo: string;
   dateOfBirth: Date;
@@ -192,4 +193,251 @@ export async function getIssuedIdDetails(): Promise<RequestedIdDetailsByFranchis
     return data.result as RequestedIdDetailsByFranchise;
   }
   return {};
+}
+
+// Certificate-related interfaces and functions
+export interface RequestedCertificateDetail {
+  id?: number; // Student ID for issuing
+  name: string;
+  rollNo: string;
+  dateOfBirth?: string;
+  residentialAddress?: string;
+  fatherContactNo?: string;
+  motherContactNo?: string;
+  franchiseName: string;
+  franchiseeAddress?: string;
+  marksObtained: number;
+  totalMarks: number;
+  courseInstructorId: number;
+  courseInstructorName?: string;
+  certificateIssueDate?: string; // Only present in issued certificates
+}
+
+export interface RequestedCertificateDetailsByFranchise {
+  [franchiseName: string]: RequestedCertificateDetail[];
+}
+
+export async function getAllRequestedCertificateDetails(): Promise<RequestedCertificateDetailsByFranchise> {
+  const response = await api.get("/students/certificate-details");
+  const data = response.data as any;
+  if (
+    data?.result &&
+    typeof data.result === "object" &&
+    !Array.isArray(data.result)
+  ) {
+    return data.result as RequestedCertificateDetailsByFranchise;
+  }
+  return {};
+}
+
+export async function getIssuedCertificateDetails(): Promise<RequestedCertificateDetailsByFranchise> {
+  const response = await api.get("/students/issued-certificates");
+  const data = response.data as any;
+  if (
+    data?.result &&
+    typeof data.result === "object" &&
+    !Array.isArray(data.result)
+  ) {
+    return data.result as RequestedCertificateDetailsByFranchise;
+  }
+  return {};
+}
+
+export async function issueCertificate(studentId: number): Promise<any> {
+  const response = await api.patch(`/students/issue-certificate/${studentId}`);
+  return response.data;
+}
+
+// Eligible students for certificate requests
+export interface EligibleStudent {
+  id: number;
+  name: string;
+  rollNo: string;
+  dateOfBirth: string;
+  sex: string;
+  standard: string;
+  stream: string;
+  level: string;
+  isActive: boolean;
+}
+
+export interface EligibleStudentsResponse extends Response {
+  result: EligibleStudent[];
+}
+
+export async function getEligibleStudents(): Promise<EligibleStudentsResponse> {
+  const response = await api.get<EligibleStudentsResponse>(
+    "/certificate/eligible-students"
+  );
+  return response.data;
+}
+
+// Admin certificate requests interfaces and functions
+export interface AdminCertificateRequest {
+  id: number;
+  studentId: number;
+  instructorId: number;
+  franchiseId: number;
+  requestDate: string;
+  status: "Pending" | "Approved" | "Rejected";
+  marksObtained: number;
+  totalMarks: number;
+  studentName: string;
+  studentRollNo: string;
+  studentDateOfBirth: string;
+  studentSex: string;
+  studentStandard: string;
+  studentStream: string;
+  studentLevel: string;
+  studentIsActive: boolean;
+  studentDateOfJoining?: string;
+  studentIdIssued: string;
+  studentIdIssueDate?: string;
+  instructorName: string;
+  franchiseName: string;
+}
+
+export interface AdminCertificateRequestsByFranchise {
+  [franchiseName: string]: AdminCertificateRequest[];
+}
+
+export interface AdminCertificateRequestsResponse extends Response {
+  result: AdminCertificateRequestsByFranchise;
+}
+
+export async function getAllAdminCertificateRequests(): Promise<AdminCertificateRequestsResponse> {
+  const response = await api.get<AdminCertificateRequestsResponse>(
+    "/certificate/all-admin"
+  );
+  return response.data;
+}
+
+export async function approveCertificateRequest(
+  certificateRequestId: number
+): Promise<any> {
+  const response = await api.patch(
+    `/certificate/approve/${certificateRequestId}`
+  );
+  return response.data;
+}
+
+export async function rejectCertificateRequest(
+  certificateRequestId: number
+): Promise<any> {
+  const response = await api.patch(
+    `/certificate/reject/${certificateRequestId}`
+  );
+  return response.data;
+}
+
+// Pagination interfaces
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export interface PaginatedStudentsResponse {
+  data: StudentData[];
+  meta: PaginationMeta;
+}
+
+export interface StudentPaginationParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}
+
+// Pagination functions
+export async function getPaginatedStudents(
+  params: StudentPaginationParams
+): Promise<PaginatedStudentsResponse> {
+  const queryParams = new URLSearchParams();
+
+  if (params.page) queryParams.append("page", params.page.toString());
+  if (params.limit) queryParams.append("limit", params.limit.toString());
+  if (params.search) queryParams.append("search", params.search);
+  if (params.status) queryParams.append("status", params.status);
+  if (params.sortBy) queryParams.append("sortBy", params.sortBy);
+  if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+
+  const response = await api.get<{ result: PaginatedStudentsResponse }>(
+    `/students/paginated?${queryParams.toString()}`
+  );
+  return response.data.result;
+}
+
+export async function getPaginatedRequestedIdDetails(
+  params: StudentPaginationParams
+): Promise<PaginatedStudentsResponse> {
+  const queryParams = new URLSearchParams();
+
+  if (params.page) queryParams.append("page", params.page.toString());
+  if (params.limit) queryParams.append("limit", params.limit.toString());
+  if (params.search) queryParams.append("search", params.search);
+  if (params.sortBy) queryParams.append("sortBy", params.sortBy);
+  if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+
+  const response = await api.get<{ result: PaginatedStudentsResponse }>(
+    `/students/id-details/paginated?${queryParams.toString()}`
+  );
+  return response.data.result;
+}
+
+export async function getPaginatedIssuedIds(
+  params: StudentPaginationParams
+): Promise<PaginatedStudentsResponse> {
+  const queryParams = new URLSearchParams();
+
+  if (params.page) queryParams.append("page", params.page.toString());
+  if (params.limit) queryParams.append("limit", params.limit.toString());
+  if (params.search) queryParams.append("search", params.search);
+  if (params.sortBy) queryParams.append("sortBy", params.sortBy);
+  if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+
+  const response = await api.get<{ result: PaginatedStudentsResponse }>(
+    `/students/issued-ids/paginated?${queryParams.toString()}`
+  );
+  return response.data.result;
+}
+
+export interface CertificatePaginationParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}
+
+export interface PaginatedCertificatesResponse {
+  data: AdminCertificateRequest[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export async function getPaginatedCertificates(
+  params: CertificatePaginationParams
+): Promise<PaginatedCertificatesResponse> {
+  const queryParams = new URLSearchParams();
+
+  if (params.page) queryParams.append("page", params.page.toString());
+  if (params.limit) queryParams.append("limit", params.limit.toString());
+  if (params.search) queryParams.append("search", params.search);
+  if (params.sortBy) queryParams.append("sortBy", params.sortBy);
+  if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+
+  const response = await api.get<{ result: PaginatedCertificatesResponse }>(
+    `/certificate/paginated?${queryParams.toString()}`
+  );
+  return response.data.result;
 }

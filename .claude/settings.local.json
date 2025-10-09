@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(test:*)",
+      "Bash(cat:*)",
+      "Bash(del:*)",
+      "Read(//c/Users/Administrator/Desktop/nmicps-new/pastforward-frontend/**)",
+      "Read(//c/Users/Administrator/Desktop/IPA-backend/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

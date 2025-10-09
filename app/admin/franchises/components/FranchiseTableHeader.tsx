@@ -6,7 +6,7 @@ export default function FranchiseTableHeader() {
         Type
       </div>
       <div className="col-span-2 text-center flex items-center justify-center">
-        Program
+        Programs
       </div>
       <div className="col-span-2 text-center flex items-center justify-center">
         Created Date

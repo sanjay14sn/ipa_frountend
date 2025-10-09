@@ -35,7 +35,7 @@ export async function POST(
     };
 
     // In production, update database
-    console.log(`Approving Course Instructor ${id}:`, approvalData);
+    // TODO: Update database with approval data
 
     return NextResponse.json({
       success: true,
@@ -76,7 +76,7 @@ export async function PUT(
     };
 
     // In production, update database
-    console.log(`Rejecting Course Instructor ${id}:`, rejectionData);
+    // TODO: Update database with rejection data
 
     return NextResponse.json({
       success: true,

@@ -18,6 +18,7 @@ import {
   BreadcrumbList,
 } from "@/components/ui/breadcrumb";
 import { useUser } from "@/context/user-context";
+import { NotificationBell } from "@/components/shared/notification-bell";
 
 export default function FranchiseeLayout({
   children,
@@ -48,6 +49,9 @@ export default function FranchiseeLayout({
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+          <div className="ml-auto">
+            <NotificationBell />
+          </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 bg-background">
           {children}

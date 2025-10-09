@@ -12,106 +12,85 @@ export default function PaymentBreakdown({
       ? n.toLocaleString()
       : Number(n || 0).toLocaleString();
 
+  // Check if paymentDetails is an array (per-program) or single object (legacy)
+  const isPerProgram = Array.isArray(paymentDetails);
+
+  // For summary, only sum the currency values, not percentages
+  const summary = isPerProgram
+    ? paymentDetails.reduce((acc: any, p: any) => ({
+        franchiseFee: (acc.franchiseFee || 0) + (p.franchiseFee || 0),
+        monthlyFee: (acc.monthlyFee || 0) + (p.monthlyFee || 0),
+        kitCost: (acc.kitCost || 0) + (p.kitCost || 0),
+        materialCost: (acc.materialCost || 0) + (p.materialCost || 0),
+        installment: (acc.installment || 0) + (p.installment || 0),
+        totalAmount: (acc.totalAmount || 0) + (p.totalAmount || 0),
+      }), { franchiseFee: 0, monthlyFee: 0, kitCost: 0, materialCost: 0, installment: 0, totalAmount: 0 })
+    : paymentDetails;
+
   return (
-    <div className="pb-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3 underline">
+    <div className="border-2 border-primary rounded-lg p-5 bg-white shadow-sm">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b-2 border-primary">
         Payment Breakdown
       </h3>
 
-      {/* Two-column grid for line items */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* Left column */}
-        <div className="space-y-2">
-          <div className="flex justify-between items-center py-2 border-b border-primary">
-            <span className="text-sm font-medium text-gray-600">
-              Franchise Fee:
-            </span>
-            <span className="text-sm font-semibold text-gray-900">
-              ₹{fmt(paymentDetails.franchiseFee)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center py-2 border-b border-primary">
-            <span className="text-sm font-medium text-gray-600">
-              Monthly Fee:
-            </span>
-            <span className="text-sm font-semibold text-gray-900">
-              ₹{fmt(paymentDetails.monthlyFee)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center py-2 border-b border-primary">
-            <span className="text-sm font-medium text-gray-600">
-              Royalty (%):
-            </span>
-            <span className="text-sm font-semibold text-gray-900">
-              {paymentDetails.royalty ?? 0}%
-            </span>
-          </div>
-          <div className="flex justify-between items-center py-2 border-b border-primary">
-            <span className="text-sm font-medium text-gray-600">Kit Cost:</span>
-            <span className="text-sm font-semibold text-gray-900">
-              ₹{fmt(paymentDetails.kitCost)}
-            </span>
-          </div>
-        </div>
-
-        {/* Right column */}
-        <div className="space-y-2">
-          <div className="flex justify-between items-center py-2 border-b border-primary">
-            <span className="text-sm font-medium text-gray-600">
-              Material Cost:
-            </span>
-            <span className="text-sm font-semibold text-gray-900">
-              ₹{fmt(paymentDetails.materialCost)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center py-2 border-b border-primary">
-            <span className="text-sm font-medium text-gray-600">
-              Installment:
-            </span>
-            <span className="text-sm font-semibold text-gray-900">
-              ₹{fmt(paymentDetails.installment)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center py-2 border-b border-primary">
-            <span className="text-sm font-medium text-gray-600">CI Share:</span>
-            <span className="text-sm font-semibold text-gray-900">
-              ₹{fmt(paymentDetails.ciShare)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center py-2 border-b border-primary">
-            <span className="text-sm font-medium text-gray-600">
-              Franchise Share:
-            </span>
-            <span className="text-sm font-semibold text-gray-900">
-              ₹{fmt(paymentDetails.franchiseShare)}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Meta dates (optional) */}
-      {(paymentDetails.dateOfJoining || paymentDetails.dateOfPayment) && (
-        <div className="text-xs text-gray-600 pt-2">
-          {paymentDetails.dateOfJoining && (
-            <div>
-              DOJ: {new Date(paymentDetails.dateOfJoining).toLocaleDateString()}
+      {/* Per-Program Breakdown */}
+      {isPerProgram && paymentDetails.length > 1 && (
+        <div className="mb-5 space-y-3">
+          <p className="text-sm font-semibold text-gray-700 mb-2">Program-wise Breakdown:</p>
+          {paymentDetails.map((program: any, idx: number) => (
+            <div key={idx} className="bg-primary/5 p-4 rounded-lg border border-primary">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                {program.program?.name || `Program ${idx + 1}`}
+              </h4>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Franchise Fee:</span>
+                  <span className="font-semibold text-gray-900">₹{fmt(program.franchiseFee)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Kit Cost:</span>
+                  <span className="font-semibold text-gray-900">₹{fmt(program.kitCost)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Material Cost:</span>
+                  <span className="font-semibold text-gray-900">₹{fmt(program.materialCost)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Monthly Fee:</span>
+                  <span className="font-semibold text-gray-900">₹{fmt(program.monthlyFee)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Installment:</span>
+                  <span className="font-semibold text-gray-900">₹{fmt(program.installment)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Royalty (%):</span>
+                  <span className="font-semibold text-gray-900">{fmt(program.royalty)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">CI Share (%):</span>
+                  <span className="font-semibold text-gray-900">{fmt(program.ciShare)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Franchise Share (%):</span>
+                  <span className="font-semibold text-gray-900">{fmt(program.franchiseShare)}%</span>
+                </div>
+              </div>
             </div>
-          )}
-          {paymentDetails.dateOfPayment && (
-            <div>
-              DOP: {new Date(paymentDetails.dateOfPayment).toLocaleDateString()}
-            </div>
-          )}
+          ))}
+          <div className="border-t-2 border-primary pt-3 mt-4">
+            <p className="text-sm font-semibold text-gray-900">Combined Summary:</p>
+          </div>
         </div>
       )}
 
-      {/* Full-width total */}
-      <div className="flex justify-between items-center pt-3 mt-2 border-t border-primary">
-        <span className="text-base font-semibold text-gray-900">
-          Total Amount:
+      {/* Total Franchise Fee to Pay */}
+      <div className="flex justify-between items-center pt-5 mt-5 border-t-2 border-primary bg-primary/5 px-4 py-3 rounded-lg">
+        <span className="text-base font-bold text-gray-900">
+          Total Franchise Fee (Payable Now):
         </span>
-        <span className="text-lg font-bold text-primary">
-          ₹{fmt(paymentDetails.totalAmount)}
+        <span className="text-2xl font-bold text-primary">
+          ₹{fmt(summary.franchiseFee)}
         </span>
       </div>
     </div>

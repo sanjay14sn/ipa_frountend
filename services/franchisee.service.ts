@@ -12,7 +12,6 @@ export interface Franchisee {
   name: string;
   dob: Date;
   bloodGroup: string;
-  address: string;
   communicationAddress: string;
   city: string;
   phone: string;
@@ -27,7 +26,8 @@ export interface Franchise {
   name: string;
   type: string;
   status: string;
-  programId: number;
+  address: string;
+  programIds: number[];
   franchiseeId: number;
 }
 
@@ -36,7 +36,13 @@ export interface FranchiseResponse {
   name: string;
   type: string;
   status: string;
-  programName: string;
+  address: string;
+  franchisePrograms?: Array<{
+    program: {
+      id: number;
+      name: string;
+    };
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -46,7 +52,6 @@ export interface FranchiseeResponse {
   name: string;
   dob: Date;
   bloodGroup: string;
-  address: string;
   communicationAddress: string;
   city: string;
   phone: string;
@@ -69,6 +74,11 @@ export interface FranchisePayrollResponse {
   materialCost: number;
   installment: number;
   totalAmount: number;
+  programId: number;
+  program?: {
+    id: number;
+    name: string;
+  };
 }
 
 export interface FranchiseeApplication {
@@ -82,11 +92,37 @@ export interface PendingFranchise extends Response {
 
 export interface FranchiseData extends FranchiseResponse {
   franchisee: FranchiseeResponse;
-  franchisePayroll: FranchisePayrollResponse;
+  franchisePayroll?: FranchisePayrollResponse; // Legacy - for backward compatibility
+  franchisePayrolls?: FranchisePayrollResponse[]; // New - per program payrolls
 }
 
 export interface FranchisesResponse extends Response {
   result: FranchiseData[];
+}
+
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export interface PaginatedFranchisesResponse {
+  data: FranchiseData[];
+  meta: PaginationMeta;
+}
+
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  type?: string;
+  program?: string;
+  sortBy?: string;
+  sortOrder?: string;
 }
 
 export interface PayrollDetails {
@@ -124,6 +160,27 @@ export async function getAllFranchise(): Promise<FranchisesResponse> {
   return response.data;
 }
 
+export async function getPaginatedFranchises(
+  status: string,
+  params: PaginationParams
+): Promise<PaginatedFranchisesResponse> {
+  const queryParams = new URLSearchParams();
+
+  if (params.page) queryParams.append("page", params.page.toString());
+  if (params.limit) queryParams.append("limit", params.limit.toString());
+  if (params.search) queryParams.append("search", params.search);
+  if (params.status) queryParams.append("status", params.status);
+  if (params.type) queryParams.append("type", params.type);
+  if (params.program) queryParams.append("program", params.program);
+  if (params.sortBy) queryParams.append("sortBy", params.sortBy);
+  if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+
+  const response = await api.get<{ result: PaginatedFranchisesResponse }>(
+    `/franchise/paginated/${status}?${queryParams.toString()}`
+  );
+  return response.data.result;
+}
+
 export async function createPayrollDetails(
   id: number,
   payrollDetails: PayrollDetails
@@ -155,4 +212,51 @@ export async function onboardingPayment(franchiseId: number) {
   } else {
     throw new Error(response.data.message);
   }
+}
+
+// Payment-related interfaces
+export interface InitiateFranchiseFeePaymentDto {
+  franchiseId: number;
+}
+
+export interface PaymentOrderResponse {
+  orderId: string;
+  amount: number;
+  currency: string;
+  franchiseId: number;
+  franchiseName: string;
+  paymentType: string;
+  key: string;
+}
+
+export interface VerifyPaymentDto {
+  paymentId: string;
+  orderId: string;
+  signature: string;
+}
+
+export interface PaymentVerificationResponse {
+  message: string;
+  status?: string;
+}
+
+// Payment API functions
+export async function initiateFranchiseFeePayment(
+  franchiseId: number
+): Promise<PaymentOrderResponse> {
+  const response = await api.post<{ result: PaymentOrderResponse }>(
+    "/payment/franchise-fee/initiate",
+    { franchiseId }
+  );
+  return response.data.result;
+}
+
+export async function verifyFranchiseFeePayment(
+  paymentData: VerifyPaymentDto
+): Promise<PaymentVerificationResponse> {
+  const response = await api.post<{ result: PaymentVerificationResponse }>(
+    "/payment/franchise-fee/verify",
+    paymentData
+  );
+  return response.data.result;
 }

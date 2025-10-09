@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -20,6 +20,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
   ChevronDown,
   ChevronRight,
   Edit,
@@ -28,64 +34,118 @@ import {
   ChevronLeft,
   ChevronFirst,
   ChevronLast,
+  X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
-import { FranchiseData } from "@/services/franchisee.service";
+import { FranchiseData, getPaginatedFranchises } from "@/services/franchisee.service";
+import { FranchiseType, FranchiseStatus } from "@/services/franchise.enums";
+import { getAllPrograms, Program } from "@/services/program.service";
 import FranchiseDetails from "./FranchiseDetails";
 
 interface FranchiseTableProps {
-  clients?: FranchiseData[];
   onClientUpdate?: (updatedClient: FranchiseData) => void;
+  refreshTrigger?: number;
 }
 
 export default function FranchiseTable({
-  clients,
   onClientUpdate,
+  refreshTrigger,
 }: FranchiseTableProps) {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedChildren, setExpandedChildren] = useState<Set<string>>(
     new Set()
   );
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("Active");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [programFilter, setProgramFilter] = useState<string>("all");
+  const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
+  const [programPopoverOpen, setProgramPopoverOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<string>("createdAt");
+  const [sortOrder, setSortOrder] = useState<string>("DESC");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage] = useState(10);
+  const [loading, setLoading] = useState(true);
+  const [clients, setClients] = useState<FranchiseData[]>([]);
+  const [totalPages, setTotalPages] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [programs, setPrograms] = useState<Program[]>([]);
 
-  // Filter data
-  const filteredData = useMemo(() => {
-    if (!clients) {
-      return [];
-    }
-    return clients.filter((client) => {
-      const matchesSearch =
-        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.franchisee?.name
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        false ||
-        client.franchisee?.city
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        false;
+  // Fetch programs on mount
+  useEffect(() => {
+    const fetchPrograms = async () => {
+      try {
+        const programsData = await getAllPrograms();
+        setPrograms(programsData);
+      } catch (error) {
+        console.error("Error fetching programs:", error);
+      }
+    };
 
-      const matchesStatus =
-        statusFilter === "all" || client.status === statusFilter;
-      const matchesType = typeFilter === "all" || client.type === typeFilter;
-      const matchesProgram =
-        programFilter === "all" || client.programName === programFilter;
+    fetchPrograms();
+  }, []);
 
-      return matchesSearch && matchesStatus && matchesType && matchesProgram;
-    });
-  }, [clients, searchTerm, statusFilter, typeFilter, programFilter]);
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1); // Reset to first page on search
+    }, 500);
 
-  // Paginate data
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredData.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredData, currentPage]);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, typeFilter, selectedPrograms, sortBy, sortOrder]);
+
+  // Fetch data from backend with pagination and filters
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const result = await getPaginatedFranchises("all", {
+          page: currentPage,
+          limit: itemsPerPage,
+          search: debouncedSearchTerm || undefined,
+          status: statusFilter !== "all" ? statusFilter : undefined,
+          type: typeFilter !== "all" ? typeFilter : undefined,
+          program: selectedPrograms.length > 0 ? selectedPrograms.join(",") : undefined,
+          sortBy: sortBy || undefined,
+          sortOrder: sortOrder || undefined,
+        });
+
+        setClients(result.data);
+        setTotalPages(result.meta.totalPages);
+        setTotal(result.meta.total);
+      } catch (error) {
+        console.error("Error fetching franchises:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [currentPage, itemsPerPage, debouncedSearchTerm, statusFilter, typeFilter, selectedPrograms, sortBy, sortOrder, refreshTrigger]);
+
+  const toggleProgram = (programName: string) => {
+    setSelectedPrograms((prev) =>
+      prev.includes(programName)
+        ? prev.filter((p) => p !== programName)
+        : [...prev, programName]
+    );
+  };
+
+  const clearProgramFilter = () => {
+    setSelectedPrograms([]);
+  };
+
+  const toggleSortOrder = () => {
+    setSortOrder((prev) => (prev === "ASC" ? "DESC" : "ASC"));
+  };
 
   const toggleRow = (id: string) => {
     if (id.includes("-")) {
@@ -122,76 +182,148 @@ export default function FranchiseTable({
     }
   };
 
-  // Get unique values for filters
-  const uniqueStatuses = [
-    ...new Set(clients?.map((client) => client.status).filter(Boolean)),
-  ];
-  const uniqueTypes = [
-    ...new Set(clients?.map((client) => client.type).filter(Boolean)),
-  ];
-  const uniquePrograms = [
-    ...new Set(clients?.map((client) => client.programName).filter(Boolean)),
-  ];
-
   return (
     <div className="space-y-4">
       {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search franchises, franchisees, or cities..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search franchises, franchisees, or cities..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {/* Status Filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              {uniqueStatuses.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {status}
-                </SelectItem>
-              ))}
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value={FranchiseStatus.ACTIVE}>Active</SelectItem>
+              <SelectItem value={FranchiseStatus.INACTIVE}>Inactive</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Type Filter */}
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              {uniqueTypes.map((type) => (
+              {Object.values(FranchiseType).map((type) => (
                 <SelectItem key={type} value={type}>
                   {type}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={programFilter} onValueChange={setProgramFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Program" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Programs</SelectItem>
-              {uniquePrograms.map((program) => (
-                <SelectItem key={program} value={program}>
-                  {program}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={programPopoverOpen} onOpenChange={setProgramPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-[200px] justify-between text-left font-normal"
+              >
+                {selectedPrograms.length === 0 ? (
+                  <span>All Programs</span>
+                ) : (
+                  <span className="truncate">
+                    {selectedPrograms.length} selected
+                  </span>
+                )}
+                <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0" align="start">
+              <div className="p-2 border-b">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Programs</span>
+                  {selectedPrograms.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={clearProgramFilter}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="max-h-[200px] overflow-y-auto p-2">
+                {programs.map((program) => (
+                  <div
+                    key={program.id}
+                    className="flex items-center space-x-2 py-2 px-2 hover:bg-gray-100 rounded cursor-pointer"
+                    onClick={() => toggleProgram(program.name)}
+                  >
+                    <Checkbox
+                      checked={selectedPrograms.includes(program.name)}
+                      onCheckedChange={() => toggleProgram(program.name)}
+                    />
+                    <label className="text-sm cursor-pointer flex-1">
+                      {program.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Sort Controls */}
+          <div className="flex items-center gap-2">
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Sort By" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="createdAt">Date</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleSortOrder}
+              className="h-9 px-3"
+            >
+              {sortOrder === "ASC" ? (
+                <>
+                  <ArrowUp className="h-4 w-4 mr-1" />
+                  <span className="text-xs">Asc</span>
+                </>
+              ) : (
+                <>
+                  <ArrowDown className="h-4 w-4 mr-1" />
+                  <span className="text-xs">Desc</span>
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Results count */}
       <div className="text-sm text-gray-600">
-        Showing {paginatedData.length} of {filteredData.length} franchises
+        {loading ? (
+          <div className="h-5 w-48 bg-gray-200 animate-pulse rounded"></div>
+        ) : (
+          <>
+            Showing {clients.length} of {total} franchises
+            {(debouncedSearchTerm ||
+              statusFilter !== "all" ||
+              typeFilter !== "all" ||
+              selectedPrograms.length > 0) && (
+              <span className="text-gray-500"> (filtered)</span>
+            )}
+          </>
+        )}
       </div>
 
       {/* Table */}
@@ -201,14 +333,48 @@ export default function FranchiseTable({
             <TableRow className="bg-secondary hover:bg-secondary">
               <TableHead className="w-[300px]">Franchise</TableHead>
               <TableHead className="text-center">Type</TableHead>
-              <TableHead className="text-center">Program</TableHead>
+              <TableHead className="text-center">Programs</TableHead>
               <TableHead className="text-center">Created Date</TableHead>
               <TableHead className="text-center">Status</TableHead>
               <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedData.map((client, index) => (
+            {loading ? (
+              // Loading skeleton
+              Array.from({ length: 5 }).map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="space-y-2">
+                        <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-3 w-48 bg-gray-200 rounded animate-pulse"></div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse mx-auto"></div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mx-auto"></div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse mx-auto"></div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="h-6 w-16 bg-gray-200 rounded-full animate-pulse mx-auto"></div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              clients.map((client, index) => (
               <React.Fragment key={client.id}>
                 <TableRow className="hover:bg-gray-50">
                   <TableCell>
@@ -243,7 +409,7 @@ export default function FranchiseTable({
                   </TableCell>
                   <TableCell className="text-center">{client.type}</TableCell>
                   <TableCell className="text-center">
-                    {client.programName}
+                    {client.franchisePrograms?.map((fp) => fp.program.name).join(", ") || "N/A"}
                   </TableCell>
                   <TableCell className="text-center">
                     {new Date(client.createdAt).toLocaleDateString()}
@@ -282,13 +448,14 @@ export default function FranchiseTable({
                   </TableRow>
                 )}
               </React.Fragment>
-            ))}
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {!loading && totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
             Page {currentPage} of {totalPages}
@@ -344,7 +511,7 @@ export default function FranchiseTable({
         </div>
       )}
 
-      {paginatedData.length === 0 && (
+      {!loading && clients.length === 0 && (
         <div className="text-center py-8">
           <div className="text-gray-500">
             No franchises found matching your criteria

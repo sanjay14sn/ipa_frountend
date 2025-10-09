@@ -99,10 +99,6 @@ export default function FranchiseeSection({
                       </p>
                     </div>
                     <div className="col-span-2">
-                      <span className="text-gray-500">Address</span>
-                      <p className="text-gray-900 mt-1">{franchisee.address}</p>
-                    </div>
-                    <div className="col-span-2">
                       <span className="text-gray-500">
                         Communication Address
                       </span>

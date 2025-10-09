@@ -83,8 +83,10 @@ export default function FranchiseDetails({
                   <p className="text-gray-900 mt-1">{client.type}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Program</span>
-                  <p className="text-gray-900 mt-1">{client.programName}</p>
+                  <span className="text-gray-500">Programs</span>
+                  <p className="text-gray-900 mt-1">
+                    {client.franchisePrograms?.map((fp) => fp.program.name).join(", ") || "N/A"}
+                  </p>
                 </div>
                 <div>
                   <span className="text-gray-500">Status</span>
@@ -105,6 +107,10 @@ export default function FranchiseDetails({
                 <div>
                   <span className="text-gray-500">Franchise ID</span>
                   <p className="text-gray-900 mt-1">{client.id}</p>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-500">Address</span>
+                  <p className="text-gray-900 mt-1">{client.address}</p>
                 </div>
               </div>
             </div>

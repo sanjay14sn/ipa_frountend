@@ -115,22 +115,16 @@ export default function PendingFranchiseeSection({
                         {franchisee.bloodGroup}
                       </p>
                     </div>
-                    <div className="col-span-2">
-                      <span className="text-gray-500">Address</span>
-                      <p className="text-gray-900 mt-1">{franchisee.address}</p>
-                    </div>
-                    {franchisee.communicationAddress &&
-                      franchisee.communicationAddress !==
-                        franchisee.address && (
-                        <div className="col-span-2">
-                          <span className="text-gray-500">
-                            Communication Address
-                          </span>
-                          <p className="text-gray-900 mt-1">
-                            {franchisee.communicationAddress}
-                          </p>
-                        </div>
-                      )}
+                    {franchisee.communicationAddress && (
+                      <div className="col-span-2">
+                        <span className="text-gray-500">
+                          Communication Address
+                        </span>
+                        <p className="text-gray-900 mt-1">
+                          {franchisee.communicationAddress}
+                        </p>
+                      </div>
+                    )}
                     {franchisee.reference && (
                       <div className="col-span-2">
                         <span className="text-gray-500">Reference</span>

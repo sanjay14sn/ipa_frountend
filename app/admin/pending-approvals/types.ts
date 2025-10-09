@@ -1,14 +1,22 @@
-export interface PayrollDetails {
-  franchiseId: number;
+export interface ProgramPayroll {
+  programId: number;
+  programName: string;
   franchiseFee: number;
-  dateOfPayment: string;
-  dateOfJoining: string;
+  kitCost: number;
+  materialCost: number;
   monthlyFee: number;
   ciShare: number;
   franchiseShare: number;
   royalty: number;
   installment: number;
   totalAmount: number;
+}
+
+export interface PayrollDetails {
+  franchiseId: number;
+  dateOfPayment: string;
+  dateOfJoining: string;
+  programPayrolls: ProgramPayroll[];
   renewalDate?: string;
   renewalAmount?: number;
 }

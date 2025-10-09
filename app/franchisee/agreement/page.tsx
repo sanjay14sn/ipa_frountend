@@ -16,7 +16,13 @@ import FranchiseDetails from "./components/FranchiseDetails";
 import PaymentBreakdown from "./components/PaymentBreakdown";
 import AgreementTerms from "./components/AgreementTerms";
 import PaymentAction from "./components/PaymentAction";
-import { onboardingPayment } from "@/services/franchisee.service";
+import RazorpayPayment, {
+  RazorpaySuccessResponse,
+} from "@/components/RazorpayPayment";
+import {
+  initiateFranchiseFeePayment,
+  verifyFranchiseFeePayment,
+} from "@/services/franchisee.service";
 
 export default function FranchiseAgreementPage() {
   const router = useRouter();
@@ -30,6 +36,14 @@ export default function FranchiseAgreementPage() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set()
   );
+  const [razorpayOrderId, setRazorpayOrderId] = useState<string | null>(null);
+  const [paymentDetails, setPaymentDetails] = useState<{
+    orderId: string;
+    amount: number;
+    currency: string;
+    franchiseName: string;
+    key: string;
+  } | null>(null);
 
   useEffect(() => {
     if (user?.role === "admin") {
@@ -67,23 +81,13 @@ export default function FranchiseAgreementPage() {
       city: user.profile.city,
       communicationAddress: user.profile.communicationAddress,
       franchiseCode: `FR-${user.profile.franchise.id}`,
-      program: "ABACUS", // Default program
+      program: user.profile.franchise.franchisePrograms?.map((fp: any) => fp.program.name).join(", ") || "N/A",
       franchiseType: user.profile.franchise.type,
       reference: user.profile.reference,
       date: user.profile.franchise.createdAt,
-      paymentDetails: user.profile.franchise.franchisePayroll || {
-        franchiseFee: 0,
-        monthlyFee: 0,
-        royalty: 0,
-        kitCost: 0,
-        materialCost: 0,
-        installment: 0,
-        ciShare: 0,
-        franchiseShare: 0,
-        totalAmount: 0,
-        dateOfJoining: undefined,
-        dateOfPayment: undefined,
-      },
+      // Support both new (per-program) and legacy (single) payroll
+      paymentDetails: user.profile.franchise.franchisePayrolls ||
+        (user.profile.franchise.franchisePayroll ? [user.profile.franchise.franchisePayroll] : []),
     } as any;
 
     // Process agreement content with franchise data
@@ -142,10 +146,34 @@ export default function FranchiseAgreementPage() {
     setIsProcessingPayment(true);
 
     try {
-      // Simulate payment processing
-      const response = await onboardingPayment(user.franchiseId);
+      // Initiate payment with backend
+      const paymentOrder = await initiateFranchiseFeePayment(user.franchiseId);
 
-      if (response.statusCode === 201) {
+      // Set payment details to trigger Razorpay
+      setPaymentDetails({
+        orderId: paymentOrder.orderId,
+        amount: paymentOrder.amount,
+        currency: paymentOrder.currency,
+        franchiseName: paymentOrder.franchiseName,
+        key: paymentOrder.key,
+      });
+    } catch (error) {
+      console.error("Error initiating payment:", error);
+      alert("Failed to initiate payment. Please try again.");
+      setIsProcessingPayment(false);
+    }
+  };
+
+  const handlePaymentSuccess = async (response: RazorpaySuccessResponse) => {
+    try {
+      // Verify payment with backend
+      const verificationResult = await verifyFranchiseFeePayment({
+        paymentId: response.razorpay_payment_id,
+        orderId: response.razorpay_order_id,
+        signature: response.razorpay_signature,
+      });
+
+      if (verificationResult.message === "Payment verified successfully") {
         // Update user in context/localStorage
         setUser({
           ...user,
@@ -158,14 +186,22 @@ export default function FranchiseAgreementPage() {
           router.push("/franchisee/dashboard");
         }, 3000);
       } else {
-        throw new Error("Failed to complete onboarding");
+        throw new Error("Payment verification failed");
       }
     } catch (error) {
-      console.error("Error processing payment:", error);
-      alert("Payment processing failed. Please try again.");
+      console.error("Error verifying payment:", error);
+      alert("Payment verification failed. Please contact support.");
     } finally {
       setIsProcessingPayment(false);
+      setPaymentDetails(null);
     }
+  };
+
+  const handlePaymentFailure = (error: any) => {
+    console.error("Payment failed:", error);
+    alert("Payment failed. Please try again.");
+    setIsProcessingPayment(false);
+    setPaymentDetails(null);
   };
 
   if (pageLoading) {
@@ -208,23 +244,13 @@ export default function FranchiseAgreementPage() {
     city: user.profile.city,
     communicationAddress: user.profile.communicationAddress,
     franchiseCode: `FR-${user.profile.franchise.id}`,
-    program: "ABACUS", // Default program
+    program: user.profile.franchise.franchisePrograms?.map((fp: any) => fp.program.name).join(", ") || "N/A",
     franchiseType: user.profile.franchise.type,
     reference: user.profile.reference,
     date: user.profile.franchise.createdAt,
-    paymentDetails: user.profile.franchise.franchisePayroll || {
-      franchiseFee: 0,
-      monthlyFee: 0,
-      royalty: 0,
-      kitCost: 0,
-      materialCost: 0,
-      installment: 0,
-      ciShare: 0,
-      franchiseShare: 0,
-      totalAmount: 0,
-      dateOfJoining: undefined,
-      dateOfPayment: undefined,
-    },
+    // Support both new (per-program) and legacy (single) payroll
+    paymentDetails: user.profile.franchise.franchisePayrolls ||
+      (user.profile.franchise.franchisePayroll ? [user.profile.franchise.franchisePayroll] : []),
   } as any;
 
   if (showPaymentSuccess) {
@@ -255,52 +281,71 @@ export default function FranchiseAgreementPage() {
   }
 
   return (
-    <div className="min-h-screen  p-8 bg-background">
-      <div className="w-full">
+    <div className="min-h-screen p-6 md:p-8 bg-gray-50">
+      {paymentDetails && user?.profile && (
+        <RazorpayPayment
+          orderId={paymentDetails.orderId}
+          amount={paymentDetails.amount}
+          currency={paymentDetails.currency}
+          franchiseName={paymentDetails.franchiseName}
+          razorpayKey={paymentDetails.key}
+          onSuccess={handlePaymentSuccess}
+          onFailure={handlePaymentFailure}
+          userDetails={{
+            name: user.profile.name,
+            email: user.profile.mail,
+            phone: user.profile.phone,
+          }}
+        />
+      )}
+      <div className="w-full max-w-[1600px] mx-auto">
         {/* Professional Header */}
-        <div className="border rounded-lg border-primary shadow-lg bg-background/80">
-          <div className=" p-6 border-b border-primary rounded-t-lg">
+        <div className="border-2 rounded-xl border-primary shadow-xl bg-white">
+          <div className="p-6 md:p-8 border-b-2 border-primary bg-primary/5 rounded-t-xl">
             <div className="text-center">
-              <h1 className="text-2xl font-bold mb-2 underline">
+              <h1 className="text-2xl md:text-3xl font-bold mb-2 text-gray-900">
                 Franchisee Agreement
               </h1>
-              <p className="text-sm">
-                Please review your franchise details and complete the payment to
-                get started
+              <p className="text-sm md:text-base text-gray-600">
+                Please review your franchise details and complete the payment to get started
               </p>
             </div>
           </div>
 
           {/* Multi-column professional layout */}
-          <div className=" grid grid-cols-5 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-5 lg:min-h-[800px]">
             {/* Column 1 - All Details */}
-            <div className="space-y-6 col-span-2 p-8">
+            <div className="space-y-6 lg:col-span-2 p-6 md:p-8 bg-gray-50/50 lg:overflow-y-auto lg:max-h-[800px]">
               <FranchiseeInformation franchiseData={franchiseData} />
               <LocationDetails franchiseData={franchiseData} />
               <FranchiseDetails franchiseData={franchiseData} />
               <PaymentBreakdown paymentDetails={franchiseData.paymentDetails} />
             </div>
 
-            {/* Column 2 - Agreement Terms & Payment */}
-            <div className="space-y-6 h-full flex flex-col col-span-3 border-l border-primary pl-8 pr-8">
-              <AgreementTerms
-                agreementContent={agreementContent}
-                expandedSections={expandedSections}
-                agreementAccepted={agreementAccepted}
-                onToggleSection={toggleSection}
-                onExpandAll={expandAllSections}
-                onCollapseAll={collapseAllSections}
-                onDownloadPDF={handleDownloadPDF}
-                onAgreementChange={handleCheckboxChange}
-              />
-              <div className="pb-8">
-                <PaymentAction
+            {/* Column 2 - Agreement Terms */}
+            <div className="lg:col-span-3 lg:border-l-2 border-primary p-6 md:p-8 flex flex-col lg:min-h-[800px]">
+              <div className="flex-1 overflow-y-auto">
+                <AgreementTerms
+                  agreementContent={agreementContent}
+                  expandedSections={expandedSections}
                   agreementAccepted={agreementAccepted}
-                  isProcessingPayment={isProcessingPayment}
-                  onPaymentSubmit={handlePaymentSubmit}
+                  onToggleSection={toggleSection}
+                  onExpandAll={expandAllSections}
+                  onCollapseAll={collapseAllSections}
+                  onDownloadPDF={handleDownloadPDF}
+                  onAgreementChange={handleCheckboxChange}
                 />
               </div>
             </div>
+          </div>
+
+          {/* Payment Action Row - Spans Full Width */}
+          <div className="border-t-2 border-primary bg-gray-50/50 p-6 md:p-8">
+            <PaymentAction
+              agreementAccepted={agreementAccepted}
+              isProcessingPayment={isProcessingPayment}
+              onPaymentSubmit={handlePaymentSubmit}
+            />
           </div>
         </div>
       </div>

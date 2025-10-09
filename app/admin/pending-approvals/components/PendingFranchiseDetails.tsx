@@ -58,9 +58,9 @@ export default function PendingFranchiseDetails({
                   <p className="text-gray-900 mt-1">{application.type}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Program</span>
+                  <span className="text-gray-500">Programs</span>
                   <p className="text-gray-900 mt-1">
-                    {application.programName}
+                    {application.franchisePrograms?.map((fp) => fp.program.name).join(", ") || "N/A"}
                   </p>
                 </div>
                 <div>
@@ -82,6 +82,10 @@ export default function PendingFranchiseDetails({
                 <div>
                   <span className="text-gray-500">Franchise ID</span>
                   <p className="text-gray-900 mt-1">{application.id}</p>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-500">Address</span>
+                  <p className="text-gray-900 mt-1">{application.address}</p>
                 </div>
               </div>
             </div>

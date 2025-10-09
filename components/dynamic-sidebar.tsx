@@ -14,6 +14,8 @@ import {
   Store,
   Clock,
   AlertCircle,
+  BookOpen,
+  Award,
 } from "lucide-react";
 
 import {
@@ -56,14 +58,29 @@ const adminNavigation = {
           icon: Building2,
         },
         {
-          title: "Pending Approvals",
+          title: "Franchisee Approvals",
           url: "/admin/pending-approvals",
           icon: Clock,
         },
         {
+          title: "CI Approvals",
+          url: "/admin/course-instructor-approvals",
+          icon: GraduationCap,
+        },
+        {
           title: "ID Requests",
-          url: "/admin/students/id-requests",
+          url: "/admin/id-requests",
           icon: Users,
+        },
+        {
+          title: "Certificate Requests",
+          url: "/admin/certificate-requests",
+          icon: Award,
+        },
+        {
+          title: "CI Training",
+          url: "/admin/ci-training",
+          icon: BookOpen,
         },
       ],
     },
@@ -104,6 +121,11 @@ const franchiseNavigation = {
           title: "Contests",
           url: "/franchisee/contests",
           icon: Trophy,
+        },
+        {
+          title: "Certificate Requests",
+          url: "/franchisee/certificate-requests",
+          icon: Award,
         },
       ],
     },

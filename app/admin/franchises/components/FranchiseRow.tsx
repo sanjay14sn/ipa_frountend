@@ -61,7 +61,9 @@ export default function FranchiseRow({
           {client.type}
         </div>
         <div className="col-span-2 text-gray-700 text-center flex items-center justify-center">
-          {client.programName}
+          <div className="overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px]">
+            {client.franchisePrograms?.map((fp) => fp.program.name).join(", ") || "N/A"}
+          </div>
         </div>
         <div className="col-span-2 text-gray-700 text-center flex items-center justify-center">
           {new Date(client.createdAt).toLocaleDateString()}

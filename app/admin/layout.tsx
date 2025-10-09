@@ -15,6 +15,7 @@ import {
   BreadcrumbLink,
   BreadcrumbList,
 } from "@/components/ui/breadcrumb";
+import { NotificationBell } from "@/components/shared/notification-bell";
 
 export default function AdminLayout({
   children,
@@ -40,6 +41,9 @@ export default function AdminLayout({
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+          <div className="ml-auto">
+            <NotificationBell />
+          </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 bg-background">
           {children}

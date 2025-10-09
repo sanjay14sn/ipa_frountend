@@ -3,6 +3,7 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import { Fira_Sans } from "next/font/google";
 import { UserProvider } from "@/context/user-context";
+import { NotificationProvider } from "@/context/notification-context";
 
 const firaSans = Fira_Sans({
   subsets: ["latin"],
@@ -26,8 +27,10 @@ export default function RootLayout({
     <html lang="en" className={`${firaSans.variable}`}>
       <body>
         <UserProvider>
-          {children}
-          <Toaster />
+          <NotificationProvider>
+            {children}
+            <Toaster />
+          </NotificationProvider>
         </UserProvider>
       </body>
     </html>
