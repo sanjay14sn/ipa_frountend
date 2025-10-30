@@ -114,9 +114,9 @@ const Stepper = ({
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-all duration-200 ${
                   currentStep === step.id
-                    ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                    ? "bg-primary text-white border-primary shadow-md"
                     : currentStep > step.id
-                    ? "bg-green-600 text-white border-green-600"
+                    ? "bg-primary text-white border-primary"
                     : "bg-white text-gray-400 border-gray-300"
                 }`}
               >
@@ -136,7 +136,7 @@ const Stepper = ({
               <div className="flex items-center justify-center flex-1 max-w-[60px] px-2">
                 <div
                   className={`h-0.5 w-full transition-all duration-200 ${
-                    currentStep > step.id ? "bg-green-600" : "bg-gray-300"
+                    currentStep > step.id ? "bg-primary" : "bg-gray-300"
                   }`}
                 />
               </div>
@@ -207,31 +207,32 @@ export default function AddStudentModal({
     existing: false,
 
     // Basic Information
-    studentName: "",
+    studentName: "Aarav Sharma",
     rollNo: "",
-    dob: "",
-    dateOfJoining: "",
-    sex: "",
-    standard: "",
-    level: "",
+    dob: "2015-03-15",
+    dateOfJoining: new Date().toISOString().split("T")[0],
+    sex: "Male",
+    standard: "4th",
+    level: "EL3",
     stream: "regular",
     status: "active",
     photoImage: null,
-    programId: 0,
+    programId: 1,
 
     // Parent Information
-    fatherName: "",
-    fatherQualification: "",
-    fatherOccupation: "",
-    fatherContactNo: "",
-    motherName: "",
-    motherQualification: "",
-    motherOccupation: "",
-    motherContactNo: "",
+    fatherName: "Rajesh Sharma",
+    fatherQualification: "B.Tech",
+    fatherOccupation: "Software Engineer",
+    fatherContactNo: "9876543210",
+    motherName: "Priya Sharma",
+    motherQualification: "M.A.",
+    motherOccupation: "Teacher",
+    motherContactNo: "9876543211",
 
     // Contact & Address
-    residentialAddress: "",
-    mailId: "",
+    residentialAddress:
+      "123, Green Park Colony, Sector 12, Mumbai, Maharashtra - 400001",
+    mailId: "sharma.family@example.com",
 
     // Status Management
     isDiscontinued: false,
@@ -441,29 +442,30 @@ export default function AddStudentModal({
     setFormData({
       existing: false,
 
-      studentName: "",
+      studentName: "Aarav Sharma",
       rollNo: "",
-      dob: "",
-      dateOfJoining: "",
-      sex: "",
-      standard: "",
-      level: "",
+      dob: "2015-03-15",
+      dateOfJoining: new Date().toISOString().split("T")[0],
+      sex: "Male",
+      standard: "4th",
+      level: "EL3",
       stream: "regular",
       status: "active",
       photoImage: null,
-      programId: 0,
+      programId: 1,
 
-      fatherName: "",
-      fatherQualification: "",
-      fatherOccupation: "",
-      fatherContactNo: "",
-      motherName: "",
-      motherQualification: "",
-      motherOccupation: "",
-      motherContactNo: "",
+      fatherName: "Rajesh Sharma",
+      fatherQualification: "B.Tech",
+      fatherOccupation: "Software Engineer",
+      fatherContactNo: "9876543210",
+      motherName: "Priya Sharma",
+      motherQualification: "M.A.",
+      motherOccupation: "Teacher",
+      motherContactNo: "9876543211",
 
-      residentialAddress: "",
-      mailId: "",
+      residentialAddress:
+        "123, Green Park Colony, Sector 12, Mumbai, Maharashtra - 400001",
+      mailId: "sharma.family@example.com",
 
       isDiscontinued: false,
       discontinueReason: "",
@@ -488,8 +490,8 @@ export default function AddStudentModal({
         return (
           <div className="space-y-4">
             {/* Student Type Selection */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+              <h4 className="font-medium text-primary mb-3 flex items-center gap-2">
                 <User className="w-4 h-4" />
                 Student Type
               </h4>
@@ -501,7 +503,7 @@ export default function AddStudentModal({
                     name="studentType"
                     checked={!formData.existing}
                     onChange={() => handleInputChange("existing", false)}
-                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500"
+                    className="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-primary"
                   />
                   <Label htmlFor="newStudent" className="text-sm font-medium">
                     New Student
@@ -514,7 +516,7 @@ export default function AddStudentModal({
                     name="studentType"
                     checked={formData.existing}
                     onChange={() => handleInputChange("existing", true)}
-                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500"
+                    className="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-primary"
                   />
                   <Label
                     htmlFor="existingStudent"
@@ -524,7 +526,7 @@ export default function AddStudentModal({
                   </Label>
                 </div>
               </div>
-              <p className="text-sm text-blue-600 mt-2">
+              <p className="text-sm text-primary/80 mt-2">
                 {formData.existing
                   ? "Select this if the student is already enrolled in your franchise"
                   : "Select this for new student registration"}
@@ -978,8 +980,8 @@ export default function AddStudentModal({
       case 4:
         return (
           <div className="space-y-4">
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <h4 className="font-medium text-orange-800 mb-2 flex items-center gap-2">
+            <div className="bg-secondary/10 border border-secondary/30 rounded-lg p-4">
+              <h4 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4" />
                 Discontinuation (Optional)
               </h4>
@@ -1023,7 +1025,7 @@ export default function AddStudentModal({
                         {errors.discontinueReason}
                       </p>
                     )}
-                    <p className="text-sm text-orange-600">
+                    <p className="text-sm text-gray-600">
                       ⚠️ Discontinued students cannot request certificates and
                       will need admin approval for reactivation.
                     </p>
@@ -1045,7 +1047,7 @@ export default function AddStudentModal({
         <DialogContent className="max-w-md w-full mx-4">
           <DialogHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <CheckCircle className="h-12 w-12 text-green-600" />
+              <CheckCircle className="h-12 w-12 text-primary" />
             </div>
             <DialogTitle className="text-2xl font-bold text-gray-900">
               Student Registered Successfully!
@@ -1057,7 +1059,7 @@ export default function AddStudentModal({
           </DialogHeader>
           <div className="pt-4">
             <Button
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className="w-full bg-primary hover:bg-primary/90"
               onClick={handleClose}
             >
               Close
@@ -1118,7 +1120,7 @@ export default function AddStudentModal({
                     <Button
                       type="button"
                       onClick={handleNext}
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-primary hover:bg-primary/90"
                     >
                       Next
                       <ArrowRight className="h-4 w-4 ml-2" />
@@ -1141,7 +1143,7 @@ export default function AddStudentModal({
 
                       <Button
                         type="submit"
-                        className="bg-blue-600 hover:bg-blue-700"
+                        className="bg-primary hover:bg-primary/90"
                         disabled={isLoading}
                       >
                         {isLoading ? (

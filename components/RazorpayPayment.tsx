@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface RazorpayPaymentProps {
   orderId: string;
@@ -65,7 +65,15 @@ export default function RazorpayPayment({
   onFailure,
   userDetails,
 }: RazorpayPaymentProps) {
+  const hasInitialized = useRef(false);
+
   useEffect(() => {
+    // Prevent double initialization in React Strict Mode or re-renders
+    if (hasInitialized.current) {
+      return;
+    }
+    hasInitialized.current = true;
+
     if (typeof window.Razorpay !== "undefined") {
       initializeRazorpay();
       return;
@@ -92,7 +100,7 @@ export default function RazorpayPayment({
         document.body.removeChild(existingScript);
       }
     };
-  }, []);
+  }, [orderId]);
 
   const initializeRazorpay = () => {
     if (typeof window.Razorpay === "undefined") {

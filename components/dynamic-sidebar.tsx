@@ -16,6 +16,9 @@ import {
   AlertCircle,
   BookOpen,
   Award,
+  CreditCard,
+  Settings,
+  Package,
 } from "lucide-react";
 
 import {
@@ -46,6 +49,16 @@ const adminNavigation = {
           title: "Dashboard",
           url: "/admin/dashboard",
           icon: LayoutDashboard,
+        },
+        {
+          title: "Profile",
+          url: "/admin/profile",
+          icon: Settings,
+        },
+        {
+          title: "Inventory",
+          url: "/admin/inventory",
+          icon: Package,
         },
       ],
     },
@@ -81,6 +94,11 @@ const adminNavigation = {
           title: "CI Training",
           url: "/admin/ci-training",
           icon: BookOpen,
+        },
+        {
+          title: "Payments",
+          url: "/admin/payments",
+          icon: CreditCard,
         },
       ],
     },

@@ -73,7 +73,7 @@ export default function ContactInfoSection({
           </button>
           <h4 className="font-medium text-gray-900">Contact & Address</h4>
           <Badge variant="outline" className="ml-2">
-            {calculateAge(instructor.dob)}y
+            {calculateAge(instructor.dob.toString())}
           </Badge>
         </div>
 
@@ -110,7 +110,7 @@ export default function ContactInfoSection({
                     <div>
                       <span className="text-gray-500">Age</span>
                       <p className="text-gray-900 mt-1">
-                        {calculateAge(instructor.dob)} years old
+                        {calculateAge(instructor.dob.toString())} years old
                       </p>
                     </div>
                     <div>
@@ -179,9 +179,9 @@ export default function ContactInfoSection({
                         <p className="font-medium text-gray-900">
                           {instructor.franchiseName}
                         </p>
-                        {instructor.franchiseeAddress && (
+                        {instructor.address && (
                           <p className="text-sm text-gray-600">
-                            {instructor.franchiseeAddress}
+                            {instructor.address}
                           </p>
                         )}
                       </div>

@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RequestedIdDetail } from "@/services/student.service";
 import IdCardPreviewModal from "./components/IdCardPreviewModal";
 import RequestedIdTable from "./components/RequestedIdTable";
-import IssuedIdTable from "./components/IssuedIdTable";
 
 export default function AdminIdRequestsPage() {
   const [selectedStudent, setSelectedStudent] =
@@ -40,20 +38,10 @@ export default function AdminIdRequestsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="requested" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="requested">Requested IDs</TabsTrigger>
-          <TabsTrigger value="issued">Issued IDs</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="requested" className="space-y-4">
-          <RequestedIdTable onIssueId={handleIssueId} refreshTrigger={refreshTrigger} />
-        </TabsContent>
-
-        <TabsContent value="issued" className="space-y-4">
-          <IssuedIdTable refreshTrigger={refreshTrigger} />
-        </TabsContent>
-      </Tabs>
+      <RequestedIdTable
+        onIssueId={handleIssueId}
+        refreshTrigger={refreshTrigger}
+      />
 
       {/* ID Card Preview Modal */}
       {selectedStudent && (

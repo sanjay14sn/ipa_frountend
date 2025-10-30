@@ -4,16 +4,13 @@ import React, { useState } from "react";
 import { Bell, Check, CheckCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "../ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { ScrollArea } from "../ui/scroll-area";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 import { useNotifications } from "../../context/notification-context";
 import { Notification } from "../../lib/notification.types";
+import { useRouter } from "next/navigation";
 
 export function NotificationBell() {
   const {
@@ -26,10 +23,61 @@ export function NotificationBell() {
   } = useNotifications();
 
   const [open, setOpen] = useState(false);
+  const router = useRouter();
+
+  const getRedirectUrl = (notification: Notification) => {
+    switch (notification.type) {
+      // Student notifications
+      case "student_id_requested":
+      case "student_id_issued":
+      case "student_deactivated":
+      case "student_reactivated":
+      case "student_level_promoted":
+      case "student_level_stuck":
+      case "student_registered":
+        return "/admin/id-requests";
+
+      // Franchise notifications
+      case "franchise_application_submitted":
+        return "/admin/franchises";
+      case "franchise_payment_pending":
+      case "franchise_payment_received":
+      case "franchise_payment_due":
+      case "franchise_payment_confirmed":
+        return "/admin/payments";
+      case "franchise_approved":
+      case "franchise_rejected":
+        return "/admin/pending-approvals";
+
+      // Course Instructor (CI) notifications
+      case "ci_application_submitted":
+      case "ci_application_approved":
+      case "ci_application_rejected":
+        return "/admin/course-instructor-approvals";
+      case "ci_training_requested":
+      case "ci_training_approved":
+      case "ci_training_rejected":
+      case "ci_training_scheduled":
+        return "/admin/ci-training";
+
+      // Certificate notifications
+      case "certificate_requested":
+      case "certificate_approved":
+      case "certificate_rejected":
+      case "certificate_sent":
+        return "/admin/certificate-requests";
+      default:
+        return undefined;
+    }
+  };
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.isRead) {
       await markNotificationAsRead(notification.id);
+    }
+    const url = getRedirectUrl(notification);
+    if (url) {
+      router.push(url);
     }
   };
 
@@ -78,7 +126,9 @@ export function NotificationBell() {
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-center px-4">
               <Bell className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">No notifications yet</p>
+              <p className="text-sm text-muted-foreground">
+                No notifications yet
+              </p>
             </div>
           ) : (
             <div className="divide-y">

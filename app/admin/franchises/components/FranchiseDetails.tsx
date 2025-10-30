@@ -1,7 +1,6 @@
-import FranchiseeSection from "./FranchiseeSection";
-import PayrollSection from "./PayrollSection";
+import FranchiseeSection, { franchiseeDotRef } from "./FranchiseeSection";
+import PayrollSection, { payrollDotRef } from "./PayrollSection";
 import { useEffect, useState, useRef } from "react";
-import { payrollDotRef } from "./PayrollSection";
 import {
   FranchisePayrollResponse,
   FranchiseData,
@@ -23,6 +22,7 @@ export default function FranchiseDetails({
   onClientUpdate,
 }: FranchiseDetailsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const franchiseDetailsDotRef = useRef<HTMLDivElement>(null);
   const [lineHeight, setLineHeight] = useState(0);
 
   const handlePayrollUpdate = (updatedPayroll: FranchisePayrollResponse) => {
@@ -37,19 +37,37 @@ export default function FranchiseDetails({
 
   useEffect(() => {
     const calculateLineHeight = () => {
-      if (containerRef.current && payrollDotRef.current) {
-        const containerTop = containerRef.current.getBoundingClientRect().top;
+      if (!containerRef.current) return;
+
+      const containerTop = containerRef.current.getBoundingClientRect().top;
+      let lastDotRef = null;
+
+      // Find the last visible dot (check in reverse order: payroll, franchisee, franchiseDetails)
+      if (payrollDotRef.current) {
+        lastDotRef = payrollDotRef.current;
+      } else if (franchiseeDotRef.current) {
+        lastDotRef = franchiseeDotRef.current;
+      } else if (franchiseDetailsDotRef.current) {
+        lastDotRef = franchiseDetailsDotRef.current;
+      }
+
+      if (lastDotRef) {
         const dotCenter =
-          payrollDotRef.current.getBoundingClientRect().top +
-          payrollDotRef.current.offsetHeight / 2;
+          lastDotRef.getBoundingClientRect().top + lastDotRef.offsetHeight / 2;
         setLineHeight(dotCenter - containerTop);
       }
     };
 
     // Add a small delay to ensure DOM has updated after expansion/collapse
-    const timeoutId = setTimeout(calculateLineHeight, 10);
+    const timeoutId = setTimeout(calculateLineHeight, 100);
 
-    return () => clearTimeout(timeoutId);
+    // Recalculate on window resize
+    window.addEventListener("resize", calculateLineHeight);
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("resize", calculateLineHeight);
+    };
   }, [client, expandedRows]);
 
   return (
@@ -69,7 +87,10 @@ export default function FranchiseDetails({
           {/* Client Details */}
           <div className="relative ">
             {/* Curved horizontal connecting line with dot */}
-            <div className="absolute -left-6 top-4 w-6 h-4 ">
+            <div
+              ref={franchiseDetailsDotRef}
+              className="absolute -left-6 top-4 w-6 h-4 "
+            >
               <div className="absolute top-0 left-0 w-6 h-4 border-l-2 border-b-2 border-primary rounded-bl-lg"></div>
               <div className="absolute top-4 left-6 w-2 h-2 bg-primary rounded-full -translate-x-1 -translate-y-1"></div>
             </div>
@@ -85,7 +106,9 @@ export default function FranchiseDetails({
                 <div>
                   <span className="text-gray-500">Programs</span>
                   <p className="text-gray-900 mt-1">
-                    {client.franchisePrograms?.map((fp) => fp.program.name).join(", ") || "N/A"}
+                    {client.franchisePrograms
+                      ?.map((fp) => fp.program.name)
+                      .join(", ") || "N/A"}
                   </p>
                 </div>
                 <div>
@@ -126,7 +149,7 @@ export default function FranchiseDetails({
 
           {/* Payroll Section */}
           <PayrollSection
-            payrollDetails={client.franchisePayroll}
+            payrollDetails={client.franchisePayrolls || client.franchisePayroll}
             clientId={client.id.toString()}
             isExpanded={expandedRows.has(`${client.id}-payroll`)}
             onToggle={onToggleRow}

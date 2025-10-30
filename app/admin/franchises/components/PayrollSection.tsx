@@ -9,7 +9,7 @@ import {
 import React, { useEffect, useState, useRef } from "react";
 
 interface PayrollSectionProps {
-  payrollDetails?: FranchisePayrollResponse;
+  payrollDetails?: FranchisePayrollResponse | FranchisePayrollResponse[];
   clientId: string;
   isExpanded: boolean;
   onToggle: (id: string) => void;
@@ -17,7 +17,6 @@ interface PayrollSectionProps {
 }
 
 export const payrollDotRef = React.createRef<HTMLDivElement>();
-export const payrollInternalDotRef = React.createRef<HTMLDivElement>();
 
 export default function PayrollSection({
   payrollDetails,
@@ -28,28 +27,25 @@ export default function PayrollSection({
 }: PayrollSectionProps) {
   const sectionId = `${clientId}-payroll`;
   const containerRef = useRef<HTMLDivElement>(null);
+  const payrollInternalDotRef = useRef<HTMLDivElement>(null);
   const [lineHeight, setLineHeight] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Default payroll details if none provided
-  const defaultPayrollDetails: FranchisePayrollResponse = {
-    id: 0,
-    franchiseFee: 0,
-    dateOfPayment: new Date(),
-    dateOfJoining: new Date(),
-    monthlyFee: 0,
-    ciShare: 0,
-    franchiseShare: 0,
-    royalty: 0,
-    kitCost: 0,
-    materialCost: 0,
-    installment: 0,
-    totalAmount: 0,
-  };
+  // Convert to array format for consistent handling
+  const payrollArray = Array.isArray(payrollDetails)
+    ? payrollDetails
+    : payrollDetails
+    ? [payrollDetails]
+    : [];
 
-  const safePayrollDetails = payrollDetails || defaultPayrollDetails;
-  const [editedData, setEditedData] =
-    useState<FranchisePayrollResponse>(safePayrollDetails);
+  // Calculate total amount across all programs
+  const totalAmount = payrollArray.reduce(
+    (sum, payroll) => sum + (payroll.totalAmount || 0),
+    0
+  );
+
+  const [editedDataArray, setEditedDataArray] =
+    useState<FranchisePayrollResponse[]>(payrollArray);
   const [isLoading, setIsLoading] = useState(false);
 
   const formatCurrency = (amount: number) => {
@@ -69,47 +65,59 @@ export default function PayrollSection({
   };
 
   useEffect(() => {
-    if (containerRef.current && payrollInternalDotRef.current && isExpanded) {
-      const containerTop = containerRef.current.getBoundingClientRect().top;
-      const dotCenter =
-        payrollInternalDotRef.current.getBoundingClientRect().top +
-        payrollInternalDotRef.current.offsetHeight / 2;
-      setLineHeight(dotCenter - containerTop);
+    if (isExpanded && payrollArray.length > 1) {
+      // Small delay to ensure DOM has rendered
+      const timer = setTimeout(() => {
+        if (containerRef.current && payrollInternalDotRef.current) {
+          const containerTop = containerRef.current.getBoundingClientRect().top;
+          const dotCenter =
+            payrollInternalDotRef.current.getBoundingClientRect().top +
+            payrollInternalDotRef.current.offsetHeight / 2;
+          setLineHeight(dotCenter - containerTop);
+        }
+      }, 50);
+      return () => clearTimeout(timer);
     }
-  }, [isExpanded, safePayrollDetails]);
+  }, [isExpanded, payrollArray, isEditing]);
 
   useEffect(() => {
-    setEditedData(safePayrollDetails);
-  }, []);
+    setEditedDataArray(payrollArray);
+  }, [payrollDetails]);
 
   const handleEdit = () => {
     setIsEditing(true);
   };
 
   const handleCancel = () => {
-    setEditedData(safePayrollDetails);
+    setEditedDataArray(payrollArray);
     setIsEditing(false);
   };
 
   const handleSave = async () => {
     try {
       setIsLoading(true);
-      const updatedPayroll = await updatePayrollDetails(safePayrollDetails.id, {
-        franchiseFee: editedData.franchiseFee,
-        monthlyFee: editedData.monthlyFee,
-        ciShare: editedData.ciShare,
-        franchiseShare: editedData.franchiseShare,
-        royalty: editedData.royalty,
-        kitCost: editedData.kitCost,
-        materialCost: editedData.materialCost,
-        installment: editedData.installment,
-        totalAmount: editedData.totalAmount,
-        dateOfPayment: editedData.dateOfPayment,
-        dateOfJoining: editedData.dateOfJoining,
-      });
 
-      if (onPayrollUpdate) {
-        onPayrollUpdate(editedData);
+      // Update all payroll entries
+      await Promise.all(
+        editedDataArray.map((payroll) =>
+          updatePayrollDetails(payroll.id, {
+            franchiseFee: payroll.franchiseFee,
+            monthlyFee: payroll.monthlyFee,
+            ciShare: payroll.ciShare,
+            franchiseShare: payroll.franchiseShare,
+            royalty: payroll.royalty,
+            kitCost: payroll.kitCost,
+            materialCost: payroll.materialCost,
+            installment: payroll.installment,
+            totalAmount: payroll.totalAmount,
+            dateOfPayment: payroll.dateOfPayment,
+            dateOfJoining: payroll.dateOfJoining,
+          })
+        )
+      );
+
+      if (onPayrollUpdate && editedDataArray[0]) {
+        onPayrollUpdate(editedDataArray[0]);
       }
       setIsEditing(false);
     } catch (error) {
@@ -121,12 +129,14 @@ export default function PayrollSection({
   };
 
   const handleInputChange = (
+    index: number,
     field: keyof FranchisePayrollResponse,
     value: string | number | Date
   ) => {
-    setEditedData((prev) => {
-      const updated = {
-        ...prev,
+    setEditedDataArray((prev) => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
         [field]: value,
       };
 
@@ -140,12 +150,12 @@ export default function PayrollSection({
           "installment",
         ].includes(field)
       ) {
-        updated.totalAmount =
-          (updated.franchiseFee || 0) +
-          (updated.monthlyFee || 0) +
-          (updated.kitCost || 0) +
-          (updated.materialCost || 0) +
-          (updated.installment || 0);
+        updated[index].totalAmount =
+          (updated[index].franchiseFee || 0) +
+          (updated[index].monthlyFee || 0) +
+          (updated[index].kitCost || 0) +
+          (updated[index].materialCost || 0) +
+          (updated[index].installment || 0);
       }
 
       return updated;
@@ -153,27 +163,28 @@ export default function PayrollSection({
   };
 
   const renderEditableField = (
+    index: number,
     label: string,
     field: keyof FranchisePayrollResponse,
     value: number | string | Date,
     type: "currency" | "percentage" | "date" | "number" = "number"
   ) => {
-    const currentValue = isEditing ? editedData[field] : value;
+    const currentValue = isEditing ? editedDataArray[index][field] : value;
 
     if (!isEditing) {
       let displayValue: string;
       switch (type) {
         case "currency":
-          displayValue = formatCurrency(currentValue as number);
+          displayValue = formatCurrency((currentValue as number) ?? 0);
           break;
         case "percentage":
-          displayValue = `${currentValue}%`;
+          displayValue = `${currentValue ?? 0}%`;
           break;
         case "date":
           displayValue = formatDate(currentValue as Date);
           break;
         default:
-          displayValue = currentValue.toString();
+          displayValue = currentValue?.toString() ?? "N/A";
       }
 
       return (
@@ -192,7 +203,7 @@ export default function PayrollSection({
           value={
             type === "date"
               ? (currentValue as Date)?.toISOString?.()?.split("T")[0] || ""
-              : currentValue.toString()
+              : currentValue?.toString() ?? ""
           }
           onChange={(e) => {
             let newValue: string | number | Date = e.target.value;
@@ -201,7 +212,7 @@ export default function PayrollSection({
             } else {
               newValue = parseFloat(e.target.value) || 0;
             }
-            handleInputChange(field, newValue);
+            handleInputChange(index, field, newValue);
           }}
           className="mt-1 h-8 text-sm"
           step={
@@ -212,6 +223,25 @@ export default function PayrollSection({
       </div>
     );
   };
+
+  // Show message if no payroll data
+  if (payrollArray.length === 0) {
+    return (
+      <div className="relative">
+        <div className="absolute -left-6 top-1 w-6 h-4">
+          <div className="absolute top-0 left-0 w-6 h-4 border-l-2 border-b-2 border-primary rounded-bl-lg"></div>
+          <div className="absolute top-4 left-6 w-2 h-2 bg-primary rounded-full -translate-x-1 -translate-y-1"></div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-primary p-4">
+          <h4 className="font-medium text-gray-900">Payroll Details</h4>
+          <p className="text-sm text-gray-500 mt-2">
+            No payroll information available
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
@@ -233,13 +263,12 @@ export default function PayrollSection({
                 <ChevronRight className="w-4 h-4" />
               )}
             </button>
-            <h4 className="font-medium text-gray-900">Payroll Details</h4>
+            <h4 className="font-medium text-gray-900">
+              Payroll Details{" "}
+              {payrollArray.length > 1 && `(${payrollArray.length} Programs)`}
+            </h4>
             <Badge variant="outline" className="ml-2">
-              {formatCurrency(
-                isEditing
-                  ? editedData.totalAmount
-                  : safePayrollDetails.totalAmount
-              )}
+              Total: {formatCurrency(totalAmount)}
             </Badge>
           </div>
 
@@ -283,117 +312,126 @@ export default function PayrollSection({
         </div>
 
         {isExpanded && (
-          <div className="relative border-t border-black" ref={containerRef}>
-            <div
-              className="absolute left-6 border-primary border bg-primary"
-              style={{ top: 0, height: `${lineHeight - 6}px` }}
-            ></div>
-            <div className="pl-12 pr-4 py-4">
-              <div className="relative">
-                <div
-                  ref={payrollInternalDotRef}
-                  className="absolute -left-6 top-4 w-6 h-4"
-                >
-                  <div className="absolute top-0 left-0 w-6 h-4 border-l-2 border-b-2 border-primary rounded-bl-lg"></div>
-                  <div className="absolute top-4 left-6 w-2 h-2 bg-primary rounded-full -translate-x-1 -translate-y-1"></div>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4 space-y-4 border border-primary">
-                  <h5 className="font-semibold text-gray-900">
-                    Financial Overview
-                  </h5>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    {renderEditableField(
-                      "Franchise Fee",
-                      "franchiseFee",
-                      safePayrollDetails.franchiseFee,
-                      "currency"
-                    )}
-                    {renderEditableField(
-                      "Monthly Fee",
-                      "monthlyFee",
-                      safePayrollDetails.monthlyFee,
-                      "currency"
-                    )}
-                    {renderEditableField(
-                      "Kit Cost",
-                      "kitCost",
-                      safePayrollDetails.kitCost,
-                      "currency"
-                    )}
-                    {renderEditableField(
-                      "Material Cost",
-                      "materialCost",
-                      safePayrollDetails.materialCost,
-                      "currency"
-                    )}
-                    {renderEditableField(
-                      "Installment",
-                      "installment",
-                      safePayrollDetails.installment,
-                      "currency"
-                    )}
-                    <div>
-                      <span className="text-gray-500">Total Amount</span>
-                      <p
-                        className={`text-gray-900 mt-1 font-semibold ${
-                          isEditing ? "text-sm" : ""
-                        }`}
-                      >
+          <div className="relative border-t border-primary" ref={containerRef}>
+            {payrollArray.length > 1 && (
+              <div
+                className="absolute left-6 border-primary border bg-primary"
+                style={{ top: 0, height: `${lineHeight - 6}px` }}
+              ></div>
+            )}
+            <div className="pl-12 pr-4 py-4 space-y-4">
+              {payrollArray.map((payroll, index) => (
+                <div key={payroll.id || index} className="relative">
+                  <div
+                    ref={
+                      index === payrollArray.length - 1
+                        ? payrollInternalDotRef
+                        : undefined
+                    }
+                    className="absolute -left-6 top-4 w-6 h-4"
+                  >
+                    <div className="absolute top-0 left-0 w-6 h-4 border-l-2 border-b-2 border-primary rounded-bl-lg"></div>
+                    <div className="absolute top-4 left-6 w-2 h-2 bg-primary rounded-full -translate-x-1 -translate-y-1"></div>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-4 border border-primary">
+                    <div className="flex items-center justify-between">
+                      <h5 className="font-semibold text-gray-900">
+                        {payroll.program?.name || `Program ${index + 1}`}
+                      </h5>
+                      <Badge className="bg-blue-100 text-blue-800 border-blue-200">
                         {formatCurrency(
                           isEditing
-                            ? editedData.totalAmount
-                            : safePayrollDetails.totalAmount
+                            ? editedDataArray[index].totalAmount
+                            : payroll.totalAmount
                         )}
-                      </p>
-                      {isEditing && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          Auto-calculated
-                        </p>
-                      )}
+                      </Badge>
                     </div>
-                  </div>
 
-                  <div className="pt-4 border-t">
-                    <h6 className="font-medium text-gray-900 mb-3">
-                      Share Distribution & Dates
-                    </h6>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       {renderEditableField(
-                        "CI Share",
-                        "ciShare",
-                        safePayrollDetails.ciShare,
-                        "percentage"
+                        index,
+                        "Franchise Fee",
+                        "franchiseFee",
+                        payroll.franchiseFee,
+                        "currency"
                       )}
                       {renderEditableField(
-                        "Franchise Share",
-                        "franchiseShare",
-                        safePayrollDetails.franchiseShare,
-                        "percentage"
+                        index,
+                        "Monthly Fee",
+                        "monthlyFee",
+                        payroll.monthlyFee,
+                        "currency"
                       )}
                       {renderEditableField(
-                        "Royalty",
-                        "royalty",
-                        safePayrollDetails.royalty,
-                        "percentage"
+                        index,
+                        "Kit Cost",
+                        "kitCost",
+                        payroll.kitCost,
+                        "currency"
                       )}
                       {renderEditableField(
-                        "Date of Joining",
-                        "dateOfJoining",
-                        safePayrollDetails.dateOfJoining,
-                        "date"
+                        index,
+                        "Material Cost",
+                        "materialCost",
+                        payroll.materialCost,
+                        "currency"
                       )}
-                      <div className="col-span-2">
+                      {renderEditableField(
+                        index,
+                        "Installment",
+                        "installment",
+                        payroll.installment,
+                        "currency"
+                      )}
+                    </div>
+
+                    <div className="pt-4 border-t">
+                      <h6 className="font-medium text-gray-900 mb-3">
+                        Share Distribution & Dates
+                      </h6>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
                         {renderEditableField(
-                          "Last Payment Date",
-                          "dateOfPayment",
-                          safePayrollDetails.dateOfPayment,
+                          index,
+                          "CI Share",
+                          "ciShare",
+                          payroll.ciShare,
+                          "percentage"
+                        )}
+                        {renderEditableField(
+                          index,
+                          "Franchise Share",
+                          "franchiseShare",
+                          payroll.franchiseShare,
+                          "percentage"
+                        )}
+                        {renderEditableField(
+                          index,
+                          "Royalty",
+                          "royalty",
+                          payroll.royalty,
+                          "percentage"
+                        )}
+                        {renderEditableField(
+                          index,
+                          "Date of Joining",
+                          "dateOfJoining",
+                          payroll.dateOfJoining,
                           "date"
                         )}
+                        <div className="col-span-2">
+                          {renderEditableField(
+                            index,
+                            "Last Payment Date",
+                            "dateOfPayment",
+                            payroll.dateOfPayment,
+                            "date"
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
         )}

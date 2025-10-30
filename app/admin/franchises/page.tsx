@@ -128,11 +128,9 @@ export default function AdminFranchises() {
         </div>
       </div>
 
-      {/* Franchise Grid */}
-      <div className="flex flex-row gap-4">
-        <div className="w-full">
-          <FranchiseTable refreshTrigger={refreshTrigger} />
-        </div>
+      {/* Franchise Table */}
+      <div className="bg-white rounded-lg">
+        <FranchiseTable refreshTrigger={refreshTrigger} />
       </div>
     </div>
   );

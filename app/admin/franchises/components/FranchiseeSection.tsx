@@ -61,7 +61,7 @@ export default function FranchiseeSection({
         </div>
 
         {isExpanded && (
-          <div className="relative border-t border-black" ref={containerRef}>
+          <div className="relative border-t border-primary" ref={containerRef}>
             <div
               className="absolute left-6 border-primary border bg-primary"
               style={{ top: 0, height: `${lineHeight - 6}px` }}

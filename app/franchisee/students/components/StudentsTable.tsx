@@ -2,41 +2,14 @@
 
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  ChevronDown,
-  ChevronRight,
-  Edit,
-  Trash2,
-  Search,
-  ChevronLeft,
-  ChevronFirst,
-  ChevronLast,
-  User,
-  Users,
-  Phone,
-  Mail,
-  MapPin,
-  BookOpen,
-  Calendar,
-  CreditCard,
-} from "lucide-react";
+import { Edit, Trash2, Mail, Phone } from "lucide-react";
+import { AdminTable } from "@/components/shared";
+import type {
+  AdminTableColumn,
+  AdminTableFilter,
+  AdminTableSortOption,
+} from "@/components/shared/AdminTable";
 import {
   StudentData,
   StudentLevel,
@@ -59,7 +32,6 @@ export default function StudentsTable({
   onStudentEdit,
   onRequestIds,
 }: StudentsTableProps) {
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedChildren, setExpandedChildren] = useState<Set<string>>(
     new Set()
   );
@@ -162,18 +134,11 @@ export default function StudentsTable({
         newExpandedChildren.add(id);
       }
       setExpandedChildren(newExpandedChildren);
-    } else {
-      if (expandedRow === id) {
-        setExpandedRow(null);
-        setExpandedChildren(new Set());
-      } else {
-        setExpandedRow(id);
-        setExpandedChildren(new Set());
-      }
     }
   };
 
   const getLevelColor = (level: StudentLevel) => {
+    if (!level) return "bg-gray-100 text-gray-800 border-gray-200";
     if (level.startsWith("EL"))
       return "bg-gray-100 text-gray-800 border-gray-200";
     if (level.startsWith("RL"))
@@ -218,315 +183,200 @@ export default function StudentsTable({
     ...new Set(students?.map((student) => student.stream).filter(Boolean)),
   ];
 
-  // Count students by ID status
-  const studentsWithoutIds =
-    students?.filter((s) => s.idIssued === StudentIdStatus.NOT_ISSUED).length ||
-    0;
+  // Table configuration
+  const columns: AdminTableColumn<StudentData>[] = [
+    {
+      key: "student",
+      header: "Student",
+      className: "w-[300px]",
+    },
+    {
+      key: "levelStandard",
+      header: "Level & Standard",
+      className: "text-center",
+      render: (student) => (
+        <div className="space-y-1">
+          <Badge className={`${getLevelColor(student.level)} border`}>
+            {student.level}
+          </Badge>
+          <div className="text-sm text-gray-600">{student.standard}</div>
+        </div>
+      ),
+    },
+    {
+      key: "parents",
+      header: "Parents",
+      className: "text-center",
+      render: (student) => (
+        <div className="text-sm space-y-1">
+          <div>
+            <strong>F:</strong> {student.fatherName}
+          </div>
+          <div>
+            <strong>M:</strong> {student.motherName}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "contact",
+      header: "Contact",
+      className: "text-center",
+      render: (student) => (
+        <div className="text-sm space-y-1">
+          <div className="flex items-center justify-center">
+            <Mail className="w-3 h-3 mr-1" />
+            <span className="truncate max-w-[120px]">{student.mail}</span>
+          </div>
+          <div className="flex items-center justify-center">
+            <Phone className="w-3 h-3 mr-1" />
+            {student.fatherContactNo}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      className: "text-center",
+      render: (student) => (
+        <Badge className={`${getStatusColor(student.isActive)} border`}>
+          {student.isActive ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+    {
+      key: "idStatus",
+      header: "ID Status",
+      className: "text-center",
+      render: (student) => (
+        <Badge className={`${getIdStatusColor(student.idIssued)} border`}>
+          {student.idIssued}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "text-center",
+      render: (student) => (
+        <div className="flex items-center justify-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onStudentEdit?.(student)}
+          >
+            <Edit className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onStudentDelete?.(student.id.toString())}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const filters: AdminTableFilter[] = [
+    {
+      key: "status",
+      label: "Status",
+      options: [
+        { value: "all", label: "All Status" },
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+      ],
+      defaultValue: "all",
+    },
+    {
+      key: "level",
+      label: "Level",
+      options: [
+        { value: "all", label: "All Levels" },
+        ...uniqueLevels.map((level) => ({ value: level, label: level })),
+      ],
+      defaultValue: "all",
+    },
+    {
+      key: "stream",
+      label: "Stream",
+      options: [
+        { value: "all", label: "All Streams" },
+        ...uniqueStreams.map((stream) => ({ value: stream, label: stream })),
+      ],
+      defaultValue: "all",
+    },
+    {
+      key: "idStatus",
+      label: "ID Status",
+      options: [
+        { value: "all", label: "All ID Status" },
+        { value: StudentIdStatus.NOT_ISSUED, label: "Not Issued" },
+        { value: StudentIdStatus.REQUESTED, label: "Requested" },
+        { value: StudentIdStatus.ISSUED, label: "Issued" },
+      ],
+      defaultValue: "all",
+    },
+  ];
+
+  const sortOptions: AdminTableSortOption[] = [
+    { value: "dateJoined", label: "Date Joined" },
+    { value: "name", label: "Name" },
+    { value: "level", label: "Level" },
+  ];
 
   return (
-    <div className="space-y-4">
-      {/* Search and Filters */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search students, roll numbers, or parent names..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+    <AdminTable
+      data={paginatedData}
+      loading={false}
+      columns={columns}
+      getRowId={(student) => student.id.toString()}
+      renderMainCell={(student) => (
+        <div className="flex flex-col">
+          <div className="font-medium text-gray-900">{student.name}</div>
+          <div className="text-sm text-gray-500">
+            {student.rollNo} • Age {calculateAge(student.dateOfBirth)} •{" "}
+            {student.sex}
           </div>
-          <div className="flex gap-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={levelFilter} onValueChange={setLevelFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Levels</SelectItem>
-                {uniqueLevels.map((level) => (
-                  <SelectItem key={level} value={level}>
-                    {level}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={streamFilter} onValueChange={setStreamFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Stream" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Streams</SelectItem>
-                {uniqueStreams.map((stream) => (
-                  <SelectItem key={stream} value={stream}>
-                    {stream}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={idStatusFilter} onValueChange={setIdStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="ID Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All ID Status</SelectItem>
-                <SelectItem value={StudentIdStatus.NOT_ISSUED}>
-                  Not Issued
-                </SelectItem>
-                <SelectItem value={StudentIdStatus.REQUESTED}>
-                  Requested
-                </SelectItem>
-                <SelectItem value={StudentIdStatus.ISSUED}>Issued</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Sorting Controls */}
-        <div className="flex gap-2">
-          <Select
-            value={sortBy}
-            onValueChange={(value: "name" | "dateJoined" | "level") =>
-              setSortBy(value)
-            }
-          >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="dateJoined">Date Joined</SelectItem>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="level">Level</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            value={sortOrder}
-            onValueChange={(value: "asc" | "desc") => setSortOrder(value)}
-          >
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Order" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="desc">Newest First</SelectItem>
-              <SelectItem value="asc">Oldest First</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Results count */}
-      <div className="text-sm text-gray-600">
-        Showing {paginatedData.length} of {filteredData.length} students
-      </div>
-
-      {/* Table */}
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-secondary hover:bg-secondary">
-              <TableHead className="w-[300px]">Student</TableHead>
-              <TableHead className="text-center">Level & Standard</TableHead>
-              <TableHead className="text-center">Parents</TableHead>
-              <TableHead className="text-center">Contact</TableHead>
-              <TableHead className="text-center">Status</TableHead>
-              <TableHead className="text-center">ID Status</TableHead>
-              <TableHead className="text-center">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedData.map((student, index) => (
-              <React.Fragment key={student.id}>
-                <TableRow className="hover:bg-gray-50">
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => toggleRow(student.id.toString())}
-                        className="p-1 hover:bg-gray-100 rounded"
-                      >
-                        {expandedRow === student.id.toString() ? (
-                          <ChevronDown className="w-4 h-4" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4" />
-                        )}
-                      </button>
-                      <div className="flex flex-col">
-                        <div className="font-medium text-gray-900">
-                          {student.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {student.rollNo} • Age{" "}
-                          {calculateAge(student.dateOfBirth)} • {student.sex}
-                        </div>
-                        <div className="text-xs text-primary font-medium">
-                          {student.standard} • {student.stream}
-                        </div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="space-y-1">
-                      <Badge
-                        className={`${getLevelColor(student.level)} border`}
-                      >
-                        {student.level}
-                      </Badge>
-                      <div className="text-sm text-gray-600">
-                        {student.standard}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="text-sm space-y-1">
-                      <div>
-                        <strong>F:</strong> {student.fatherName}
-                      </div>
-                      <div>
-                        <strong>M:</strong> {student.motherName}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="text-sm space-y-1">
-                      <div className="flex items-center justify-center">
-                        <Mail className="w-3 h-3 mr-1" />
-                        <span className="truncate max-w-[120px]">
-                          {student.mail}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-center">
-                        <Phone className="w-3 h-3 mr-1" />
-                        {student.fatherContactNo}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge
-                      className={`${getStatusColor(student.isActive)} border`}
-                    >
-                      {student.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge
-                      className={`${getIdStatusColor(student.idIssued)} border`}
-                    >
-                      {student.idIssued}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onStudentEdit?.(student)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onStudentDelete?.(student.id.toString())}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-
-                {/* Expanded Details Row */}
-                {expandedRow === student.id.toString() && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="p-0">
-                      <StudentDetails
-                        student={student}
-                        lastRow={index === paginatedData.length - 1}
-                        expandedRows={expandedChildren}
-                        onToggleRow={toggleRow}
-                        onStudentUpdate={onStudentUpdate}
-                      />
-                    </TableCell>
-                  </TableRow>
-                )}
-              </React.Fragment>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            Page {currentPage} of {totalPages}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronFirst className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              const pageNum =
-                Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
-              return (
-                <Button
-                  key={pageNum}
-                  variant={currentPage === pageNum ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCurrentPage(pageNum)}
-                >
-                  {pageNum}
-                </Button>
-              );
-            })}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronLast className="h-4 w-4" />
-            </Button>
+          <div className="text-xs text-primary font-medium">
+            {student.standard} • {student.stream}
           </div>
         </div>
       )}
-
-      {paginatedData.length === 0 && (
-        <div className="text-center py-8">
-          <div className="text-gray-500">
-            No students found matching your criteria
-          </div>
-        </div>
+      renderExpandedContent={(student) => (
+        <StudentDetails
+          student={student}
+          lastRow={false}
+          expandedRows={expandedChildren}
+          onToggleRow={toggleRow}
+          onStudentUpdate={onStudentUpdate}
+        />
       )}
-    </div>
+      searchPlaceholder="Search students, roll numbers, or parent names..."
+      onSearchChange={setSearchTerm}
+      filters={filters}
+      onFilterChange={(key, value) => {
+        if (key === "status") setStatusFilter(value as string);
+        else if (key === "level") setLevelFilter(value as string);
+        else if (key === "stream") setStreamFilter(value as string);
+        else if (key === "idStatus") setIdStatusFilter(value as string);
+      }}
+      sortOptions={sortOptions}
+      defaultSortBy="dateJoined"
+      defaultSortOrder="DESC"
+      onSortChange={(newSortBy, newSortOrder) => {
+        setSortBy(newSortBy as "name" | "dateJoined" | "level");
+        setSortOrder(newSortOrder.toLowerCase() as "asc" | "desc");
+      }}
+      pagination={{ total: filteredData.length, totalPages }}
+      currentPage={currentPage}
+      onPageChange={setCurrentPage}
+      itemsPerPage={itemsPerPage}
+      emptyMessage="No students found matching your criteria"
+      resultsText={(count, total) => `Showing ${count} of ${total} students`}
+    />
   );
 }

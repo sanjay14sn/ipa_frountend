@@ -52,7 +52,10 @@ export default function FranchiseRow({
             </div>
             <div className="flex items-center gap-1">
               <span className="text-xs text-green-600 font-medium">
-                ₹{(client.franchisePayroll.totalAmount / 1000).toFixed(0)}K/mo
+                ₹{(
+                  (client.franchisePayrolls?.reduce((sum, p) => sum + (p.totalAmount || 0), 0) ||
+                   client.franchisePayroll?.totalAmount || 0) / 1000
+                ).toFixed(0)}K/mo
               </span>
             </div>
           </div>

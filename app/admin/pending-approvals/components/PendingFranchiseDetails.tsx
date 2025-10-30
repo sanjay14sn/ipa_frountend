@@ -60,7 +60,9 @@ export default function PendingFranchiseDetails({
                 <div>
                   <span className="text-gray-500">Programs</span>
                   <p className="text-gray-900 mt-1">
-                    {application.franchisePrograms?.map((fp) => fp.program.name).join(", ") || "N/A"}
+                    {application.franchisePrograms
+                      ?.map((fp) => fp.program.name)
+                      .join(", ") || "N/A"}
                   </p>
                 </div>
                 <div>
