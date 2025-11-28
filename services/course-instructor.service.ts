@@ -331,3 +331,21 @@ export async function getPaginatedCourseInstructors(
   );
   return response.data.result;
 }
+
+export async function getPaginatedFranchiseeCourseInstructors(
+  params: CourseInstructorPaginationParams
+): Promise<PaginatedCourseInstructorsResponse> {
+  const queryParams = new URLSearchParams();
+
+  if (params.page !== undefined) queryParams.append("page", params.page.toString());
+  if (params.limit !== undefined) queryParams.append("limit", params.limit.toString());
+  if (params.search) queryParams.append("search", params.search);
+  if (params.status) queryParams.append("status", params.status);
+  if (params.sortBy) queryParams.append("sortBy", params.sortBy);
+  if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+
+  const response = await api.get<{ result: PaginatedCourseInstructorsResponse }>(
+    `/course-instructor/paginated-franchisee?${queryParams.toString()}`
+  );
+  return response.data.result;
+}

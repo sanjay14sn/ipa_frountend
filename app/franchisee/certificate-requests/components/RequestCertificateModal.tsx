@@ -20,11 +20,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Award, Loader2 } from "lucide-react";
-import {
-  EligibleStudent,
-  CourseInstructorData,
-} from "@/services/student.service";
+import { EligibleStudent } from "@/services/student.service";
 import { useToast } from "@/hooks/use-toast";
+import { CourseInstructorData } from "@/services/course-instructor.service";
 
 interface RequestCertificateModalProps {
   open: boolean;
@@ -110,7 +108,6 @@ export default function RequestCertificateModal({
         description: "Certificate request created successfully",
       });
 
-      // Reset form
       setFormData({
         marksObtained: "",
         totalMarks: "",

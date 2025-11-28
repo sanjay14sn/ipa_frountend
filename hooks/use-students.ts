@@ -15,12 +15,14 @@ import {
   getAllAdminCertificateRequests,
   approveCertificateRequest,
   rejectCertificateRequest,
+  getFranchiseeCertificates,
   StudentData,
   RequestedIdDetailsByFranchise,
   RequestedCertificateDetailsByFranchise,
   EligibleStudent,
   AdminCertificateRequest,
   AdminCertificateRequestsByFranchise,
+  FranchiseeCertificate,
 } from "@/services/student.service";
 
 // SWR fetchers
@@ -55,6 +57,11 @@ const fetchAdminCertificateRequests = async () => {
   return response.result || {};
 };
 
+const fetchFranchiseeCertificates = async () => {
+  const response = await getFranchiseeCertificates();
+  return response.result || [];
+};
+
 // SWR keys
 export const STUDENTS_KEY = "/students/all";
 export const REQUESTED_IDS_KEY = "/students/id-details";
@@ -63,6 +70,7 @@ export const REQUESTED_CERTIFICATES_KEY = "/students/certificate-details";
 export const ISSUED_CERTIFICATES_KEY = "/students/issued-certificates";
 export const ELIGIBLE_STUDENTS_KEY = "/certificate/eligible-students";
 export const ADMIN_CERTIFICATE_REQUESTS_KEY = "/certificate/all-admin";
+export const FRANCHISEE_CERTIFICATES_KEY = "/certificate/my-certificates";
 
 // Custom hooks
 export function useStudents() {
@@ -177,6 +185,25 @@ export function useAdminCertificateRequests() {
 
   return {
     certificateRequestsByFranchise: data || {},
+    isLoading,
+    error,
+    revalidate,
+  };
+}
+
+export function useFranchiseeCertificates() {
+  const {
+    data,
+    error,
+    isLoading,
+    mutate: revalidate,
+  } = useSWR(FRANCHISEE_CERTIFICATES_KEY, fetchFranchiseeCertificates, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+  });
+
+  return {
+    certificates: data || [],
     isLoading,
     error,
     revalidate,

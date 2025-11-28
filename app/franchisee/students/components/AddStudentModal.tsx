@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,13 +29,11 @@ import {
   CheckCircle,
 } from "lucide-react";
 import React from "react";
-import {
-  StudentLevel,
-  StudentStream,
-  StudentIdStatus,
-} from "@/services/student.service";
+import { StudentStream, StudentIdStatus } from "@/services/student.service";
 import { createStudentWithRevalidation } from "@/hooks/use-students";
 import { useUser } from "@/context/user-context";
+import { getAllPrograms, Program } from "@/services/program.service";
+import { getLevelsByProgram, Level } from "@/services/level.service";
 
 // Define the steps for the form
 const FORM_STEPS = [
@@ -55,28 +53,6 @@ const FORM_STEPS = [
     id: 4,
     title: "Academic Details",
   },
-];
-
-const LEVELS = [
-  "EL1",
-  "EL2",
-  "EL3",
-  "EL4",
-  "EL5",
-  "EL6",
-  "RL1",
-  "RL2",
-  "RL3",
-  "RL4",
-  "RL5",
-  "RL6",
-  "RL7",
-  "RL8",
-  "RL9",
-  "RL10",
-  "GML1",
-  "GML2",
-  "GML3",
 ];
 
 const STANDARDS = [
@@ -165,7 +141,7 @@ interface StudentFormData {
   dateOfJoining: string;
   sex: string;
   standard: string;
-  level: string;
+  levelId: number;
   stream: string;
   status: string;
   photoImage: File | null;
@@ -199,6 +175,10 @@ export default function AddStudentModal({
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [levels, setLevels] = useState<Level[]>([]);
+  const [loadingPrograms, setLoadingPrograms] = useState(false);
+  const [loadingLevels, setLoadingLevels] = useState(false);
 
   const { user } = useUser();
 
@@ -213,11 +193,11 @@ export default function AddStudentModal({
     dateOfJoining: new Date().toISOString().split("T")[0],
     sex: "Male",
     standard: "4th",
-    level: "EL3",
+    levelId: 0,
     stream: "regular",
     status: "active",
     photoImage: null,
-    programId: 1,
+    programId: 0,
 
     // Parent Information
     fatherName: "Rajesh Sharma",
@@ -239,6 +219,47 @@ export default function AddStudentModal({
     discontinueReason: "",
   });
 
+  // Fetch programs on mount
+  useEffect(() => {
+    const fetchPrograms = async () => {
+      setLoadingPrograms(true);
+      try {
+        const fetchedPrograms = await getAllPrograms();
+        setPrograms(fetchedPrograms);
+      } catch (error) {
+        console.error("Error fetching programs:", error);
+      } finally {
+        setLoadingPrograms(false);
+      }
+    };
+
+    if (open) {
+      fetchPrograms();
+    }
+  }, [open]);
+
+  // Fetch levels when program is selected
+  useEffect(() => {
+    const fetchLevels = async () => {
+      if (formData.programId && formData.programId > 0) {
+        setLoadingLevels(true);
+        try {
+          const fetchedLevels = await getLevelsByProgram(formData.programId);
+          setLevels(fetchedLevels);
+        } catch (error) {
+          console.error("Error fetching levels:", error);
+          setLevels([]);
+        } finally {
+          setLoadingLevels(false);
+        }
+      } else {
+        setLevels([]);
+      }
+    };
+
+    fetchLevels();
+  }, [formData.programId]);
+
   const validateCurrentStep = () => {
     const newErrors: Record<string, string> = {};
 
@@ -259,8 +280,8 @@ export default function AddStudentModal({
         if (!formData.standard) {
           newErrors.standard = "Standard is required";
         }
-        if (!formData.level) {
-          newErrors.level = "Level is required";
+        if (!formData.levelId || formData.levelId === 0) {
+          newErrors.levelId = "Level is required";
         }
         if (!formData.programId || formData.programId === 0) {
           newErrors.programId = "Program selection is required";
@@ -324,8 +345,11 @@ export default function AddStudentModal({
   const handleInputChange = (field: string, value: string | boolean) => {
     let convertedValue: any = value;
 
-    // Convert programId to number
-    if (field === "programId" && typeof value === "string") {
+    // Convert programId and levelId to number
+    if (
+      (field === "programId" || field === "levelId") &&
+      typeof value === "string"
+    ) {
       convertedValue = parseInt(value, 10) || 0;
     }
 
@@ -414,7 +438,7 @@ export default function AddStudentModal({
         motherContactNo: formData.motherContactNo,
         mail: formData.mailId,
         standard: formData.standard,
-        level: formData.level as StudentLevel, // Cast to StudentLevel enum
+        levelId: Number(formData.levelId),
         stream:
           formData.stream === "regular"
             ? StudentStream.REGULAR
@@ -425,7 +449,9 @@ export default function AddStudentModal({
       };
 
       // Call the student service with SWR revalidation
-      const result = await createStudentWithRevalidation(studentData);
+      // Note: studentData uses levelId (number) as expected by backend DTO,
+      // even though StudentData interface uses level (string)
+      const result = await createStudentWithRevalidation(studentData as any);
 
       setSubmitted(true);
       onSuccess();
@@ -448,11 +474,11 @@ export default function AddStudentModal({
       dateOfJoining: new Date().toISOString().split("T")[0],
       sex: "Male",
       standard: "4th",
-      level: "EL3",
+      levelId: 0,
       stream: "regular",
       status: "active",
       photoImage: null,
-      programId: 1,
+      programId: 0,
 
       fatherName: "Rajesh Sharma",
       fatherQualification: "B.Tech",
@@ -656,28 +682,41 @@ export default function AddStudentModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="level">Level *</Label>
+                <Label htmlFor="levelId">Level *</Label>
                 <Select
-                  value={formData.level}
-                  onValueChange={(value) => handleInputChange("level", value)}
+                  value={formData.levelId.toString()}
+                  onValueChange={(value) => handleInputChange("levelId", value)}
+                  disabled={
+                    !formData.programId ||
+                    formData.programId === 0 ||
+                    loadingLevels
+                  }
                 >
                   <SelectTrigger
-                    className={errors.level ? "border-red-500" : ""}
+                    className={errors.levelId ? "border-red-500" : ""}
                   >
-                    <SelectValue placeholder="Select level" />
+                    <SelectValue
+                      placeholder={
+                        loadingLevels
+                          ? "Loading levels..."
+                          : formData.programId === 0
+                          ? "Select program first"
+                          : "Select level"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    {LEVELS.map((level) => (
-                      <SelectItem key={level} value={level}>
-                        {level}
+                    {levels.map((level) => (
+                      <SelectItem key={level.id} value={level.id.toString()}>
+                        {level.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.level && (
+                {errors.levelId && (
                   <p className="text-red-500 text-sm flex items-center gap-1">
                     <AlertCircle className="w-4 h-4" />
-                    {errors.level}
+                    {errors.levelId}
                   </p>
                 )}
               </div>
@@ -686,24 +725,33 @@ export default function AddStudentModal({
                 <Label htmlFor="programId">Program *</Label>
                 <Select
                   value={formData.programId.toString()}
-                  onValueChange={(value) =>
-                    handleInputChange("programId", value)
-                  }
+                  onValueChange={(value) => {
+                    handleInputChange("programId", value);
+                    // Reset levelId when program changes
+                    setFormData((prev) => ({ ...prev, levelId: 0 }));
+                  }}
+                  disabled={loadingPrograms}
                 >
                   <SelectTrigger
                     className={errors.programId ? "border-red-500" : ""}
                   >
-                    <SelectValue placeholder="Select program" />
+                    <SelectValue
+                      placeholder={
+                        loadingPrograms
+                          ? "Loading programs..."
+                          : "Select program"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">Abacus</SelectItem>
-                    <SelectItem value="2">Brain Tree</SelectItem>
-                    <SelectItem value="3">Phonics</SelectItem>
-                    <SelectItem value="4">Brite</SelectItem>
-                    <SelectItem value="5">Handwriting</SelectItem>
-                    <SelectItem value="6">Creative Arts India</SelectItem>
-                    <SelectItem value="7">Vedic Maths</SelectItem>
-                    <SelectItem value="8">Arka Kids</SelectItem>
+                    {programs.map((program) => (
+                      <SelectItem
+                        key={program.id}
+                        value={program.id.toString()}
+                      >
+                        {program.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 {errors.programId && (

@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Check, X } from "lucide-react";
+import { Calendar, Check, X, FileText } from "lucide-react";
 import { AdminTable } from "@/components/shared";
 import type {
   AdminTableColumn,
@@ -19,6 +19,7 @@ import {
   approveCertificateRequestWithRevalidation,
   rejectCertificateRequestWithRevalidation,
 } from "@/hooks/use-students";
+import { getCertificatePdfUrl } from "@/services/student.service";
 
 interface AdminCertificateRequestsTableProps {
   certificateRequestsByFranchise?: AdminCertificateRequestsByFranchise;
@@ -193,6 +194,7 @@ export default function AdminCertificateRequestsTable({
     }
   };
 
+
   // Table configuration
   const columns: AdminTableColumn<AdminCertificateRequest>[] = [
     {
@@ -283,6 +285,20 @@ export default function AdminCertificateRequestsTable({
               title="Reject"
             >
               <X className="w-4 h-4" />
+            </Button>
+          </div>
+        ) : request.status === "Approved" && request.certificatePdfPath ? (
+          <div className="flex items-center justify-center gap-1">
+            <Button
+              size="sm"
+              onClick={() => {
+                const url = getCertificatePdfUrl(request.certificatePdfPath);
+                window.open(url, "_blank");
+              }}
+              className="bg-blue-600 hover:bg-blue-700 h-8 w-8 p-0"
+              title="View Certificate"
+            >
+              <FileText className="w-4 h-4" />
             </Button>
           </div>
         ) : (

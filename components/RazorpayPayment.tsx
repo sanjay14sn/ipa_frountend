@@ -68,11 +68,21 @@ export default function RazorpayPayment({
   const hasInitialized = useRef(false);
 
   useEffect(() => {
-    // Prevent double initialization in React Strict Mode or re-renders
     if (hasInitialized.current) {
       return;
     }
     hasInitialized.current = true;
+
+    // If amount is 0, skip Razorpay and directly call success
+    if (amount === 0) {
+      console.log("Zero amount payment - creating order directly");
+      onSuccess({
+        razorpay_payment_id: "",
+        razorpay_order_id: orderId,
+        razorpay_signature: "",
+      });
+      return;
+    }
 
     if (typeof window.Razorpay !== "undefined") {
       initializeRazorpay();
@@ -91,16 +101,8 @@ export default function RazorpayPayment({
     };
     document.body.appendChild(script);
 
-    return () => {
-      // Only remove script if it was added by this component
-      const existingScript = document.querySelector(
-        'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
-      );
-      if (existingScript && existingScript.parentNode === document.body) {
-        document.body.removeChild(existingScript);
-      }
-    };
-  }, [orderId]);
+    return () => {};
+  }, [orderId, razorpayKey, amount]);
 
   const initializeRazorpay = () => {
     if (typeof window.Razorpay === "undefined") {
@@ -109,8 +111,11 @@ export default function RazorpayPayment({
       return;
     }
 
-    if (!razorpayKey) {
-      console.error("Razorpay Key ID is missing from backend response");
+    const effectiveKey =
+      razorpayKey || (process.env.NEXT_PUBLIC_RAZORPAY_KEY as string) || "";
+
+    if (!effectiveKey) {
+      console.error("Razorpay Key ID is missing from backend response and env");
       onFailure({
         error:
           "Payment configuration error. Razorpay key is missing. Please contact support.",
@@ -119,11 +124,11 @@ export default function RazorpayPayment({
     }
 
     const options: RazorpayOptions = {
-      key: razorpayKey,
+      key: effectiveKey,
       amount: amount * 100,
       currency: currency,
       name: "IPA Franchise",
-      description: `Franchise Fee Payment for ${franchiseName}`,
+      description: `Order Payment for ${franchiseName}`,
       order_id: orderId,
       handler: function (response: RazorpaySuccessResponse) {
         console.log("Payment successful! Verifying...");
@@ -134,7 +139,7 @@ export default function RazorpayPayment({
       },
       prefill: {
         name: userDetails.name,
-        email: userDetails.email,
+        email: (userDetails as any).email || (userDetails as any).mail || "",
         contact: userDetails.phone,
       },
       theme: {

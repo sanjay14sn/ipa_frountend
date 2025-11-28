@@ -14,12 +14,12 @@ export interface Inventory {
   name: string;
   description: string;
   category: InventoryCategory;
-  price: number;
   quantity: number;
   restockQuantity: number;
   programId: number;
   levelId: number;
   isActive: boolean;
+  price: number;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: number;
@@ -38,12 +38,12 @@ export interface CreateInventoryDto {
   name: string;
   description: string;
   category: InventoryCategory;
-  price: number;
   quantity: number;
   restockQuantity: number;
   programId: number;
-  levelId: number;
+  levelId?: number;
   isActive: boolean;
+  price?: number;
 }
 
 export interface UpdateInventoryDto {
@@ -95,6 +95,17 @@ export interface InventoryFilters {
   status?: string;
   sortBy?: string;
   sortOrder?: "ASC" | "DESC";
+}
+
+export interface InventorySupplier {
+  id: number;
+  inventoryId: number;
+  supplierId: number;
+  costPrice: number;
+  supplier?: {
+    id: number;
+    name: string;
+  };
 }
 
 const api = axios.create({
@@ -158,4 +169,36 @@ export async function getPaginatedInventory(
     `/inventory/paginated?${params.toString()}`
   );
   return response.data.result;
+}
+
+export async function getKitInventoryItems(): Promise<Inventory[]> {
+  const response = await api.get<InventoryResponse>("/inventory/kit-items");
+  return Array.isArray(response.data.result) ? response.data.result : [];
+}
+
+// Inventory-Supplier linking methods
+export async function linkSupplierToInventory(
+  inventoryId: number,
+  supplierId: number,
+  costPrice: number
+): Promise<InventorySupplier> {
+  const response = await api.post(`/inventory/${inventoryId}/suppliers`, {
+    supplierId,
+    costPrice,
+  });
+  return response.data.result;
+}
+
+export async function unlinkSupplierFromInventory(
+  inventoryId: number,
+  supplierId: number
+): Promise<void> {
+  await api.delete(`/inventory/${inventoryId}/suppliers/${supplierId}`);
+}
+
+export async function getSuppliersForInventory(
+  inventoryId: number
+): Promise<InventorySupplier[]> {
+  const response = await api.get(`/inventory/${inventoryId}/suppliers`);
+  return Array.isArray(response.data.result) ? response.data.result : [];
 }

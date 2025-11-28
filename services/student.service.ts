@@ -248,7 +248,6 @@ export async function issueCertificate(studentId: number): Promise<any> {
   return response.data;
 }
 
-// Eligible students for certificate requests
 export interface EligibleStudent {
   id: number;
   name: string;
@@ -257,7 +256,7 @@ export interface EligibleStudent {
   sex: string;
   standard: string;
   stream: string;
-  level: string;
+  levelName: string;
   isActive: boolean;
 }
 
@@ -272,7 +271,6 @@ export async function getEligibleStudents(): Promise<EligibleStudentsResponse> {
   return response.data;
 }
 
-// Admin certificate requests interfaces and functions
 export interface AdminCertificateRequest {
   id: number;
   studentId: number;
@@ -295,6 +293,8 @@ export interface AdminCertificateRequest {
   studentIdIssueDate?: string;
   instructorName: string;
   franchiseName: string;
+  certificatePdfPath?: string;
+  issueDate?: string;
 }
 
 export interface AdminCertificateRequestsByFranchise {
@@ -440,4 +440,103 @@ export async function getPaginatedCertificates(
     `/certificate/paginated?${queryParams.toString()}`
   );
   return response.data.result;
+}
+
+export interface FranchiseeCertificate {
+  id: number;
+  studentId: number;
+  instructorId: number;
+  franchiseId: number;
+  requestDate: string;
+  status: "Pending" | "Approved" | "Rejected";
+  marksObtained: number;
+  totalMarks: number;
+  issueDate?: string;
+  certificatePdfPath?: string;
+  studentName: string;
+  studentRollNo: string;
+  studentDateOfBirth: string;
+  studentSex: string;
+  studentStandard: string;
+  studentStream: string;
+  studentLevel: string;
+  instructorName: string;
+  instructorInstructorId: string;
+}
+
+export interface FranchiseeCertificatesResponse extends Response {
+  result: FranchiseeCertificate[];
+}
+
+export async function getFranchiseeCertificates(): Promise<FranchiseeCertificatesResponse> {
+  const response = await api.get<FranchiseeCertificatesResponse>(
+    "/certificate/my-certificates"
+  );
+  return response.data;
+}
+
+export function getCertificatePdfUrl(certificatePdfPath: string): string {
+  if (!certificatePdfPath) return "";
+  // certificatePdfPath is stored as "certificates/filename.pdf"
+  // Backend serves static files at /uploads/ prefix
+  const baseUrl = api.defaults.baseURL || "http://localhost:5000";
+  return `${baseUrl}/uploads/${certificatePdfPath}`;
+}
+
+export interface BulkCertificateRequestItem {
+  studentId: number;
+  marksObtained: number;
+}
+
+export interface BulkCertificateRequestDto {
+  courseInstructerId: number;
+  students: BulkCertificateRequestItem[];
+}
+
+export interface BulkCertificateRequestResponse extends Response {
+  result: any[];
+}
+
+export async function bulkRequestCertificates(
+  data: BulkCertificateRequestDto
+): Promise<BulkCertificateRequestResponse> {
+  const response = await api.post<BulkCertificateRequestResponse>(
+    "/certificate/bulk-request",
+    data
+  );
+  return response.data;
+}
+
+export interface StudentCertificate {
+  id: number;
+  studentId: number;
+  instructorId: number;
+  franchiseId: number;
+  levelId: number;
+  requestDate: string;
+  status: "Pending" | "Approved" | "Rejected";
+  marksObtained: number;
+  totalMarks: number;
+  issueDate?: string;
+  certificatePdfPath?: string;
+  studentName: string;
+  studentRollNo: string;
+  studentLevel: string;
+  certificateLevel: string;
+  levelDisplayOrder: number;
+  instructorName: string;
+  instructorInstructorId: string;
+}
+
+export interface StudentCertificatesResponse extends Response {
+  result: StudentCertificate[];
+}
+
+export async function getStudentCertificates(
+  studentId: number
+): Promise<StudentCertificatesResponse> {
+  const response = await api.get<StudentCertificatesResponse>(
+    `/certificate/student/${studentId}`
+  );
+  return response.data;
 }

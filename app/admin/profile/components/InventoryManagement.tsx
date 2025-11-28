@@ -120,7 +120,7 @@ export function InventoryManagement({
   };
 
   const handleAddItem = async () => {
-    if (!formData.name.trim() || formData.price <= 0) {
+    if (!formData.name.trim() || formData.price! <= 0) {
       toast({
         title: "Error",
         description: "Name and valid price are required",
@@ -258,7 +258,9 @@ export function InventoryManagement({
       key: "price",
       header: "Price",
       className: "text-center",
-      render: (item) => <span>₹{item.price}</span>,
+      render: (item) => (
+        <span className="font-medium">₹{item.price || "0.00"}</span>
+      ),
     },
     {
       key: "stock",

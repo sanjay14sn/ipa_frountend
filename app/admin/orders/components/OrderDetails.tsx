@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { OrderData, getOrderById } from "@/services/order.service";
+import { OrderData, getOrderByIdAdmin } from "@/services/order.service";
 import { Loader2 } from "lucide-react";
 import StudentOrderSection, { studentOrderDotRef } from "./StudentOrderSection";
 
@@ -28,7 +28,7 @@ export default function OrderDetails({
     const fetchOrderDetails = async () => {
       try {
         setLoading(true);
-        const data = await getOrderById(order.id);
+        const data = await getOrderByIdAdmin(order.id);
         setDetailedOrder(data);
       } catch (error) {
         console.error("Error fetching order details:", error);
@@ -181,3 +181,5 @@ export default function OrderDetails({
     </div>
   );
 }
+
+

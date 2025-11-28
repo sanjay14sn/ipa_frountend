@@ -223,52 +223,95 @@ export default function FranchiseeDashboard() {
                         {new Date(user.profile.dob).toLocaleDateString()}
                       </span>
                     </div>
-                    {user.profile.franchise.franchisePayroll?.dateOfJoining && (
+                    {(user.profile.franchise.franchisePayrolls?.[0]?.dateOfJoining || 
+                      user.profile.franchise.franchisePayroll?.dateOfJoining) && (
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">
                           DOJ:
                         </span>
                         <span className="text-sm font-medium">
                           {new Date(
-                            user.profile.franchise.franchisePayroll.dateOfJoining
+                            user.profile.franchise.franchisePayrolls?.[0]?.dateOfJoining ||
+                            user.profile.franchise.franchisePayroll?.dateOfJoining
                           ).toLocaleDateString()}
                         </span>
                       </div>
                     )}
                   </div>
                 </div>
-                {user.profile.franchise.franchisePayroll && (
+                {(user.profile.franchise.franchisePayrolls?.[0] || 
+                  user.profile.franchise.franchisePayroll) && (
                   <div>
                     <h4 className="text-sm font-semibold text-muted-foreground">
                       Payroll
                     </h4>
                     <div className="space-y-2 mt-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Franchise Fee:
-                        </span>
-                        <span className="text-sm font-medium">
-                          ₹
-                          {user.profile.franchise.franchisePayroll.franchiseFee.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Monthly Fee:
-                        </span>
-                        <span className="text-sm font-medium">
-                          ₹
-                          {user.profile.franchise.franchisePayroll.monthlyFee.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Royalty:
-                        </span>
-                        <span className="text-sm font-medium">
-                          {user.profile.franchise.franchisePayroll.royalty}%
-                        </span>
-                      </div>
+                      {user.profile.franchise.franchisePayrolls && user.profile.franchise.franchisePayrolls.length > 0 ? (
+                        user.profile.franchise.franchisePayrolls.map((payroll: any, idx: number) => (
+                          <div key={idx} className={idx > 0 ? "mt-4 pt-4 border-t" : ""}>
+                            {payroll.franchiseProgram?.program?.name && (
+                              <div className="text-xs font-semibold text-muted-foreground mb-2">
+                                {payroll.franchiseProgram.program.name}
+                              </div>
+                            )}
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-sm text-muted-foreground">
+                                  Franchise Fee:
+                                </span>
+                                <span className="text-sm font-medium">
+                                  ₹{payroll.franchiseFee.toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-sm text-muted-foreground">
+                                  Monthly Fee:
+                                </span>
+                                <span className="text-sm font-medium">
+                                  ₹{payroll.monthlyFee.toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-sm text-muted-foreground">
+                                  Royalty:
+                                </span>
+                                <span className="text-sm font-medium">
+                                  {payroll.royalty}%
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">
+                              Franchise Fee:
+                            </span>
+                            <span className="text-sm font-medium">
+                              ₹
+                              {user.profile.franchise.franchisePayroll?.franchiseFee.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">
+                              Monthly Fee:
+                            </span>
+                            <span className="text-sm font-medium">
+                              ₹
+                              {user.profile.franchise.franchisePayroll?.monthlyFee.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">
+                              Royalty:
+                            </span>
+                            <span className="text-sm font-medium">
+                              {user.profile.franchise.franchisePayroll?.royalty}%
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

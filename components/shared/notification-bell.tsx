@@ -66,6 +66,11 @@ export function NotificationBell() {
       case "certificate_rejected":
       case "certificate_sent":
         return "/admin/certificate-requests";
+
+      // Order notifications
+      case "order_placed":
+      case "order_updated":
+        return "/admin/orders";
       default:
         return undefined;
     }

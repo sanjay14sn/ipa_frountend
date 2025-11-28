@@ -38,6 +38,9 @@ import {
 } from "@/services/inventory.service";
 import { type Program } from "@/services/program.service";
 import { type Level } from "@/services/level.service";
+import { type Supplier } from "@/services/supplier.service";
+import { type InventorySupplier } from "@/services/inventory.service";
+import { Badge } from "@/components/ui/badge";
 
 interface InventoryDialogsProps {
   // Add Dialog
@@ -70,6 +73,48 @@ interface InventoryDialogsProps {
   setIsDeleteDialogOpen: (open: boolean) => void;
   deletingItem: Inventory | null;
   onDeleteSubmit: () => void;
+
+  // Supplier Order Dialog
+  isSupplierOrderDialogOpen: boolean;
+  setIsSupplierOrderDialogOpen: (open: boolean) => void;
+  supplierOrderForm: {
+    supplierId: number;
+    inventoryId: number;
+    quantity: number;
+    unitPrice: number;
+  };
+  setSupplierOrderForm: (form: any) => void;
+  itemSuppliers: InventorySupplier[];
+  inventory: Inventory[];
+  onSupplierOrderSubmit: () => void;
+
+  // Add Supplier Dialog - changed to create new supplier
+  isAddSupplierDialogOpen: boolean;
+  setIsAddSupplierDialogOpen: (open: boolean) => void;
+  addSupplierForm: {
+    name: string;
+    address: string;
+    phone: string;
+    email: string;
+    costPrice: number;
+  };
+  setAddSupplierForm: (form: any) => void;
+  onAddSupplierSubmit: () => void;
+
+  // Manage Suppliers Dialog
+  isManageSuppliersDialogOpen: boolean;
+  setIsManageSuppliersDialogOpen: (open: boolean) => void;
+  selectedInventoryItem: Inventory | null;
+  inventorySuppliers: InventorySupplier[];
+  onRemoveSupplier: (supplierId: number) => void;
+  onOpenAddSupplier: () => void;
+  suppliers: Supplier[]; // For all available suppliers
+
+  // Order History Dialog
+  isOrderHistoryDialogOpen: boolean;
+  setIsOrderHistoryDialogOpen: (open: boolean) => void;
+  orderHistory: any[]; // SupplierOrder[]
+  onReceiveOrder: (orderId: number) => void;
 }
 
 export function InventoryDialogs({
@@ -96,6 +141,29 @@ export function InventoryDialogs({
   setIsDeleteDialogOpen,
   deletingItem,
   onDeleteSubmit,
+  isSupplierOrderDialogOpen,
+  setIsSupplierOrderDialogOpen,
+  supplierOrderForm,
+  setSupplierOrderForm,
+  itemSuppliers,
+  inventory,
+  onSupplierOrderSubmit,
+  isAddSupplierDialogOpen,
+  setIsAddSupplierDialogOpen,
+  addSupplierForm,
+  setAddSupplierForm,
+  onAddSupplierSubmit,
+  isManageSuppliersDialogOpen,
+  setIsManageSuppliersDialogOpen,
+  selectedInventoryItem,
+  inventorySuppliers,
+  onRemoveSupplier,
+  onOpenAddSupplier,
+  suppliers,
+  isOrderHistoryDialogOpen,
+  setIsOrderHistoryDialogOpen,
+  orderHistory,
+  onReceiveOrder,
 }: InventoryDialogsProps) {
   return (
     <>
@@ -175,43 +243,28 @@ export function InventoryDialogs({
                 rows={2}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      category: value as InventoryCategory,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(InventoryCategory).map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="price">Price (₹)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: Number(e.target.value) })
-                  }
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    category: value as InventoryCategory,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(InventoryCategory).map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -244,6 +297,23 @@ export function InventoryDialogs({
                   }
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="price">Price (₹)</Label>
+              <Input
+                id="price"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.price || 0}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    price: Number(e.target.value),
+                  })
+                }
+              />
             </div>
             <div className="flex items-center space-x-2">
               <Switch
@@ -302,46 +372,28 @@ export function InventoryDialogs({
                 rows={2}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="editCategory">Category</Label>
-                <Select
-                  value={editFormData.category}
-                  onValueChange={(value) =>
-                    setEditFormData({
-                      ...editFormData,
-                      category: value as InventoryCategory,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(InventoryCategory).map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="editPrice">Price (₹)</Label>
-                <Input
-                  id="editPrice"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editFormData.price || 0}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      price: Number(e.target.value),
-                    })
-                  }
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="editCategory">Category</Label>
+              <Select
+                value={editFormData.category}
+                onValueChange={(value) =>
+                  setEditFormData({
+                    ...editFormData,
+                    category: value as InventoryCategory,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(InventoryCategory).map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -374,6 +426,23 @@ export function InventoryDialogs({
                   }
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editPrice">Price (₹)</Label>
+              <Input
+                id="editPrice"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={editFormData.price ?? ""}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    price: e.target.value ? Number(e.target.value) : undefined,
+                  })
+                }
+              />
             </div>
             <div className="flex items-center space-x-2">
               <Switch
@@ -471,6 +540,375 @@ export function InventoryDialogs({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Supplier Order Dialog */}
+      <Dialog open={isSupplierOrderDialogOpen} onOpenChange={setIsSupplierOrderDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Place Supplier Order</DialogTitle>
+            <DialogDescription>
+              Order inventory items from suppliers
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="supplier">Supplier</Label>
+              <Select
+                value={supplierOrderForm.supplierId?.toString() || ""}
+                onValueChange={(value) =>
+                  setSupplierOrderForm({
+                    ...supplierOrderForm,
+                    supplierId: Number(value),
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Supplier" />
+                </SelectTrigger>
+                <SelectContent>
+                  {itemSuppliers.length === 0 ? (
+                    <div className="p-2 text-sm text-gray-500">
+                      No suppliers linked. Add a supplier first.
+                    </div>
+                  ) : (
+                    itemSuppliers.map((invSupplier) => (
+                      <SelectItem key={invSupplier.id} value={invSupplier.supplierId.toString()}>
+                        {invSupplier.supplier?.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="inventoryItem">Inventory Item</Label>
+              <Select
+                value={supplierOrderForm.inventoryId?.toString() || ""}
+                onValueChange={(value) =>
+                  setSupplierOrderForm({
+                    ...supplierOrderForm,
+                    inventoryId: Number(value),
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Item" />
+                </SelectTrigger>
+                <SelectContent>
+                  {inventory.map((item) => (
+                    <SelectItem key={item.id} value={item.id.toString()}>
+                      {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="quantity">Quantity</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="1"
+                  value={supplierOrderForm.quantity}
+                  onChange={(e) =>
+                    setSupplierOrderForm({
+                      ...supplierOrderForm,
+                      quantity: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="unitPrice">Unit Price (₹)</Label>
+                <Input
+                  id="unitPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={supplierOrderForm.unitPrice}
+                  onChange={(e) =>
+                    setSupplierOrderForm({
+                      ...supplierOrderForm,
+                       unitPrice: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
+            <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+              Total Amount: ₹
+              {(supplierOrderForm.quantity * supplierOrderForm.unitPrice).toFixed(2)}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsSupplierOrderDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={onSupplierOrderSubmit}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Place Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Supplier Dialog - Create New Supplier */}
+      <Dialog open={isAddSupplierDialogOpen} onOpenChange={setIsAddSupplierDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Supplier to {selectedInventoryItem?.name}</DialogTitle>
+            <DialogDescription>
+              Create a new supplier and link it to this inventory item
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="supplierName">Supplier Name *</Label>
+              <Input
+                id="supplierName"
+                placeholder="Enter supplier name"
+                value={addSupplierForm.name}
+                onChange={(e) =>
+                  setAddSupplierForm({
+                    ...addSupplierForm,
+                    name: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="supplierAddress">Address</Label>
+              <Input
+                id="supplierAddress"
+                placeholder="Enter supplier address"
+                value={addSupplierForm.address}
+                onChange={(e) =>
+                  setAddSupplierForm({
+                    ...addSupplierForm,
+                    address: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="supplierPhone">Phone</Label>
+                <Input
+                  id="supplierPhone"
+                  placeholder="Contact number"
+                  value={addSupplierForm.phone}
+                  onChange={(e) =>
+                    setAddSupplierForm({
+                      ...addSupplierForm,
+                      phone: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="supplierEmail">Email</Label>
+                <Input
+                  id="supplierEmail"
+                  type="email"
+                  placeholder="Email address"
+                  value={addSupplierForm.email}
+                  onChange={(e) =>
+                    setAddSupplierForm({
+                      ...addSupplierForm,
+                      email: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="costPrice">Cost Price (₹)</Label>
+              <Input
+                id="costPrice"
+                type="number"
+                min="0"
+                step="0.01"
+                value={addSupplierForm.costPrice}
+                onChange={(e) =>
+                  setAddSupplierForm({
+                    ...addSupplierForm,
+                    costPrice: Number(e.target.value),
+                  })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddSupplierDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={onAddSupplierSubmit}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Create & Link Supplier
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Suppliers Dialog */}
+      <Dialog open={isManageSuppliersDialogOpen} onOpenChange={setIsManageSuppliersDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manage Suppliers for {selectedInventoryItem?.name}</DialogTitle>
+            <DialogDescription>
+              View and manage suppliers linked to this item
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {inventorySuppliers.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">
+                No suppliers linked yet.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {inventorySuppliers.map((invSupplier) => (
+                  <div
+                    key={invSupplier.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div>
+                      <p className="font-medium">{invSupplier.supplier?.name}</p>
+                      <p className="text-sm text-gray-500">
+                        Cost Price: ₹{invSupplier.costPrice}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onRemoveSupplier(invSupplier.supplierId)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsManageSuppliersDialogOpen(false)}
+            >
+              Close
+            </Button>
+            <Button
+              onClick={onOpenAddSupplier}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Add Supplier
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order History Dialog */}
+      <Dialog open={isOrderHistoryDialogOpen} onOpenChange={setIsOrderHistoryDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Order History</DialogTitle>
+            <DialogDescription>
+              All supplier orders for this item
+           </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {orderHistory.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-8">
+                No orders found for this item.
+              </p>
+            ) : (
+              orderHistory.map((order: any) => (
+                <div
+                  key={order.id}
+                  className="border rounded-lg p-4 space-y-2"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium">Order #{order.id}</p>
+                      <p className="text-sm text-gray-600">
+                        Supplier: {order.supplier?.name || "N/A"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        className={
+                          order.status === "Received"
+                            ? "bg-green-100 text-green-800"
+                            : order.status === "Pending"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-gray-100 text-gray-800"
+                        }
+                      >
+                        {order.status}
+                      </Badge>
+                      {order.status === "Pending" && (
+                        <Button
+                          size="sm"
+                          onClick={() => onReceiveOrder(order.id)}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          Receive
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    <p>Total: ₹{order.totalAmount}</p>
+                    {order.items && order.items.length > 0 && (
+                      <p className="text-sm">
+                        Quantity: {order.items.reduce((sum: number, item: any) => sum + item.quantity, 0)} units
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      <span className="font-medium">Ordered:</span>{" "}
+                      {new Date(order.createdAt).toLocaleDateString("en-IN", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                    {order.receivedAt && (
+                      <p className="text-xs text-gray-500">
+                        <span className="font-medium">Received:</span>{" "}
+                        {new Date(order.receivedAt).toLocaleDateString("en-IN", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsOrderHistoryDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

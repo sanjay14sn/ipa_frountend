@@ -125,18 +125,23 @@ export interface PaginationParams {
   sortOrder?: string;
 }
 
-export interface PayrollDetails {
+export interface ProgramPayrollRequest {
+  programId: number;
   franchiseFee: number;
-  dateOfPayment: Date;
   kitCost: number;
   materialCost: number;
-  dateOfJoining: Date;
   monthlyFee: number;
   ciShare: number;
   franchiseShare: number;
   royalty: number;
   installment: number;
   totalAmount: number;
+  gstInclusive: boolean;
+  freeload: boolean;
+}
+
+export interface CreatePayrollRequest {
+  programPayrolls: ProgramPayrollRequest[];
 }
 
 const api = axios.create({
@@ -183,7 +188,7 @@ export async function getPaginatedFranchises(
 
 export async function createPayrollDetails(
   id: number,
-  payrollDetails: PayrollDetails
+  payrollDetails: CreatePayrollRequest
 ) {
   const response = await api.post(`/franchise/payroll/${id}`, payrollDetails);
   if (response.status === 201) {
@@ -195,7 +200,7 @@ export async function createPayrollDetails(
 
 export async function updatePayrollDetails(
   id: number,
-  payrollDetails: Partial<PayrollDetails>
+  payrollDetails: Partial<ProgramPayrollRequest>
 ) {
   const response = await api.put(`/franchise/payroll/${id}`, payrollDetails);
   if (response.status === 200) {
@@ -214,7 +219,26 @@ export async function onboardingPayment(franchiseId: number) {
   }
 }
 
-// Payment-related interfaces
+export interface UpdateFranchiseStatusDto {
+  status: "Approved" | "Rejected" | "Pending";
+}
+
+export async function updateFranchiseStatus(
+  franchiseId: number,
+  dto: UpdateFranchiseStatusDto
+) {
+  const response = await api.patch(`/franchise/status/${franchiseId}`, dto);
+  if (response.status === 200) {
+    return response.data;
+  } else {
+    throw new Error(response.data.message);
+  }
+}
+
+export async function rejectFranchise(franchiseId: number) {
+  return updateFranchiseStatus(franchiseId, { status: "Rejected" });
+}
+
 export interface InitiateFranchiseFeePaymentDto {
   franchiseId: number;
 }
@@ -227,6 +251,7 @@ export interface PaymentOrderResponse {
   franchiseName: string;
   paymentType: string;
   key: string;
+  isZeroAmount?: boolean;
 }
 
 export interface VerifyPaymentDto {
@@ -240,7 +265,6 @@ export interface PaymentVerificationResponse {
   status?: string;
 }
 
-// Payment API functions
 export async function initiateFranchiseFeePayment(
   franchiseId: number
 ): Promise<PaymentOrderResponse> {

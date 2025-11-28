@@ -35,6 +35,10 @@ export enum NotificationType {
   CERTIFICATE_APPROVED = 'certificate_approved',
   CERTIFICATE_REJECTED = 'certificate_rejected',
   E_CERTIFICATE_SENT = 'certificate_sent',
+
+  // Order notifications
+  ORDER_PLACED = 'order_placed',
+  ORDER_UPDATED = 'order_updated',
 }
 
 export type UserType = 'admin' | 'franchisee';

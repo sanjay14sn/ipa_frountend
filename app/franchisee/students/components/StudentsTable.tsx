@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Mail, Phone } from "lucide-react";
+import { Edit, Trash2, Mail, Phone, Award } from "lucide-react";
 import { AdminTable } from "@/components/shared";
 import type {
   AdminTableColumn,
@@ -16,6 +16,7 @@ import {
   StudentIdStatus,
 } from "@/services/student.service";
 import StudentDetails from "./StudentDetails";
+import StudentCertificatesModal from "../../certificate-requests/components/StudentCertificatesModal";
 
 interface StudentsTableProps {
   students?: StudentData[];
@@ -45,6 +46,8 @@ export default function StudentsTable({
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [isCertificatesModalOpen, setIsCertificatesModalOpen] = useState(false);
   const itemsPerPage = 10;
 
   // Filter and sort data
@@ -264,6 +267,17 @@ export default function StudentsTable({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => {
+              setSelectedStudentId(student.id);
+              setIsCertificatesModalOpen(true);
+            }}
+            title="View Certificates"
+          >
+            <Award className="w-4 h-4 text-green-600" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onStudentEdit?.(student)}
           >
             <Edit className="w-4 h-4" />
@@ -329,6 +343,7 @@ export default function StudentsTable({
   ];
 
   return (
+    <>
     <AdminTable
       data={paginatedData}
       loading={false}
@@ -378,5 +393,15 @@ export default function StudentsTable({
       emptyMessage="No students found matching your criteria"
       resultsText={(count, total) => `Showing ${count} of ${total} students`}
     />
+
+    {selectedStudentId && (
+      <StudentCertificatesModal
+        open={isCertificatesModalOpen}
+        onOpenChange={setIsCertificatesModalOpen}
+        studentId={selectedStudentId}
+        studentName={students?.find((s) => s.id === selectedStudentId)?.name}
+      />
+    )}
+  </>
   );
 }

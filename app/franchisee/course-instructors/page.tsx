@@ -30,12 +30,13 @@ import {
   MapPin,
   Eye,
   BookOpen,
+  Edit2,
+  Trash2,
 } from "lucide-react";
 import { useUser } from "@/context/user-context";
 import { CourseInstructorData } from "@/services/course-instructor.service";
 import {
-  useCourseInstructors,
-  useTrainingCourseInstructors,
+  usePaginatedFranchiseeCourseInstructors,
   deleteCourseInstructorWithRevalidation,
 } from "@/hooks/use-course-instructors";
 import AddCourseInstructorModal from "./components/AddCourseInstructorModal";
@@ -57,27 +58,51 @@ export default function FranchiseeCourseInstructorsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const { user } = useUser();
 
-  // Use SWR for data fetching
-  const { courseInstructors, isLoading, revalidate } = useCourseInstructors();
+  // Pagination state
+  const [currentTab, setCurrentTab] = useState<"active" | "training">("active");
+  const [activePage, setActivePage] = useState(1);
+  const [trainingPage, setTrainingPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const limit = 10;
+
+  // Use paginated hook for active CIs
   const {
-    trainingCourseInstructors,
+    courseInstructors: activeCourseInstructors,
+    meta: activeMeta,
+    isLoading: activeLoading,
+    revalidate: revalidateActive,
+  } = usePaginatedFranchiseeCourseInstructors({
+    page: activePage,
+    limit,
+    search,
+    status: "Active",
+  });
+
+  // Use paginated hook for training CIs
+  const {
+    courseInstructors: trainingCourseInstructors,
+    meta: trainingMeta,
     isLoading: trainingLoading,
     revalidate: revalidateTraining,
-  } = useTrainingCourseInstructors();
+  } = usePaginatedFranchiseeCourseInstructors({
+    page: trainingPage,
+    limit,
+    search,
+    status: "Training",
+  });
 
   if (!user || !user.franchiseId) {
     return <div>Loading...</div>;
   }
 
-  if (isLoading || trainingLoading) {
-    return <div>Loading course instructors...</div>;
-  }
+  const isLoading = currentTab === "active" ? activeLoading : trainingLoading;
+  const courseInstructors = currentTab === "active" ? activeCourseInstructors : trainingCourseInstructors;
+  const meta = currentTab === "active" ? activeMeta : trainingMeta;
 
-  const activeCourseInstructors = courseInstructors.filter(
-    (ci) => ci.status !== "Training"
-  ).length;
-  const trainingCount = trainingCourseInstructors.length;
-  const newThisMonth = 0;
+  // Calculate stats
+  const activeCourseInstructorsCount = activeMeta?.total || 0;
+  const trainingCount = trainingMeta?.total || 0;
+  const newThisMonth = 0; // TODO: Implement this calculation
 
   // Helper function to calculate age
   const calculateAge = (dateOfBirth: Date): number => {
@@ -293,7 +318,7 @@ export default function FranchiseeCourseInstructorsPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{courseInstructors.length}</div>
+            <div className="text-2xl font-bold">{activeCourseInstructorsCount + trainingCount}</div>
             <p className="text-xs text-muted-foreground">In your franchise</p>
           </CardContent>
         </Card>
@@ -305,7 +330,7 @@ export default function FranchiseeCourseInstructorsPage() {
             <GraduationCap className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeCourseInstructors}</div>
+            <div className="text-2xl font-bold">{activeCourseInstructorsCount}</div>
             <p className="text-xs text-muted-foreground">Currently active</p>
           </CardContent>
         </Card>
@@ -361,10 +386,10 @@ export default function FranchiseeCourseInstructorsPage() {
       ) : (
         // Table View with Tabs
         <CourseInstructorTabs
-          courseInstructors={courseInstructors}
-          trainingCourseInstructors={trainingCourseInstructors}
+          courseInstructors={activeCourseInstructors}
+          trainingCourseInstructors={trainingCourseInstructors as any}
           onCourseInstructorUpdate={(updatedCourseInstructor) => {
-            revalidate();
+            revalidateActive();
           }}
           onCourseInstructorDelete={(courseInstructorId) => {
             setDeleteCourseInstructorId(courseInstructorId);
@@ -600,7 +625,8 @@ export default function FranchiseeCourseInstructorsPage() {
         onOpenChange={setIsAddModalOpen}
         onSuccess={() => {
           // Don't close modal immediately - let the modal handle its own success state
-          revalidate(); // SWR will automatically refresh the data
+          revalidateActive(); // Revalidate active CIs
+          revalidateTraining(); // Revalidate training CIs too in case the new CI requires training
         }}
       />
     </div>

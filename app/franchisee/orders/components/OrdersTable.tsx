@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, IndianRupee } from "lucide-react";
+import { Eye } from "lucide-react";
 import { AdminTable } from "@/components/shared";
 import type {
   AdminTableColumn,
@@ -30,9 +30,7 @@ export default function OrdersTable({
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"orderDate" | "totalAmount">(
-    "orderDate"
-  );
+  const [sortBy, setSortBy] = useState<"orderDate">("orderDate");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -62,10 +60,6 @@ export default function OrdersTable({
         case "orderDate":
           comparison =
             new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-          break;
-        case "totalAmount":
-          comparison =
-            a.totalAmount as number - (b.totalAmount as number);
           break;
         default:
           comparison = 0;
@@ -141,17 +135,6 @@ export default function OrdersTable({
       ),
     },
     {
-      key: "totalAmount",
-      header: "Total Amount",
-      className: "text-center",
-      render: (order) => (
-        <div className="font-medium flex items-center justify-center gap-1">
-          <IndianRupee className="h-4 w-4" />
-          {order.totalAmount}
-        </div>
-      ),
-    },
-    {
       key: "status",
       header: "Status",
       className: "text-center",
@@ -191,7 +174,6 @@ export default function OrdersTable({
 
   const sortOptions: AdminTableSortOption[] = [
     { value: "orderDate", label: "Order Date" },
-    { value: "totalAmount", label: "Total Amount" },
   ];
 
   return (
@@ -233,7 +215,7 @@ export default function OrdersTable({
       defaultSortBy="orderDate"
       defaultSortOrder="DESC"
       onSortChange={(newSortBy, newSortOrder) => {
-        setSortBy(newSortBy as "orderDate" | "totalAmount");
+        setSortBy(newSortBy as "orderDate");
         setSortOrder(newSortOrder.toLowerCase() as "asc" | "desc");
       }}
       pagination={{ total: filteredData.length, totalPages }}

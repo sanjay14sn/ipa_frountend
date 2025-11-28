@@ -1,12 +1,9 @@
-// middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-// Note: Middleware runs in the Edge runtime. Use fetch, not axios/node APIs.
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // only run for /franchisee routes
   if (pathname.startsWith("/franchisee")) {
     try {
       const apiBase =

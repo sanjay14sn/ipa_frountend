@@ -96,6 +96,16 @@ const adminNavigation = {
           icon: BookOpen,
         },
         {
+          title: "Orders",
+          url: "/admin/orders",
+          icon: ShoppingCart,
+        },
+        {
+          title: "Shipping",
+          url: "/admin/shipping",
+          icon: Package,
+        },
+        {
           title: "Payments",
           url: "/admin/payments",
           icon: CreditCard,

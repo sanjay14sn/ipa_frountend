@@ -254,3 +254,34 @@ export function useTrainingCourseInstructors() {
     revalidate,
   };
 }
+
+// Paginated Course Instructors hook
+export function usePaginatedFranchiseeCourseInstructors(
+  params: import("@/services/course-instructor.service").CourseInstructorPaginationParams
+) {
+  const key = `/course-instructor/paginated-franchisee?${JSON.stringify(params)}`;
+
+  const { data, error, isLoading } = useSWR<
+    import("@/services/course-instructor.service").PaginatedCourseInstructorsResponse
+  >(
+    key,
+    () =>
+      import("@/services/course-instructor.service").then((module) =>
+        module.getPaginatedFranchiseeCourseInstructors(params)
+      ),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+    }
+  );
+
+  const revalidate = () => mutate(key);
+
+  return {
+    courseInstructors: data?.data || [],
+    meta: data?.meta,
+    isLoading,
+    error,
+    revalidate,
+  };
+}

@@ -10,8 +10,8 @@ export interface Response {
 
 export enum OrderStatus {
   PENDING = "Pending",
-  PROCESSING = "Processing",
-  SHIPPED = "Shipped",
+  VERIFIED = "Verified",
+  SHIPPING = "Shipping",
   DELIVERED = "Delivered",
   CANCELLED = "Cancelled",
 }
@@ -38,8 +38,11 @@ export interface OrderData {
   updatedAt: string;
   // Extended fields (may not be present in list view)
   orderNumber?: string;
+  referenceId?: string;
   franchiseId?: number;
   createdBy?: number;
+  city?: string;
+  phone?: string;
   updatedBy?: number;
   franchise?: {
     id: number;
@@ -47,6 +50,8 @@ export interface OrderData {
   };
   // Detailed view: order items grouped by student
   orderItems?: Record<string, OrderItemData[]>;
+  // DC PDF path for shipping orders
+  dcPdfPath?: string | null;
 }
 
 export interface CreateOrderDto {
@@ -60,10 +65,21 @@ export interface UpdateOrderDto {
 }
 
 export interface InvoiceItem {
-  id: number;
-  name: string;
-  totalPrice: string;
-  quantity: number;
+  studentId: number;
+  studentName: string;
+  rollNo: string;
+  levelId: number;
+  levelName: string;
+  programId: number;
+  isFirstLevel: boolean;
+  materialCost: number;
+  kitCost?: number;
+  royalty: number;
+  totalPrice: number;
+  inventoryItems: Array<{
+    id: number;
+    name: string;
+  }>;
 }
 
 export interface InvoiceResponse extends Response {
@@ -98,7 +114,9 @@ export async function getFranchiseeOrders(): Promise<OrderData[]> {
 }
 
 export async function getOrderById(orderId: number): Promise<OrderData> {
-  const response = await api.get<SingleOrderResponse>(`/orders/franchise/${orderId}`);
+  const response = await api.get<SingleOrderResponse>(
+    `/orders/franchise/${orderId}`
+  );
   return response.data.result;
 }
 
@@ -114,13 +132,61 @@ export async function updateFranchiseeOrder(
 }
 
 // Admin endpoints
-export async function getAllOrdersAdmin(): Promise<OrderData[]> {
-  const response = await api.get<OrdersResponse>("/orders/admin");
+export interface GroupedOrdersResponse extends Response {
+  result: {
+    data: Record<string, OrderData[]>;
+    meta: {
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
+  };
+}
+
+export async function getAllOrdersAdmin(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  sortBy?: string;
+  sortOrder?: string;
+}): Promise<GroupedOrdersResponse["result"]> {
+  const response = await api.get<GroupedOrdersResponse>("/orders/admin", {
+    params,
+  });
   return response.data.result;
 }
 
 export async function getOrdersByFranchise(): Promise<any> {
   const response = await api.get("/orders/admin/by-franchise");
+  return response.data.result;
+}
+
+export async function getOrderByIdAdmin(orderId: number): Promise<OrderData> {
+  const response = await api.get<SingleOrderResponse>(
+    `/orders/admin/${orderId}`
+  );
+  return response.data.result;
+}
+
+export function getDcPdfUrl(dcPdfPath: string): string {
+  if (!dcPdfPath) return "";
+  // dcPdfPath is stored as "delivery-challans/filename.pdf"
+  // Backend serves static files at /uploads/ prefix
+  const baseUrl = api.defaults.baseURL || "http://localhost:5000";
+  return `${baseUrl}/uploads/${dcPdfPath}`;
+}
+
+export async function regenerateDcPdf(orderId: number): Promise<OrderData> {
+  const response = await api.post<SingleOrderResponse>(
+    `/orders/admin/${orderId}/regenerate-dc`,
+    {}
+  );
   return response.data.result;
 }
 
@@ -131,6 +197,16 @@ export async function updateOrderAdmin(
   const response = await api.patch<SingleOrderResponse>(
     `/orders/admin/${orderId}`,
     updateData
+  );
+  return response.data.result;
+}
+
+export async function verifyOrderAdmin(
+  orderId: number,
+  status: string = "verify"
+): Promise<OrderData> {
+  const response = await api.patch<SingleOrderResponse>(
+    `/orders/admin/${orderId}/${status}`
   );
   return response.data.result;
 }
@@ -160,7 +236,9 @@ export interface OrderPaymentResponse {
   paymentType: string;
   key: string;
   studentIds: number[];
+  customItems?: CustomOrderItem[];
   notes?: string;
+  isZeroAmount?: boolean;
 }
 
 export interface VerifyOrderPaymentDto {
@@ -201,6 +279,98 @@ export async function verifyOrderPayment(
   const response = await api.post<OrderPaymentVerifyResponse>(
     "/orders/payment/verify",
     verifyData
+  );
+  return response.data.result;
+}
+
+// Custom order interfaces and functions
+export interface CustomOrderItem {
+  studentId: number;
+  inventoryId: number;
+  quantity: number;
+}
+
+export interface CreateCustomOrderDto {
+  studentIds: number[];
+  customItems: CustomOrderItem[];
+  notes?: string;
+}
+
+export interface AvailableItem {
+  id: number;
+  name: string;
+  description: string;
+  category: string;
+  price: number;
+  isKitItem: boolean;
+  defaultQuantity?: number;
+}
+
+export interface StudentAvailableItems {
+  studentId: number;
+  studentName: string;
+  rollNo: string;
+  levelId: number;
+  levelName: string;
+  programId: number;
+  programName: string;
+  levelItems: AvailableItem[];
+  kitItems: AvailableItem[];
+  allItems: AvailableItem[];
+}
+
+export interface AvailableItemsResponse extends Response {
+  result: StudentAvailableItems[];
+}
+
+export interface StudentOrderHistory {
+  studentId: number;
+  studentName: string;
+  levelId: number;
+  levelName: string;
+  hasOrderedForLevel: boolean;
+  orderCount: number;
+  orders: Array<{
+    orderId: number;
+    orderStatus: OrderStatus;
+    orderDate: string;
+    inventoryId: number;
+    inventoryName: string;
+  }>;
+}
+
+export interface StudentOrderHistoryResponse extends Response {
+  result: StudentOrderHistory;
+}
+
+// Initiate custom order payment
+export async function initiateCustomOrderPayment(
+  orderData: CreateCustomOrderDto
+): Promise<OrderPaymentResponse> {
+  const response = await api.post<OrderPaymentInitResponse>(
+    "/orders/custom/payment/initiate",
+    orderData
+  );
+  return response.data.result;
+}
+
+// Get available items for custom order
+export async function getAvailableItems(
+  studentIds: number[]
+): Promise<StudentAvailableItems[]> {
+  const response = await api.post<AvailableItemsResponse>(
+    "/orders/available-items",
+    { studentIds }
+  );
+  return response.data.result;
+}
+
+// Get student order history for their level
+export async function getStudentOrderHistory(
+  studentId: number
+): Promise<StudentOrderHistory> {
+  const response = await api.get<StudentOrderHistoryResponse>(
+    `/orders/student-order-history/${studentId}`
   );
   return response.data.result;
 }

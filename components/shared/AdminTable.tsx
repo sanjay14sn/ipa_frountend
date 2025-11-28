@@ -282,8 +282,11 @@ export default function AdminTable<T>({
                     <SelectValue placeholder={filter.label} />
                   </SelectTrigger>
                   <SelectContent>
-                    {filter.options.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
+                    {filter.options.map((option, idx) => (
+                      <SelectItem
+                        key={`${filter.key}-${option.value ?? option.label ?? `idx-${idx}`}`}
+                        value={option.value}
+                      >
                         {option.label}
                       </SelectItem>
                     ))}
@@ -328,9 +331,9 @@ export default function AdminTable<T>({
                       </div>
                     </div>
                     <div className="max-h-[200px] overflow-y-auto p-2">
-                      {filter.options.map((option) => (
+                      {filter.options.map((option, idx) => (
                         <div
-                          key={option.value}
+                          key={`${filter.key}-${option.value ?? option.label ?? `idx-${idx}`}`}
                           className="flex items-center space-x-2 py-2 px-2 hover:bg-gray-100 rounded cursor-pointer"
                           onClick={() =>
                             handleMultiSelectToggle(filter.key, option.value)

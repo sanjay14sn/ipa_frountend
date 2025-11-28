@@ -1,5 +1,6 @@
 import FranchiseeSection, { franchiseeDotRef } from "./FranchiseeSection";
 import PayrollSection, { payrollDotRef } from "./PayrollSection";
+import StartingKitSection, { startingKitDotRef } from "./StartingKitSection";
 import { useEffect, useState, useRef } from "react";
 import {
   FranchisePayrollResponse,
@@ -42,8 +43,10 @@ export default function FranchiseDetails({
       const containerTop = containerRef.current.getBoundingClientRect().top;
       let lastDotRef = null;
 
-      // Find the last visible dot (check in reverse order: payroll, franchisee, franchiseDetails)
-      if (payrollDotRef.current) {
+      // Find the last visible dot (check in reverse order: startingKit, payroll, franchisee, franchiseDetails)
+      if (startingKitDotRef.current) {
+        lastDotRef = startingKitDotRef.current;
+      } else if (payrollDotRef.current) {
         lastDotRef = payrollDotRef.current;
       } else if (franchiseeDotRef.current) {
         lastDotRef = franchiseeDotRef.current;
@@ -154,6 +157,14 @@ export default function FranchiseDetails({
             isExpanded={expandedRows.has(`${client.id}-payroll`)}
             onToggle={onToggleRow}
             onPayrollUpdate={handlePayrollUpdate}
+          />
+
+          {/* Starting Kit Section */}
+          <StartingKitSection
+            franchise={client}
+            clientId={client.id.toString()}
+            isExpanded={expandedRows.has(`${client.id}-starting-kit`)}
+            onToggle={onToggleRow}
           />
 
           {/* Note: Students, Instructors, and Orders sections are commented out in the original */}

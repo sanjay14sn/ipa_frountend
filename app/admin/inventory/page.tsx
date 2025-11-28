@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Edit2, Package, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, Edit2, Package, ArrowLeft, ShoppingCart, Users, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdminTable } from "@/components/shared";
 import type { AdminTableColumn } from "@/components/shared/AdminTable";
@@ -15,14 +15,20 @@ import {
   updateInventory,
   updateStock,
   deleteInventory,
+  linkSupplierToInventory,
+  unlinkSupplierFromInventory,
+  getSuppliersForInventory,
   type Inventory,
   type CreateInventoryDto,
   type UpdateInventoryDto,
   type PaginationMeta,
+  type InventorySupplier,
   InventoryCategory,
 } from "@/services/inventory.service";
 import { getAllPrograms, type Program } from "@/services/program.service";
 import { getLevelsByProgram, type Level } from "@/services/level.service";
+import { getAllSuppliers, createSupplier, type Supplier } from "@/services/supplier.service";
+import { createSupplierOrder, getOrderHistoryForInventory, receiveSupplierOrder, type CreateSupplierOrderDto, type SupplierOrder } from "@/services/supplier-order.service";
 import { InventoryDialogs } from "./components/InventoryDialogs";
 
 export default function InventoryPage() {
@@ -32,6 +38,7 @@ export default function InventoryPage() {
   const [inventory, setInventory] = useState<Inventory[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
@@ -48,10 +55,36 @@ export default function InventoryPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isStockDialogOpen, setIsStockDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isSupplierOrderDialogOpen, setIsSupplierOrderDialogOpen] = useState(false);
+  const [isAddSupplierDialogOpen, setIsAddSupplierDialogOpen] = useState(false);
+  const [isManageSuppliersDialogOpen, setIsManageSuppliersDialogOpen] = useState(false);
+  const [isOrderHistoryDialogOpen, setIsOrderHistoryDialogOpen] = useState(false);
+  
   const [editingItem, setEditingItem] = useState<Inventory | null>(null);
   const [stockItem, setStockItem] = useState<Inventory | null>(null);
   const [stockQuantity, setStockQuantity] = useState(0);
   const [deletingItem, setDeletingItem] = useState<Inventory | null>(null);
+  const [selectedInventoryItem, setSelectedInventoryItem] = useState<Inventory | null>(null);
+  const [inventorySuppliers, setInventorySuppliers] = useState<InventorySupplier[]>([]);
+  const [itemSuppliers, setItemSuppliers] = useState<InventorySupplier[]>([]); // For restock dialog
+  const [orderHistory, setOrderHistory] = useState<SupplierOrder[]>([]);
+
+  // Supplier order form
+  const [supplierOrderForm, setSupplierOrderForm] = useState({
+    supplierId: 0,
+    inventoryId: 0,
+    quantity: 1,
+    unitPrice: 0,
+  });
+
+  // Add supplier form - changed to create new supplier
+  const [addSupplierForm, setAddSupplierForm] = useState({
+    name: "",
+    address: "",
+    phone: "",
+    email: "",
+    costPrice: 0,
+  });
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -65,18 +98,19 @@ export default function InventoryPage() {
     name: "",
     description: "",
     category: InventoryCategory.OTHER,
-    price: 0,
     quantity: 0,
     restockQuantity: 10,
     programId: 0,
     levelId: 0,
     isActive: true,
+    price: 0,
   });
 
   const [editFormData, setEditFormData] = useState<UpdateInventoryDto>({});
 
   useEffect(() => {
     loadPrograms();
+    loadSuppliers();
   }, []);
 
   // Load inventory when filters or page changes
@@ -98,6 +132,19 @@ export default function InventoryPage() {
       toast({
         title: "Error",
         description: "Failed to load programs",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const loadSuppliers = async () => {
+    try {
+      const data = await getAllSuppliers();
+      setSuppliers(data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load suppliers",
         variant: "destructive",
       });
     }
@@ -154,17 +201,30 @@ export default function InventoryPage() {
     }
   };
 
+  const loadInventorySuppliers = async (inventoryId: number) => {
+    try {
+      const data = await getSuppliersForInventory(inventoryId);
+      setInventorySuppliers(data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load suppliers for this item",
+        variant: "destructive",
+      });
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: "",
       description: "",
       category: InventoryCategory.OTHER,
-      price: 0,
       quantity: 0,
       restockQuantity: 10,
       programId: 0,
       levelId: 0,
       isActive: true,
+      price: 0,
     });
   };
 
@@ -173,16 +233,16 @@ export default function InventoryPage() {
       switch (key) {
         case "program":
           setSelectedProgramId(value);
-          setSelectedLevelId("all"); // Reset level when program changes
-          setCurrentPage(1); // Reset to first page
+          setSelectedLevelId("all");
+          setCurrentPage(1);
           break;
         case "level":
           setSelectedLevelId(value);
-          setCurrentPage(1); // Reset to first page
+          setCurrentPage(1);
           break;
         case "status":
           setSelectedStatus(value);
-          setCurrentPage(1); // Reset to first page
+          setCurrentPage(1);
           break;
       }
     }
@@ -190,14 +250,14 @@ export default function InventoryPage() {
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
-    setCurrentPage(1); // Reset to first page when searching
+    setCurrentPage(1);
   };
 
   const handleAddItem = async () => {
-    if (!formData.name.trim() || formData.price <= 0) {
+    if (!formData.name.trim()) {
       toast({
         title: "Error",
-        description: "Name and valid price are required",
+        description: "Name is required",
         variant: "destructive",
       });
       return;
@@ -292,6 +352,145 @@ export default function InventoryPage() {
     }
   };
 
+  const handlePlaceSupplierOrder = async () => {
+    if (!supplierOrderForm.supplierId || !supplierOrderForm.inventoryId) {
+      toast({
+        title: "Error",
+        description: "Please select a supplier and inventory item",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (supplierOrderForm.quantity <= 0) {
+      toast({
+        title: "Error",
+        description: "Quantity must be greater than 0",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const orderData: CreateSupplierOrderDto = {
+        supplierId: supplierOrderForm.supplierId,
+        items: [
+          {
+            inventoryId: supplierOrderForm.inventoryId,
+            quantity: supplierOrderForm.quantity,
+            unitPrice: supplierOrderForm.unitPrice,
+          },
+        ],
+      };
+
+      await createSupplierOrder(orderData);
+      toast({
+        title: "Success",
+        description: "Supplier order placed successfully",
+      });
+      setIsSupplierOrderDialogOpen(false);
+      setSupplierOrderForm({
+        supplierId: 0,
+        inventoryId: 0,
+        quantity: 1,
+        unitPrice: 0,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to place supplier order",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddSupplier = async () => {
+    if (!selectedInventoryItem) return;
+
+    if (!addSupplierForm.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Supplier name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // First create the supplier
+      const newSupplier = await createSupplier({
+        name: addSupplierForm.name,
+        address: addSupplierForm.address,
+        phone: addSupplierForm.phone,
+        email: addSupplierForm.email,
+      });
+
+      // Then link the supplier to the inventory item
+      await linkSupplierToInventory(
+        selectedInventoryItem.id,
+        newSupplier.id,
+        addSupplierForm.costPrice
+      );
+
+      toast({
+        title: "Success",
+        description: "Supplier created and linked successfully",
+      });
+      setIsAddSupplierDialogOpen(false);
+      setAddSupplierForm({ name: "", address: "", phone: "", email: "", costPrice: 0 });
+      loadInventorySuppliers(selectedInventoryItem.id);
+      loadSuppliers(); // Reload suppliers list
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create and link supplier",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRemoveSupplier = async (supplierId: number) => {
+    if (!selectedInventoryItem) return;
+
+    try {
+      await unlinkSupplierFromInventory(selectedInventoryItem.id, supplierId);
+      toast({
+        title: "Success",
+        description: "Supplier removed successfully",
+      });
+      loadInventorySuppliers(selectedInventoryItem.id);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove supplier",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReceiveOrder = async (orderId: number) => {
+    try {
+      await receiveSupplierOrder(orderId);
+      toast({
+        title: "Success",
+        description: "Order received and stock updated successfully",
+      });
+      // Reload order history and inventory
+      if (selectedInventoryItem) {
+        getOrderHistoryForInventory(selectedInventoryItem.id).then((orders) => {
+          setOrderHistory(orders);
+        });
+      }
+      loadInventory();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to receive order",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getCategoryColor = (category: InventoryCategory) => {
     switch (category) {
       case InventoryCategory.SHIRT:
@@ -345,12 +544,6 @@ export default function InventoryPage() {
       },
     },
     {
-      key: "price",
-      header: "Price",
-      className: "text-center",
-      render: (item) => <span>₹{item.price}</span>,
-    },
-    {
       key: "stock",
       header: "Stock",
       className: "text-center",
@@ -363,6 +556,14 @@ export default function InventoryPage() {
             </Badge>
           )}
         </div>
+      ),
+    },
+    {
+      key: "price",
+      header: "Price",
+      className: "text-center",
+      render: (item) => (
+        <span className="font-medium">₹{item.price || "0.00"}</span>
       ),
     },
     {
@@ -392,6 +593,61 @@ export default function InventoryPage() {
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
+              setSelectedInventoryItem(item);
+              // Load suppliers for this specific item
+              loadInventorySuppliers(item.id).then(() => {
+                getSuppliersForInventory(item.id).then((itemSups) => {
+                  setItemSuppliers(itemSups);
+                });
+              });
+              setSupplierOrderForm({
+                supplierId: 0,
+                inventoryId: item.id,
+                quantity: 1,
+                unitPrice: 0,
+              });
+              setIsSupplierOrderDialogOpen(true);
+            }}
+            title="Restock"
+            className="text-green-600 hover:text-green-700"
+          >
+            <ShoppingCart className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedInventoryItem(item);
+              loadInventorySuppliers(item.id);
+              setIsManageSuppliersDialogOpen(true);
+            }}
+            title="Manage Suppliers"
+            className="text-blue-600 hover:text-blue-700"
+          >
+            <Users className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedInventoryItem(item);
+              getOrderHistoryForInventory(item.id).then((orders) => {
+                setOrderHistory(orders);
+                setIsOrderHistoryDialogOpen(true);
+              });
+            }}
+            title="Order History"
+            className="text-purple-600 hover:text-purple-700"
+          >
+            <History className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
               setStockItem(item);
               setStockQuantity(item.quantity);
               setIsStockDialogOpen(true);
@@ -410,9 +666,9 @@ export default function InventoryPage() {
                 name: item.name,
                 description: item.description,
                 category: item.category,
-                price: item.price,
                 quantity: item.quantity,
                 restockQuantity: item.restockQuantity,
+                price: item.price,
                 isActive: item.isActive,
               });
               setIsEditDialogOpen(true);
@@ -453,7 +709,7 @@ export default function InventoryPage() {
             Inventory Management
           </h1>
           <p className="text-sm text-gray-600">
-            Manage inventory items across all programs and levels
+            Manage inventory items and supplier orders
           </p>
         </div>
         <Button
@@ -521,7 +777,10 @@ export default function InventoryPage() {
             },
           ]}
           onFilterChange={handleFilterChange}
-          pagination={{ total: paginationMeta.total, totalPages: paginationMeta.totalPages }}
+          pagination={{
+            total: paginationMeta.total,
+            totalPages: paginationMeta.totalPages,
+          }}
           currentPage={currentPage}
           onPageChange={setCurrentPage}
           itemsPerPage={itemsPerPage}
@@ -554,6 +813,36 @@ export default function InventoryPage() {
         setIsDeleteDialogOpen={setIsDeleteDialogOpen}
         deletingItem={deletingItem}
         onDeleteSubmit={handleDeleteItem}
+        // Supplier Order Dialog Props
+        isSupplierOrderDialogOpen={isSupplierOrderDialogOpen}
+        setIsSupplierOrderDialogOpen={setIsSupplierOrderDialogOpen}
+        supplierOrderForm={supplierOrderForm}
+        setSupplierOrderForm={setSupplierOrderForm}
+        itemSuppliers={itemSuppliers}
+        inventory={inventory}
+        onSupplierOrderSubmit={handlePlaceSupplierOrder}
+        // Add Supplier Dialog Props
+        isAddSupplierDialogOpen={isAddSupplierDialogOpen}
+        setIsAddSupplierDialogOpen={setIsAddSupplierDialogOpen}
+        addSupplierForm={addSupplierForm}
+        setAddSupplierForm={setAddSupplierForm}
+        onAddSupplierSubmit={handleAddSupplier}
+        // Manage Suppliers Dialog Props
+        isManageSuppliersDialogOpen={isManageSuppliersDialogOpen}
+        setIsManageSuppliersDialogOpen={setIsManageSuppliersDialogOpen}
+        selectedInventoryItem={selectedInventoryItem}
+        inventorySuppliers={inventorySuppliers}
+        onRemoveSupplier={handleRemoveSupplier}
+        onOpenAddSupplier={() => {
+          setIsManageSuppliersDialogOpen(false);
+          setAddSupplierForm({ name: "", address: "", phone: "", email: "", costPrice: 0 });
+          setIsAddSupplierDialogOpen(true);
+        }}
+        suppliers={suppliers}
+        isOrderHistoryDialogOpen={isOrderHistoryDialogOpen}
+        setIsOrderHistoryDialogOpen={setIsOrderHistoryDialogOpen}
+        orderHistory={orderHistory}
+        onReceiveOrder={handleReceiveOrder}
       />
     </div>
   );

@@ -40,6 +40,7 @@ export default function FranchiseAgreementPage() {
   const [paymentDetails, setPaymentDetails] = useState<{
     orderId: string;
     amount: number;
+    isZeroAmount?: boolean;
     currency: string;
     franchiseName: string;
     key: string;
@@ -81,7 +82,10 @@ export default function FranchiseAgreementPage() {
       city: user.profile.city,
       communicationAddress: user.profile.communicationAddress,
       franchiseCode: `FR-${user.profile.franchise.id}`,
-      program: user.profile.franchise.franchisePrograms?.map((fp: any) => fp.program.name).join(", ") || "N/A",
+      program: user.profile.franchise.franchisePayrolls?.map((payroll: any) => 
+        payroll.franchiseProgram?.program?.name || "N/A"
+      ).join(", ") || 
+      user.profile.franchise.franchisePrograms?.map((fp: any) => fp.program.name).join(", ") || "N/A",
       franchiseType: user.profile.franchise.type,
       reference: user.profile.reference,
       date: user.profile.franchise.createdAt,
@@ -149,6 +153,21 @@ export default function FranchiseAgreementPage() {
       // Initiate payment with backend
       const paymentOrder = await initiateFranchiseFeePayment(user.franchiseId);
 
+      // If zero amount, payment is already completed, just show success
+      if (paymentOrder.isZeroAmount || paymentOrder.amount === 0) {
+        setUser({
+          ...user,
+          franchiseStatus: "Active",
+        });
+        setShowPaymentSuccess(true);
+        setIsProcessingPayment(false);
+        // Redirect to dashboard after a short delay
+        setTimeout(() => {
+          router.push("/franchisee/dashboard");
+        }, 3000);
+        return;
+      }
+
       // Set payment details to trigger Razorpay
       setPaymentDetails({
         orderId: paymentOrder.orderId,
@@ -156,6 +175,7 @@ export default function FranchiseAgreementPage() {
         currency: paymentOrder.currency,
         franchiseName: paymentOrder.franchiseName,
         key: paymentOrder.key,
+        isZeroAmount: paymentOrder.isZeroAmount,
       });
     } catch (error) {
       console.error("Error initiating payment:", error);
@@ -244,7 +264,10 @@ export default function FranchiseAgreementPage() {
     city: user.profile.city,
     communicationAddress: user.profile.communicationAddress,
     franchiseCode: `FR-${user.profile.franchise.id}`,
-    program: user.profile.franchise.franchisePrograms?.map((fp: any) => fp.program.name).join(", ") || "N/A",
+    program: user.profile.franchise.franchisePayrolls?.map((payroll: any) => 
+      payroll.franchiseProgram?.program?.name || "N/A"
+    ).join(", ") || 
+    user.profile.franchise.franchisePrograms?.map((fp: any) => fp.program.name).join(", ") || "N/A",
     franchiseType: user.profile.franchise.type,
     reference: user.profile.reference,
     date: user.profile.franchise.createdAt,
@@ -282,7 +305,10 @@ export default function FranchiseAgreementPage() {
 
   return (
     <div className="min-h-screen p-6 md:p-8 bg-gray-50">
-      {paymentDetails && user?.profile && (
+      {paymentDetails && 
+       user?.profile && 
+       !paymentDetails.isZeroAmount && 
+       paymentDetails.amount > 0 && (
         <RazorpayPayment
           orderId={paymentDetails.orderId}
           amount={paymentDetails.amount}

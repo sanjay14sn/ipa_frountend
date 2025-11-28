@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, BookOpen, Award } from "lucide-react";
 import { AdminTable } from "@/components/shared";
 import type {
@@ -15,11 +16,15 @@ import { EligibleStudent } from "@/services/student.service";
 interface EligibleStudentsTableProps {
   students?: EligibleStudent[];
   onRequestCertificate?: (student: EligibleStudent) => void;
+  onBulkRequest?: (selectedStudents: EligibleStudent[]) => void;
+  courseInstructors?: any[];
 }
 
 export default function EligibleStudentsTable({
   students,
   onRequestCertificate,
+  onBulkRequest,
+  courseInstructors = [],
 }: EligibleStudentsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -28,6 +33,7 @@ export default function EligibleStudentsTable({
   const [sortBy, setSortBy] = useState<"name" | "rollNo" | "level">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedStudents, setSelectedStudents] = useState<Set<number>>(new Set());
   const itemsPerPage = 10;
 
   // Filter and sort data
@@ -47,7 +53,7 @@ export default function EligibleStudentsTable({
         (statusFilter === "inactive" && !student.isActive);
 
       const matchesLevel =
-        levelFilter === "all" || student.level === levelFilter;
+        levelFilter === "all" || student.levelName === levelFilter;
       const matchesStream =
         streamFilter === "all" || student.stream === streamFilter;
 
@@ -66,7 +72,7 @@ export default function EligibleStudentsTable({
           comparison = a.rollNo.localeCompare(b.rollNo);
           break;
         case "level":
-          comparison = a.level.localeCompare(b.level);
+          comparison = a.levelName.localeCompare(b.levelName);
           break;
         default:
           comparison = 0;
@@ -110,7 +116,6 @@ export default function EligibleStudentsTable({
       : "bg-gray-50 text-gray-600 border-gray-200";
   };
 
-  // Helper function to calculate age
   const calculateAge = (dateOfBirth: string): number => {
     const today = new Date();
     const birthDate = new Date(dateOfBirth);
@@ -127,15 +132,43 @@ export default function EligibleStudentsTable({
     return age;
   };
 
-  // Get unique values for filters
   const uniqueLevels = [
-    ...new Set(students?.map((student) => student.level).filter(Boolean)),
+    ...new Set(students?.map((student) => student.levelName).filter(Boolean)),
   ];
   const uniqueStreams = [
     ...new Set(students?.map((student) => student.stream).filter(Boolean)),
   ];
 
-  // Table configuration
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = new Set(filteredData.map((s) => s.id));
+      setSelectedStudents(allIds);
+    } else {
+      setSelectedStudents(new Set());
+    }
+  };
+
+  const handleSelectStudent = (studentId: number, checked: boolean) => {
+    const newSelected = new Set(selectedStudents);
+    if (checked) {
+      newSelected.add(studentId);
+    } else {
+      newSelected.delete(studentId);
+    }
+    setSelectedStudents(newSelected);
+  };
+
+  const handleBulkRequest = () => {
+    const selected = filteredData.filter((s) => selectedStudents.has(s.id));
+    if (selected.length === 0) {
+      return;
+    }
+    onBulkRequest?.(selected);
+  };
+
+  const allSelected = filteredData.length > 0 && filteredData.every((s) => selectedStudents.has(s.id));
+  const someSelected = filteredData.some((s) => selectedStudents.has(s.id));
+
   const columns: AdminTableColumn<EligibleStudent>[] = [
     {
       key: "student",
@@ -148,8 +181,8 @@ export default function EligibleStudentsTable({
       className: "text-center",
       render: (student) => (
         <div className="space-y-1">
-          <Badge className={`${getLevelColor(student.level)} border`}>
-            {student.level}
+          <Badge className={`${getLevelColor(student.levelName)} border`}>
+            {student.levelName}
           </Badge>
           <div className="text-sm text-gray-600">{student.standard}</div>
         </div>
@@ -237,23 +270,63 @@ export default function EligibleStudentsTable({
   ];
 
   return (
-    <AdminTable
-      data={paginatedData}
-      loading={false}
-      columns={columns}
-      getRowId={(student) => student.id.toString()}
-      renderMainCell={(student) => (
-        <div className="flex flex-col">
-          <div className="font-medium text-gray-900">{student.name}</div>
-          <div className="text-sm text-gray-500">
-            {student.rollNo} • Age {calculateAge(student.dateOfBirth)} •{" "}
-            {student.sex}
+    <div className="space-y-4">
+      {/* Select All and Bulk Actions */}
+      <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={(checked) => handleSelectAll(checked === true)}
+              className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+            />
+            <label className="text-sm font-medium cursor-pointer" onClick={() => handleSelectAll(!allSelected)}>
+              Select All ({filteredData.length})
+            </label>
           </div>
-          <div className="text-xs text-primary font-medium">
-            {student.standard} • {student.stream}
-          </div>
+          {selectedStudents.size > 0 && (
+            <div className="text-sm text-gray-600">
+              {selectedStudents.size} selected
+            </div>
+          )}
         </div>
-      )}
+        {selectedStudents.size > 0 && (
+          <Button
+            onClick={handleBulkRequest}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Award className="w-4 h-4 mr-2" />
+            Bulk Request ({selectedStudents.size})
+          </Button>
+        )}
+      </div>
+      <AdminTable
+        data={paginatedData}
+        loading={false}
+        columns={columns}
+        getRowId={(student) => student.id.toString()}
+        renderMainCell={(student) => (
+          <div className="flex items-center gap-3">
+            <Checkbox
+              checked={selectedStudents.has(student.id)}
+              onCheckedChange={(checked) =>
+                handleSelectStudent(student.id, checked === true)
+              }
+              className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <div className="flex flex-col flex-1">
+              <div className="font-medium text-gray-900">{student.name}</div>
+              <div className="text-sm text-gray-500">
+                {student.rollNo} • Age {calculateAge(student.dateOfBirth)} •{" "}
+                {student.sex}
+              </div>
+              <div className="text-xs text-primary font-medium">
+                {student.standard} • {student.stream}
+              </div>
+            </div>
+          </div>
+        )}
       searchPlaceholder="Search eligible students by name or roll number..."
       onSearchChange={setSearchTerm}
       filters={filters}
@@ -277,6 +350,7 @@ export default function EligibleStudentsTable({
       resultsText={(count, total) =>
         `Showing ${count} of ${total} eligible students`
       }
-    />
+      />
+    </div>
   );
 }

@@ -4,13 +4,17 @@ export function useFranchiseeProfile() {
   const { user } = useUser();
 
   const profile = user?.profile || null;
-  const payroll = profile?.franchise?.franchisePayroll || null;
+  // Support both new (array) and legacy (single) payroll structure
+  const payroll = profile?.franchise?.franchisePayrolls?.[0] || 
+                  profile?.franchise?.franchisePayroll || null;
+  const payrolls = profile?.franchise?.franchisePayrolls || null;
 
   return {
     profile,
     isProfileLoaded: !!profile,
     franchiseDetails: profile?.franchise || null,
     payroll,
+    payrolls,
     personalDetails: profile
       ? {
           name: profile.name,

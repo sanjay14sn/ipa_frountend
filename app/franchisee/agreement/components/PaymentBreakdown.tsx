@@ -40,7 +40,7 @@ export default function PaymentBreakdown({
           {paymentDetails.map((program: any, idx: number) => (
             <div key={idx} className="bg-primary/5 p-4 rounded-lg border border-primary">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                {program.program?.name || `Program ${idx + 1}`}
+                {program.franchiseProgram?.program?.name || program.program?.name || `Program ${idx + 1}`}
               </h4>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="flex justify-between">
