@@ -1,4 +1,4 @@
-import axios from "axios";
+
 
 export interface Level {
   id: number;
@@ -43,11 +43,7 @@ export interface LevelsResponse {
   result: Level[] | Level;
 }
 
-const api = axios.create({
-  baseURL: "http://localhost:5000",
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
+import { api } from "@/lib/axios";
 
 export async function getAllLevels(): Promise<Level[]> {
   const response = await api.get<LevelsResponse>("/level");

@@ -1,4 +1,4 @@
-import axios from "axios";
+
 
 interface LoginResponse {
   statusCode: number;
@@ -114,13 +114,7 @@ interface FranchiseeProfileResponse {
 //     }
 // }
 
-const baseUrl = "http://localhost:5000";
-
-const api = axios.create({
-  baseURL: baseUrl,
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
+import { api } from "@/lib/axios";
 
 export async function login(
   name: string,

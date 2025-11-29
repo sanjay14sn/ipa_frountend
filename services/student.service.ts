@@ -1,4 +1,4 @@
-import axios from "axios";
+
 
 export interface Response {
   statusCode: number;
@@ -74,11 +74,7 @@ export interface StudentsResponse extends Response {
   result: StudentData[];
 }
 
-const api = axios.create({
-  baseURL: "http://localhost:5000",
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
+import { api } from "@/lib/axios";
 
 export async function getAllStudents(): Promise<StudentsResponse> {
   const response = await api.get<StudentsResponse>("/students/all");

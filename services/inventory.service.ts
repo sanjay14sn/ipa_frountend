@@ -1,4 +1,4 @@
-import axios from "axios";
+import { api } from "@/lib/axios";
 
 export enum InventoryCategory {
   SHIRT = "Shirt",
@@ -102,21 +102,6 @@ export interface InventorySupplier {
   inventoryId: number;
   supplierId: number;
   costPrice: number;
-  supplier?: {
-    id: number;
-    name: string;
-  };
-}
-
-const api = axios.create({
-  baseURL: "http://localhost:5000",
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
-
-export async function getAllInventory(): Promise<Inventory[]> {
-  const response = await api.get<InventoryResponse>("/inventory");
-  return Array.isArray(response.data.result) ? response.data.result : [];
 }
 
 export async function getInventoryByLevel(

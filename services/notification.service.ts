@@ -1,13 +1,7 @@
-import axios from "axios";
+
 import { Notification, NotificationResponse, UserType } from "../lib/notification.types";
 
-const baseUrl = "http://localhost:5000";
-
-const api = axios.create({
-  baseURL: baseUrl,
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
+import { api } from "@/lib/axios";
 
 // Helper function to get the correct base path for notifications based on user type
 function getNotificationBasePath(userType: UserType): string {

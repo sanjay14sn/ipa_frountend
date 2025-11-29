@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { Fira_Sans } from "next/font/google";
 import { UserProvider } from "@/context/user-context";
 import { NotificationProvider } from "@/context/notification-context";
+import QueryProvider from "@/components/providers/query-provider";
 
 const firaSans = Fira_Sans({
   subsets: ["latin"],
@@ -28,8 +29,10 @@ export default function RootLayout({
       <body>
         <UserProvider>
           <NotificationProvider>
-            {children}
-            <Toaster />
+            <QueryProvider>
+              {children}
+              <Toaster />
+            </QueryProvider>
           </NotificationProvider>
         </UserProvider>
       </body>

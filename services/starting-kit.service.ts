@@ -1,4 +1,4 @@
-import axios from "axios";
+
 
 export interface ProgramKit {
   id: number;
@@ -72,17 +72,13 @@ export interface StartingKitResponse {
     | FranchiseProgramKit;
 }
 
-const api = axios.create({
-  baseURL: "http://localhost:5000",
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
+import { api } from "@/lib/axios";
 
 export async function getProgramKits(programId: number): Promise<ProgramKit[]> {
   const response = await api.get<StartingKitResponse>(
     `/starting-kit/program/${programId}`
   );
-  return Array.isArray(response.data.result) ? response.data.result : [];
+  return Array.isArray(response.data.result) ? (response.data.result as ProgramKit[]) : [];
 }
 
 export async function createProgramKit(
@@ -114,7 +110,7 @@ export async function getFranchiseProgramKits(
   const response = await api.get<StartingKitResponse>(
     `/starting-kit/franchise/${franchiseId}/program/${programId}`
   );
-  return Array.isArray(response.data.result) ? response.data.result : [];
+  return Array.isArray(response.data.result) ? (response.data.result as FranchiseProgramKit[]) : [];
 }
 
 export async function getAllFranchiseProgramKits(
@@ -123,7 +119,7 @@ export async function getAllFranchiseProgramKits(
   const response = await api.get<StartingKitResponse>(
     `/starting-kit/franchise/${franchiseId}`
   );
-  return Array.isArray(response.data.result) ? response.data.result : [];
+  return Array.isArray(response.data.result) ? (response.data.result as FranchiseProgramKit[]) : [];
 }
 
 export async function assignFranchiseKits(

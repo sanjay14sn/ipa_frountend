@@ -1,4 +1,4 @@
-import axios from "axios";
+
 
 export interface Response {
   statusCode: number;
@@ -78,11 +78,7 @@ export interface PaymentPaginationParams {
   sortOrder?: string;
 }
 
-const api = axios.create({
-  baseURL: "http://localhost:5000",
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
+import { api } from "@/lib/axios";
 
 export async function getPaginatedAdminPayments(
   params: PaymentPaginationParams

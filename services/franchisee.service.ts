@@ -1,4 +1,4 @@
-import axios from "axios";
+
 
 export interface Response {
   statusCode: number;
@@ -20,6 +20,7 @@ export interface Franchisee {
   occupation: string;
   reference: string;
   refreshToken: string;
+  password?: string;
 }
 
 export interface Franchise {
@@ -144,15 +145,16 @@ export interface CreatePayrollRequest {
   programPayrolls: ProgramPayrollRequest[];
 }
 
-const api = axios.create({
-  baseURL: "http://localhost:5000",
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
+import { api } from "@/lib/axios";
 
 export async function applyFranchisee(franchisee: FranchiseeApplication) {
   const response = await api.post("/franchisee/apply", franchisee);
   return response;
+}
+
+export async function createFranchiseeByAdmin(franchisee: FranchiseeApplication) {
+  const response = await api.post("/franchisee/admin/create", franchisee);
+  return response.data;
 }
 
 export async function getPendingFranchise(): Promise<FranchisesResponse> {

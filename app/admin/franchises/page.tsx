@@ -1,14 +1,30 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import FranchiseTable from "./components/FranchiseTable";
+import { CreateFranchiseDialog } from "./components/CreateFranchiseDialog";
 import { bulkUploadFranchises } from "@/services/franchise.service";
+import { getAllPrograms, Program } from "@/services/program.service";
 import { toast } from "sonner";
 
 export default function AdminFranchises() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [programs, setPrograms] = useState<Program[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const fetchPrograms = async () => {
+      try {
+        const programsData = await getAllPrograms();
+        setPrograms(programsData);
+      } catch (error) {
+        console.error("Error fetching programs:", error);
+      }
+    };
+    fetchPrograms();
+  }, []);
 
   const triggerRefresh = () => {
     setRefreshTrigger((prev) => prev + 1);
@@ -98,6 +114,12 @@ export default function AdminFranchises() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            className="bg-green-600 hover:bg-green-700 text-white"
+            onClick={() => setIsCreateDialogOpen(true)}
+          >
+            Setup Existing Franchise
+          </Button>
           <input
             ref={fileInputRef}
             type="file"
@@ -127,6 +149,14 @@ export default function AdminFranchises() {
           </Button>
         </div>
       </div>
+
+      {/* Create Franchise Dialog */}
+      <CreateFranchiseDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        programs={programs}
+        onSuccess={triggerRefresh}
+      />
 
       {/* Franchise Table */}
       <div className="bg-white rounded-lg">

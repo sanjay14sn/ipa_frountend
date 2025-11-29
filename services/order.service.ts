@@ -1,4 +1,4 @@
-import axios from "axios";
+
 
 export interface Response {
   statusCode: number;
@@ -27,6 +27,21 @@ export interface OrderItemData {
   };
 }
 
+export interface PaymentDetails {
+  method: string | null;
+  bank: string | null;
+  wallet: string | null;
+  vpa: string | null;
+  email: string | null;
+  contact: string | null;
+  cardLast4: string | null;
+  cardNetwork: string | null;
+  cardType: string | null;
+  cardIssuer: string | null;
+  fee: number | null;
+  tax: number | null;
+}
+
 export interface OrderData {
   id: number;
   totalItems?: number;
@@ -52,6 +67,8 @@ export interface OrderData {
   orderItems?: Record<string, OrderItemData[]>;
   // DC PDF path for shipping orders
   dcPdfPath?: string | null;
+  // Payment details
+  paymentDetails?: PaymentDetails | null;
 }
 
 export interface CreateOrderDto {
@@ -94,11 +111,7 @@ export interface SingleOrderResponse extends Response {
   result: OrderData;
 }
 
-const api = axios.create({
-  baseURL: "http://localhost:5000",
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
+import { api } from "@/lib/axios";
 
 // Franchisee endpoints
 export async function createOrder(

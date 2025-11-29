@@ -1,4 +1,4 @@
-import axios from "axios";
+
 
 export interface Supplier {
   id: number;
@@ -36,11 +36,7 @@ interface SupplierResponse {
   result: Supplier[] | Supplier;
 }
 
-const api = axios.create({
-  baseURL: "http://localhost:5000",
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
+import { api } from "@/lib/axios";
 
 export async function getAllSuppliers(): Promise<Supplier[]> {
   const response = await api.get<SupplierResponse>("/suppliers");

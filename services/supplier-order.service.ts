@@ -1,4 +1,4 @@
-import axios from "axios";
+
 import type { Supplier } from "./supplier.service";
 import type { Inventory } from "./inventory.service";
 
@@ -49,11 +49,7 @@ interface SupplierOrderResponse {
   result: SupplierOrder[] | SupplierOrder;
 }
 
-const api = axios.create({
-  baseURL: "http://localhost:5000",
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
+import { api } from "@/lib/axios";
 
 export async function getAllSupplierOrders(): Promise<SupplierOrder[]> {
   const response = await api.get<SupplierOrderResponse>("/supplier-orders");

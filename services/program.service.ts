@@ -1,4 +1,4 @@
-import axios from "axios";
+
 
 export interface Program {
   id: number;
@@ -18,11 +18,7 @@ export interface ProgramsResponse {
   result: Program[] | Program;
 }
 
-const api = axios.create({
-  baseURL: "http://localhost:5000",
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
+import { api } from "@/lib/axios";
 
 export async function getAllPrograms(): Promise<Program[]> {
   const response = await api.get<ProgramsResponse>("/program");

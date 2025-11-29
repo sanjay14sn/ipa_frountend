@@ -153,6 +153,113 @@ export default function OrderDetails({
                   </div>
                 )}
               </div>
+              {detailedOrder.paymentDetails && (
+                <div className="pt-3 border-t">
+                  <span className="text-gray-500 text-sm font-medium">Payment Details</span>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+                    {detailedOrder.paymentDetails.method && (
+                      <div>
+                        <span className="text-gray-500 text-xs">Payment Method</span>
+                        <p className="text-gray-900 mt-1 text-sm font-medium capitalize">
+                          {detailedOrder.paymentDetails.method}
+                        </p>
+                      </div>
+                    )}
+                    {detailedOrder.paymentDetails.method === 'card' && (
+                      <>
+                        {detailedOrder.paymentDetails.cardNetwork && (
+                          <div>
+                            <span className="text-gray-500 text-xs">Card Network</span>
+                            <p className="text-gray-900 mt-1 text-sm capitalize">
+                              {detailedOrder.paymentDetails.cardNetwork}
+                            </p>
+                          </div>
+                        )}
+                        {detailedOrder.paymentDetails.cardType && (
+                          <div>
+                            <span className="text-gray-500 text-xs">Card Type</span>
+                            <p className="text-gray-900 mt-1 text-sm capitalize">
+                              {detailedOrder.paymentDetails.cardType}
+                            </p>
+                          </div>
+                        )}
+                        {detailedOrder.paymentDetails.cardLast4 && (
+                          <div>
+                            <span className="text-gray-500 text-xs">Card Number</span>
+                            <p className="text-gray-900 mt-1 text-sm font-mono">
+                              **** **** **** {detailedOrder.paymentDetails.cardLast4}
+                            </p>
+                          </div>
+                        )}
+                        {detailedOrder.paymentDetails.cardIssuer && (
+                          <div>
+                            <span className="text-gray-500 text-xs">Card Issuer</span>
+                            <p className="text-gray-900 mt-1 text-sm">
+                              {detailedOrder.paymentDetails.cardIssuer}
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {detailedOrder.paymentDetails.method === 'upi' && detailedOrder.paymentDetails.vpa && (
+                      <div className="col-span-2">
+                        <span className="text-gray-500 text-xs">UPI ID</span>
+                        <p className="text-gray-900 mt-1 text-sm font-mono">
+                          {detailedOrder.paymentDetails.vpa}
+                        </p>
+                      </div>
+                    )}
+                    {detailedOrder.paymentDetails.method === 'wallet' && detailedOrder.paymentDetails.wallet && (
+                      <div>
+                        <span className="text-gray-500 text-xs">Wallet Provider</span>
+                        <p className="text-gray-900 mt-1 text-sm capitalize">
+                          {detailedOrder.paymentDetails.wallet}
+                        </p>
+                      </div>
+                    )}
+                    {detailedOrder.paymentDetails.method === 'netbanking' && detailedOrder.paymentDetails.bank && (
+                      <div>
+                        <span className="text-gray-500 text-xs">Bank</span>
+                        <p className="text-gray-900 mt-1 text-sm">
+                          {detailedOrder.paymentDetails.bank}
+                        </p>
+                      </div>
+                    )}
+                    {detailedOrder.paymentDetails.email && (
+                      <div className="col-span-2">
+                        <span className="text-gray-500 text-xs">Email</span>
+                        <p className="text-gray-900 mt-1 text-sm">
+                          {detailedOrder.paymentDetails.email}
+                        </p>
+                      </div>
+                    )}
+                    {detailedOrder.paymentDetails.contact && (
+                      <div>
+                        <span className="text-gray-500 text-xs">Contact</span>
+                        <p className="text-gray-900 mt-1 text-sm">
+                          {detailedOrder.paymentDetails.contact}
+                        </p>
+                      </div>
+                    )}
+                    {detailedOrder.paymentDetails.fee !== null && detailedOrder.paymentDetails.fee !== undefined && (
+                      <div>
+                        <span className="text-gray-500 text-xs">Gateway Fee</span>
+                        <p className="text-gray-900 mt-1 text-sm">
+                          ₹{detailedOrder.paymentDetails.fee.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                    {detailedOrder.paymentDetails.tax !== null && detailedOrder.paymentDetails.tax !== undefined && (
+                      <div>
+                        <span className="text-gray-500 text-xs">Tax</span>
+                        <p className="text-gray-900 mt-1 text-sm">
+                          ₹{detailedOrder.paymentDetails.tax.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               {detailedOrder.notes && (
                 <div className="pt-2 border-t">
                   <span className="text-gray-500 text-sm">Notes</span>
