@@ -42,7 +42,6 @@ export default function RequestCertificateModal({
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     marksObtained: "",
-    totalMarks: "",
     courseInstructorId: "",
   });
   const { toast } = useToast();
@@ -52,7 +51,6 @@ export default function RequestCertificateModal({
 
     if (
       !formData.marksObtained ||
-      !formData.totalMarks ||
       !formData.courseInstructorId
     ) {
       toast({
@@ -64,13 +62,12 @@ export default function RequestCertificateModal({
     }
 
     const marksObtained = parseInt(formData.marksObtained);
-    const totalMarks = parseInt(formData.totalMarks);
 
-    if (marksObtained < 0 || totalMarks <= 0 || marksObtained > totalMarks) {
+    if (marksObtained < 0) {
       toast({
         title: "Error",
         description:
-          "Invalid marks: marks obtained must be between 0 and total marks",
+          "Invalid marks: marks obtained must be non-negative",
         variant: "destructive",
       });
       return;
@@ -80,7 +77,6 @@ export default function RequestCertificateModal({
     try {
       const requestBody = {
         marksObtained,
-        totalMarks,
         courseInstructerId: parseInt(formData.courseInstructorId),
       };
 
@@ -110,7 +106,6 @@ export default function RequestCertificateModal({
 
       setFormData({
         marksObtained: "",
-        totalMarks: "",
         courseInstructorId: "",
       });
 
@@ -166,7 +161,7 @@ export default function RequestCertificateModal({
                 <SelectValue placeholder="Select course instructor" />
               </SelectTrigger>
               <SelectContent>
-                {courseInstructors.map((instructor) => (
+              {courseInstructors.map((instructor) => (
                   <SelectItem
                     key={instructor.id}
                     value={instructor.id.toString()}
@@ -179,51 +174,20 @@ export default function RequestCertificateModal({
           </div>
 
           {/* Marks Input */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="marksObtained">Marks Obtained *</Label>
-              <Input
-                id="marksObtained"
-                type="number"
-                min="0"
-                value={formData.marksObtained}
-                onChange={(e) =>
-                  handleInputChange("marksObtained", e.target.value)
-                }
-                placeholder="e.g., 85"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="totalMarks">Total Marks *</Label>
-              <Input
-                id="totalMarks"
-                type="number"
-                min="1"
-                value={formData.totalMarks}
-                onChange={(e) =>
-                  handleInputChange("totalMarks", e.target.value)
-                }
-                placeholder="e.g., 100"
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="marksObtained">Marks Obtained *</Label>
+            <Input
+              id="marksObtained"
+              type="number"
+              min="0"
+              value={formData.marksObtained}
+              onChange={(e) =>
+                handleInputChange("marksObtained", e.target.value)
+              }
+              placeholder="e.g., 85"
+              required
+            />
           </div>
-
-          {/* Percentage Display */}
-          {formData.marksObtained && formData.totalMarks && (
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="text-sm text-gray-600">
-                Percentage:{" "}
-                {(
-                  (parseInt(formData.marksObtained) /
-                    parseInt(formData.totalMarks)) *
-                  100
-                ).toFixed(1)}
-                %
-              </div>
-            </div>
-          )}
 
           {/* Selected Instructor Info */}
           {selectedInstructor && (

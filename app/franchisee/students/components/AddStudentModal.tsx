@@ -187,12 +187,12 @@ export default function AddStudentModal({
     existing: false,
 
     // Basic Information
-    studentName: "Aarav Sharma",
+    studentName: "",
     rollNo: "",
-    dob: "2015-03-15",
+    dob: "",
     dateOfJoining: new Date().toISOString().split("T")[0],
-    sex: "Male",
-    standard: "4th",
+    sex: "",
+    standard: "",
     levelId: 0,
     stream: "regular",
     status: "active",
@@ -200,19 +200,18 @@ export default function AddStudentModal({
     programId: 0,
 
     // Parent Information
-    fatherName: "Rajesh Sharma",
-    fatherQualification: "B.Tech",
-    fatherOccupation: "Software Engineer",
-    fatherContactNo: "9876543210",
-    motherName: "Priya Sharma",
-    motherQualification: "M.A.",
-    motherOccupation: "Teacher",
-    motherContactNo: "9876543211",
+    fatherName: "",
+    fatherQualification: "",
+    fatherOccupation: "",
+    fatherContactNo: "",
+    motherName: "",
+    motherQualification: "",
+    motherOccupation: "",
+    motherContactNo: "",
 
     // Contact & Address
-    residentialAddress:
-      "123, Green Park Colony, Sector 12, Mumbai, Maharashtra - 400001",
-    mailId: "sharma.family@example.com",
+    residentialAddress: "",
+    mailId: "",
 
     // Status Management
     isDiscontinued: false,
@@ -468,30 +467,29 @@ export default function AddStudentModal({
     setFormData({
       existing: false,
 
-      studentName: "Aarav Sharma",
+      studentName: "",
       rollNo: "",
-      dob: "2015-03-15",
+      dob: "",
       dateOfJoining: new Date().toISOString().split("T")[0],
-      sex: "Male",
-      standard: "4th",
+      sex: "",
+      standard: "",
       levelId: 0,
       stream: "regular",
       status: "active",
       photoImage: null,
       programId: 0,
 
-      fatherName: "Rajesh Sharma",
-      fatherQualification: "B.Tech",
-      fatherOccupation: "Software Engineer",
-      fatherContactNo: "9876543210",
-      motherName: "Priya Sharma",
-      motherQualification: "M.A.",
-      motherOccupation: "Teacher",
-      motherContactNo: "9876543211",
+      fatherName: "",
+      fatherQualification: "",
+      fatherOccupation: "",
+      fatherContactNo: "",
+      motherName: "",
+      motherQualification: "",
+      motherOccupation: "",
+      motherContactNo: "",
 
-      residentialAddress:
-        "123, Green Park Colony, Sector 12, Mumbai, Maharashtra - 400001",
-      mailId: "sharma.family@example.com",
+      residentialAddress: "",
+      mailId: "",
 
       isDiscontinued: false,
       discontinueReason: "",

@@ -123,54 +123,25 @@ export function CreateFranchiseDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   const [formData, setFormData] = useState({
-    name: "Rajesh Kumar",
-    email: "rajesh.test2025@example.com",
-    phone: "+919123456789",
-    dob: "1985-05-15",
+    name: "",
+    email: "",
+    phone: "",
+    dob: "",
     bloodGroup: BloodGroup.O_POSITIVE,
-    communicationAddress: "123, MG Road, Koramangala, Bangalore, Karnataka - 560034",
-    city: "Bangalore",
-    education: "MBA in Business Administration",
-    occupation: "Former IT Professional",
-    reference: "Referred by existing franchisee",
-    password: "Test@123",
-    confirmPassword: "Test@123",
-    franchiseName: "IPA Koramangala Center",
+    communicationAddress: "",
+    city: "",
+    education: "",
+    occupation: "",
+    reference: "",
+    password: "",
+    confirmPassword: "",
+    franchiseName: "",
     franchiseType: FranchiseType.AREA,
-    franchiseAddress: "456, 1st Floor, HSR Layout, Bangalore, Karnataka - 560102",
-    selectedPrograms: [1, 2] as number[],
+    franchiseAddress: "",
+    selectedPrograms: [] as number[],
   });
 
-  const [programPayrolls, setProgramPayrolls] = useState<Record<number, ProgramPayroll>>({
-    1: {
-      programId: 1,
-      franchiseFee: 50000,
-      kitCost: 15000,
-      materialCost: 10000,
-      monthlyFee: 5000,
-      ciShare: 30,
-      franchiseShare: 60,
-      royalty: 10,
-      installment: 3,
-      totalAmount: 75000,
-      gstInclusive: true,
-      freeload: false,
-    },
-    2: {
-      programId: 2,
-      franchiseFee: 45000,
-      kitCost: 12000,
-      materialCost: 8000,
-      monthlyFee: 4500,
-      ciShare: 30,
-      franchiseShare: 60,
-      royalty: 10,
-      installment: 2,
-      totalAmount: 65000,
-      gstInclusive: true,
-      freeload: false,
-    },
-  });
+  const [programPayrolls, setProgramPayrolls] = useState<Record<number, ProgramPayroll>>({});
 
   const validateCurrentStep = () => {
     const newErrors: Record<string, string> = {};
