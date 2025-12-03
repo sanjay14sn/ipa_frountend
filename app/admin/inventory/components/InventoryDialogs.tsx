@@ -34,12 +34,13 @@ import {
   type CreateInventoryDto,
   type UpdateInventoryDto,
   type Inventory,
-  InventoryCategory,
 } from "@/services/inventory.service";
 import { type Program } from "@/services/program.service";
 import { type Level } from "@/services/level.service";
 import { type Supplier } from "@/services/supplier.service";
 import { type InventorySupplier } from "@/services/inventory.service";
+import { type InventoryCategory } from "@/services/inventory-category.service";
+import { CategorySelect } from "@/components/inventory/CategorySelect";
 import { Badge } from "@/components/ui/badge";
 
 interface InventoryDialogsProps {
@@ -50,8 +51,10 @@ interface InventoryDialogsProps {
   setFormData: (data: CreateInventoryDto) => void;
   programs: Program[];
   levels: Level[];
+  categories: InventoryCategory[];
   onAddSubmit: () => void;
   onLoadLevels: (programId: number) => void;
+  onCategoryAdded?: (category: InventoryCategory) => void;
 
   // Edit Dialog
   isEditDialogOpen: boolean;
@@ -124,8 +127,10 @@ export function InventoryDialogs({
   setFormData,
   programs,
   levels,
+  categories,
   onAddSubmit,
   onLoadLevels,
+  onCategoryAdded,
   isEditDialogOpen,
   setIsEditDialogOpen,
   editFormData,
@@ -245,26 +250,18 @@ export function InventoryDialogs({
             </div>
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
-              <Select
-                value={formData.category}
+              <CategorySelect
+                value={formData.categoryId?.toString() || ""}
                 onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    category: value as InventoryCategory,
+                    categoryId: Number(value),
                   })
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(InventoryCategory).map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                categories={categories}
+                onCategoryAdded={onCategoryAdded}
+                placeholder="Select Category"
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -374,26 +371,18 @@ export function InventoryDialogs({
             </div>
             <div className="space-y-2">
               <Label htmlFor="editCategory">Category</Label>
-              <Select
-                value={editFormData.category}
+              <CategorySelect
+                value={editFormData.categoryId?.toString() || ""}
                 onValueChange={(value) =>
                   setEditFormData({
                     ...editFormData,
-                    category: value as InventoryCategory,
+                    categoryId: Number(value),
                   })
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(InventoryCategory).map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                categories={categories}
+                onCategoryAdded={onCategoryAdded}
+                placeholder="Select Category"
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">

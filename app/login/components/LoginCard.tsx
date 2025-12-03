@@ -42,7 +42,6 @@ export function LoginCard() {
         return;
       }
 
-      // Ensure only franchisee users can login through homepage
       if (data.role !== "franchisee" && data.role !== "franchise") {
         setError(
           "This portal is for franchisees only. Please use the admin portal for admin access."
@@ -50,7 +49,6 @@ export function LoginCard() {
         return;
       }
 
-      // Fetch franchisee profile data
       let profileData = null;
       try {
         const profileResponse = await getFranchiseeProfile();
@@ -59,7 +57,6 @@ export function LoginCard() {
         }
       } catch (profileError) {
         console.warn("Failed to fetch profile data:", profileError);
-        // Continue with login even if profile fetch fails
       }
 
       const loggedInUser = {

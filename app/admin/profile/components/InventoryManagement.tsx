@@ -27,8 +27,12 @@ import {
   type Inventory,
   type CreateInventoryDto,
   type UpdateInventoryDto,
-  InventoryCategory,
 } from "@/services/inventory.service";
+import { 
+  getInventoryCategories,
+  type InventoryCategory 
+} from "@/services/inventory-category.service";
+import { CategorySelect } from "@/components/inventory/CategorySelect";
 import {
   Dialog,
   DialogContent,
@@ -70,6 +74,7 @@ export function InventoryManagement({
   const [stockQuantity, setStockQuantity] = useState(0);
   const [deletingItem, setDeletingItem] = useState<Inventory | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [inventoryCategories, setInventoryCategories] = useState<InventoryCategory[]>([]);
   const { toast } = useToast();
 
   const itemsPerPage = 10;
@@ -79,7 +84,7 @@ export function InventoryManagement({
   >({
     name: "",
     description: "",
-    category: InventoryCategory.OTHER,
+    categoryId: 0,
     price: 0,
     quantity: 0,
     restockQuantity: 10,
@@ -90,6 +95,7 @@ export function InventoryManagement({
 
   useEffect(() => {
     loadInventory();
+    loadInventoryCategories();
   }, [levelId]);
 
   const loadInventory = async () => {
@@ -107,11 +113,33 @@ export function InventoryManagement({
     }
   };
 
+  const loadInventoryCategories = async () => {
+    try {
+      const data = await getInventoryCategories();
+      setInventoryCategories(data);
+      // Set default category if available
+      if (data.length > 0 && formData.categoryId === 0) {
+        setFormData(prev => ({ ...prev, categoryId: data[0].id }));
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load inventory categories",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCategoryAdded = async (newCategory: InventoryCategory) => {
+    // Reload categories to include the new one
+    await loadInventoryCategories();
+  };
+
   const resetForm = () => {
     setFormData({
       name: "",
       description: "",
-      category: InventoryCategory.OTHER,
+      categoryId: inventoryCategories.length > 0 ? inventoryCategories[0].id : 0,
       price: 0,
       quantity: 0,
       restockQuantity: 10,
@@ -216,20 +244,23 @@ export function InventoryManagement({
     }
   };
 
-  const getCategoryColor = (category: InventoryCategory) => {
-    switch (category) {
-      case InventoryCategory.SHIRT:
-      case InventoryCategory.UNIFORM:
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case InventoryCategory.BOOK:
-        return "bg-green-100 text-green-800 border-green-200";
-      case InventoryCategory.STATIONERY:
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case InventoryCategory.MATERIAL:
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+  const getCategoryColor = (categoryName?: string) => {
+    if (!categoryName) return "bg-gray-100 text-gray-800 border-gray-200";
+    
+    const name = categoryName.toLowerCase();
+    if (name.includes("shirt") || name.includes("uniform")) {
+      return "bg-blue-100 text-blue-800 border-blue-200";
     }
+    if (name.includes("book")) {
+      return "bg-green-100 text-green-800 border-green-200";
+    }
+    if (name.includes("stationery")) {
+      return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    }
+    if (name.includes("material")) {
+      return "bg-purple-100 text-purple-800 border-purple-200";
+    }
+    return "bg-gray-100 text-gray-800 border-gray-200";
   };
 
   const totalPages = Math.ceil(inventory.length / itemsPerPage);
@@ -249,8 +280,8 @@ export function InventoryManagement({
       header: "Category",
       className: "text-center",
       render: (item) => (
-        <Badge className={`${getCategoryColor(item.category)} border`}>
-          {item.category}
+        <Badge className={`${getCategoryColor(item.category?.name)} border`}>
+          {item.category?.name || "N/A"}
         </Badge>
       ),
     },
@@ -321,7 +352,7 @@ export function InventoryManagement({
               setEditFormData({
                 name: item.name,
                 description: item.description,
-                category: item.category,
+                categoryId: item.categoryId,
                 price: item.price,
                 quantity: item.quantity,
                 restockQuantity: item.restockQuantity,
@@ -425,26 +456,18 @@ export function InventoryManagement({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
-                <Select
-                  value={formData.category}
+                <CategorySelect
+                  value={formData.categoryId?.toString() || ""}
                   onValueChange={(value) =>
                     setFormData({
                       ...formData,
-                      category: value as InventoryCategory,
+                      categoryId: Number(value),
                     })
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(InventoryCategory).map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  categories={inventoryCategories}
+                  onCategoryAdded={handleCategoryAdded}
+                  placeholder="Select Category"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="price">Price (₹)</Label>
@@ -552,26 +575,18 @@ export function InventoryManagement({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="editCategory">Category</Label>
-                <Select
-                  value={editFormData.category}
+                <CategorySelect
+                  value={editFormData.categoryId?.toString() || ""}
                   onValueChange={(value) =>
                     setEditFormData({
                       ...editFormData,
-                      category: value as InventoryCategory,
+                      categoryId: Number(value),
                     })
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(InventoryCategory).map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  categories={inventoryCategories}
+                  onCategoryAdded={handleCategoryAdded}
+                  placeholder="Select Category"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="editPrice">Price (₹)</Label>

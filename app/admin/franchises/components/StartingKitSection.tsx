@@ -31,7 +31,12 @@ import {
   deleteProgramKit,
   type ProgramKit,
 } from "@/services/starting-kit.service";
-import { createInventory, InventoryCategory } from "@/services/inventory.service";
+import { createInventory } from "@/services/inventory.service";
+import { 
+  getInventoryCategories,
+  type InventoryCategory 
+} from "@/services/inventory-category.service";
+import { CategorySelect } from "@/components/inventory/CategorySelect";
 import React, { useEffect, useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { FranchiseData } from "@/services/franchisee.service";
@@ -76,6 +81,7 @@ export default function StartingKitSection({
   const [newInventoryQuantity, setNewInventoryQuantity] = useState<number>(0);
   const [newInventoryRestockQuantity, setNewInventoryRestockQuantity] =
     useState<number>(0);
+  const [inventoryCategories, setInventoryCategories] = useState<InventoryCategory[]>([]);
   const { toast } = useToast();
 
   const franchisePrograms = franchise.franchisePrograms || [];
@@ -85,6 +91,10 @@ export default function StartingKitSection({
       loadKitData();
     }
   }, [isExpanded, franchise.id]);
+
+  useEffect(() => {
+    loadInventoryCategories();
+  }, []);
 
   const loadKitData = async () => {
     setIsLoading(true);
@@ -125,6 +135,24 @@ export default function StartingKitSection({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadInventoryCategories = async () => {
+    try {
+      const data = await getInventoryCategories();
+      setInventoryCategories(data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load inventory categories",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCategoryAdded = async (newCategory: InventoryCategory) => {
+    // Reload categories to include the new one
+    await loadInventoryCategories();
   };
 
   const handleEdit = () => {
@@ -208,7 +236,7 @@ export default function StartingKitSection({
       const newInventory = await createInventory({
         name: newInventoryName.trim(),
         description: newInventoryDescription.trim() || "",
-        category: newInventoryCategory as InventoryCategory,
+        categoryId: Number(newInventoryCategory),
         quantity: newInventoryQuantity || 0,
         restockQuantity: newInventoryRestockQuantity || 0,
         programId: selectedProgramId,
@@ -230,6 +258,7 @@ export default function StartingKitSection({
               id: newInventory.id,
               name: newInventory.name,
               description: newInventory.description,
+              categoryId: newInventory.categoryId,
               category: newInventory.category,
             },
           } as FranchiseProgramKit,
@@ -459,9 +488,9 @@ export default function StartingKitSection({
                                   </p>
                                 )}
                                 <div className="flex items-center gap-3 mt-2">
-                                  {kit.inventory?.category && (
+                                  {kit.inventory?.category?.name && (
                                     <Badge variant="outline" className="text-xs">
-                                      {kit.inventory.category}
+                                      {kit.inventory.category.name}
                                     </Badge>
                                   )}
                                   <span className="text-xs text-gray-600">
@@ -538,19 +567,13 @@ export default function StartingKitSection({
                     <Label htmlFor="inventoryCategory">
                       Category <span className="text-red-500">*</span>
                     </Label>
-                    <select
-                      id="inventoryCategory"
+                    <CategorySelect
                       value={newInventoryCategory}
-                      onChange={(e) => setNewInventoryCategory(e.target.value)}
-                      className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select category</option>
-                      {Object.values(InventoryCategory).map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
+                      onValueChange={setNewInventoryCategory}
+                      categories={inventoryCategories}
+                      onCategoryAdded={handleCategoryAdded}
+                      placeholder="Select category"
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">

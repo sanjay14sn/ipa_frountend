@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { AdminTable } from "@/components/shared";
 import type { AdminTableColumn } from "@/components/shared/AdminTable";
 import {
-  getAllInventory,
   getPaginatedInventory,
   createInventory,
   updateInventory,
@@ -23,12 +22,12 @@ import {
   type UpdateInventoryDto,
   type PaginationMeta,
   type InventorySupplier,
-  InventoryCategory,
 } from "@/services/inventory.service";
 import { getAllPrograms, type Program } from "@/services/program.service";
 import { getLevelsByProgram, type Level } from "@/services/level.service";
 import { getAllSuppliers, createSupplier, type Supplier } from "@/services/supplier.service";
 import { createSupplierOrder, getOrderHistoryForInventory, receiveSupplierOrder, type CreateSupplierOrderDto, type SupplierOrder } from "@/services/supplier-order.service";
+import { getInventoryCategories, type InventoryCategory } from "@/services/inventory-category.service";
 import { InventoryDialogs } from "./components/InventoryDialogs";
 
 export default function InventoryPage() {
@@ -39,6 +38,7 @@ export default function InventoryPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [categories, setCategories] = useState<InventoryCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
@@ -97,7 +97,7 @@ export default function InventoryPage() {
   const [formData, setFormData] = useState<CreateInventoryDto>({
     name: "",
     description: "",
-    category: InventoryCategory.OTHER,
+    categoryId: 0,
     quantity: 0,
     restockQuantity: 10,
     programId: 0,
@@ -111,6 +111,7 @@ export default function InventoryPage() {
   useEffect(() => {
     loadPrograms();
     loadSuppliers();
+    loadCategories();
   }, []);
 
   // Load inventory when filters or page changes
@@ -148,6 +149,28 @@ export default function InventoryPage() {
         variant: "destructive",
       });
     }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const data = await getInventoryCategories();
+      setCategories(data);
+      // Set default category if available
+      if (data.length > 0 && formData.categoryId === 0) {
+        setFormData(prev => ({ ...prev, categoryId: data[0].id }));
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load categories",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCategoryAdded = async (newCategory: InventoryCategory) => {
+    // Reload categories to include the new one
+    await loadCategories();
   };
 
   const loadLevels = async (programId: number) => {
@@ -218,7 +241,7 @@ export default function InventoryPage() {
     setFormData({
       name: "",
       description: "",
-      category: InventoryCategory.OTHER,
+      categoryId: categories.length > 0 ? categories[0].id : 0,
       quantity: 0,
       restockQuantity: 10,
       programId: 0,
@@ -491,20 +514,23 @@ export default function InventoryPage() {
     }
   };
 
-  const getCategoryColor = (category: InventoryCategory) => {
-    switch (category) {
-      case InventoryCategory.SHIRT:
-      case InventoryCategory.UNIFORM:
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case InventoryCategory.BOOK:
-        return "bg-green-100 text-green-800 border-green-200";
-      case InventoryCategory.STATIONERY:
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case InventoryCategory.MATERIAL:
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+  const getCategoryColor = (categoryName?: string) => {
+    if (!categoryName) return "bg-gray-100 text-gray-800 border-gray-200";
+    
+    const name = categoryName.toLowerCase();
+    if (name.includes("shirt") || name.includes("uniform")) {
+      return "bg-blue-100 text-blue-800 border-blue-200";
     }
+    if (name.includes("book")) {
+      return "bg-green-100 text-green-800 border-green-200";
+    }
+    if (name.includes("stationery")) {
+      return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    }
+    if (name.includes("material")) {
+      return "bg-purple-100 text-purple-800 border-purple-200";
+    }
+    return "bg-gray-100 text-gray-800 border-gray-200";
   };
 
   // Load levels for the selected program
@@ -523,8 +549,8 @@ export default function InventoryPage() {
       header: "Category",
       className: "text-center",
       render: (item) => (
-        <Badge className={`${getCategoryColor(item.category)} border`}>
-          {item.category}
+        <Badge className={`${getCategoryColor(item.category?.name)} border`}>
+          {item.category?.name || "N/A"}
         </Badge>
       ),
     },
@@ -665,7 +691,7 @@ export default function InventoryPage() {
               setEditFormData({
                 name: item.name,
                 description: item.description,
-                category: item.category,
+                categoryId: item.categoryId,
                 quantity: item.quantity,
                 restockQuantity: item.restockQuantity,
                 price: item.price,
@@ -796,8 +822,10 @@ export default function InventoryPage() {
         setFormData={setFormData}
         programs={programs}
         levels={levels}
+        categories={categories}
         onAddSubmit={handleAddItem}
         onLoadLevels={loadLevels}
+        onCategoryAdded={handleCategoryAdded}
         isEditDialogOpen={isEditDialogOpen}
         setIsEditDialogOpen={setIsEditDialogOpen}
         editFormData={editFormData}

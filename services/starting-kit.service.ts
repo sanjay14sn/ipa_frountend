@@ -11,7 +11,13 @@ export interface ProgramKit {
     id: number;
     name: string;
     description: string;
-    category: string;
+    categoryId: number;
+    category?: {
+      id: number;
+      name: string;
+      description: string;
+      isActive: boolean;
+    };
   };
 }
 
@@ -27,7 +33,13 @@ export interface FranchiseProgramKit {
     id: number;
     name: string;
     description: string;
-    category: string;
+    categoryId: number;
+    category?: {
+      id: number;
+      name: string;
+      description: string;
+      isActive: boolean;
+    };
   };
   program?: {
     id: number;

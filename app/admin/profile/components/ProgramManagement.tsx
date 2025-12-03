@@ -57,10 +57,12 @@ import {
   deleteProgramKit,
   type ProgramKit,
 } from "@/services/starting-kit.service";
+import { createInventory } from "@/services/inventory.service";
 import {
-  createInventory,
-  InventoryCategory,
-} from "@/services/inventory.service";
+  getInventoryCategories,
+  type InventoryCategory,
+} from "@/services/inventory-category.service";
+import { CategorySelect } from "@/components/inventory/CategorySelect";
 
 export function ProgramManagement() {
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -86,6 +88,9 @@ export function ProgramManagement() {
   const [newInventoryQuantity, setNewInventoryQuantity] = useState<number>(0);
   const [newInventoryRestockQuantity, setNewInventoryRestockQuantity] =
     useState<number>(0);
+  const [inventoryCategories, setInventoryCategories] = useState<
+    InventoryCategory[]
+  >([]);
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
   const [selectedProgramForTemplate, setSelectedProgramForTemplate] =
     useState<Program | null>(null);
@@ -126,6 +131,7 @@ export function ProgramManagement() {
 
   useEffect(() => {
     loadPrograms();
+    loadInventoryCategories();
   }, []);
 
   const loadPrograms = async () => {
@@ -141,6 +147,24 @@ export function ProgramManagement() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadInventoryCategories = async () => {
+    try {
+      const data = await getInventoryCategories();
+      setInventoryCategories(data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load inventory categories",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCategoryAdded = async (newCategory: InventoryCategory) => {
+    // Reload categories to include the new one
+    await loadInventoryCategories();
   };
 
   const handleAddProgram = async () => {
@@ -261,19 +285,16 @@ export function ProgramManagement() {
     setIsCreatingInventory(true);
 
     try {
-      // Create new inventory item (without levelId - for program kit)
       const newInventory = await createInventory({
         name: newInventoryName.trim(),
         description: newInventoryDescription.trim() || "",
-        category: newInventoryCategory as InventoryCategory,
+        categoryId: Number(newInventoryCategory),
         quantity: newInventoryQuantity || 0,
         restockQuantity: newInventoryRestockQuantity || 0,
         programId: selectedProgramForKit.id,
         isActive: true,
-        // levelId is omitted - will be null for kit items
       });
 
-      // Add the newly created inventory item to the kit
       await createProgramKit(selectedProgramForKit.id, {
         inventoryId: newInventory.id,
         defaultQuantity: newKitQuantity,
@@ -284,7 +305,6 @@ export function ProgramManagement() {
         description: "Kit item created and added successfully",
       });
 
-      // Reload kit items
       const kits = await getProgramKits(selectedProgramForKit.id);
       setKitItems(kits);
 
@@ -1076,19 +1096,13 @@ export function ProgramManagement() {
                     <Label htmlFor="inventoryCategory">
                       Category <span className="text-red-500">*</span>
                     </Label>
-                    <select
-                      id="inventoryCategory"
+                    <CategorySelect
                       value={newInventoryCategory}
-                      onChange={(e) => setNewInventoryCategory(e.target.value)}
-                      className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select category</option>
-                      {Object.values(InventoryCategory).map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
+                      onValueChange={setNewInventoryCategory}
+                      categories={inventoryCategories}
+                      onCategoryAdded={handleCategoryAdded}
+                      placeholder="Select category"
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">

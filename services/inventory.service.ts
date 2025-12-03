@@ -1,19 +1,16 @@
 import { api } from "@/lib/axios";
 
-export enum InventoryCategory {
-  SHIRT = "Shirt",
-  BOOK = "Book",
-  STATIONERY = "Stationery",
-  UNIFORM = "Uniform",
-  MATERIAL = "Material",
-  OTHER = "Other",
-}
-
 export interface Inventory {
   id: number;
   name: string;
   description: string;
-  category: InventoryCategory;
+  categoryId: number;
+  category?: {
+    id: number;
+    name: string;
+    description: string;
+    isActive: boolean;
+  };
   quantity: number;
   restockQuantity: number;
   programId: number;
@@ -37,7 +34,7 @@ export interface Inventory {
 export interface CreateInventoryDto {
   name: string;
   description: string;
-  category: InventoryCategory;
+  categoryId: number;
   quantity: number;
   restockQuantity: number;
   programId: number;
@@ -49,7 +46,7 @@ export interface CreateInventoryDto {
 export interface UpdateInventoryDto {
   name?: string;
   description?: string;
-  category?: InventoryCategory;
+  categoryId?: number;
   price?: number;
   quantity?: number;
   restockQuantity?: number;

@@ -30,7 +30,6 @@ import {
 } from "@/services/franchisee.service";
 import { getAllPrograms, Program } from "@/services/program.service";
 
-// Define the steps for the form
 const FORM_STEPS = [
   {
     id: 1,
@@ -50,7 +49,6 @@ const FORM_STEPS = [
   },
 ];
 
-// Stepper Component
 const Stepper = ({
   currentStep,
   steps,
@@ -127,7 +125,6 @@ export function FranchiseApplicationModal({
     franchise: {
       name: "",
       type: "",
-      status: "PENDING",
       address: "",
       programIds: [],
       franchiseeId: 0,
@@ -250,7 +247,6 @@ export function FranchiseApplicationModal({
     setFormData((prev) => {
       let convertedValue: any = value;
 
-      // Handle special conversions
       if (property === "dob" && value) {
         convertedValue = new Date(value);
       }
@@ -264,7 +260,6 @@ export function FranchiseApplicationModal({
       };
     });
 
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({
         ...prev,
@@ -289,7 +284,6 @@ export function FranchiseApplicationModal({
       };
     });
 
-    // Clear error when user selects a program
     if (errors.programIds) {
       setErrors((prev) => ({
         ...prev,
@@ -317,7 +311,6 @@ export function FranchiseApplicationModal({
       franchise: {
         name: "",
         type: "",
-        status: "PENDING",
         address: "",
         programIds: [],
         franchiseeId: 0,
@@ -653,12 +646,10 @@ export function FranchiseApplicationModal({
 
         <div className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-6">
-            {/* Progress Stepper with clear separation */}
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
               <Stepper currentStep={currentStep} steps={FORM_STEPS} />
             </div>
 
-            {/* Form Content with clear separation */}
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <div className="space-y-6">
                 <div>

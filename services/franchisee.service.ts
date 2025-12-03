@@ -26,7 +26,6 @@ export interface Franchisee {
 export interface Franchise {
   name: string;
   type: string;
-  status: string;
   address: string;
   programIds: number[];
   franchiseeId: number;
