@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,7 @@ import {
   Franchisee,
   Franchise,
 } from "@/services/franchisee.service";
+import { getAllPrograms, Program } from "@/services/program.service";
 
 // Define the steps for the form
 const FORM_STEPS = [
@@ -135,6 +136,26 @@ export function FranchiseApplicationModal({
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [isLoadingPrograms, setIsLoadingPrograms] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      const fetchPrograms = async () => {
+        setIsLoadingPrograms(true);
+        try {
+          const programsData = await getAllPrograms();
+          setPrograms(programsData);
+        } catch (error) {
+          console.error("Error fetching programs:", error);
+          setPrograms([]);
+        } finally {
+          setIsLoadingPrograms(false);
+        }
+      };
+      fetchPrograms();
+    }
+  }, [open]);
 
   const validateCurrentStep = () => {
     const newErrors: Record<string, string> = {};
@@ -388,7 +409,9 @@ export function FranchiseApplicationModal({
               <Textarea
                 id="address"
                 value={formData.franchise.address}
-                onChange={(e) => handleInputChange("franchise.address", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("franchise.address", e.target.value)
+                }
                 className={errors.address ? "border-red-500" : ""}
                 rows={3}
               />
@@ -544,32 +567,32 @@ export function FranchiseApplicationModal({
                   errors.programIds ? "border-red-500" : "border-gray-200"
                 }`}
               >
-                {[
-                  { id: 1, name: "Abacus" },
-                  { id: 2, name: "Brain Tree" },
-                  { id: 3, name: "Phonics" },
-                  { id: 4, name: "Brite" },
-                  { id: 5, name: "Handwriting" },
-                  { id: 6, name: "Creative Arts India" },
-                  { id: 7, name: "Vedic Maths" },
-                  { id: 8, name: "Arka Kids" },
-                ].map((program) => (
-                  <div key={program.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`program-${program.id}`}
-                      checked={formData.franchise.programIds.includes(
-                        program.id
-                      )}
-                      onCheckedChange={() => handleProgramToggle(program.id)}
-                    />
-                    <label
-                      htmlFor={`program-${program.id}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                {isLoadingPrograms ? (
+                  <p className="text-sm text-gray-500">Loading programs...</p>
+                ) : programs.length === 0 ? (
+                  <p className="text-sm text-gray-500">No programs available</p>
+                ) : (
+                  programs.map((program) => (
+                    <div
+                      key={program.id}
+                      className="flex items-center space-x-2"
                     >
-                      {program.name}
-                    </label>
-                  </div>
-                ))}
+                      <Checkbox
+                        id={`program-${program.id}`}
+                        checked={formData.franchise.programIds.includes(
+                          program.id
+                        )}
+                        onCheckedChange={() => handleProgramToggle(program.id)}
+                      />
+                      <label
+                        htmlFor={`program-${program.id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {program.name}
+                      </label>
+                    </div>
+                  ))
+                )}
               </div>
               {errors.programIds && (
                 <p className="text-red-500 text-sm">{errors.programIds}</p>
