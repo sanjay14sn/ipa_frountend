@@ -45,6 +45,7 @@ import {
   BookOpen,
   CreditCard,
   AlertCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { getUserFromStorage } from "@/lib/auth";
 import Link from "next/link";
@@ -136,6 +137,32 @@ export default function FranchiseeStudentsPage() {
     return age;
   };
 
+  // Helper function to check if student has only a week left
+  const hasOnlyWeekLeft = (deactivateDate?: Date | string): boolean => {
+    if (!deactivateDate) return false;
+    
+    try {
+      const today = new Date();
+      const deactivate = new Date(deactivateDate);
+      
+      // Check if date is valid
+      if (isNaN(deactivate.getTime())) return false;
+      
+      // Set time to start of day for accurate comparison
+      today.setHours(0, 0, 0, 0);
+      deactivate.setHours(0, 0, 0, 0);
+      
+      // Calculate difference in milliseconds
+      const diffTime = deactivate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      // Check if deactivate date is within 7 days and not in the past
+      return diffDays >= 0 && diffDays <= 7;
+    } catch (error) {
+      return false;
+    }
+  };
+
   const StudentCard = ({ student }: { student: StudentData }) => (
     <Card className="w-full hover:shadow-lg transition-shadow duration-200">
       <CardHeader className="pb-4">
@@ -145,7 +172,19 @@ export default function FranchiseeStudentsPage() {
               <User className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <CardTitle className="text-lg">{student.name}</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-lg">{student.name}</CardTitle>
+                {hasOnlyWeekLeft(student.deactivateDate) && (
+                  <Badge
+                    variant="destructive"
+                    className="flex items-center gap-1 text-xs"
+                    title="Student has only a week left before deactivation"
+                  >
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>1 Week Left</span>
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <Badge variant="outline" className="text-xs">
                   {student.rollNo}

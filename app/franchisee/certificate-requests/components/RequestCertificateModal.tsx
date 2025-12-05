@@ -23,6 +23,7 @@ import { Award, Loader2 } from "lucide-react";
 import { EligibleStudent } from "@/services/student.service";
 import { useToast } from "@/hooks/use-toast";
 import { CourseInstructorData } from "@/services/course-instructor.service";
+import { revalidateCertificateRequests } from "@/hooks/use-students";
 
 interface RequestCertificateModalProps {
   open: boolean;
@@ -98,6 +99,9 @@ export default function RequestCertificateModal({
       }
 
       const result = await response.json();
+
+      // Revalidate both admin and franchisee certificate requests
+      await revalidateCertificateRequests();
 
       toast({
         title: "Success",

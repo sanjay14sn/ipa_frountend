@@ -64,6 +64,7 @@ export interface StudentData {
   stream: StudentStream;
   isActive: boolean;
   idIssued: StudentIdStatus;
+  deactivateDate?: Date;
   createdAt: Date;
   updatedAt: Date;
   createdBy: number;

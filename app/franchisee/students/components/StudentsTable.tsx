@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Mail, Phone, Award } from "lucide-react";
+import { Edit, Trash2, Mail, Phone, Award, AlertTriangle } from "lucide-react";
 import { AdminTable } from "@/components/shared";
 import type {
   AdminTableColumn,
@@ -46,7 +46,9 @@ export default function StudentsTable({
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(
+    null
+  );
   const [isCertificatesModalOpen, setIsCertificatesModalOpen] = useState(false);
   const itemsPerPage = 10;
 
@@ -176,6 +178,27 @@ export default function StudentsTable({
     }
 
     return age;
+  };
+
+  const hasOnlyWeekLeft = (deactivateDate?: Date | string): boolean => {
+    if (!deactivateDate) return false;
+
+    try {
+      const today = new Date();
+      const deactivate = new Date(deactivateDate);
+
+      if (isNaN(deactivate.getTime())) return false;
+
+      today.setHours(0, 0, 0, 0);
+      deactivate.setHours(0, 0, 0, 0);
+
+      const diffTime = deactivate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      return diffDays >= 0 && diffDays <= 7;
+    } catch (error) {
+      return false;
+    }
   };
 
   // Get unique values for filters
@@ -344,64 +367,76 @@ export default function StudentsTable({
 
   return (
     <>
-    <AdminTable
-      data={paginatedData}
-      loading={false}
-      columns={columns}
-      getRowId={(student) => student.id.toString()}
-      renderMainCell={(student) => (
-        <div className="flex flex-col">
-          <div className="font-medium text-gray-900">{student.name}</div>
-          <div className="text-sm text-gray-500">
-            {student.rollNo} • Age {calculateAge(student.dateOfBirth)} •{" "}
-            {student.sex}
+      <AdminTable
+        data={paginatedData}
+        loading={false}
+        columns={columns}
+        getRowId={(student) => student.id.toString()}
+        renderMainCell={(student) => (
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <div className="font-medium text-gray-900">{student.name}</div>
+              {hasOnlyWeekLeft(student.deactivateDate) && (
+                <Badge
+                  variant="destructive"
+                  className="flex items-center gap-1 text-xs"
+                  title="Student has only a week left before deactivation"
+                >
+                  <AlertTriangle className="w-3 h-3" />
+                  <span>1 Week Left</span>
+                </Badge>
+              )}
+            </div>
+            <div className="text-sm text-gray-500">
+              {student.rollNo} • Age {calculateAge(student.dateOfBirth)} •{" "}
+              {student.sex}
+            </div>
+            <div className="text-xs text-primary font-medium">
+              {student.standard} • {student.stream}
+            </div>
           </div>
-          <div className="text-xs text-primary font-medium">
-            {student.standard} • {student.stream}
-          </div>
-        </div>
-      )}
-      renderExpandedContent={(student) => (
-        <StudentDetails
-          student={student}
-          lastRow={false}
-          expandedRows={expandedChildren}
-          onToggleRow={toggleRow}
-          onStudentUpdate={onStudentUpdate}
+        )}
+        renderExpandedContent={(student) => (
+          <StudentDetails
+            student={student}
+            lastRow={false}
+            expandedRows={expandedChildren}
+            onToggleRow={toggleRow}
+            onStudentUpdate={onStudentUpdate}
+          />
+        )}
+        searchPlaceholder="Search students, roll numbers, or parent names..."
+        onSearchChange={setSearchTerm}
+        filters={filters}
+        onFilterChange={(key, value) => {
+          if (key === "status") setStatusFilter(value as string);
+          else if (key === "level") setLevelFilter(value as string);
+          else if (key === "stream") setStreamFilter(value as string);
+          else if (key === "idStatus") setIdStatusFilter(value as string);
+        }}
+        sortOptions={sortOptions}
+        defaultSortBy="dateJoined"
+        defaultSortOrder="DESC"
+        onSortChange={(newSortBy, newSortOrder) => {
+          setSortBy(newSortBy as "name" | "dateJoined" | "level");
+          setSortOrder(newSortOrder.toLowerCase() as "asc" | "desc");
+        }}
+        pagination={{ total: filteredData.length, totalPages }}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        emptyMessage="No students found matching your criteria"
+        resultsText={(count, total) => `Showing ${count} of ${total} students`}
+      />
+
+      {selectedStudentId && (
+        <StudentCertificatesModal
+          open={isCertificatesModalOpen}
+          onOpenChange={setIsCertificatesModalOpen}
+          studentId={selectedStudentId}
+          studentName={students?.find((s) => s.id === selectedStudentId)?.name}
         />
       )}
-      searchPlaceholder="Search students, roll numbers, or parent names..."
-      onSearchChange={setSearchTerm}
-      filters={filters}
-      onFilterChange={(key, value) => {
-        if (key === "status") setStatusFilter(value as string);
-        else if (key === "level") setLevelFilter(value as string);
-        else if (key === "stream") setStreamFilter(value as string);
-        else if (key === "idStatus") setIdStatusFilter(value as string);
-      }}
-      sortOptions={sortOptions}
-      defaultSortBy="dateJoined"
-      defaultSortOrder="DESC"
-      onSortChange={(newSortBy, newSortOrder) => {
-        setSortBy(newSortBy as "name" | "dateJoined" | "level");
-        setSortOrder(newSortOrder.toLowerCase() as "asc" | "desc");
-      }}
-      pagination={{ total: filteredData.length, totalPages }}
-      currentPage={currentPage}
-      onPageChange={setCurrentPage}
-      itemsPerPage={itemsPerPage}
-      emptyMessage="No students found matching your criteria"
-      resultsText={(count, total) => `Showing ${count} of ${total} students`}
-    />
-
-    {selectedStudentId && (
-      <StudentCertificatesModal
-        open={isCertificatesModalOpen}
-        onOpenChange={setIsCertificatesModalOpen}
-        studentId={selectedStudentId}
-        studentName={students?.find((s) => s.id === selectedStudentId)?.name}
-      />
-    )}
-  </>
+    </>
   );
 }

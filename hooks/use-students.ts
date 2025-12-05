@@ -210,7 +210,6 @@ export function useFranchiseeCertificates() {
   };
 }
 
-// Mutation functions with automatic revalidation
 export async function createStudentWithRevalidation(
   studentData: Omit<
     StudentData,
@@ -218,7 +217,6 @@ export async function createStudentWithRevalidation(
   >
 ) {
   const result = await createStudent(studentData);
-  // Revalidate all related data
   await Promise.all([
     mutate(STUDENTS_KEY),
     mutate(REQUESTED_IDS_KEY),
@@ -232,7 +230,6 @@ export async function updateStudentWithRevalidation(
   studentData: Partial<StudentData>
 ) {
   const result = await updateStudent(studentId, studentData);
-  // Revalidate all related data
   await Promise.all([
     mutate(STUDENTS_KEY),
     mutate(REQUESTED_IDS_KEY),
@@ -243,7 +240,6 @@ export async function updateStudentWithRevalidation(
 
 export async function deleteStudentWithRevalidation(studentId: number) {
   await deleteStudent(studentId);
-  // Revalidate all related data
   await Promise.all([
     mutate(STUDENTS_KEY),
     mutate(REQUESTED_IDS_KEY),
@@ -253,7 +249,6 @@ export async function deleteStudentWithRevalidation(studentId: number) {
 
 export async function requestStudentIdsWithRevalidation(studentIds: number[]) {
   const result = await requestStudentIds(studentIds);
-  // Revalidate all related data
   await Promise.all([
     mutate(STUDENTS_KEY),
     mutate(REQUESTED_IDS_KEY),
@@ -264,7 +259,6 @@ export async function requestStudentIdsWithRevalidation(studentIds: number[]) {
 
 export async function issueIdCardWithRevalidation(studentId: number) {
   const result = await issueIdCard(studentId);
-  // Revalidate all related data
   await Promise.all([
     mutate(STUDENTS_KEY),
     mutate(REQUESTED_IDS_KEY),
@@ -275,7 +269,6 @@ export async function issueIdCardWithRevalidation(studentId: number) {
 
 export async function issueCertificateWithRevalidation(studentId: number) {
   const result = await issueCertificate(studentId);
-  // Revalidate all related data
   await Promise.all([
     mutate(STUDENTS_KEY),
     mutate(REQUESTED_CERTIFICATES_KEY),
@@ -289,8 +282,10 @@ export async function approveCertificateRequestWithRevalidation(
   certificateRequestId: number
 ) {
   const result = await approveCertificateRequest(certificateRequestId);
-  // Revalidate admin certificate requests
-  await mutate(ADMIN_CERTIFICATE_REQUESTS_KEY);
+  await Promise.all([
+    mutate(ADMIN_CERTIFICATE_REQUESTS_KEY),
+    mutate(FRANCHISEE_CERTIFICATES_KEY),
+  ]);
   return result;
 }
 
@@ -298,7 +293,16 @@ export async function rejectCertificateRequestWithRevalidation(
   certificateRequestId: number
 ) {
   const result = await rejectCertificateRequest(certificateRequestId);
-  // Revalidate admin certificate requests
-  await mutate(ADMIN_CERTIFICATE_REQUESTS_KEY);
+  await Promise.all([
+    mutate(ADMIN_CERTIFICATE_REQUESTS_KEY),
+    mutate(FRANCHISEE_CERTIFICATES_KEY),
+  ]);
   return result;
+}
+
+export async function revalidateCertificateRequests() {
+  await Promise.all([
+    mutate(ADMIN_CERTIFICATE_REQUESTS_KEY),
+    mutate(FRANCHISEE_CERTIFICATES_KEY),
+  ]);
 }

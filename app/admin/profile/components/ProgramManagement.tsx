@@ -1052,7 +1052,7 @@ export function ProgramManagement() {
                         )}
                         <div className="flex items-center gap-4 mt-2">
                           <span className="text-sm text-gray-600">
-                            Category: {kit.inventory?.category || "N/A"}
+                            Category: {kit.inventory?.category?.name || "N/A"}
                           </span>
                           <span className="text-sm font-medium text-gray-900">
                             Default Quantity: {kit.defaultQuantity}

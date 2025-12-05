@@ -30,6 +30,7 @@ export default function FranchiseeCertificatesTable({
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [selectedCertificateId, setSelectedCertificateId] = useState<number | undefined>(undefined);
   const [isCertificatesModalOpen, setIsCertificatesModalOpen] = useState(false);
   const itemsPerPage = 10;
 
@@ -196,13 +197,14 @@ export default function FranchiseeCertificatesTable({
           size="sm"
           onClick={() => {
             setSelectedStudentId(certificate.studentId);
+            setSelectedCertificateId(certificate.id);
             setIsCertificatesModalOpen(true);
           }}
           className="bg-blue-600 hover:bg-blue-700"
-          title="View All Certificates"
+          title="View Certificate"
         >
           <Award className="w-4 h-4 mr-1" />
-          View Certificates
+          View Certificate
         </Button>
       ),
     },
@@ -280,8 +282,15 @@ export default function FranchiseeCertificatesTable({
     {selectedStudentId && (
       <StudentCertificatesModal
         open={isCertificatesModalOpen}
-        onOpenChange={setIsCertificatesModalOpen}
+        onOpenChange={(open) => {
+          setIsCertificatesModalOpen(open);
+          if (!open) {
+            setSelectedStudentId(null);
+            setSelectedCertificateId(undefined);
+          }
+        }}
         studentId={selectedStudentId}
+        certificateId={selectedCertificateId}
       />
     )}
   </>
