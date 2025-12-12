@@ -69,8 +69,8 @@ export interface CreateCourseInstructorRequest {
   reference: string;
   expiryDate: Date;
   trainingProof?: string;
-  trainingType?: CITrainingType;
-  dateOfTraining?: Date;
+  trainingLevelId?: number;
+  levelId?: number;
   additionalDetails?: string;
 }
 
@@ -262,6 +262,7 @@ export async function completeTraining(
   );
   return response.data;
 }
+
 
 // Training Course Instructor interfaces and functions
 export interface TrainingCourseInstructorData {

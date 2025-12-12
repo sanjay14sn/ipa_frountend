@@ -96,6 +96,11 @@ const adminNavigation = {
           icon: BookOpen,
         },
         {
+          title: "Training Levels",
+          url: "/admin/training-levels",
+          icon: BookOpen,
+        },
+        {
           title: "Orders",
           url: "/admin/orders",
           icon: ShoppingCart,

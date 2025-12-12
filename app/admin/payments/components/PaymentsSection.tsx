@@ -50,6 +50,15 @@ export default function PaymentsSection({
     }).format(amount);
   };
 
+  const formatPaymentType = (type: string) => {
+    const typeMap: Record<string, string> = {
+      franchise_fee: "Franchise Fee",
+      ci_payment: "CI Payment",
+      subscription: "Subscription",
+    };
+    return typeMap[type] || type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
   return (
     <div ref={paymentsDotRef}>
       <NestedSection
@@ -70,6 +79,7 @@ export default function PaymentsSection({
           <TableHeader>
             <TableRow className="bg-secondary hover:bg-secondary">
               <TableHead>Order ID</TableHead>
+              <TableHead className="text-center">Type</TableHead>
               <TableHead className="text-center">Amount</TableHead>
               <TableHead className="text-center">Status</TableHead>
               <TableHead className="text-center">Subscription</TableHead>
@@ -82,6 +92,11 @@ export default function PaymentsSection({
                 <TableCell>
                   <Badge variant="outline" className="font-mono text-xs">
                     {payment.razorpayOrderId}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-center">
+                  <Badge variant="outline" className="text-xs">
+                    {formatPaymentType(payment.type)}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-center font-medium">

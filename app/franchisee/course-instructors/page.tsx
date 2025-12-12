@@ -32,6 +32,7 @@ import {
   BookOpen,
   Edit2,
   Trash2,
+  CreditCard,
 } from "lucide-react";
 import { useUser } from "@/context/user-context";
 import { CourseInstructorData } from "@/services/course-instructor.service";
@@ -78,6 +79,20 @@ export default function FranchiseeCourseInstructorsPage() {
     status: "Active",
   });
 
+  // Use paginated hook for payment CIs
+  const [paymentPage, setPaymentPage] = useState(1);
+  const {
+    courseInstructors: paymentCourseInstructors,
+    meta: paymentMeta,
+    isLoading: paymentLoading,
+    revalidate: revalidatePayment,
+  } = usePaginatedFranchiseeCourseInstructors({
+    page: paymentPage,
+    limit,
+    search,
+    status: "Payment",
+  });
+
   // Use paginated hook for training CIs
   const {
     courseInstructors: trainingCourseInstructors,
@@ -101,6 +116,7 @@ export default function FranchiseeCourseInstructorsPage() {
 
   // Calculate stats
   const activeCourseInstructorsCount = activeMeta?.total || 0;
+  const paymentCount = paymentMeta?.total || 0;
   const trainingCount = trainingMeta?.total || 0;
   const newThisMonth = 0; // TODO: Implement this calculation
 
@@ -336,6 +352,18 @@ export default function FranchiseeCourseInstructorsPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Payment Pending</CardTitle>
+            <CreditCard className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{paymentCount}</div>
+            <p className="text-xs text-muted-foreground">
+              Awaiting payment
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">In Training</CardTitle>
             <BookOpen className="h-4 w-4 text-orange-500" />
           </CardHeader>
@@ -387,6 +415,7 @@ export default function FranchiseeCourseInstructorsPage() {
         // Table View with Tabs
         <CourseInstructorTabs
           courseInstructors={activeCourseInstructors}
+          paymentCourseInstructors={paymentCourseInstructors}
           trainingCourseInstructors={trainingCourseInstructors as any}
           onCourseInstructorUpdate={(updatedCourseInstructor) => {
             revalidateActive();
@@ -396,6 +425,18 @@ export default function FranchiseeCourseInstructorsPage() {
             setIsDeleteModalOpen(true);
           }}
           onCourseInstructorEdit={(courseInstructor) => {
+            setEditCourseInstructor(courseInstructor);
+            setIsEditModalOpen(true);
+          }}
+          onPaymentCourseInstructorUpdate={(updatedCourseInstructor) => {
+            revalidatePayment();
+            revalidateTraining(); // Also revalidate training as payment moves CI to training
+          }}
+          onPaymentCourseInstructorDelete={(courseInstructorId) => {
+            setDeleteCourseInstructorId(courseInstructorId);
+            setIsDeleteModalOpen(true);
+          }}
+          onPaymentCourseInstructorEdit={(courseInstructor) => {
             setEditCourseInstructor(courseInstructor);
             setIsEditModalOpen(true);
           }}

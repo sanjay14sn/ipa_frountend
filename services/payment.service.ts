@@ -45,6 +45,7 @@ export interface PaymentData {
   status: PaymentStatus;
   amount: number;
   currency: string;
+  type: string;
   createdAt: string;
   updatedAt: string;
   franchisee: Franchisee;
@@ -101,4 +102,45 @@ export async function getPaginatedAdminPayments(
 export async function getPaymentDetails(orderId: string): Promise<PaymentData> {
   const response = await api.get<PaymentData>(`/payment/${orderId}`);
   return response.data;
+}
+
+export interface CITrainingPaymentOrderResponse {
+  orderId: string;
+  amount: number;
+  currency: string;
+  ciId: number;
+  ciName: string;
+  paymentType: string;
+  key: string;
+  message?: string;
+}
+
+export interface VerifyPaymentDto {
+  paymentId: string;
+  orderId: string;
+  signature: string;
+}
+
+export interface PaymentVerificationResponse {
+  message: string;
+  status?: string;
+}
+
+export async function initiateCITrainingPayment(
+  ciId: number
+): Promise<CITrainingPaymentOrderResponse> {
+  const response = await api.post<{ result: CITrainingPaymentOrderResponse }>(
+    `/payment/ci-training/initiate/${ciId}`
+  );
+  return response.data.result;
+}
+
+export async function verifyCITrainingPayment(
+  paymentData: VerifyPaymentDto
+): Promise<PaymentVerificationResponse> {
+  const response = await api.post<{ result: PaymentVerificationResponse }>(
+    "/payment/ci-training/verify",
+    paymentData
+  );
+  return response.data.result;
 }
