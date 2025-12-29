@@ -126,7 +126,11 @@ export default function RequestedIdStudentsModal({
                               {student.standard}
                             </div>
                             <Badge variant="outline" className="text-xs">
-                              {student.level}
+                              {typeof student.level === 'object' && student.level !== null && 'name' in student.level 
+                                ? student.level.name 
+                                : typeof student.level === 'string' 
+                                ? student.level 
+                                : 'N/A'}
                             </Badge>
                           </div>
                         </TableCell>
@@ -172,7 +176,10 @@ export default function RequestedIdStudentsModal({
               Total: {requestedIdStudents.length} requested ID
               {requestedIdStudents.length !== 1 ? "s" : ""}
             </div>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              className="bg-primary hover:bg-primary/90"
+              onClick={() => onOpenChange(false)}
+            >
               Close
             </Button>
           </div>

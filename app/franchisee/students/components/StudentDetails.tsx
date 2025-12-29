@@ -113,7 +113,13 @@ export default function StudentDetails({
                 </div>
                 <div>
                   <span className="text-gray-500">Level</span>
-                  <p className="text-gray-900 mt-1">{student.level}</p>
+                  <p className="text-gray-900 mt-1">
+                    {typeof student.level === 'object' && student.level !== null && 'name' in student.level 
+                      ? student.level.name 
+                      : typeof student.level === 'string' 
+                      ? student.level 
+                      : 'N/A'}
+                  </p>
                 </div>
                 <div>
                   <span className="text-gray-500">Stream</span>

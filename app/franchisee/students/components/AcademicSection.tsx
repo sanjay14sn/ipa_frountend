@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { StudentData } from "@/services/student.service";
 import React, { useEffect, useState, useRef } from "react";
+import { getStudentLevelName } from "../utils/student-helpers";
 
 interface AcademicSectionProps {
   student: StudentData;
@@ -22,6 +23,8 @@ export default function AcademicSection({
   const sectionId = `${studentId}-academic`;
   const containerRef = useRef<HTMLDivElement>(null);
   const [lineHeight, setLineHeight] = useState(0);
+
+  const levelName = getStudentLevelName(student);
 
   useEffect(() => {
     if (containerRef.current && academicInternalDotRef.current && isExpanded) {
@@ -53,7 +56,7 @@ export default function AcademicSection({
           </button>
           <h4 className="font-medium text-gray-900">Academic Information</h4>
           <Badge variant="outline" className="ml-2">
-            {student.level}
+            {levelName}
           </Badge>
         </div>
 
@@ -79,7 +82,7 @@ export default function AcademicSection({
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-500">Level</span>
-                      <p className="text-gray-900 mt-1">{student.level}</p>
+                      <p className="text-gray-900 mt-1">{levelName}</p>
                     </div>
                     <div>
                       <span className="text-gray-500">Standard</span>
@@ -131,22 +134,27 @@ export default function AcademicSection({
                     </h6>
                     <div className="bg-gray-100 rounded-lg p-3">
                       <div className="text-sm text-gray-600">
-                        {student.level.startsWith("EL") && (
+                        {levelName && levelName.startsWith("EL") && (
                           <p>
                             Early Learning Level - Foundation stage for young
                             learners
                           </p>
                         )}
-                        {student.level.startsWith("RL") && (
+                        {levelName && levelName.startsWith("RL") && (
                           <p>
                             Regular Learning Level - Standard academic
                             progression
                           </p>
                         )}
-                        {student.level.startsWith("GML") && (
+                        {levelName && levelName.startsWith("GML") && (
                           <p>
                             General Mathematics Level - Advanced mathematical
                             concepts
+                          </p>
+                        )}
+                        {levelName === 'N/A' && (
+                          <p className="text-gray-500 italic">
+                            Level information not available
                           </p>
                         )}
                       </div>

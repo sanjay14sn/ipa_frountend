@@ -1,5 +1,3 @@
-
-
 export interface Response {
   statusCode: number;
   timeStamp: string;
@@ -60,11 +58,16 @@ export interface StudentData {
   motherContactNo: string;
   mail: string;
   standard: string;
-  level: StudentLevel;
+  levelId?: number;
+  level:
+    | StudentLevel
+    | string
+    | { id: number; name: string; code: string; streamId: number };
   stream: StudentStream;
   isActive: boolean;
   idIssued: StudentIdStatus;
   deactivateDate?: Date;
+  dateOfJoining?: Date;
   createdAt: Date;
   updatedAt: Date;
   createdBy: number;

@@ -63,6 +63,7 @@ import {
   updateStudentWithRevalidation,
 } from "@/hooks/use-students";
 import AddStudentModal from "./components/AddStudentModal";
+import EditStudentModal from "./components/EditStudentModal";
 import StudentsTable from "./components/StudentsTable";
 import RequestIdModal from "./components/RequestIdModal";
 import RequestedIdStudentsModal from "./components/RequestedIdStudentsModal";
@@ -96,10 +97,11 @@ export default function FranchiseeStudentsPage() {
     return <div>Loading students...</div>;
   }
 
-  const getLevelColor = (level: StudentLevel) => {
-    if (level.startsWith("EL")) return "bg-green-100 text-green-800";
-    if (level.startsWith("RL")) return "bg-blue-100 text-blue-800";
-    if (level.startsWith("GML")) return "bg-purple-100 text-purple-800";
+  const getLevelColor = (level: StudentLevel | string) => {
+    const levelStr = typeof level === 'string' ? level : (level as any)?.name || '';
+    if (levelStr.startsWith("EL")) return "bg-green-100 text-green-800";
+    if (levelStr.startsWith("RL")) return "bg-blue-100 text-blue-800";
+    if (levelStr.startsWith("GML")) return "bg-purple-100 text-purple-800";
     return "bg-gray-100 text-gray-800";
   };
 
@@ -197,7 +199,11 @@ export default function FranchiseeStudentsPage() {
           </div>
           <div className="flex items-center space-x-2">
             <Badge className={getLevelColor(student.level)} variant="secondary">
-              {student.level}
+              {typeof student.level === 'object' && student.level !== null && 'name' in student.level 
+                ? student.level.name 
+                : typeof student.level === 'string' 
+                ? student.level 
+                : 'N/A'}
             </Badge>
             <Badge
               className={getStatusColor(student.isActive)}
@@ -514,21 +520,28 @@ export default function FranchiseeStudentsPage() {
 
       {/* Student Detail Modal */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Student Details</DialogTitle>
+        <DialogContent className="max-w-4xl w-full mx-4 max-h-[95vh] overflow-hidden flex flex-col">
+          <DialogHeader className="text-center border-b border-gray-200 pb-4 flex-shrink-0">
+            <div className="flex justify-center mb-4">
+              <User className="h-8 w-8 text-gray-700" />
+            </div>
+            <DialogTitle className="text-xl font-bold text-gray-900">
+              Student Details
+            </DialogTitle>
             <DialogDescription>
               Complete information for {selectedStudent?.name}
             </DialogDescription>
           </DialogHeader>
-          {selectedStudent && (
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3 flex items-center">
-                  <User className="w-5 h-5 mr-2" />
-                  Student Information
-                </h3>
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-6 space-y-6">
+              {selectedStudent && (
+                <>
+                  {/* Basic Information */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex items-center">
+                      <User className="w-5 h-5 mr-2" />
+                      Student Information
+                    </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Roll Number</p>
@@ -555,12 +568,12 @@ export default function FranchiseeStudentsPage() {
                 </div>
               </div>
 
-              {/* Parent Information */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3 flex items-center">
-                  <Users className="w-5 h-5 mr-2" />
-                  Parent Information
-                </h3>
+                  {/* Parent Information */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex items-center">
+                      <Users className="w-5 h-5 mr-2" />
+                      Parent Information
+                    </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Card>
                     <CardHeader className="pb-3">
@@ -644,12 +657,12 @@ export default function FranchiseeStudentsPage() {
                 </div>
               </div>
 
-              {/* Contact & Address */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3 flex items-center">
-                  <MapPin className="w-5 h-5 mr-2" />
-                  Contact & Address
-                </h3>
+                  {/* Contact & Address */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex items-center">
+                      <MapPin className="w-5 h-5 mr-2" />
+                      Contact & Address
+                    </h3>
                 <div className="space-y-3">
                   <div>
                     <p className="text-sm text-muted-foreground">
@@ -668,12 +681,12 @@ export default function FranchiseeStudentsPage() {
                 </div>
               </div>
 
-              {/* Academic Status */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3 flex items-center">
-                  <BookOpen className="w-5 h-5 mr-2" />
-                  Academic Status
-                </h3>
+                  {/* Academic Status */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex items-center">
+                      <BookOpen className="w-5 h-5 mr-2" />
+                      Academic Status
+                    </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-blue-50 rounded-lg">
                     <div className="font-semibold text-blue-700">
@@ -702,170 +715,87 @@ export default function FranchiseeStudentsPage() {
                 </div>
               </div>
 
-              {!selectedStudent.isActive && (
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                  <h4 className="font-medium text-orange-800 mb-2">
-                    Student Status
-                  </h4>
-                  <p className="text-sm text-orange-700">
-                    This student is currently inactive
-                  </p>
-                </div>
+                  {!selectedStudent.isActive && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                      <h4 className="font-medium text-orange-800 mb-2">
+                        Student Status
+                      </h4>
+                      <p className="text-sm text-orange-700">
+                        This student is currently inactive
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
-          )}
-          <DialogFooter>
+          </div>
+          <div className="border-t border-gray-200 p-4 flex-shrink-0">
             <Button
-              variant="outline"
+              className="w-full bg-primary hover:bg-primary/90"
               onClick={() => setIsDetailModalOpen(false)}
             >
               Close
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* Keep existing Edit and Delete modals */}
       {/* Edit Student Modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="font-sans">
-          <DialogHeader>
-            <DialogTitle>Edit Student</DialogTitle>
-            <DialogDescription>
-              Update basic student information.
-            </DialogDescription>
-          </DialogHeader>
-          {editStudent && (
-            <form
-              className="space-y-4"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (!user || !editStudent) return;
-                try {
-                  await updateStudentWithRevalidation(editStudent.id, {
-                    name: editStudent.name,
-                    level: editStudent.level,
-                    isActive: editStudent.isActive,
-                  });
-                  setIsEditModalOpen(false);
-                  setEditStudent(null);
-                } catch (error) {
-                  console.error("Error updating student:", error);
-                  alert("Failed to update student");
-                }
-              }}
-            >
-              <div>
-                <label className="block text-sm font-medium mb-1">Name</label>
-                <Input
-                  required
-                  value={editStudent.name}
-                  onChange={(e) =>
-                    setEditStudent((s) =>
-                      s ? { ...s, name: e.target.value } : s
-                    )
-                  }
-                  placeholder="Student Name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Level</label>
-                <select
-                  className="w-full border rounded px-2 py-1 bg-white"
-                  value={editStudent.level}
-                  onChange={(e) =>
-                    setEditStudent((s) =>
-                      s ? { ...s, level: e.target.value as StudentLevel } : s
-                    )
-                  }
-                >
-                  <option value="EL1">EL1</option>
-                  <option value="EL2">EL2</option>
-                  <option value="EL3">EL3</option>
-                  <option value="RL1">RL1</option>
-                  <option value="RL2">RL2</option>
-                  <option value="RL3">RL3</option>
-                  <option value="RL4">RL4</option>
-                  <option value="RL5">RL5</option>
-                  <option value="GML1">GML1</option>
-                  <option value="GML2">GML2</option>
-                  <option value="GML3">GML3</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Status</label>
-                <select
-                  className="w-full border rounded px-2 py-1 bg-white"
-                  value={editStudent.isActive ? "active" : "inactive"}
-                  onChange={(e) =>
-                    setEditStudent((s) =>
-                      s
-                        ? {
-                            ...s,
-                            isActive: e.target.value === "active",
-                          }
-                        : s
-                    )
-                  }
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-              <DialogFooter>
-                <Button type="submit">Update Student</Button>
-                <DialogClose asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsEditModalOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                </DialogClose>
-              </DialogFooter>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
+      <EditStudentModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        student={editStudent}
+        onSuccess={() => {
+          setIsEditModalOpen(false);
+          setEditStudent(null);
+          revalidate();
+        }}
+      />
 
       {/* Delete Student Modal */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent className="font-sans">
-          <DialogHeader>
-            <DialogTitle>Delete Student</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-md w-full mx-4">
+          <DialogHeader className="text-center border-b border-gray-200 pb-4">
+            <div className="flex justify-center mb-4">
+              <AlertTriangle className="h-12 w-12 text-red-500" />
+            </div>
+            <DialogTitle className="text-xl font-bold text-gray-900">
+              Delete Student
+            </DialogTitle>
+            <DialogDescription className="text-center">
               Are you sure you want to delete this student? This action cannot
               be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (!user || !deleteStudentId) return;
-                try {
-                  await deleteStudentWithRevalidation(Number(deleteStudentId));
-                  setIsDeleteModalOpen(false);
-                  setDeleteStudentId(null);
-                } catch (error) {
-                  console.error("Error deleting student:", error);
-                  alert("Failed to delete student");
-                }
-              }}
-            >
-              Delete
-            </Button>
-            <DialogClose asChild>
+          <div className="p-6">
+            <div className="flex gap-4">
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  if (!user || !deleteStudentId) return;
+                  try {
+                    await deleteStudentWithRevalidation(Number(deleteStudentId));
+                    setIsDeleteModalOpen(false);
+                    setDeleteStudentId(null);
+                  } catch (error) {
+                    console.error("Error deleting student:", error);
+                    alert("Failed to delete student");
+                  }
+                }}
+                className="flex-1"
+              >
+                Delete
+              </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsDeleteModalOpen(false)}
+                className="flex-1"
               >
                 Cancel
               </Button>
-            </DialogClose>
-          </DialogFooter>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

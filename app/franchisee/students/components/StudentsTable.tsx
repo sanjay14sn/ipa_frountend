@@ -17,6 +17,7 @@ import {
 } from "@/services/student.service";
 import StudentDetails from "./StudentDetails";
 import StudentCertificatesModal from "../../certificate-requests/components/StudentCertificatesModal";
+import { getStudentLevelName, getStudentLevelForFilter } from "../utils/student-helpers";
 
 interface StudentsTableProps {
   students?: StudentData[];
@@ -72,7 +73,7 @@ export default function StudentsTable({
         (statusFilter === "inactive" && !student.isActive);
 
       const matchesLevel =
-        levelFilter === "all" || student.level === levelFilter;
+        levelFilter === "all" || getStudentLevelForFilter(student) === levelFilter;
       const matchesStream =
         streamFilter === "all" || student.stream === streamFilter;
 
@@ -142,7 +143,7 @@ export default function StudentsTable({
     }
   };
 
-  const getLevelColor = (level: StudentLevel) => {
+  const getLevelColor = (level: string) => {
     if (!level) return "bg-gray-100 text-gray-800 border-gray-200";
     if (level.startsWith("EL"))
       return "bg-gray-100 text-gray-800 border-gray-200";
@@ -203,7 +204,7 @@ export default function StudentsTable({
 
   // Get unique values for filters
   const uniqueLevels = [
-    ...new Set(students?.map((student) => student.level).filter(Boolean)),
+    ...new Set(students?.map((student) => getStudentLevelName(student)).filter(Boolean)),
   ];
   const uniqueStreams = [
     ...new Set(students?.map((student) => student.stream).filter(Boolean)),
@@ -222,8 +223,8 @@ export default function StudentsTable({
       className: "text-center",
       render: (student) => (
         <div className="space-y-1">
-          <Badge className={`${getLevelColor(student.level)} border`}>
-            {student.level}
+          <Badge className={`${getLevelColor(getStudentLevelName(student))} border`}>
+            {getStudentLevelName(student)}
           </Badge>
           <div className="text-sm text-gray-600">{student.standard}</div>
         </div>

@@ -99,7 +99,10 @@ export default function RequestIdModal({
             </DialogDescription>
           </DialogHeader>
           <div className="pt-4">
-            <Button className="w-full" onClick={handleClose}>
+            <Button
+              className="w-full bg-primary hover:bg-primary/90"
+              onClick={handleClose}
+            >
               Close
             </Button>
           </div>
@@ -227,7 +230,11 @@ export default function RequestIdModal({
                         </div>
                         <div className="col-span-2">
                           <Badge variant="outline" className="text-xs">
-                            {student.level}
+                            {typeof student.level === 'object' && student.level !== null && 'name' in student.level 
+                              ? student.level.name 
+                              : typeof student.level === 'string' 
+                              ? student.level 
+                              : 'N/A'}
                           </Badge>
                         </div>
                         <div className="col-span-2">
@@ -272,6 +279,7 @@ export default function RequestIdModal({
             Cancel
           </Button>
           <Button
+            className="bg-primary hover:bg-primary/90"
             onClick={handleSubmit}
             disabled={selectedStudents.size === 0 || isLoading}
           >

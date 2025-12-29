@@ -467,10 +467,7 @@ export default function AddStudentModal({
         mail: formData.mailId,
         standard: formData.standard,
         levelId: Number(formData.levelId),
-        stream:
-          formData.stream === "regular"
-            ? StudentStream.REGULAR
-            : StudentStream.SUMMER_CAMP, // Map to StudentStream enum
+        stream: StudentStream.REGULAR, // Default to REGULAR enrollment type
         isActive: formData.status === "active",
         idIssued: StudentIdStatus.NOT_ISSUED,
         existing: formData.existing,
@@ -839,23 +836,7 @@ export default function AddStudentModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="stream">Stream</Label>
-                <Select
-                  value={formData.stream}
-                  onValueChange={(value) => handleInputChange("stream", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="regular">Regular</SelectItem>
-                    <SelectItem value="summer_camp">Summer Camp</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select
