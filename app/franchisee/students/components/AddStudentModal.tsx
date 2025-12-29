@@ -33,7 +33,8 @@ import { StudentStream, StudentIdStatus } from "@/services/student.service";
 import { createStudentWithRevalidation } from "@/hooks/use-students";
 import { useUser } from "@/context/user-context";
 import { getAllPrograms, Program } from "@/services/program.service";
-import { getLevelsByProgram, Level } from "@/services/level.service";
+import { getLevelsByStream, Level } from "@/services/level.service";
+import { getStreamsByProgram, Stream } from "@/services/stream.service";
 
 // Define the steps for the form
 const FORM_STEPS = [
@@ -141,6 +142,7 @@ interface StudentFormData {
   dateOfJoining: string;
   sex: string;
   standard: string;
+  streamId: number;
   levelId: number;
   stream: string;
   status: string;
@@ -176,8 +178,10 @@ export default function AddStudentModal({
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [streams, setStreams] = useState<Stream[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
+  const [loadingStreams, setLoadingStreams] = useState(false);
   const [loadingLevels, setLoadingLevels] = useState(false);
 
   const { user } = useUser();
@@ -193,6 +197,7 @@ export default function AddStudentModal({
     dateOfJoining: new Date().toISOString().split("T")[0],
     sex: "",
     standard: "",
+    streamId: 0,
     levelId: 0,
     stream: "regular",
     status: "active",
@@ -237,13 +242,35 @@ export default function AddStudentModal({
     }
   }, [open]);
 
-  // Fetch levels when program is selected
+  // Fetch streams when program is selected
+  useEffect(() => {
+    const fetchStreams = async () => {
+      if (formData.programId && formData.programId > 0) {
+        setLoadingStreams(true);
+        try {
+          const fetchedStreams = await getStreamsByProgram(formData.programId);
+          setStreams(fetchedStreams);
+        } catch (error) {
+          console.error("Error fetching streams:", error);
+          setStreams([]);
+        } finally {
+          setLoadingStreams(false);
+        }
+      } else {
+        setStreams([]);
+        setLevels([]);
+      }
+    };
+
+    fetchStreams();
+  }, [formData.programId]);
+
   useEffect(() => {
     const fetchLevels = async () => {
-      if (formData.programId && formData.programId > 0) {
+      if (formData.streamId && formData.streamId > 0) {
         setLoadingLevels(true);
         try {
-          const fetchedLevels = await getLevelsByProgram(formData.programId);
+          const fetchedLevels = await getLevelsByStream(formData.streamId);
           setLevels(fetchedLevels);
         } catch (error) {
           console.error("Error fetching levels:", error);
@@ -257,7 +284,7 @@ export default function AddStudentModal({
     };
 
     fetchLevels();
-  }, [formData.programId]);
+  }, [formData.streamId]);
 
   const validateCurrentStep = () => {
     const newErrors: Record<string, string> = {};
@@ -279,11 +306,14 @@ export default function AddStudentModal({
         if (!formData.standard) {
           newErrors.standard = "Standard is required";
         }
-        if (!formData.levelId || formData.levelId === 0) {
-          newErrors.levelId = "Level is required";
-        }
         if (!formData.programId || formData.programId === 0) {
           newErrors.programId = "Program selection is required";
+        }
+        if (!formData.streamId || formData.streamId === 0) {
+          newErrors.streamId = "Stream selection is required";
+        }
+        if (!formData.levelId || formData.levelId === 0) {
+          newErrors.levelId = "Level is required";
         }
         break;
 
@@ -344,9 +374,8 @@ export default function AddStudentModal({
   const handleInputChange = (field: string, value: string | boolean) => {
     let convertedValue: any = value;
 
-    // Convert programId and levelId to number
     if (
-      (field === "programId" || field === "levelId") &&
+      (field === "programId" || field === "streamId" || field === "levelId") &&
       typeof value === "string"
     ) {
       convertedValue = parseInt(value, 10) || 0;
@@ -473,6 +502,7 @@ export default function AddStudentModal({
       dateOfJoining: new Date().toISOString().split("T")[0],
       sex: "",
       standard: "",
+      streamId: 0,
       levelId: 0,
       stream: "regular",
       status: "active",
@@ -680,53 +710,17 @@ export default function AddStudentModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="levelId">Level *</Label>
-                <Select
-                  value={formData.levelId.toString()}
-                  onValueChange={(value) => handleInputChange("levelId", value)}
-                  disabled={
-                    !formData.programId ||
-                    formData.programId === 0 ||
-                    loadingLevels
-                  }
-                >
-                  <SelectTrigger
-                    className={errors.levelId ? "border-red-500" : ""}
-                  >
-                    <SelectValue
-                      placeholder={
-                        loadingLevels
-                          ? "Loading levels..."
-                          : formData.programId === 0
-                          ? "Select program first"
-                          : "Select level"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {levels.map((level) => (
-                      <SelectItem key={level.id} value={level.id.toString()}>
-                        {level.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.levelId && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.levelId}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="programId">Program *</Label>
                 <Select
                   value={formData.programId.toString()}
                   onValueChange={(value) => {
                     handleInputChange("programId", value);
-                    // Reset levelId when program changes
-                    setFormData((prev) => ({ ...prev, levelId: 0 }));
+                    // Reset streamId and levelId when program changes
+                    setFormData((prev) => ({
+                      ...prev,
+                      streamId: 0,
+                      levelId: 0,
+                    }));
                   }}
                   disabled={loadingPrograms}
                 >
@@ -756,6 +750,90 @@ export default function AddStudentModal({
                   <p className="text-red-500 text-sm flex items-center gap-1">
                     <AlertCircle className="w-4 h-4" />
                     {errors.programId}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="streamId">Stream *</Label>
+                <Select
+                  value={formData.streamId.toString()}
+                  onValueChange={(value) => {
+                    handleInputChange("streamId", value);
+                    // Reset levelId when stream changes
+                    setFormData((prev) => ({ ...prev, levelId: 0 }));
+                  }}
+                  disabled={
+                    !formData.programId ||
+                    formData.programId === 0 ||
+                    loadingStreams
+                  }
+                >
+                  <SelectTrigger
+                    className={errors.streamId ? "border-red-500" : ""}
+                  >
+                    <SelectValue
+                      placeholder={
+                        loadingStreams
+                          ? "Loading streams..."
+                          : formData.programId === 0
+                          ? "Select program first"
+                          : "Select stream"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {streams.map((stream) => (
+                      <SelectItem key={stream.id} value={stream.id.toString()}>
+                        {stream.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.streamId && (
+                  <p className="text-red-500 text-sm flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {errors.streamId}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="levelId">Level *</Label>
+                <Select
+                  value={formData.levelId.toString()}
+                  onValueChange={(value) => handleInputChange("levelId", value)}
+                  disabled={
+                    !formData.streamId ||
+                    formData.streamId === 0 ||
+                    loadingLevels
+                  }
+                >
+                  <SelectTrigger
+                    className={errors.levelId ? "border-red-500" : ""}
+                  >
+                    <SelectValue
+                      placeholder={
+                        loadingLevels
+                          ? "Loading levels..."
+                          : formData.streamId === 0
+                          ? "Select stream first"
+                          : "Select level"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {levels.map((level) => (
+                      <SelectItem key={level.id} value={level.id.toString()}>
+                        {level.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.levelId && (
+                  <p className="text-red-500 text-sm flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {errors.levelId}
                   </p>
                 )}
               </div>
