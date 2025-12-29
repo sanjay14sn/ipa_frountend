@@ -2,7 +2,7 @@
 
 export interface Level {
   id: number;
-  programId: number;
+  streamId: number;
   name: string;
   code: string;
   totalMarks: number;
@@ -16,7 +16,7 @@ export interface Level {
 }
 
 export interface CreateLevelDto {
-  programId: number;
+  streamId: number;
   name: string;
   code: string;
   totalMarks: number;
@@ -52,6 +52,11 @@ export async function getAllLevels(): Promise<Level[]> {
 
 export async function getLevelsByProgram(programId: number): Promise<Level[]> {
   const response = await api.get<LevelsResponse>(`/level/program/${programId}`);
+  return Array.isArray(response.data.result) ? response.data.result : [];
+}
+
+export async function getLevelsByStream(streamId: number): Promise<Level[]> {
+  const response = await api.get<LevelsResponse>(`/level/stream/${streamId}`);
   return Array.isArray(response.data.result) ? response.data.result : [];
 }
 

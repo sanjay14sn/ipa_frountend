@@ -60,9 +60,7 @@ export default function FranchiseeCourseInstructorsPage() {
   const { user } = useUser();
 
   // Pagination state
-  const [currentTab, setCurrentTab] = useState<"active" | "training">("active");
   const [activePage, setActivePage] = useState(1);
-  const [trainingPage, setTrainingPage] = useState(1);
   const [search, setSearch] = useState("");
   const limit = 10;
 
@@ -79,6 +77,19 @@ export default function FranchiseeCourseInstructorsPage() {
     status: "Active",
   });
 
+  // Use paginated hook for training CIs
+  const {
+    courseInstructors: trainingCourseInstructors,
+    meta: trainingMeta,
+    isLoading: trainingLoading,
+    revalidate: revalidateTraining,
+  } = usePaginatedFranchiseeCourseInstructors({
+    page: activePage,
+    limit,
+    search,
+    status: "Training",
+  });
+
   // Use paginated hook for payment CIs
   const [paymentPage, setPaymentPage] = useState(1);
   const {
@@ -93,31 +104,20 @@ export default function FranchiseeCourseInstructorsPage() {
     status: "Payment",
   });
 
-  // Use paginated hook for training CIs
-  const {
-    courseInstructors: trainingCourseInstructors,
-    meta: trainingMeta,
-    isLoading: trainingLoading,
-    revalidate: revalidateTraining,
-  } = usePaginatedFranchiseeCourseInstructors({
-    page: trainingPage,
-    limit,
-    search,
-    status: "Training",
-  });
+  // Combine active and training CIs for the regular tab
+  const regularCourseInstructors = [
+    ...(activeCourseInstructors || []),
+    ...(trainingCourseInstructors || []),
+  ];
+  const regularIsLoading = activeLoading || trainingLoading;
 
   if (!user || !user.franchiseId) {
     return <div>Loading...</div>;
   }
 
-  const isLoading = currentTab === "active" ? activeLoading : trainingLoading;
-  const courseInstructors = currentTab === "active" ? activeCourseInstructors : trainingCourseInstructors;
-  const meta = currentTab === "active" ? activeMeta : trainingMeta;
-
   // Calculate stats
-  const activeCourseInstructorsCount = activeMeta?.total || 0;
+  const activeCourseInstructorsCount = (activeMeta?.total || 0) + (trainingMeta?.total || 0);
   const paymentCount = paymentMeta?.total || 0;
-  const trainingCount = trainingMeta?.total || 0;
   const newThisMonth = 0; // TODO: Implement this calculation
 
   // Helper function to calculate age
@@ -334,7 +334,7 @@ export default function FranchiseeCourseInstructorsPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeCourseInstructorsCount + trainingCount}</div>
+            <div className="text-2xl font-bold">{activeCourseInstructorsCount}</div>
             <p className="text-xs text-muted-foreground">In your franchise</p>
           </CardContent>
         </Card>
@@ -368,7 +368,7 @@ export default function FranchiseeCourseInstructorsPage() {
             <BookOpen className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{trainingCount}</div>
+            <div className="text-2xl font-bold">{trainingMeta?.total || 0}</div>
             <p className="text-xs text-muted-foreground">
               Currently in training
             </p>
@@ -414,11 +414,11 @@ export default function FranchiseeCourseInstructorsPage() {
       ) : (
         // Table View with Tabs
         <CourseInstructorTabs
-          courseInstructors={activeCourseInstructors}
+          courseInstructors={regularCourseInstructors}
           paymentCourseInstructors={paymentCourseInstructors}
-          trainingCourseInstructors={trainingCourseInstructors as any}
           onCourseInstructorUpdate={(updatedCourseInstructor) => {
             revalidateActive();
+            revalidateTraining();
           }}
           onCourseInstructorDelete={(courseInstructorId) => {
             setDeleteCourseInstructorId(courseInstructorId);
@@ -430,6 +430,7 @@ export default function FranchiseeCourseInstructorsPage() {
           }}
           onPaymentCourseInstructorUpdate={(updatedCourseInstructor) => {
             revalidatePayment();
+            revalidateActive();
             revalidateTraining(); // Also revalidate training as payment moves CI to training
           }}
           onPaymentCourseInstructorDelete={(courseInstructorId) => {
@@ -438,17 +439,6 @@ export default function FranchiseeCourseInstructorsPage() {
           }}
           onPaymentCourseInstructorEdit={(courseInstructor) => {
             setEditCourseInstructor(courseInstructor);
-            setIsEditModalOpen(true);
-          }}
-          onTrainingCourseInstructorUpdate={(updatedCourseInstructor) => {
-            revalidateTraining();
-          }}
-          onTrainingCourseInstructorDelete={(courseInstructorId) => {
-            setDeleteCourseInstructorId(courseInstructorId);
-            setIsDeleteModalOpen(true);
-          }}
-          onTrainingCourseInstructorEdit={(courseInstructor) => {
-            setEditCourseInstructor(courseInstructor as any);
             setIsEditModalOpen(true);
           }}
         />

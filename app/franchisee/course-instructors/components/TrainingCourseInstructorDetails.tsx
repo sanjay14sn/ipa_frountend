@@ -22,12 +22,31 @@ export default function TrainingCourseInstructorDetails({
   const [lineHeight, setLineHeight] = useState(0);
 
   // Helper function to format currency
-  const formatCurrency = (amount: number): string => {
+  const formatCurrency = (amount: number | null | undefined): string => {
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      return "N/A";
+    }
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       minimumFractionDigits: 0,
     }).format(amount);
+  };
+
+  // Helper function to format number or return N/A
+  const formatNumber = (value: number | null | undefined): string => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return "N/A";
+    }
+    return value.toString();
+  };
+
+  // Helper function to format text or return N/A
+  const formatText = (value: string | null | undefined): string => {
+    if (!value || value.trim() === "" || value === "null" || value === "undefined") {
+      return "N/A";
+    }
+    return value;
   };
 
   useEffect(() => {
@@ -83,15 +102,15 @@ export default function TrainingCourseInstructorDetails({
                   </p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Training Type</span>
+                  <span className="text-gray-500">Training Level</span>
                   <p className="text-gray-900 mt-1">
-                    {courseInstructor.trainingType}
+                    {formatText(courseInstructor.trainingLevelName || "N/A")}
                   </p>
                 </div>
                 <div>
                   <span className="text-gray-500">Status</span>
                   <p className="text-gray-900 mt-1">
-                    {courseInstructor.status}
+                    {formatText(courseInstructor.status)}
                   </p>
                 </div>
                 <div>
@@ -100,31 +119,11 @@ export default function TrainingCourseInstructorDetails({
                     {formatCurrency(courseInstructor.amount)}
                   </p>
                 </div>
-                <div>
-                  <span className="text-gray-500">Installment Count</span>
-                  <p className="text-gray-900 mt-1">
-                    {courseInstructor.installmentCount}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Installment Amount</span>
-                  <p className="text-gray-900 mt-1">
-                    {formatCurrency(courseInstructor.installmentAmount)}
-                  </p>
-                </div>
                 {courseInstructor.paidAmount && (
                   <div>
                     <span className="text-gray-500">Paid Amount</span>
                     <p className="text-green-600 mt-1">
                       {formatCurrency(courseInstructor.paidAmount)}
-                    </p>
-                  </div>
-                )}
-                {courseInstructor.paidInstallmentCount && (
-                  <div>
-                    <span className="text-gray-500">Paid Installments</span>
-                    <p className="text-green-600 mt-1">
-                      {courseInstructor.paidInstallmentCount}
                     </p>
                   </div>
                 )}

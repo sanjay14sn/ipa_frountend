@@ -3,31 +3,21 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, BookOpen, CreditCard } from "lucide-react";
+import { Users, CreditCard } from "lucide-react";
 import CourseInstructorsTable from "./CourseInstructorsTable";
-import TrainingCourseInstructorsTable from "./TrainingCourseInstructorsTable";
 import PaymentCourseInstructorsTable from "./PaymentCourseInstructorsTable";
 import {
   CourseInstructorData,
-  TrainingCourseInstructorData,
 } from "@/services/course-instructor.service";
 
 interface CourseInstructorTabsProps {
   courseInstructors: CourseInstructorData[];
-  trainingCourseInstructors: TrainingCourseInstructorData[];
   paymentCourseInstructors: CourseInstructorData[];
   onCourseInstructorUpdate?: (
     updatedCourseInstructor: CourseInstructorData
   ) => void;
   onCourseInstructorDelete?: (courseInstructorId: string) => void;
   onCourseInstructorEdit?: (courseInstructor: CourseInstructorData) => void;
-  onTrainingCourseInstructorUpdate?: (
-    updatedCourseInstructor: TrainingCourseInstructorData
-  ) => void;
-  onTrainingCourseInstructorDelete?: (courseInstructorId: string) => void;
-  onTrainingCourseInstructorEdit?: (
-    courseInstructor: TrainingCourseInstructorData
-  ) => void;
   onPaymentCourseInstructorUpdate?: (
     updatedCourseInstructor: CourseInstructorData
   ) => void;
@@ -37,19 +27,15 @@ interface CourseInstructorTabsProps {
 
 export default function CourseInstructorTabs({
   courseInstructors,
-  trainingCourseInstructors,
   paymentCourseInstructors,
   onCourseInstructorUpdate,
   onCourseInstructorDelete,
   onCourseInstructorEdit,
-  onTrainingCourseInstructorUpdate,
-  onTrainingCourseInstructorDelete,
-  onTrainingCourseInstructorEdit,
   onPaymentCourseInstructorUpdate,
   onPaymentCourseInstructorDelete,
   onPaymentCourseInstructorEdit,
 }: CourseInstructorTabsProps) {
-  const [activeTab, setActiveTab] = useState<"regular" | "training" | "payment">("regular");
+  const [activeTab, setActiveTab] = useState<"regular" | "payment">("regular");
 
   return (
     <div className="space-y-6">
@@ -79,18 +65,6 @@ export default function CourseInstructorTabs({
             {paymentCourseInstructors.length}
           </Badge>
         </Button>
-        <Button
-          variant={activeTab === "training" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("training")}
-          className="flex items-center gap-2"
-        >
-          <BookOpen className="h-4 w-4" />
-          Training Course Instructors
-          <Badge variant="secondary" className="ml-1">
-            {trainingCourseInstructors.length}
-          </Badge>
-        </Button>
       </div>
 
       {/* Tab Content */}
@@ -109,15 +83,6 @@ export default function CourseInstructorTabs({
           onCourseInstructorUpdate={onPaymentCourseInstructorUpdate}
           onCourseInstructorDelete={onPaymentCourseInstructorDelete}
           onCourseInstructorEdit={onPaymentCourseInstructorEdit}
-        />
-      )}
-
-      {activeTab === "training" && (
-        <TrainingCourseInstructorsTable
-          courseInstructors={trainingCourseInstructors}
-          onCourseInstructorUpdate={onTrainingCourseInstructorUpdate}
-          onCourseInstructorDelete={onTrainingCourseInstructorDelete}
-          onCourseInstructorEdit={onTrainingCourseInstructorEdit}
         />
       )}
     </div>

@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Award, Target, Phone, MapPin } from "lucide-react";
 import { AdminTable } from "@/components/shared";
 import type {
   AdminTableColumn,
@@ -22,6 +22,9 @@ import RazorpayPayment, {
 } from "@/components/RazorpayPayment";
 import { useUser } from "@/context/user-context";
 import { toast } from "sonner";
+import { MultiLevelTrainingPaymentModal } from "./MultiLevelTrainingPaymentModal";
+import { GraduationHistoryModal } from "./GraduationHistoryModal";
+import { TrainingProgressModal } from "./TrainingProgressModal";
 
 interface PaymentCourseInstructorsTableProps {
   courseInstructors?: CourseInstructorData[];
@@ -49,6 +52,11 @@ export default function PaymentCourseInstructorsTable({
     orderData: CITrainingPaymentOrderResponse;
   } | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [multiLevelModalOpen, setMultiLevelModalOpen] = useState(false);
+  const [graduationModalOpen, setGraduationModalOpen] = useState(false);
+  const [progressModalOpen, setProgressModalOpen] = useState(false);
+  const [selectedInstructor, setSelectedInstructor] =
+    useState<CourseInstructorData | null>(null);
   const { user } = useUser();
   const itemsPerPage = 10;
 
@@ -206,56 +214,98 @@ export default function PaymentCourseInstructorsTable({
   const columns: AdminTableColumn<CourseInstructorData>[] = [
     {
       key: "name",
-      header: "Name",
+      header: "Instructor Details",
+      className: "w-[280px]",
       render: (row) => (
-        <div className="flex items-center space-x-2">
-          <span className="font-medium">{row.name}</span>
-          <Badge variant="outline" className="text-xs">
-            {row.instructorId}
+        <div className="flex flex-col space-y-2 py-1">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-base text-gray-900">
+              {row.name}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs font-mono">
+              {row.instructorId}
+            </Badge>
+            <span className="text-xs text-gray-500">ID</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "contact",
+      header: "Contact Information",
+      className: "w-[220px]",
+      render: (row) => (
+        <div className="flex flex-col space-y-1.5 py-1">
+          <div className="flex items-center gap-2 text-sm">
+            <Phone className="h-3.5 w-3.5 text-gray-400" />
+            <span className="text-gray-700">{row.phone}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <MapPin className="h-3.5 w-3.5 text-gray-400" />
+            <span className="text-gray-600">{row.city}</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Payment Status",
+      className: "w-[160px] text-center",
+      render: (row) => (
+        <div className="flex justify-center py-1">
+          <Badge
+            variant="outline"
+            className="bg-yellow-50 text-yellow-700 border-yellow-300 px-3 py-1"
+          >
+            {row.status}
           </Badge>
         </div>
       ),
     },
     {
-      key: "city",
-      header: "City",
-      render: (row) => <span>{row.city}</span>,
-    },
-    {
-      key: "phone",
-      header: "Phone",
-      render: (row) => <span>{row.phone}</span>,
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (row) => (
-        <Badge
-          variant="outline"
-          className={
-            row.status === "Payment"
-              ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-              : ""
-          }
-        >
-          {row.status}
-        </Badge>
-      ),
-    },
-    {
       key: "actions",
       header: "Actions",
+      className: "w-[380px]",
       render: (row) => (
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2.5 py-1">
           <Button
             variant="default"
             size="sm"
-            onClick={() => handlePayment(row.id)}
-            disabled={processingPayment === row.id || isProcessingPayment}
-            className="bg-green-600 hover:bg-green-700"
+            onClick={() => {
+              setSelectedInstructor(row);
+              setMultiLevelModalOpen(true);
+            }}
+            disabled={isProcessingPayment}
+            className="bg-primary hover:bg-primary/90 font-medium h-9 px-4"
           >
-            <CreditCard className="h-4 w-4 mr-1" />
-            {processingPayment === row.id ? "Processing..." : "Make Payment"}
+            <CreditCard className="h-4 w-4 mr-2" />
+            Pay for Training
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSelectedInstructor(row);
+              setProgressModalOpen(true);
+            }}
+            className="h-9 px-4"
+          >
+            <Target className="h-4 w-4 mr-2" />
+            View Progress
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSelectedInstructor(row);
+              setGraduationModalOpen(true);
+            }}
+            className="h-9 px-3"
+            title="View Graduation History"
+          >
+            <Award className="h-4 w-4" />
           </Button>
         </div>
       ),
@@ -287,13 +337,35 @@ export default function PaymentCourseInstructorsTable({
         columns={columns}
         getRowId={(courseInstructor) => courseInstructor.id.toString()}
         renderMainCell={(courseInstructor) => (
-          <div className="flex flex-col">
-            <div className="font-medium text-gray-900">
-              {courseInstructor.name}
+          <div className="flex items-center justify-between w-full pr-6 py-2">
+            <div className="flex flex-col space-y-1.5">
+              <div className="font-semibold text-gray-900 text-lg">
+                {courseInstructor.name}
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <span className="text-gray-500 flex items-center gap-1.5">
+                  <Badge variant="outline" className="font-mono text-xs">
+                    {courseInstructor.instructorId}
+                  </Badge>
+                </span>
+                <span className="text-gray-400">•</span>
+                <span className="text-gray-600 flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {courseInstructor.city}
+                </span>
+                <span className="text-gray-400">•</span>
+                <span className="text-gray-600 flex items-center gap-1">
+                  <Phone className="h-3.5 w-3.5" />
+                  {courseInstructor.phone}
+                </span>
+              </div>
             </div>
-            <div className="text-sm text-gray-500">
-              {courseInstructor.instructorId} • {courseInstructor.city}
-            </div>
+            <Badge
+              variant="outline"
+              className="bg-yellow-50 text-yellow-700 border-yellow-300 px-4 py-1.5 text-sm font-medium"
+            >
+              Payment Pending
+            </Badge>
           </div>
         )}
         filters={filters}
@@ -335,6 +407,42 @@ export default function PaymentCourseInstructorsTable({
             phone: user.profile?.phone || "",
           }}
         />
+      )}
+
+      {/* Multi-Level Training Payment Modal */}
+      {selectedInstructor && (
+        <>
+          <MultiLevelTrainingPaymentModal
+            isOpen={multiLevelModalOpen}
+            onClose={() => {
+              setMultiLevelModalOpen(false);
+              setSelectedInstructor(null);
+            }}
+            instructorId={selectedInstructor.id}
+            instructorName={selectedInstructor.name}
+            onPaymentSuccess={() => {
+              onCourseInstructorUpdate?.(selectedInstructor);
+            }}
+          />
+          <GraduationHistoryModal
+            isOpen={graduationModalOpen}
+            onClose={() => {
+              setGraduationModalOpen(false);
+              setSelectedInstructor(null);
+            }}
+            instructorId={selectedInstructor.id}
+            instructorName={selectedInstructor.name}
+          />
+          <TrainingProgressModal
+            isOpen={progressModalOpen}
+            onClose={() => {
+              setProgressModalOpen(false);
+              setSelectedInstructor(null);
+            }}
+            instructorId={selectedInstructor.id}
+            instructorName={selectedInstructor.name}
+          />
+        </>
       )}
     </div>
   );

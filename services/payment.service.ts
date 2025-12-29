@@ -144,3 +144,41 @@ export async function verifyCITrainingPayment(
   );
   return response.data.result;
 }
+
+// Multi-level training payment interfaces
+export interface MultiLevelCITrainingPaymentRequest {
+  trainingLevelIds: number[];
+}
+
+export interface MultiLevelCITrainingPaymentOrderResponse {
+  orderId: string;
+  amount: number;
+  currency: string;
+  ciId: number;
+  ciName: string;
+  trainingLevels: string;
+  paymentType: string;
+  key: string;
+  message?: string;
+}
+
+export async function initiateMultiLevelCITrainingPayment(
+  ciId: number,
+  trainingLevelIds: number[]
+): Promise<MultiLevelCITrainingPaymentOrderResponse> {
+  const response = await api.post<{ result: MultiLevelCITrainingPaymentOrderResponse }>(
+    `/payment/ci-training/multi-level/initiate/${ciId}`,
+    { trainingLevelIds }
+  );
+  return response.data.result;
+}
+
+export async function verifyMultiLevelCITrainingPayment(
+  paymentData: VerifyPaymentDto
+): Promise<PaymentVerificationResponse> {
+  const response = await api.post<{ result: PaymentVerificationResponse }>(
+    "/payment/ci-training/multi-level/verify",
+    paymentData
+  );
+  return response.data.result;
+}

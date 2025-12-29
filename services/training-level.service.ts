@@ -6,6 +6,7 @@ export interface TrainingLevel {
   description?: string;
   isActive: boolean;
   amount: number;
+  rank?: number;
   createdAt?: string;
   updatedAt?: string;
 }

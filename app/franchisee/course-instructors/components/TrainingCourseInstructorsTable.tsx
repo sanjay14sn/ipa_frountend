@@ -34,8 +34,7 @@ export default function TrainingCourseInstructorsTable({
     new Set()
   );
   const [searchTerm, setSearchTerm] = useState("");
-  const [trainingTypeFilter, setTrainingTypeFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"name" | "amount" | "installmentCount">(
+  const [sortBy, setSortBy] = useState<"name" | "amount">(
     "name"
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -59,19 +58,16 @@ export default function TrainingCourseInstructorsTable({
         courseInstructor.instructorId
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
-        courseInstructor.trainingType
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
+        (courseInstructor.trainingLevelName &&
+          courseInstructor.trainingLevelName
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())) ||
         (courseInstructor.additionalDetails &&
           courseInstructor.additionalDetails
             .toLowerCase()
             .includes(searchTerm.toLowerCase()));
 
-      const matchesTrainingType =
-        trainingTypeFilter === "all" ||
-        courseInstructor.trainingType === trainingTypeFilter;
-
-      return matchesSearch && matchesTrainingType;
+      return matchesSearch;
     });
 
     // Sort the filtered data
@@ -85,9 +81,6 @@ export default function TrainingCourseInstructorsTable({
         case "amount":
           comparison = a.amount - b.amount;
           break;
-        case "installmentCount":
-          comparison = a.installmentCount - b.installmentCount;
-          break;
         default:
           comparison = 0;
       }
@@ -99,7 +92,6 @@ export default function TrainingCourseInstructorsTable({
   }, [
     trainingCourseInstructors,
     searchTerm,
-    trainingTypeFilter,
     sortBy,
     sortOrder,
   ]);
@@ -124,19 +116,6 @@ export default function TrainingCourseInstructorsTable({
     }
   };
 
-  const getTrainingTypeColor = (trainingType: string) => {
-    switch (trainingType) {
-      case "Elementary":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "Regular":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "Grand":
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
   // Helper function to format currency
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat("en-IN", {
@@ -145,13 +124,6 @@ export default function TrainingCourseInstructorsTable({
       minimumFractionDigits: 0,
     }).format(amount);
   };
-
-  // Get unique values for filters
-  const uniqueTrainingTypes = [
-    ...new Set(
-      trainingCourseInstructors?.map((ci) => ci.trainingType).filter(Boolean)
-    ),
-  ];
 
   // Table configuration
   const columns: AdminTableColumn<TrainingCourseInstructorData>[] = [
@@ -166,13 +138,14 @@ export default function TrainingCourseInstructorsTable({
       className: "text-center",
       render: (courseInstructor) => (
         <div className="space-y-1">
-          <Badge
-            className={`${getTrainingTypeColor(
-              courseInstructor.trainingType || "Unknown"
-            )} border`}
-          >
-            {courseInstructor.trainingType || "Unknown"}
-          </Badge>
+          {courseInstructor.trainingLevelName && (
+            <Badge
+              variant="outline"
+              className="bg-blue-50 text-blue-700 border-blue-200"
+            >
+              {courseInstructor.trainingLevelName}
+            </Badge>
+          )}
           <div className="text-sm text-gray-600">
             {courseInstructor.additionalDetails || "No details"}
           </div>
@@ -187,10 +160,6 @@ export default function TrainingCourseInstructorsTable({
         <div className="text-sm space-y-1">
           <div>
             <strong>Total:</strong> {formatCurrency(courseInstructor.amount)}
-          </div>
-          <div>
-            <strong>Installments:</strong> {courseInstructor.installmentCount} ×{" "}
-            {formatCurrency(courseInstructor.installmentAmount)}
           </div>
           {courseInstructor.paidAmount && (
             <div className="text-green-600">
@@ -238,22 +207,9 @@ export default function TrainingCourseInstructorsTable({
     },
   ];
 
-  const filters: AdminTableFilter[] = [
-    {
-      key: "trainingType",
-      label: "Training Type",
-      options: [
-        { value: "all", label: "All Types" },
-        ...uniqueTrainingTypes.map((type) => ({ value: type, label: type })),
-      ],
-      defaultValue: "all",
-    },
-  ];
-
   const sortOptions: AdminTableSortOption[] = [
     { value: "name", label: "Name" },
     { value: "amount", label: "Amount" },
-    { value: "installmentCount", label: "Installments" },
   ];
 
   return (
@@ -286,15 +242,11 @@ export default function TrainingCourseInstructorsTable({
       )}
       searchPlaceholder="Search training course instructors, instructor IDs, or names..."
       onSearchChange={setSearchTerm}
-      filters={filters}
-      onFilterChange={(key, value) => {
-        if (key === "trainingType") setTrainingTypeFilter(value as string);
-      }}
       sortOptions={sortOptions}
       defaultSortBy="name"
       defaultSortOrder="DESC"
       onSortChange={(newSortBy, newSortOrder) => {
-        setSortBy(newSortBy as "name" | "amount" | "installmentCount");
+        setSortBy(newSortBy as "name" | "amount");
         setSortOrder(newSortOrder.toLowerCase() as "asc" | "desc");
       }}
       pagination={{ total: filteredData.length, totalPages }}

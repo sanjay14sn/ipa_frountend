@@ -160,7 +160,7 @@ export default function CompletedTrainingTable({
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center text-sm text-gray-600">
-                    {instructors[0]?.trainingType || "N/A"}
+                    {instructors[0]?.trainingLevelName || "N/A"}
                   </TableCell>
                 </TableRow>
 

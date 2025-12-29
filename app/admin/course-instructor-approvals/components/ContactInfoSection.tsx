@@ -177,7 +177,7 @@ export default function ContactInfoSection({
                           </span>
                         </div>
                         <p className="font-medium text-gray-900">
-                          {instructor.franchiseName}
+                          {instructor.franchise?.name || "N/A"}
                         </p>
                         {instructor.address && (
                           <p className="text-sm text-gray-600">

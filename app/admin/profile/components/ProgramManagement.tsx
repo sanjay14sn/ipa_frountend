@@ -51,6 +51,8 @@ import {
 import { AdminTable } from "@/components/shared";
 import type { AdminTableColumn } from "@/components/shared/AdminTable";
 import { LevelManagement } from "./LevelManagement";
+import { StreamManagement } from "./StreamManagement";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   getProgramKits,
   createProgramKit,
@@ -897,10 +899,24 @@ export function ProgramManagement() {
         )}
         renderExpandedContent={(program) => (
           <div className="bg-gray-50 p-6 border-t">
-            <LevelManagement
-              programId={program.id}
-              programName={program.name}
-            />
+            <Tabs defaultValue="streams" className="w-full">
+              <TabsList className="grid w-full max-w-md grid-cols-2">
+                <TabsTrigger value="streams">Streams</TabsTrigger>
+                <TabsTrigger value="levels">Levels</TabsTrigger>
+              </TabsList>
+              <TabsContent value="streams" className="mt-4">
+                <StreamManagement
+                  programId={program.id}
+                  programName={program.name}
+                />
+              </TabsContent>
+              <TabsContent value="levels" className="mt-4">
+                <LevelManagement
+                  programId={program.id}
+                  programName={program.name}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         )}
         pagination={{ total: programs.length, totalPages }}

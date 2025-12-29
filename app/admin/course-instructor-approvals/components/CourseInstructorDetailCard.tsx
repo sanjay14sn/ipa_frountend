@@ -126,9 +126,36 @@ export default function CourseInstructorDetailCard({
                 <div>
                   <span className="text-gray-500">Franchise</span>
                   <p className="text-gray-900 mt-1">
-                    {instructor.franchiseName}
+                    {instructor.franchise.name}
                   </p>
                 </div>
+                {instructor.trainingLevels &&
+                  instructor.trainingLevels.length > 0 && (
+                    <div>
+                      <span className="text-gray-500">Training Levels</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {instructor.trainingLevels.map((level: any) => (
+                          <span
+                            key={level.id}
+                            className="inline-block px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200"
+                          >
+                            {level.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                {instructor.totalTrainingAmount !== undefined &&
+                  instructor.totalTrainingAmount > 0 && (
+                    <div>
+                      <span className="text-gray-500">
+                        Total Training Amount
+                      </span>
+                      <p className="text-gray-900 mt-1 font-semibold text-green-600">
+                        ₹{instructor.totalTrainingAmount.toLocaleString()}
+                      </p>
+                    </div>
+                  )}
               </div>
             </div>
           </div>

@@ -51,12 +51,7 @@ export default function CourseInstructorsTable({
       return [];
     }
 
-    // Filter out course instructors with training status
     let filtered = courseInstructors.filter((courseInstructor) => {
-      // Exclude course instructors with training status
-      if (courseInstructor.status === "Training") {
-        return false;
-      }
       const matchesSearch =
         courseInstructor.name
           .toLowerCase()
@@ -77,7 +72,8 @@ export default function CourseInstructorsTable({
       const matchesStatus =
         statusFilter === "all" ||
         (statusFilter === "active" && courseInstructor.status === "Active") ||
-        (statusFilter === "inactive" && courseInstructor.status !== "Active");
+        (statusFilter === "training" && courseInstructor.status === "Training") ||
+        (statusFilter === "inactive" && courseInstructor.status !== "Active" && courseInstructor.status !== "Training");
 
       const matchesBloodGroup =
         bloodGroupFilter === "all" ||
@@ -278,6 +274,7 @@ export default function CourseInstructorsTable({
       options: [
         { value: "all", label: "All Status" },
         { value: "active", label: "Active" },
+        { value: "training", label: "Training" },
         { value: "inactive", label: "Inactive" },
       ],
       defaultValue: "all",

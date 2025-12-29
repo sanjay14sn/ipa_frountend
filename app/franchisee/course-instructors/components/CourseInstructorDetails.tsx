@@ -1,9 +1,12 @@
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { CourseInstructorData } from "@/services/course-instructor.service";
 import ProfessionalInfoSection, {
   professionalDotRef,
 } from "./ProfessionalInfoSection";
 import ContactInfoSection, { contactDotRef } from "./ContactInfoSection";
+import { TrainingProgressView } from "./TrainingProgressView";
+
+export const trainingProgressDotRef = React.createRef<HTMLDivElement>();
 
 interface CourseInstructorDetailsProps {
   courseInstructor: CourseInstructorData;
@@ -47,14 +50,23 @@ export default function CourseInstructorDetails({
       if (containerRef.current) {
         const containerTop = containerRef.current.getBoundingClientRect().top;
 
-        // Always use contact section dot as reference for the vertical line
-        if (contactDotRef.current) {
+        // Use training progress section dot as reference (last section)
+        // Fallback to contact section dot, then professional dot
+        let dotRef = trainingProgressDotRef.current;
+        if (!dotRef) {
+          dotRef = contactDotRef.current;
+        }
+        if (!dotRef) {
+          dotRef = professionalDotRef.current;
+        }
+
+        if (dotRef) {
           const dotCenter =
-            contactDotRef.current.getBoundingClientRect().top +
-            contactDotRef.current.offsetHeight / 2;
+            dotRef.getBoundingClientRect().top +
+            dotRef.offsetHeight / 2;
           setLineHeight(dotCenter - containerTop);
         } else {
-          // Fallback if contact section is not rendered yet
+          // Fallback if no section is rendered yet
           const firstSection = containerRef.current.querySelector(".relative");
           if (firstSection) {
             const sectionTop = firstSection.getBoundingClientRect().top;
@@ -155,6 +167,21 @@ export default function CourseInstructorDetails({
             isExpanded={expandedRows.has(`${courseInstructor.id}-contact`)}
             onToggle={onToggleRow}
           />
+
+          {/* Training Progress Section */}
+          <div className="relative">
+            <div ref={trainingProgressDotRef} className="absolute -left-6 top-4 w-6 h-4">
+              <div className="absolute top-0 left-0 w-6 h-4 border-l-2 border-b-2 border-primary rounded-bl-lg"></div>
+              <div className="absolute top-4 left-6 w-2 h-2 bg-primary rounded-full -translate-x-1 -translate-y-1"></div>
+            </div>
+            <TrainingProgressView
+              instructorId={courseInstructor.id}
+              instructorName={courseInstructor.name}
+              onPaymentSuccess={() => {
+                onCourseInstructorUpdate?.(courseInstructor);
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>

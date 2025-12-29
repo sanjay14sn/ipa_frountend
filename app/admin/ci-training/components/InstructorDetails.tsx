@@ -60,17 +60,15 @@ export default function InstructorDetails({
     return () => clearTimeout(timeoutId);
   }, [instructors, expandedRows]);
 
-  const getTrainingTypeColor = (type: string) => {
-    switch (type.toLowerCase()) {
-      case "elementary":
-        return "bg-blue-50 text-blue-700 border-blue-200";
-      case "regular":
-        return "bg-green-50 text-green-700 border-green-200";
-      case "grand":
-        return "bg-purple-50 text-purple-700 border-purple-200";
-      default:
-        return "bg-gray-50 text-gray-700 border-gray-200";
-    }
+  const getTrainingLevelColor = (order: number) => {
+    const colors = [
+      "bg-blue-50 text-blue-700 border-blue-200",
+      "bg-green-50 text-green-700 border-green-200",
+      "bg-purple-50 text-purple-700 border-purple-200",
+      "bg-orange-50 text-orange-700 border-orange-200",
+      "bg-pink-50 text-pink-700 border-pink-200",
+    ];
+    return colors[(order - 1) % colors.length] || "bg-gray-50 text-gray-700 border-gray-200";
   };
 
   const formatCurrency = (amount: number) => {
@@ -111,7 +109,8 @@ export default function InstructorDetails({
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[250px]">Instructor</TableHead>
-                    <TableHead className="text-center">Training Type</TableHead>
+                    <TableHead className="text-center">Training Level</TableHead>
+                    <TableHead className="text-center">Level Order</TableHead>
                     <TableHead className="text-center">Amount</TableHead>
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
@@ -119,17 +118,17 @@ export default function InstructorDetails({
                 </TableHeader>
                 <TableBody>
                   {instructors.map((instructor, index) => {
-                    const instructorId = `${instructor.instructorId}-${instructor.instructorName}`;
+                    const instructorKey = `training-${instructor.id}`;
                     return (
-                      <React.Fragment key={instructorId}>
+                      <React.Fragment key={instructorKey}>
                         <TableRow className="hover:bg-gray-50/50">
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => onToggleRow(instructorId)}
+                                onClick={() => onToggleRow(instructorKey)}
                                 className="p-1 hover:bg-gray-100 rounded"
                               >
-                                {expandedRows.has(instructorId) ? (
+                                {expandedRows.has(instructorKey) ? (
                                   <ChevronDown className="w-4 h-4" />
                                 ) : (
                                   <ChevronRight className="w-4 h-4" />
@@ -146,12 +145,22 @@ export default function InstructorDetails({
                             </div>
                           </TableCell>
                           <TableCell className="text-center">
-                            <Badge
-                              className={getTrainingTypeColor(
-                                instructor.trainingType
+                            <div className="flex flex-col items-center gap-1">
+                              <Badge
+                                className={getTrainingLevelColor(instructor.displayOrder)}
+                              >
+                                {instructor.trainingLevelName || "N/A"}
+                              </Badge>
+                              {instructor.isActive && (
+                                <span className="text-xs text-green-600 font-medium">
+                                  Currently Active
+                                </span>
                               )}
-                            >
-                              {instructor.trainingType}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="font-mono">
+                              Level {instructor.displayOrder}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
@@ -184,7 +193,7 @@ export default function InstructorDetails({
                         </TableRow>
 
                         {/* Expanded Instructor Details */}
-                        {expandedRows.has(instructorId) && (
+                        {expandedRows.has(instructorKey) && (
                           <TableRow>
                             <TableCell colSpan={5} className="p-0">
                               <InstructorDetailCard

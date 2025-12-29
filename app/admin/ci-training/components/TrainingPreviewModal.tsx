@@ -139,7 +139,7 @@ export default function TrainingPreviewModal({
                     ID: {instructor.instructorId}
                   </p>
                   <p className="text-xs opacity-80">
-                    Training: {instructor.trainingType}
+                    Training: {instructor.trainingLevelName || "N/A"}
                   </p>
                 </div>
               </div>

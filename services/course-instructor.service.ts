@@ -1,5 +1,3 @@
-
-
 export interface Response {
   statusCode: number;
   timeStamp: string;
@@ -27,7 +25,10 @@ export enum CITrainingType {
 
 export interface CourseInstructorData {
   id: number;
-  franchiseId: number;
+  franchise: {
+    id: number;
+    name: string;
+  };
   programId: number;
   instructorId: string;
   name: string;
@@ -54,7 +55,10 @@ export interface CourseInstructorsResponse extends Response {
 }
 
 export interface CreateCourseInstructorRequest {
-  franchiseId: number;
+  franchise: {
+    id: number;
+    name: string;
+  };
   programId: number;
   instructorId: string;
   name: string;
@@ -70,7 +74,6 @@ export interface CreateCourseInstructorRequest {
   expiryDate: Date;
   trainingProof?: string;
   trainingLevelId?: number;
-  levelId?: number;
   additionalDetails?: string;
 }
 
@@ -142,10 +145,22 @@ export async function deactivateCourseInstructor(
 }
 
 // Admin-specific interfaces and functions
+export interface TrainingLevelInfo {
+  id: number;
+  name: string;
+  amount: number;
+  displayOrder: number;
+}
+
 export interface AdminCourseInstructorData extends CourseInstructorData {
   instructorId: string;
   status: "Pending" | "Approved" | "Rejected";
-  franchiseName: string;
+  franchise: {
+    id: number;
+    name: string;
+  };
+  trainingLevels?: TrainingLevelInfo[];
+  totalTrainingAmount?: number;
 }
 
 export interface AdminCourseInstructorsByFranchise {
@@ -196,8 +211,6 @@ export async function rejectCourseInstructor(
 export interface ApproveTrainingRequest {
   dateOfTraining: Date;
   amount: number;
-  installmentCount?: number;
-  installmentAmount?: number;
 }
 
 export interface ApproveTrainingResponse extends Response {
@@ -205,8 +218,6 @@ export interface ApproveTrainingResponse extends Response {
     instructorId: string;
     dateOfTraining: string;
     amount: number;
-    installmentCount?: number;
-    installmentAmount?: number;
     approvedAt: string;
     approvedBy: string;
   };
@@ -227,13 +238,19 @@ export async function approveTraining(
 export interface CITrainingData {
   id: number;
   instructorId: string;
-  trainingType: string;
-  additionalDetails?: string;
-  amount: number;
-  installmentCount?: number;
-  installmentAmount?: number;
   instructorName: string;
-  franchiseName: string;
+  trainingLevelId: number;
+  trainingLevelName: string;
+  amount: number;
+  additionalDetails?: string;
+  displayOrder: number;
+  isActive: boolean;
+  isCompleted: boolean;
+  dateOfTraining?: string;
+  franchise: {
+    id: number;
+    name: string;
+  };
   isApproved?: boolean;
 }
 
@@ -254,15 +271,26 @@ export interface CompleteTrainingResponse extends Response {
   result: string;
 }
 
-export async function completeTraining(
-  id: number
-): Promise<CompleteTrainingResponse> {
-  const response = await api.patch<CompleteTrainingResponse>(
-    `/ci-training/complete/${id}`
-  );
-  return response.data;
+export interface CompleteTrainingRequest {
+  marksObtained?: number;
+  certificateNumber?: string;
+  notes?: string;
 }
 
+export interface CompleteTrainingWithGraduationResponse {
+  message: string;
+  graduationRecorded: boolean;
+}
+
+export async function completeTraining(
+  id: number,
+  data?: CompleteTrainingRequest
+): Promise<CompleteTrainingWithGraduationResponse> {
+  const response = await api.patch<{
+    result: CompleteTrainingWithGraduationResponse;
+  }>(`/ci-training/complete/${id}`, data || {});
+  return response.data.result;
+}
 
 // Training Course Instructor interfaces and functions
 export interface TrainingCourseInstructorData {
@@ -270,13 +298,10 @@ export interface TrainingCourseInstructorData {
   instructorId: string;
   name: string;
   status: string;
-  trainingType: string;
+  trainingLevelName?: string;
   additionalDetails?: string;
   amount: number;
-  installmentCount: number;
-  installmentAmount: number;
   paidAmount?: number;
-  paidInstallmentCount?: number;
 }
 
 export interface TrainingCourseInstructorsResponse extends Response {
@@ -316,16 +341,18 @@ export async function getPaginatedCourseInstructors(
 ): Promise<PaginatedCourseInstructorsResponse> {
   const queryParams = new URLSearchParams();
 
-  if (params.page !== undefined) queryParams.append("page", params.page.toString());
-  if (params.limit !== undefined) queryParams.append("limit", params.limit.toString());
+  if (params.page !== undefined)
+    queryParams.append("page", params.page.toString());
+  if (params.limit !== undefined)
+    queryParams.append("limit", params.limit.toString());
   if (params.search) queryParams.append("search", params.search);
   if (params.status) queryParams.append("status", params.status);
   if (params.sortBy) queryParams.append("sortBy", params.sortBy);
   if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
 
-  const response = await api.get<{ result: PaginatedCourseInstructorsResponse }>(
-    `/course-instructor/paginated/${status}?${queryParams.toString()}`
-  );
+  const response = await api.get<{
+    result: PaginatedCourseInstructorsResponse;
+  }>(`/course-instructor/paginated/${status}?${queryParams.toString()}`);
   return response.data.result;
 }
 
@@ -334,15 +361,128 @@ export async function getPaginatedFranchiseeCourseInstructors(
 ): Promise<PaginatedCourseInstructorsResponse> {
   const queryParams = new URLSearchParams();
 
-  if (params.page !== undefined) queryParams.append("page", params.page.toString());
-  if (params.limit !== undefined) queryParams.append("limit", params.limit.toString());
+  if (params.page !== undefined)
+    queryParams.append("page", params.page.toString());
+  if (params.limit !== undefined)
+    queryParams.append("limit", params.limit.toString());
   if (params.search) queryParams.append("search", params.search);
   if (params.status) queryParams.append("status", params.status);
   if (params.sortBy) queryParams.append("sortBy", params.sortBy);
   if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
 
-  const response = await api.get<{ result: PaginatedCourseInstructorsResponse }>(
-    `/course-instructor/paginated-franchisee?${queryParams.toString()}`
+  const response = await api.get<{
+    result: PaginatedCourseInstructorsResponse;
+  }>(`/course-instructor/paginated-franchisee?${queryParams.toString()}`);
+  return response.data.result;
+}
+
+// CI Level Graduation interfaces and functions
+export interface CILevelGraduation {
+  id: number;
+  instructorId: number;
+  trainingLevelId: number;
+  graduationDate: string;
+  certificateNumber?: string;
+  marksObtained?: number;
+  notes?: string;
+  trainingLevel: {
+    id: number;
+    name: string;
+    description: string;
+    amount: number;
+  };
+}
+
+export interface CIGraduationsResponse {
+  result: CILevelGraduation[];
+}
+
+export async function getCIGraduations(
+  instructorId: number
+): Promise<CILevelGraduation[]> {
+  const response = await api.get<CIGraduationsResponse>(
+    `/ci-training/graduations/${instructorId}`
   );
   return response.data.result;
+}
+
+export interface CIGraduationsByFranchise {
+  [franchiseName: string]: Array<{
+    id: number;
+    instructorName: string;
+    instructorCode: string;
+    levelName: string;
+    graduationDate: string;
+    certificateNumber?: string;
+    marksObtained?: number;
+    notes?: string;
+  }>;
+}
+
+export interface AllCIGraduationsResponse {
+  result: CIGraduationsByFranchise;
+}
+
+export async function getAllCIGraduations(): Promise<CIGraduationsByFranchise> {
+  const response = await api.get<AllCIGraduationsResponse>(
+    "/ci-training/graduations-all"
+  );
+  return response.data.result;
+}
+
+// CI Training Progress interfaces and functions
+export interface CITrainingProgressItem {
+  id: number;
+  trainingLevelId: number;
+  trainingLevelName: string;
+  amount: number;
+  isCompleted: boolean;
+  isActive: boolean;
+  paid: boolean;
+  displayOrder: number;
+}
+
+export interface CITrainingProgress {
+  totalTrainings: number;
+  completedTrainings: number;
+  progress: number;
+  trainings: CITrainingProgressItem[];
+  activeTraining: {
+    id: number;
+    trainingLevelName: string;
+    displayOrder: number;
+  } | null;
+}
+
+export interface CITrainingProgressResponse {
+  result: CITrainingProgress;
+}
+
+export async function getCITrainingProgress(
+  instructorId: number
+): Promise<CITrainingProgress> {
+  const response = await api.get<CITrainingProgressResponse>(
+    `/ci-training/progress/${instructorId}`
+  );
+  return response.data.result;
+}
+
+export interface RequestAdditionalTrainingRequest {
+  trainingLevelIds: number[];
+  additionalDetails?: string;
+}
+
+export interface RequestAdditionalTrainingResponse extends Response {
+  result: any[];
+}
+
+export async function requestAdditionalTraining(
+  instructorId: number,
+  data: RequestAdditionalTrainingRequest
+): Promise<RequestAdditionalTrainingResponse> {
+  const response = await api.post<RequestAdditionalTrainingResponse>(
+    `/course-instructor/request-training/${instructorId}`,
+    data
+  );
+  return response.data;
 }

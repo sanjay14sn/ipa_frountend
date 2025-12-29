@@ -73,10 +73,10 @@ export default function CompleteTrainingConfirmation({
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-gray-600">
-                Training Type:
+                Training Level:
               </span>
               <span className="text-sm text-gray-900">
-                {instructor.trainingType}
+                {instructor.trainingLevelName || "N/A"}
               </span>
             </div>
             <div className="flex justify-between items-center">

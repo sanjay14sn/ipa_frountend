@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Trash2, Edit2, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +27,10 @@ import {
   type CreateLevelDto,
   type UpdateLevelDto,
 } from "@/services/level.service";
+import {
+  getStreamsByProgram,
+  type Stream,
+} from "@/services/stream.service";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +62,8 @@ export function LevelManagement({
 }: LevelManagementProps) {
   const router = useRouter();
   const [levels, setLevels] = useState<Level[]>([]);
+  const [streams, setStreams] = useState<Stream[]>([]);
+  const [selectedStreamId, setSelectedStreamId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -62,7 +75,7 @@ export function LevelManagement({
 
   const itemsPerPage = 10;
 
-  const [formData, setFormData] = useState<Omit<CreateLevelDto, "programId">>({
+  const [formData, setFormData] = useState<Omit<CreateLevelDto, "streamId">>({
     name: "",
     code: "",
     totalMarks: 100,
@@ -74,8 +87,27 @@ export function LevelManagement({
   const [editFormData, setEditFormData] = useState<UpdateLevelDto>({});
 
   useEffect(() => {
+    loadStreams();
     loadLevels();
   }, [programId]);
+
+  const loadStreams = async () => {
+    try {
+      const data = await getStreamsByProgram(programId);
+      setStreams(data);
+      // Auto-select first active stream
+      if (data.length > 0) {
+        const activeStream = data.find(s => s.isActive) || data[0];
+        setSelectedStreamId(activeStream.id);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load streams",
+        variant: "destructive",
+      });
+    }
+  };
 
   const loadLevels = async () => {
     try {
@@ -113,10 +145,19 @@ export function LevelManagement({
       return;
     }
 
+    if (!selectedStreamId) {
+      toast({
+        title: "Error",
+        description: "Please select a stream",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await createLevel({
         ...formData,
-        programId,
+        streamId: selectedStreamId,
       });
       toast({
         title: "Success",
@@ -341,6 +382,29 @@ export function LevelManagement({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="stream">Stream *</Label>
+              <Select
+                value={selectedStreamId?.toString() || ""}
+                onValueChange={(value) => setSelectedStreamId(Number(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a stream" />
+                </SelectTrigger>
+                <SelectContent>
+                  {streams.map((stream) => (
+                    <SelectItem key={stream.id} value={stream.id.toString()}>
+                      {stream.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {streams.length === 0 && (
+                <p className="text-sm text-amber-600">
+                  ⚠️ No streams available. Please create a stream first.
+                </p>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Level Name</Label>

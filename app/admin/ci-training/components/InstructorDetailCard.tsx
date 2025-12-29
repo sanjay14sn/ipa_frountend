@@ -43,17 +43,15 @@ export default function InstructorDetailCard({
     }).format(amount);
   };
 
-  const getTrainingTypeColor = (type: string) => {
-    switch (type.toLowerCase()) {
-      case "elementary":
-        return "bg-blue-50 text-blue-700 border-blue-200";
-      case "regular":
-        return "bg-green-50 text-green-700 border-green-200";
-      case "grand":
-        return "bg-purple-50 text-purple-700 border-purple-200";
-      default:
-        return "bg-gray-50 text-gray-700 border-gray-200";
-    }
+  const getTrainingLevelColor = (order: number) => {
+    const colors = [
+      "bg-blue-50 text-blue-700 border-blue-200",
+      "bg-green-50 text-green-700 border-green-200",
+      "bg-purple-50 text-purple-700 border-purple-200",
+      "bg-orange-50 text-orange-700 border-orange-200",
+      "bg-pink-50 text-pink-700 border-pink-200",
+    ];
+    return colors[(order - 1) % colors.length] || "bg-gray-50 text-gray-700 border-gray-200";
   };
 
   return (
@@ -95,15 +93,22 @@ export default function InstructorDetailCard({
                 </div>
 
                 <div>
-                  <span className="text-gray-500">Training Type</span>
+                  <span className="text-gray-500">Training Level</span>
                   <p className="text-gray-900 mt-1">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${getTrainingTypeColor(
-                        instructor.trainingType
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${getTrainingLevelColor(
+                        instructor.displayOrder
                       )}`}
                     >
-                      {instructor.trainingType}
+                      {instructor.trainingLevelName || "N/A"}
                     </span>
+                  </p>
+                </div>
+
+                <div>
+                  <span className="text-gray-500">Level Order</span>
+                  <p className="text-gray-900 mt-1 font-mono">
+                    Level {instructor.displayOrder}
                   </p>
                 </div>
 

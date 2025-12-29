@@ -71,6 +71,7 @@ export default function TrainingLevelsPage() {
     description: "",
     isActive: true,
     amount: 0,
+    rank: undefined as number | undefined,
   });
   const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
   const [newLevelInput, setNewLevelInput] = useState("");
@@ -108,7 +109,11 @@ export default function TrainingLevelsPage() {
     try {
       setLoadingLevels(true);
       const data = await getLevelsByProgram(programId);
-      setProgramLevels(data.filter((level) => level.isActive));
+      // Filter active levels and sort by display order
+      const activeLevels = data
+        .filter((level) => level.isActive)
+        .sort((a, b) => a.displayOrder - b.displayOrder);
+      setProgramLevels(activeLevels);
     } catch (error) {
       console.error("Error fetching levels:", error);
       setProgramLevels([]);
@@ -116,6 +121,16 @@ export default function TrainingLevelsPage() {
       setLoadingLevels(false);
     }
   };
+
+  // Group levels by display order
+  const groupedLevelsByOrder = programLevels.reduce((acc, level) => {
+    const order = level.displayOrder;
+    if (!acc[order]) {
+      acc[order] = [];
+    }
+    acc[order].push(level);
+    return acc;
+  }, {} as Record<number, Level[]>);
 
   const fetchTrainingLevels = async () => {
     try {
@@ -132,7 +147,7 @@ export default function TrainingLevelsPage() {
   const handleOpenDialog = (level?: TrainingLevel) => {
     if (level) {
       setSelectedLevel(level);
-      // Parse existing levels from comma-separated string
+      // Parse existing levels from comma-separated string (for display)
       const levels = level.name
         ? level.name
             .split(",")
@@ -140,20 +155,27 @@ export default function TrainingLevelsPage() {
             .filter((item) => item.length > 0)
         : [];
       setSelectedLevels(levels);
+      // Populate all fields including rank
       setFormData({
-        name: level.name,
+        name: level.name || "",
         description: level.description || "",
-        isActive: level.isActive,
-        amount: level.amount || 0,
+        isActive: level.isActive ?? true,
+        amount: level.amount ?? 0,
+        rank: level.rank ?? undefined,
       });
+      // Don't reset program selection when editing - allow editing without program
+      // Keep existing program selection if any
     } else {
       setSelectedLevel(null);
       setSelectedLevels([]);
+      setSelectedProgramId(null);
+      setProgramLevels([]);
       setFormData({
         name: "",
         description: "",
         isActive: true,
         amount: 0,
+        rank: undefined,
       });
     }
     setNewLevelInput("");
@@ -172,6 +194,7 @@ export default function TrainingLevelsPage() {
       description: "",
       isActive: true,
       amount: 0,
+      rank: undefined,
     });
   };
 
@@ -222,22 +245,27 @@ export default function TrainingLevelsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate program selection
-    if (!selectedProgramId) {
+    // Only validate program selection for new training levels
+    if (!selectedLevel && !selectedProgramId) {
       alert("Please select a program.");
       return;
     }
 
-    // Validate that at least one level is selected
-    if (selectedLevels.length === 0) {
+    // Only validate level selection for new training levels
+    if (!selectedLevel && selectedLevels.length === 0) {
       alert("Please select at least one training level.");
       return;
     }
 
-    // Ensure formData.name is updated with selected levels
+    // Ensure formData.name is updated with selected levels (only for new entries)
+    // For editing, use the existing name or the selected levels
     const updatedFormData = {
       ...formData,
-      name: selectedLevels.join(", "),
+      name: selectedLevel ? formData.name : selectedLevels.join(", "),
+      description: formData.description || "",
+      isActive: formData.isActive ?? true,
+      amount: formData.amount ?? 0,
+      rank: formData.rank || undefined,
     };
 
     try {
@@ -298,6 +326,7 @@ export default function TrainingLevelsPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                {!selectedLevel && (
                 <div className="space-y-2">
                   <Label>Program *</Label>
                   <Select
@@ -326,126 +355,153 @@ export default function TrainingLevelsPage() {
                     Select a program to view its levels
                   </p>
                 </div>
+                )}
 
-                <div className="space-y-2">
-                  <Label>Training Levels *</Label>
-                  <div className="space-y-3">
-                    {/* Selected Levels Display */}
-                    {selectedLevels.length > 0 && (
-                      <div className="flex flex-wrap gap-2 p-3 border rounded-md min-h-[60px]">
-                        {selectedLevels.map((level) => (
-                          <Badge
-                            key={level}
-                            variant="secondary"
-                            className="flex items-center gap-1 px-2 py-1"
-                          >
-                            {level}
-                            <button
-                              type="button"
-                              onClick={() => removeLevel(level)}
-                              className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Level Selection Popover */}
-                    {selectedProgramId ? (
-                      <Popover
-                        open={isPopoverOpen}
-                        onOpenChange={setIsPopoverOpen}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full justify-between"
-                            disabled={
-                              loadingLevels || programLevels.length === 0
-                            }
-                          >
-                            {loadingLevels
-                              ? "Loading levels..."
-                              : programLevels.length === 0
-                              ? "No levels available for this program"
-                              : "Select levels from program"}
-                            <ChevronDown className="h-4 w-4 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0" align="start">
-                          <div className="p-2">
-                            {programLevels.length > 0 ? (
-                              <div className="max-h-[200px] overflow-y-auto space-y-1">
-                                {programLevels.map((level) => (
-                                  <div
-                                    key={level.id}
-                                    className="flex items-center space-x-2 p-2 hover:bg-accent rounded cursor-pointer"
-                                    onClick={() =>
-                                      toggleLevelSelection(level.code)
-                                    }
-                                  >
-                                    <Checkbox
-                                      checked={selectedLevels.includes(
-                                        level.code
-                                      )}
-                                      onCheckedChange={() =>
-                                        toggleLevelSelection(level.code)
-                                      }
-                                    />
-                                    <label className="text-sm cursor-pointer flex-1">
-                                      {level.code} - {level.name}
-                                    </label>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-muted-foreground p-2">
-                                No levels found for this program
-                              </p>
-                            )}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    ) : (
-                      <div className="p-3 border rounded-md text-sm text-muted-foreground text-center">
-                        Please select a program first
-                      </div>
-                    )}
-
-                    {/* Add Custom Level */}
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Add custom level (e.g., RL1, EL1)"
-                        value={newLevelInput}
-                        onChange={(e) => setNewLevelInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            addCustomLevel();
-                          }
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={addCustomLevel}
-                        disabled={!newLevelInput.trim()}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    {/* Hidden input for form validation */}
-                    <Input type="hidden" value={formData.name} required />
+                {selectedLevel ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Name *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      placeholder="Enter training level name"
+                      required
+                    />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Select from existing levels or add custom ones. Selected
-                    levels will be combined.
-                  </p>
-                </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Training Levels *</Label>
+                    <div className="space-y-3">
+                      {/* Selected Levels Display */}
+                      {selectedLevels.length > 0 && (
+                        <div className="flex flex-wrap gap-2 p-3 border rounded-md min-h-[60px]">
+                          {selectedLevels.map((level) => (
+                            <Badge
+                              key={level}
+                              variant="secondary"
+                              className="flex items-center gap-1 px-2 py-1"
+                            >
+                              {level}
+                              <button
+                                type="button"
+                                onClick={() => removeLevel(level)}
+                                className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Level Selection Popover */}
+                      {selectedProgramId ? (
+                        <Popover
+                          open={isPopoverOpen}
+                          onOpenChange={setIsPopoverOpen}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full justify-between"
+                              disabled={
+                                loadingLevels || programLevels.length === 0
+                              }
+                            >
+                              {loadingLevels
+                                ? "Loading levels..."
+                                : programLevels.length === 0
+                                ? "No levels available for this program"
+                                : "Select levels from program"}
+                              <ChevronDown className="h-4 w-4 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[400px] p-0" align="start">
+                            <div className="p-2">
+                              {programLevels.length > 0 ? (
+                                <div className="max-h-[300px] overflow-y-auto space-y-3">
+                                  {Object.entries(groupedLevelsByOrder)
+                                    .sort(([a], [b]) => Number(a) - Number(b))
+                                    .map(([displayOrder, levels]) => (
+                                      <div key={displayOrder} className="space-y-1">
+                                        <div className="text-xs font-semibold text-muted-foreground px-2 py-1 bg-muted rounded">
+                                          Display Order: {displayOrder}
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 px-2">
+                                          {levels.map((level) => (
+                                            <div
+                                              key={level.id}
+                                              className="flex items-center space-x-1 p-2 hover:bg-accent rounded cursor-pointer border border-border"
+                                              onClick={() =>
+                                                toggleLevelSelection(level.code)
+                                              }
+                                            >
+                                              <Checkbox
+                                                checked={selectedLevels.includes(
+                                                  level.code
+                                                )}
+                                                onCheckedChange={() =>
+                                                  toggleLevelSelection(level.code)
+                                                }
+                                              />
+                                              <label className="text-sm cursor-pointer whitespace-nowrap">
+                                                {level.code} - {level.name}
+                                              </label>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ))}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-muted-foreground p-2">
+                                  No levels found for this program
+                                </p>
+                              )}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        <div className="p-3 border rounded-md text-sm text-muted-foreground text-center">
+                          Please select a program first
+                        </div>
+                      )}
+
+                      {/* Add Custom Level */}
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Add custom level (e.g., RL1, EL1)"
+                          value={newLevelInput}
+                          onChange={(e) => setNewLevelInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addCustomLevel();
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={addCustomLevel}
+                          disabled={!newLevelInput.trim()}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {/* Hidden input for form validation */}
+                      <Input type="hidden" value={formData.name} required />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Select from existing levels or add custom ones. Selected
+                      levels will be combined.
+                    </p>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea
@@ -477,6 +533,25 @@ export default function TrainingLevelsPage() {
                   />
                   <p className="text-sm text-muted-foreground">
                     Set the training fee amount for this level (default: 0)
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rank">Rank/Order</Label>
+                  <Input
+                    id="rank"
+                    type="number"
+                    min="1"
+                    value={formData.rank || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        rank: e.target.value ? parseInt(e.target.value) : undefined,
+                      })
+                    }
+                    placeholder="Enter rank/order (optional)"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Lower numbers appear first. Leave empty for no specific order.
                   </p>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -521,6 +596,7 @@ export default function TrainingLevelsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Rank</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Status</TableHead>
@@ -530,6 +606,13 @@ export default function TrainingLevelsPage() {
             <TableBody>
               {trainingLevels?.map((level: TrainingLevel) => (
                 <TableRow key={level.id}>
+                  <TableCell>
+                    {level.rank !== null && level.rank !== undefined ? (
+                      <span className="font-medium">{level.rank}</span>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
                   <TableCell className="font-medium">{level.name}</TableCell>
                   <TableCell>
                     {level.description || (

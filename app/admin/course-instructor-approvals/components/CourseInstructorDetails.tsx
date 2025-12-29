@@ -102,6 +102,12 @@ export default function CourseInstructorDetails({
                     <TableHead className="w-[250px]">
                       Course Instructor
                     </TableHead>
+                    <TableHead className="text-center">Contact</TableHead>
+                    <TableHead className="text-center">Location</TableHead>
+                    <TableHead className="text-center">Professional</TableHead>
+                    <TableHead className="text-center">Personal Info</TableHead>
+                    <TableHead className="text-center">Training Levels</TableHead>
+                    <TableHead className="text-center">Total Amount</TableHead>
                     <TableHead className="text-center">Date of Birth</TableHead>
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
@@ -134,6 +140,71 @@ export default function CourseInstructorDetails({
                                 </div>
                               </div>
                             </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex flex-col text-sm">
+                              <span className="text-gray-900">{instructor.phone || "N/A"}</span>
+                              <span className="text-gray-500 text-xs">{instructor.mail || "N/A"}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex flex-col text-sm">
+                              <span className="text-gray-900">{instructor.city || "N/A"}</span>
+                              {instructor.address && (
+                                <span className="text-gray-500 text-xs truncate max-w-[150px]" title={instructor.address}>
+                                  {instructor.address.length > 25 
+                                    ? instructor.address.substring(0, 25) + "..." 
+                                    : instructor.address}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex flex-col text-sm">
+                              <span className="text-gray-900">{instructor.education || "N/A"}</span>
+                              <span className="text-gray-500 text-xs">{instructor.occupation || "N/A"}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex flex-col text-sm">
+                              <span className="text-gray-900">
+                                {instructor.dob
+                                  ? `${Math.floor((new Date().getTime() - new Date(instructor.dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000))} years`
+                                  : "N/A"}
+                              </span>
+                              <span className="text-gray-500 text-xs">
+                                {instructor.bloodGroup || "N/A"}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {instructor.trainingLevels && instructor.trainingLevels.length > 0 ? (
+                              <div className="flex flex-col gap-1 items-center">
+                                {instructor.trainingLevels.map((level: any) => (
+                                  <Badge key={level.id} variant="outline" className="text-xs">
+                                    {level.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-gray-400">No levels</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {instructor.totalTrainingAmount !== undefined ? (
+                              <div className="flex flex-col">
+                                <span className="font-semibold text-green-600">
+                                  ₹{instructor.totalTrainingAmount.toLocaleString()}
+                                </span>
+                                {instructor.trainingLevels && (
+                                  <span className="text-xs text-gray-500">
+                                    {instructor.trainingLevels.length} level(s)
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-gray-400">N/A</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-center">
                             {instructor.dob
@@ -177,7 +248,7 @@ export default function CourseInstructorDetails({
                         {/* Expanded Instructor Details */}
                         {expandedRows.has(instructorId) && (
                           <TableRow>
-                            <TableCell colSpan={4} className="p-0">
+                            <TableCell colSpan={10} className="p-0">
                               <CourseInstructorDetailCard
                                 instructor={instructor}
                                 expandedRows={expandedRows}
