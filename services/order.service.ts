@@ -46,6 +46,7 @@ export interface OrderData {
   id: number;
   totalItems?: number;
   totalStudents?: number;
+  totalInstructors?: number;
   totalAmount: string | number;
   status: OrderStatus;
   notes: string | null;
@@ -63,7 +64,7 @@ export interface OrderData {
     id: number;
     name: string;
   };
-  // Detailed view: order items grouped by student
+  // Detailed view: order items grouped by student/instructor
   orderItems?: Record<string, OrderItemData[]>;
   // DC PDF path for shipping orders
   dcPdfPath?: string | null;
@@ -384,6 +385,49 @@ export async function getStudentOrderHistory(
 ): Promise<StudentOrderHistory> {
   const response = await api.get<StudentOrderHistoryResponse>(
     `/orders/student-order-history/${studentId}`
+  );
+  return response.data.result;
+}
+
+// CI Materials Order interfaces and functions
+export interface CIMaterialsPreview {
+  ciId: number;
+  ciName: string;
+  trainingLevel: {
+    id: number;
+    name: string;
+    description?: string;
+  };
+  inventoryItems: Array<{
+    id: number;
+    name: string;
+    description?: string;
+    quantity: number;
+    availableQuantity: number;
+    price: number;
+  }>;
+  hasExistingOrder: boolean;
+  totalAmount: number;
+}
+
+export interface CIMaterialsPreviewResponse extends Response {
+  result: CIMaterialsPreview;
+}
+
+export async function getCIMaterialsPreview(
+  ciId: number
+): Promise<CIMaterialsPreview> {
+  const response = await api.get<CIMaterialsPreviewResponse>(
+    `/orders/ci-materials/preview/${ciId}`
+  );
+  return response.data.result;
+}
+
+export async function createCIMaterialsOrder(
+  ciId: number
+): Promise<OrderData> {
+  const response = await api.post<SingleOrderResponse>(
+    `/orders/ci-materials/${ciId}`
   );
   return response.data.result;
 }

@@ -120,10 +120,17 @@ export default function OrdersTable({
     },
     {
       key: "students",
-      header: "Students",
+      header: "Students / CIs",
       className: "text-center",
       render: (order) => (
-        <div className="font-medium">{order.totalStudents || 0}</div>
+        <div className="font-medium">
+          {order.totalStudents || 0}
+          {order.totalInstructors && order.totalInstructors > 0 && (
+            <span className="text-xs text-muted-foreground block">
+              + {order.totalInstructors} CI{order.totalInstructors > 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
       ),
     },
     {

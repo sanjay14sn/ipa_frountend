@@ -397,6 +397,20 @@ export default function FranchiseeOrdersPage() {
     selectedStudents.includes(s.id)
   );
 
+  // Helper function to safely get level display value
+  const getLevelDisplay = (level: any): string => {
+    if (typeof level === "string") {
+      return level;
+    }
+    if (level && typeof level === "object" && "name" in level) {
+      return level.name;
+    }
+    if (level && typeof level === "object" && "code" in level) {
+      return level.code;
+    }
+    return String(level || "");
+  };
+
   // Calculate invoice totals
   const invoiceSubtotal = invoiceItems.reduce(
     (sum, item) => sum + item.totalPrice,
@@ -570,14 +584,14 @@ export default function FranchiseeOrdersPage() {
                                         {student.name}
                                       </div>
                                       <div className="text-xs text-muted-foreground">
-                                        {student.rollNo} • {student.level}
+                                        {student.rollNo} • {getLevelDisplay(student.level)}
                                       </div>
                                     </div>
                                     <Badge
                                       variant="outline"
                                       className="text-xs"
                                     >
-                                      {student.level}
+                                      {getLevelDisplay(student.level)}
                                     </Badge>
                                   </div>
                                 </CommandItem>
@@ -603,7 +617,7 @@ export default function FranchiseeOrdersPage() {
                                     {student.name}
                                   </div>
                                   <div className="text-muted-foreground">
-                                    {student.rollNo} • {student.level}
+                                    {student.rollNo} • {getLevelDisplay(student.level)}
                                   </div>
                                 </div>
                                 <Button
@@ -938,14 +952,14 @@ export default function FranchiseeOrdersPage() {
                                         {student.name}
                                       </div>
                                       <div className="text-xs text-muted-foreground">
-                                        {student.rollNo} • {student.level}
+                                        {student.rollNo} • {getLevelDisplay(student.level)}
                                       </div>
                                     </div>
                                     <Badge
                                       variant="outline"
                                       className="text-xs"
                                     >
-                                      {student.level}
+                                      {getLevelDisplay(student.level)}
                                     </Badge>
                                   </div>
                                 </CommandItem>
@@ -971,7 +985,7 @@ export default function FranchiseeOrdersPage() {
                                     {student.name}
                                   </div>
                                   <div className="text-muted-foreground">
-                                    {student.rollNo} • {student.level}
+                                    {student.rollNo} • {getLevelDisplay(student.level)}
                                   </div>
                                 </div>
                                 <Button

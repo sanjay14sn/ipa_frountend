@@ -141,7 +141,7 @@ export default function OrderDetails({
                   </p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Students</span>
+                  <span className="text-gray-500">Students / CIs</span>
                   <p className="text-gray-900 mt-1">{studentKeys.length}</p>
                 </div>
                 {detailedOrder.referenceId && (
@@ -271,7 +271,7 @@ export default function OrderDetails({
             </div>
           </div>
 
-          {/* Student Order Sections */}
+          {/* Student/CI Order Sections */}
           {studentKeys.map((studentKey, index) => (
             <StudentOrderSection
               key={studentKey}
@@ -281,6 +281,7 @@ export default function OrderDetails({
               isExpanded={expandedRows.has(`${order.id}-${studentKey}`)}
               onToggle={onToggleRow}
               isLast={index === studentKeys.length - 1}
+              isCIOrder={studentKey.startsWith('CI:')}
             />
           ))}
         </div>

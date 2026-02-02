@@ -11,6 +11,7 @@ import {
   DollarSign,
   AlertCircle,
   Plus,
+  Package,
 } from "lucide-react";
 import {
   getCITrainingProgress,
@@ -19,6 +20,7 @@ import {
 import { getActiveTrainingLevels, TrainingLevel } from "@/services/training-level.service";
 import { MultiLevelTrainingPaymentModal } from "./MultiLevelTrainingPaymentModal";
 import { RequestTrainingModal } from "./RequestTrainingModal";
+import { RequestMaterialsModal } from "./RequestMaterialsModal";
 
 interface TrainingProgressViewProps {
   instructorId: number;
@@ -37,6 +39,7 @@ export function TrainingProgressView({
   const [error, setError] = useState<string | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [requestTrainingModalOpen, setRequestTrainingModalOpen] = useState(false);
+  const [requestMaterialsModalOpen, setRequestMaterialsModalOpen] = useState(false);
 
   useEffect(() => {
     loadProgress();
@@ -192,10 +195,21 @@ export function TrainingProgressView({
           {/* Active Training Highlight */}
           {progress.activeTraining && (
             <div className="p-3 border border-primary/20 bg-primary/5 rounded-lg">
-              <p className="text-sm text-gray-700">
-                <span className="font-medium">Active:</span>{" "}
-                {progress.activeTraining.trainingLevelName}
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-700">
+                  <span className="font-medium">Active:</span>{" "}
+                  {progress.activeTraining.trainingLevelName}
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => setRequestMaterialsModalOpen(true)}
+                  variant="outline"
+                  className="ml-2"
+                >
+                  <Package className="w-4 h-4 mr-2" />
+                  Request Materials
+                </Button>
+              </div>
             </div>
           )}
 
@@ -288,6 +302,18 @@ export function TrainingProgressView({
       <RequestTrainingModal
         isOpen={requestTrainingModalOpen}
         onClose={() => setRequestTrainingModalOpen(false)}
+        instructorId={instructorId}
+        instructorName={instructorName}
+        onSuccess={() => {
+          loadProgress();
+          onPaymentSuccess?.();
+        }}
+      />
+
+      {/* Request Materials Modal */}
+      <RequestMaterialsModal
+        isOpen={requestMaterialsModalOpen}
+        onClose={() => setRequestMaterialsModalOpen(false)}
         instructorId={instructorId}
         instructorName={instructorName}
         onSuccess={() => {

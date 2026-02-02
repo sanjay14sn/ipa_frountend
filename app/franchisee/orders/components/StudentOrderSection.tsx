@@ -10,6 +10,7 @@ interface StudentOrderSectionProps {
   isExpanded: boolean;
   onToggle: (id: string) => void;
   isLast: boolean;
+  isCIOrder?: boolean;
 }
 
 export const studentOrderDotRef = React.createRef<HTMLDivElement>();
@@ -22,6 +23,7 @@ export default function StudentOrderSection({
   isExpanded,
   onToggle,
   isLast,
+  isCIOrder = false,
 }: StudentOrderSectionProps) {
   const sectionId = `${orderId}-${studentKey}`;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -63,6 +65,11 @@ export default function StudentOrderSection({
             )}
           </button>
           <h4 className="font-medium text-gray-900">{studentKey}</h4>
+          {isCIOrder && (
+            <Badge variant="secondary" className="ml-2">
+              CI Order
+            </Badge>
+          )}
           <Badge variant="outline" className="ml-2">
             {items.length} {items.length === 1 ? "item" : "items"}
           </Badge>
