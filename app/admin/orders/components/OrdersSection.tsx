@@ -165,6 +165,7 @@ export default function OrdersSection({
             <TableRow className="bg-secondary hover:bg-secondary">
               <TableHead className="w-[50px]"></TableHead>
               <TableHead>Order ID</TableHead>
+              <TableHead className="text-center">Order Type</TableHead>
               <TableHead className="text-center">Students</TableHead>
               <TableHead className="text-center">Items</TableHead>
               <TableHead className="text-center">Amount</TableHead>
@@ -192,6 +193,11 @@ export default function OrdersSection({
                   <TableCell>
                     <Badge variant="outline" className="font-mono text-xs">
                       #{order.id}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className="text-xs">
+                      {order.orderType}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center">

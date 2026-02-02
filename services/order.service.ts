@@ -49,6 +49,7 @@ export interface OrderData {
   totalInstructors?: number;
   totalAmount: string | number;
   status: OrderStatus;
+  orderType: string;
   notes: string | null;
   createdAt: string;
   updatedAt: string;

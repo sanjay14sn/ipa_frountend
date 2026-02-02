@@ -119,6 +119,16 @@ export default function OrdersTable({
       className: "w-[200px]",
     },
     {
+      key: "orderType",
+      header: "Order Type",
+      className: "text-center",
+      render: (order) => (
+        <Badge variant="outline" className="text-xs">
+          {order.orderType}
+        </Badge>
+      ),
+    },
+    {
       key: "students",
       header: "Students / CIs",
       className: "text-center",
@@ -196,6 +206,11 @@ export default function OrdersTable({
           </div>
           <div className="text-sm text-gray-500">
             {new Date(order.createdAt).toLocaleString()}
+          </div>
+          <div className="text-xs text-gray-600 mt-1">
+            <Badge variant="outline" className="text-xs">
+              {order.orderType}
+            </Badge>
           </div>
           {order.notes && (
             <div className="text-xs text-gray-400 truncate max-w-[200px]">
