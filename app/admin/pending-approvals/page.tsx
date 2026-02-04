@@ -799,7 +799,7 @@ export default function PendingApprovals() {
                               </p>
                               {kit.inventory?.category && (
                                 <p className="text-xs text-gray-500">
-                                  {kit.inventory.category}
+                                  {kit.inventory.category.name}
                                 </p>
                               )}
                             </div>
