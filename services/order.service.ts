@@ -315,7 +315,12 @@ export interface AvailableItem {
   id: number;
   name: string;
   description: string;
-  category: string;
+  categoryId: number;
+  category?: {
+    id: number;
+    name: string;
+    description: string;
+  };
   price: number;
   isKitItem: boolean;
   defaultQuantity?: number;
@@ -331,7 +336,7 @@ export interface StudentAvailableItems {
   programName: string;
   levelItems: AvailableItem[];
   kitItems: AvailableItem[];
-  allItems: AvailableItem[];
+  allItems?: AvailableItem[];
 }
 
 export interface AvailableItemsResponse extends Response {

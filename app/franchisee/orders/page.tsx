@@ -1101,7 +1101,7 @@ export default function FranchiseeOrdersPage() {
                                                 {item.name}
                                               </div>
                                               <div className="text-xs text-muted-foreground">
-                                                {item.category}
+                                                {item.category?.name || 'N/A'}
                                               </div>
                                               <div className="text-xs font-medium text-primary mt-1">
                                                 ₹{item.price}
@@ -1175,7 +1175,7 @@ export default function FranchiseeOrdersPage() {
                                                 </Badge>
                                               </div>
                                               <div className="text-xs text-muted-foreground">
-                                                {item.category}
+                                                {item.category?.name || 'N/A'}
                                               </div>
                                               <div className="text-xs font-medium text-primary mt-1">
                                                 ₹{item.price}
@@ -1250,10 +1250,10 @@ export default function FranchiseeOrdersPage() {
                                         const studentData = availableItems.find(
                                           (s) => s.studentId === item.studentId
                                         );
-                                        const inventoryItem =
-                                          studentData?.allItems.find(
-                                            (i) => i.id === item.inventoryId
-                                          );
+                                        const inventoryItem = [
+                                          ...(studentData?.levelItems || []),
+                                          ...(studentData?.kitItems || []),
+                                        ].find((i) => i.id === item.inventoryId);
                                         return (
                                           sum +
                                           (inventoryItem?.price || 0) *
