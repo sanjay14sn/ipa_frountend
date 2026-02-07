@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUser } from "@/context/user-context";
 import { login } from "@/services/auth.service";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -62,7 +63,11 @@ export default function AdminLoginPage() {
       }, 600);
     } catch (err) {
       console.error("Admin login error:", err);
-      setError("An error occurred. Please try again.");
+      const errorMessage = getUserFriendlyMessage(
+        err,
+        "Invalid username or password. Please check your credentials and try again."
+      );
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

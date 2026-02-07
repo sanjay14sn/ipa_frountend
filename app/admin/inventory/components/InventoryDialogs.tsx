@@ -55,6 +55,7 @@ interface InventoryDialogsProps {
   onAddSubmit: () => void;
   onLoadLevels: (programId: number) => void;
   onCategoryAdded?: (category: InventoryCategory) => void;
+  formError?: string;
 
   // Edit Dialog
   isEditDialogOpen: boolean;
@@ -131,6 +132,7 @@ export function InventoryDialogs({
   onAddSubmit,
   onLoadLevels,
   onCategoryAdded,
+  formError,
   isEditDialogOpen,
   setIsEditDialogOpen,
   editFormData,
@@ -322,6 +324,11 @@ export function InventoryDialogs({
               />
               <Label htmlFor="isActive">Active</Label>
             </div>
+            {formError && isAddDialogOpen && (
+              <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-2">
+                {formError}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
@@ -443,6 +450,11 @@ export function InventoryDialogs({
               />
               <Label htmlFor="editIsActive">Active</Label>
             </div>
+            {formError && isEditDialogOpen && (
+              <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-2">
+                {formError}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button
@@ -486,6 +498,11 @@ export function InventoryDialogs({
                 Warning: Stock is at or below restock level (
                 {stockItem.restockQuantity})
               </p>
+            )}
+            {formError && isStockDialogOpen && (
+              <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-2">
+                {formError}
+              </div>
             )}
           </div>
           <DialogFooter>

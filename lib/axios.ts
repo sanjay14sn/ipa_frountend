@@ -105,11 +105,8 @@ api.interceptors.response.use(
       }
     }
 
-    const message =
-      error.response?.data?.message ||
-      error.message ||
-      "An unexpected error occurred";
-    toast.error(message);
+    // Don't show generic toast here - let components handle errors
+    // Only reject the promise so components can catch and display inline errors
     return Promise.reject(error);
   }
 );

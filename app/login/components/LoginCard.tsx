@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { franchiseeLogin, getFranchiseeProfile } from "@/services/auth.service";
 import { useUser } from "@/context/user-context";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 export function LoginCard() {
   const router = useRouter();
@@ -76,7 +77,11 @@ export function LoginCard() {
       }, 600);
     } catch (err) {
       console.error("Login error:", err);
-      setError("An error occurred. Please try again.");
+      const errorMessage = getUserFriendlyMessage(
+        err,
+        "Invalid email or password. Please check your credentials and try again."
+      );
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

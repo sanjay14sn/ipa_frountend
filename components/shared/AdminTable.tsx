@@ -222,17 +222,10 @@ export default function AdminTable<T>({
     }
   };
 
-  // Handle row expansion
   const toggleRow = (id: string) => {
-    if (id.includes("-")) {
-      const newExpandedChildren = new Set(expandedChildren);
-      if (newExpandedChildren.has(id)) {
-        newExpandedChildren.delete(id);
-      } else {
-        newExpandedChildren.add(id);
-      }
-      setExpandedChildren(newExpandedChildren);
-    } else {
+    const isParentRow = data.some((item) => getRowId(item) === id);
+    
+    if (isParentRow) {
       if (expandedRow === id) {
         setExpandedRow(null);
         setExpandedChildren(new Set());
@@ -240,6 +233,14 @@ export default function AdminTable<T>({
         setExpandedRow(id);
         setExpandedChildren(new Set());
       }
+    } else {
+      const newExpandedChildren = new Set(expandedChildren);
+      if (newExpandedChildren.has(id)) {
+        newExpandedChildren.delete(id);
+      } else {
+        newExpandedChildren.add(id);
+      }
+      setExpandedChildren(newExpandedChildren);
     }
   };
 
@@ -455,8 +456,12 @@ export default function AdminTable<T>({
                         <div className="flex items-center gap-2">
                           {renderExpandedContent && (
                             <button
-                              onClick={() => toggleRow(rowId)}
-                              className="p-1 hover:bg-gray-100 rounded"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleRow(rowId);
+                              }}
+                              className="p-1 hover:bg-gray-100 rounded cursor-pointer"
                             >
                               {isExpanded ? (
                                 <ChevronDown className="w-4 h-4" />

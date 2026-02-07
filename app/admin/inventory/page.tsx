@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Edit2, Package, ArrowLeft, ShoppingCart, Users, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { AdminTable } from "@/components/shared";
 import type { AdminTableColumn } from "@/components/shared/AdminTable";
 import {
@@ -68,6 +69,7 @@ export default function InventoryPage() {
   const [inventorySuppliers, setInventorySuppliers] = useState<InventorySupplier[]>([]);
   const [itemSuppliers, setItemSuppliers] = useState<InventorySupplier[]>([]); // For restock dialog
   const [orderHistory, setOrderHistory] = useState<SupplierOrder[]>([]);
+  const [formError, setFormError] = useState("");
 
   // Supplier order form
   const [supplierOrderForm, setSupplierOrderForm] = useState({
@@ -277,21 +279,15 @@ export default function InventoryPage() {
   };
 
   const handleAddItem = async () => {
+    setFormError("");
+    
     if (!formData.name.trim()) {
-      toast({
-        title: "Error",
-        description: "Name is required",
-        variant: "destructive",
-      });
+      setFormError("Name is required");
       return;
     }
 
     if (!formData.programId || !formData.levelId) {
-      toast({
-        title: "Error",
-        description: "Please select a program and level",
-        variant: "destructive",
-      });
+      setFormError("Please select a program and level");
       return;
     }
 
@@ -302,19 +298,21 @@ export default function InventoryPage() {
         description: "Inventory item created successfully",
       });
       resetForm();
+      setFormError("");
       setIsAddDialogOpen(false);
       loadInventory();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create inventory item",
-        variant: "destructive",
-      });
+      const errorMessage = getUserFriendlyMessage(
+        error,
+        "Failed to create inventory item"
+      );
+      setFormError(errorMessage);
     }
   };
 
   const handleEditItem = async () => {
     if (!editingItem) return;
+    setFormError("");
 
     try {
       await updateInventory(editingItem.id, editFormData);
@@ -325,18 +323,20 @@ export default function InventoryPage() {
       setIsEditDialogOpen(false);
       setEditingItem(null);
       setEditFormData({});
+      setFormError("");
       loadInventory();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update inventory item",
-        variant: "destructive",
-      });
+      const errorMessage = getUserFriendlyMessage(
+        error,
+        "Failed to update inventory item"
+      );
+      setFormError(errorMessage);
     }
   };
 
   const handleUpdateStock = async () => {
     if (!stockItem) return;
+    setFormError("");
 
     try {
       await updateStock(stockItem.id, stockQuantity);
@@ -344,13 +344,14 @@ export default function InventoryPage() {
       setIsStockDialogOpen(false);
       setStockItem(null);
       setStockQuantity(0);
+      setFormError("");
       loadInventory();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update stock",
-        variant: "destructive",
-      });
+      const errorMessage = getUserFriendlyMessage(
+        error,
+        "Failed to update stock"
+      );
+      setFormError(errorMessage);
     }
   };
 
@@ -826,6 +827,7 @@ export default function InventoryPage() {
         onAddSubmit={handleAddItem}
         onLoadLevels={loadLevels}
         onCategoryAdded={handleCategoryAdded}
+        formError={formError}
         isEditDialogOpen={isEditDialogOpen}
         setIsEditDialogOpen={setIsEditDialogOpen}
         editFormData={editFormData}
