@@ -86,10 +86,21 @@ export default function FranchisePaymentsDetails({
                   <p className="text-gray-900 mt-1">{payments.length}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Total Amount</span>
+                  <span className="text-gray-500">Completed Amount</span>
                   <p className="text-gray-900 mt-1">
                     ₹
                     {payments
+                      .filter((p) => p.status === "completed")
+                      .reduce((acc, p) => acc + p.amount, 0)
+                      .toLocaleString("en-IN")}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-gray-500">Pending Amount</span>
+                  <p className="text-gray-900 mt-1">
+                    ₹
+                    {payments
+                      .filter((p) => p.status === "pending")
                       .reduce((acc, p) => acc + p.amount, 0)
                       .toLocaleString("en-IN")}
                   </p>

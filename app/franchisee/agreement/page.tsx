@@ -57,7 +57,6 @@ export default function FranchiseAgreementPage() {
       return;
     }
 
-    // Use profile data if available, otherwise show loading
     if (user?.profile) {
       initializeAgreementContent();
     } else {
@@ -68,7 +67,6 @@ export default function FranchiseAgreementPage() {
   const initializeAgreementContent = () => {
     if (!user?.profile) return;
 
-    // Create franchise data object from profile
     const franchiseData = {
       name: user.profile.franchise.name,
       contactPerson: user.profile.name,
@@ -84,8 +82,7 @@ export default function FranchiseAgreementPage() {
       franchiseCode: `FR-${user.profile.franchise.id}`,
       program: user.profile.franchise.franchisePayrolls?.map((payroll: any) => 
         payroll.franchiseProgram?.program?.name || "N/A"
-      ).join(", ") || 
-      user.profile.franchise.franchisePrograms?.map((fp: any) => fp.program.name).join(", ") || "N/A",
+      ).join(", ") || "N/A",
       franchiseType: user.profile.franchise.type,
       reference: user.profile.reference,
       date: user.profile.franchise.createdAt,
@@ -94,11 +91,9 @@ export default function FranchiseAgreementPage() {
         (user.profile.franchise.franchisePayroll ? [user.profile.franchise.franchisePayroll] : []),
     } as any;
 
-    // Process agreement content with franchise data
     const processedContent = getProcessedAgreementContent(franchiseData);
     setAgreementContent(processedContent);
 
-    // Expand first two sections by default
     setExpandedSections(new Set(["basic-terms", "financial-terms"]));
     setPageLoading(false);
   };
@@ -150,25 +145,23 @@ export default function FranchiseAgreementPage() {
     setIsProcessingPayment(true);
 
     try {
-      // Initiate payment with backend
       const paymentOrder = await initiateFranchiseFeePayment(user.franchiseId);
 
-      // If zero amount, payment is already completed, just show success
       if (paymentOrder.isZeroAmount || paymentOrder.amount === 0) {
-        setUser({
-          ...user,
-          franchiseStatus: "Active",
-        });
+        if (user) {
+          setUser({
+            ...user,
+            franchiseStatus: "Active",
+          });
+        }
         setShowPaymentSuccess(true);
         setIsProcessingPayment(false);
-        // Redirect to dashboard after a short delay
         setTimeout(() => {
           router.push("/franchisee/dashboard");
         }, 3000);
         return;
       }
 
-      // Set payment details to trigger Razorpay
       setPaymentDetails({
         orderId: paymentOrder.orderId,
         amount: paymentOrder.amount,
@@ -186,7 +179,6 @@ export default function FranchiseAgreementPage() {
 
   const handlePaymentSuccess = async (response: RazorpaySuccessResponse) => {
     try {
-      // Verify payment with backend
       const verificationResult = await verifyFranchiseFeePayment({
         paymentId: response.razorpay_payment_id,
         orderId: response.razorpay_order_id,
@@ -194,14 +186,14 @@ export default function FranchiseAgreementPage() {
       });
 
       if (verificationResult.message === "Payment verified successfully") {
-        // Update user in context/localStorage
-        setUser({
-          ...user,
-          franchiseStatus: "Active",
-        });
+        if (user) {
+          setUser({
+            ...user,
+            franchiseStatus: "Active",
+          });
+        }
         setShowPaymentSuccess(true);
 
-        // Redirect to dashboard after a short delay
         setTimeout(() => {
           router.push("/franchisee/dashboard");
         }, 3000);
@@ -217,8 +209,21 @@ export default function FranchiseAgreementPage() {
     }
   };
 
-  const handlePaymentFailure = (error: any) => {
+  const handlePaymentFailure = async (error: any) => {
     console.error("Payment failed:", error);
+
+    if (paymentDetails?.orderId) {
+      try {
+        await verifyFranchiseFeePayment({
+          paymentId: "",
+          orderId: paymentDetails.orderId,
+          signature: "",
+        });
+      } catch (err) {
+        console.error("Error updating payment status:", err);
+      }
+    }
+
     alert("Payment failed. Please try again.");
     setIsProcessingPayment(false);
     setPaymentDetails(null);
@@ -250,7 +255,6 @@ export default function FranchiseAgreementPage() {
     );
   }
 
-  // Create franchise data object from profile for components
   const franchiseData = {
     name: user.profile.franchise.name,
     contactPerson: user.profile.name,
@@ -266,8 +270,7 @@ export default function FranchiseAgreementPage() {
     franchiseCode: `FR-${user.profile.franchise.id}`,
     program: user.profile.franchise.franchisePayrolls?.map((payroll: any) => 
       payroll.franchiseProgram?.program?.name || "N/A"
-    ).join(", ") || 
-    user.profile.franchise.franchisePrograms?.map((fp: any) => fp.program.name).join(", ") || "N/A",
+    ).join(", ") || "N/A",
     franchiseType: user.profile.franchise.type,
     reference: user.profile.reference,
     date: user.profile.franchise.createdAt,

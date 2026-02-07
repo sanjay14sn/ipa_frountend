@@ -114,14 +114,18 @@ export default function PaymentsTable() {
       key: "totalAmount",
       header: "Total Amount",
       className: "text-center",
-      render: (group) => (
-        <span className="font-medium">
-          ₹
-          {group.payments
-            .reduce((acc, p) => acc + p.amount, 0)
-            .toLocaleString("en-IN")}
-        </span>
-      ),
+      render: (group) => {
+        // Calculate only completed amount, excluding cancelled/failed payments
+        const completedAmount = group.payments
+          .filter((p) => p.status === "completed")
+          .reduce((acc, p) => acc + p.amount, 0);
+
+        return (
+          <span className="font-medium">
+            ₹{completedAmount.toLocaleString("en-IN")}
+          </span>
+        );
+      },
     },
     {
       key: "status",
