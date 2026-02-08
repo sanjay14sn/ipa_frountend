@@ -34,7 +34,7 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-      const response = await login(email, password);
+      const response = await login(email.trim(), password.trim());
       const data = response.result;
 
       if (response.statusCode !== 201) {
@@ -42,7 +42,6 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Ensure only admin users can login through admin portal
       if (data.role !== "admin") {
         setError("Access denied. Admin credentials required.");
         return;

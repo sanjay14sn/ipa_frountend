@@ -35,7 +35,7 @@ export function LoginCard() {
     setError("");
 
     try {
-      const response = await franchiseeLogin(username, password);
+      const response = await franchiseeLogin(username.trim(), password.trim());
       const data = response.result;
 
       if (response.statusCode !== 201) {
