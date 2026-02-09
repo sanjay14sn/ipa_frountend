@@ -41,9 +41,7 @@ export default function IdCardPreviewModal({
   const handleIssueId = async () => {
     try {
       setIsIssuing(true);
-      // Use student ID if available, otherwise fall back to roll number
-      const studentId = student.id || Number(student.rollNo);
-      await issueIdCardWithRevalidation(studentId);
+      await issueIdCardWithRevalidation(student.rollNo);
       setIssued(true);
       onSuccess();
     } catch (error) {
@@ -128,7 +126,9 @@ export default function IdCardPreviewModal({
                       </p>
                       <p className="text-xs opacity-80">
                         DOB:{" "}
-                        {new Date(student.dateOfBirth).toLocaleDateString()}
+                        {student.dateOfBirth
+                          ? new Date(student.dateOfBirth).toLocaleDateString()
+                          : "N/A"}
                       </p>
                     </div>
                   </div>

@@ -257,8 +257,8 @@ export async function requestStudentIdsWithRevalidation(studentIds: number[]) {
   return result;
 }
 
-export async function issueIdCardWithRevalidation(studentId: number) {
-  const result = await issueIdCard(studentId);
+export async function issueIdCardWithRevalidation(rollNo: string) {
+  const result = await issueIdCard(rollNo);
   await Promise.all([
     mutate(STUDENTS_KEY),
     mutate(REQUESTED_IDS_KEY),

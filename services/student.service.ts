@@ -182,8 +182,8 @@ export async function getAllRequestedIdDetails(): Promise<RequestedIdDetailsByFr
   return {};
 }
 
-export async function issueIdCard(studentId: number): Promise<any> {
-  const response = await api.patch(`/students/issue-id/${studentId}`);
+export async function issueIdCard(rollNo: string): Promise<any> {
+  const response = await api.patch(`/students/issue-id/${rollNo}`);
   return response.data;
 }
 
