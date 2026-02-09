@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { Notification, UserType } from "../lib/notification.types";
+import { getApiBaseUrl } from "@/lib/api-utils";
 
 interface UseNotificationSocketProps {
   userId: number | null;
@@ -30,7 +31,7 @@ export function useNotificationSocket({
     console.log("useNotificationSocket - Attempting to connect to WebSocket...");
 
     // Connect to WebSocket
-    const socket = io("http://localhost:5000/notifications", {
+    const socket = io(`${getApiBaseUrl()}/notifications`, {
       transports: ["websocket", "polling"],
     });
 

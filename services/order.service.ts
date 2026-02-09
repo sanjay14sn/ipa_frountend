@@ -115,6 +115,7 @@ export interface SingleOrderResponse extends Response {
 }
 
 import { api } from "@/lib/axios";
+import { getApiBaseUrl } from "@/lib/api-utils";
 
 export async function createOrder(
   orderData: CreateOrderDto
@@ -192,7 +193,7 @@ export function getDcPdfUrl(dcPdfPath: string): string {
   if (!dcPdfPath) return "";
   // dcPdfPath is stored as "delivery-challans/filename.pdf"
   // Backend serves static files at /uploads/ prefix
-  const baseUrl = api.defaults.baseURL || "http://localhost:5000";
+  const baseUrl = api.defaults.baseURL || getApiBaseUrl();
   return `${baseUrl}/uploads/${dcPdfPath}`;
 }
 

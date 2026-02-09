@@ -24,6 +24,7 @@ import { EligibleStudent } from "@/services/student.service";
 import { useToast } from "@/hooks/use-toast";
 import { CourseInstructorData } from "@/services/course-instructor.service";
 import { revalidateCertificateRequests } from "@/hooks/use-students";
+import { getApiBaseUrl } from "@/lib/api-utils";
 
 interface RequestCertificateModalProps {
   open: boolean;
@@ -82,7 +83,7 @@ export default function RequestCertificateModal({
       };
 
       const response = await fetch(
-        `http://localhost:5000/certificate/request/${student.id}`,
+        `${getApiBaseUrl()}/certificate/request/${student.id}`,
         {
           method: "POST",
           headers: {

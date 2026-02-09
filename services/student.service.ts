@@ -79,6 +79,7 @@ export interface StudentsResponse extends Response {
 }
 
 import { api } from "@/lib/axios";
+import { getApiBaseUrl } from "@/lib/api-utils";
 
 export async function getAllStudents(): Promise<StudentsResponse> {
   const response = await api.get<StudentsResponse>("/students/all");
@@ -493,7 +494,7 @@ export function getCertificatePdfUrl(certificatePdfPath: string): string {
   if (!certificatePdfPath) return "";
   // certificatePdfPath is stored as "certificates/filename.pdf"
   // Backend serves static files at /uploads/ prefix
-  const baseUrl = api.defaults.baseURL || "http://localhost:5000";
+  const baseUrl = api.defaults.baseURL || getApiBaseUrl();
   return `${baseUrl}/uploads/${certificatePdfPath}`;
 }
 

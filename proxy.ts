@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+function getApiBaseUrl(): string {
+  return process.env.NEXT_PUBLIC_API_URL ||
+    process.env.API_URL ||
+    "http://localhost:5000";
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (pathname.startsWith("/franchisee")) {
     try {
-      const apiBase =
-        process.env.NEXT_PUBLIC_API_URL ||
-        process.env.API_URL ||
-        "http://localhost:5000";
+      const apiBase = getApiBaseUrl();
       const apiUrl = `${apiBase}/franchisee/isActive`;
       const apiRes = await fetch(apiUrl, {
         method: "GET",

@@ -65,6 +65,7 @@ import {
   type InventoryCategory,
 } from "@/services/inventory-category.service";
 import { CategorySelect } from "@/components/inventory/CategorySelect";
+import { getApiBaseUrl } from "@/lib/api-utils";
 
 export function ProgramManagement() {
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -396,7 +397,7 @@ export function ProgramManagement() {
         }
 
         if (template.templatePdfPath) {
-          const baseUrl = "http://localhost:5000";
+          const baseUrl = getApiBaseUrl();
           setTemplatePreviewUrl(
             `${baseUrl}/uploads/${template.templatePdfPath}?t=${Date.now()}`
           );
@@ -464,7 +465,7 @@ export function ProgramManagement() {
           }
 
           if (freshTemplate?.templatePdfPath) {
-            const baseUrl = "http://localhost:5000";
+            const baseUrl = getApiBaseUrl();
             const newUrl = `${baseUrl}/uploads/${
               freshTemplate.templatePdfPath
             }?t=${Date.now()}`;
@@ -501,7 +502,7 @@ export function ProgramManagement() {
         selectedProgramForTemplate.id
       );
       if (updatedTemplate?.templatePdfPath) {
-        const baseUrl = "http://localhost:5000";
+        const baseUrl = getApiBaseUrl();
         const newUrl = `${baseUrl}/uploads/${
           updatedTemplate.templatePdfPath
         }?t=${Date.now()}`;
