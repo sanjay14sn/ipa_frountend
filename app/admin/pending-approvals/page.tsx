@@ -43,7 +43,7 @@ export default function PendingApprovals() {
     useState<FranchiseData | null>(null);
   const [showPayrollDialog, setShowPayrollDialog] = useState(false);
   const [payrollDetails, setPayrollDetails] = useState<PayrollDetails>({
-    franchiseId: 0,
+    franchiseId: "",
     dateOfPayment: "",
     dateOfJoining: "",
     programPayrolls: [],

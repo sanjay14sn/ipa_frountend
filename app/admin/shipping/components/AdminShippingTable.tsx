@@ -20,7 +20,7 @@ import OrdersHistoryModal from "../../orders/components/OrdersHistoryModal";
 
 interface FranchiseOrderGroup {
   franchiseName: string;
-  franchiseId: number;
+  franchiseId: string | number; // Support both formats during transition
   orders: OrderData[];
 }
 
@@ -59,7 +59,7 @@ export default function AdminShippingTable() {
       const groups: FranchiseOrderGroup[] = Object.entries(result.data).map(
         ([franchiseName, orders]) => ({
           franchiseName,
-          franchiseId: orders[0]?.franchiseId || 0,
+          franchiseId: orders[0]?.franchiseId || "",
           orders,
         })
       );

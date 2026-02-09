@@ -41,7 +41,7 @@ export enum StudentIdStatus {
 
 export interface StudentData {
   id: number;
-  franchiseId: number;
+  franchiseId: string;
   programId: number;
   name: string;
   rollNo: string;
@@ -159,7 +159,7 @@ export interface RequestedIdDetail {
   franchiseeAddress?: string;
   idIssueDate?: string; // Only present in issued IDs
   franchise?: {
-    id: number;
+    id: string;
     name: string;
     address?: string;
   };
@@ -280,7 +280,7 @@ export interface AdminCertificateRequest {
   id: number;
   studentId: number;
   instructorId: number;
-  franchiseId: number;
+  franchiseId: string;
   requestDate: string;
   status: "Pending" | "Approved" | "Rejected";
   marksObtained: number;
@@ -460,7 +460,7 @@ export interface FranchiseeCertificate {
   id: number;
   studentId: number;
   instructorId: number;
-  franchiseId: number;
+  franchiseId: string;
   requestDate: string;
   status: "Pending" | "Approved" | "Rejected";
   marksObtained: number;
@@ -525,7 +525,7 @@ export interface StudentCertificate {
   id: number;
   studentId: number;
   instructorId: number;
-  franchiseId: number;
+  franchiseId: string;
   levelId: number;
   requestDate: string;
   status: "Pending" | "Approved" | "Rejected";

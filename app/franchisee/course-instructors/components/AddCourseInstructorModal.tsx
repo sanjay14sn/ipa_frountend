@@ -376,7 +376,7 @@ export default function AddCourseInstructorModal({
     try {
       // Prepare course instructor data for the service
       const courseInstructorData: any = {
-        franchiseId: Number(user.franchiseId), // Ensure it's a number
+        franchiseId: user.franchiseId, // Keep as string
         programId: Number(formData.programId),
         instructorId: formData.instructorId || `CI${Date.now()}`, // Auto-generate if empty
         name: formData.name,

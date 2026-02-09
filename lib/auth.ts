@@ -4,7 +4,7 @@ export interface User {
   id: string;
   name: string;
   role: UserRole;
-  franchiseId?: number;
+  franchiseId?: string;
   franchiseName?: string;
   franchiseStatus?: string;
   profile?: {
@@ -21,7 +21,7 @@ export interface User {
     occupation: string;
     reference: string;
     franchise: {
-      id: number;
+      id: string;
       name: string;
       type: string;
       status: string;

@@ -32,7 +32,7 @@ export interface Franchise {
 }
 
 export interface FranchiseResponse {
-  id: number;
+  id: string;
   name: string;
   type: string;
   status: string;
@@ -188,7 +188,7 @@ export async function getPaginatedFranchises(
 }
 
 export async function createPayrollDetails(
-  id: number,
+  id: string,
   payrollDetails: CreatePayrollRequest
 ) {
   const response = await api.post(`/franchise/payroll/${id}`, payrollDetails);
@@ -200,7 +200,7 @@ export async function createPayrollDetails(
 }
 
 export async function updatePayrollDetails(
-  id: number,
+  id: string,
   payrollDetails: Partial<ProgramPayrollRequest>
 ) {
   const response = await api.put(`/franchise/payroll/${id}`, payrollDetails);
@@ -211,7 +211,7 @@ export async function updatePayrollDetails(
   }
 }
 
-export async function onboardingPayment(franchiseId: number) {
+export async function onboardingPayment(franchiseId: string) {
   const response = await api.post(`/franchisee/onboarding/${franchiseId}`);
   if (response.status === 201) {
     return response.data;
@@ -225,7 +225,7 @@ export interface UpdateFranchiseStatusDto {
 }
 
 export async function updateFranchiseStatus(
-  franchiseId: number,
+  franchiseId: string,
   dto: UpdateFranchiseStatusDto
 ) {
   const response = await api.patch(`/franchise/status/${franchiseId}`, dto);
@@ -236,19 +236,19 @@ export async function updateFranchiseStatus(
   }
 }
 
-export async function rejectFranchise(franchiseId: number) {
+export async function rejectFranchise(franchiseId: string) {
   return updateFranchiseStatus(franchiseId, { status: "Rejected" });
 }
 
 export interface InitiateFranchiseFeePaymentDto {
-  franchiseId: number;
+  franchiseId: string;
 }
 
 export interface PaymentOrderResponse {
   orderId: string;
   amount: number;
   currency: string;
-  franchiseId: number;
+  franchiseId: string;
   franchiseName: string;
   paymentType: string;
   key: string;
@@ -267,7 +267,7 @@ export interface PaymentVerificationResponse {
 }
 
 export async function initiateFranchiseFeePayment(
-  franchiseId: number
+  franchiseId: string
 ): Promise<PaymentOrderResponse> {
   const response = await api.post<{ result: PaymentOrderResponse }>(
     "/payment/franchise-fee/initiate",

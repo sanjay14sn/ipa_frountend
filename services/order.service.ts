@@ -56,13 +56,13 @@ export interface OrderData {
   // Extended fields (may not be present in list view)
   orderNumber?: string;
   referenceId?: string;
-  franchiseId?: number;
+  franchiseId?: string | number; // Support both string (new format) and number (legacy)
   createdBy?: number;
   city?: string;
   phone?: string;
   updatedBy?: number;
   franchise?: {
-    id: number;
+    id: string | number; // Support both string (new format) and number (legacy)
     name: string;
   };
   // Detailed view: order items grouped by student/instructor

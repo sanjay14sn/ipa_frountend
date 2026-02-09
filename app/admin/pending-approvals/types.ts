@@ -15,7 +15,7 @@ export interface ProgramPayroll {
 }
 
 export interface PayrollDetails {
-  franchiseId: number;
+  franchiseId: string;
   dateOfPayment: string;
   dateOfJoining: string;
   programPayrolls: ProgramPayroll[];

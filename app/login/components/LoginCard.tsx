@@ -73,12 +73,15 @@ export function LoginCard() {
       setUser(loggedInUser);
       router.push("/franchisee/dashboard");
     } catch (err: any) {
-      console.error("Login error:", err);
-      const errorMessage = getUserFriendlyMessage(
-        err,
-        "Invalid username or password. Please check your credentials and try again."
-      );
-      setError(errorMessage);
+      try {
+        const errorMessage = getUserFriendlyMessage(
+          err,
+          "Invalid username or password. Please check your credentials and try again."
+        );
+        setError(errorMessage);
+      } catch (errorHandlingError) {
+        setError("Invalid username or password. Please check your credentials and try again.");
+      }
     } finally {
       setLoading(false);
     }

@@ -23,7 +23,7 @@ interface FranchiseeLoginResponse {
     message: string;
     userId: number;
     name: string;
-    franchiseId: number;
+    franchiseId: string;
     role: string;
     franchiseStatus: string;
   };
@@ -51,7 +51,7 @@ interface FranchiseeProfileResponse {
     createdAt: string;
     updatedAt: string;
     franchise: {
-      id: number;
+      id: string;
       name: string;
       type: string;
       status: string;

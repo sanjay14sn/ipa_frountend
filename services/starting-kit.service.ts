@@ -23,7 +23,7 @@ export interface ProgramKit {
 
 export interface FranchiseProgramKit {
   id: number;
-  franchiseId: number;
+  franchiseId: string;
   programId: number;
   inventoryId: number;
   quantity: number;
@@ -67,7 +67,7 @@ export interface FranchiseProgramKitGroup {
 }
 
 export interface AssignFranchiseKitsDto {
-  franchiseId: number;
+  franchiseId: string;
   programKits: FranchiseProgramKitGroup[];
 }
 
@@ -116,7 +116,7 @@ export async function deleteProgramKit(id: number): Promise<void> {
 }
 
 export async function getFranchiseProgramKits(
-  franchiseId: number,
+  franchiseId: string,
   programId: number
 ): Promise<FranchiseProgramKit[]> {
   const response = await api.get<StartingKitResponse>(
@@ -126,7 +126,7 @@ export async function getFranchiseProgramKits(
 }
 
 export async function getAllFranchiseProgramKits(
-  franchiseId: number
+  franchiseId: string
 ): Promise<FranchiseProgramKit[]> {
   const response = await api.get<StartingKitResponse>(
     `/starting-kit/franchise/${franchiseId}`
