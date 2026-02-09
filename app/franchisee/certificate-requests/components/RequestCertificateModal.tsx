@@ -185,7 +185,7 @@ export default function RequestCertificateModal({
               id="marksObtained"
               type="number"
               min="0"
-              value={formData.marksObtained === "0" || formData.marksObtained === 0 ? "" : formData.marksObtained}
+              value={formData.marksObtained === "0" ? "" : formData.marksObtained}
               onChange={(e) =>
                 handleInputChange("marksObtained", e.target.value)
               }
