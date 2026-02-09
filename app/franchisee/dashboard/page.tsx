@@ -276,7 +276,7 @@ export default function FranchiseeDashboard() {
                                   Royalty:
                                 </span>
                                 <span className="text-sm font-medium">
-                                  {payroll.royalty}%
+                                  ₹{payroll.royalty.toLocaleString()}/month
                                 </span>
                               </div>
                             </div>
@@ -307,7 +307,7 @@ export default function FranchiseeDashboard() {
                               Royalty:
                             </span>
                             <span className="text-sm font-medium">
-                              {user.profile.franchise.franchisePayroll?.royalty}%
+                              ₹{user.profile.franchise.franchisePayroll?.royalty.toLocaleString()}/month
                             </span>
                           </div>
                         </>

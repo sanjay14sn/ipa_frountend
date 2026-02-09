@@ -94,6 +94,7 @@ export interface InvoiceItem {
   materialCost: number;
   kitCost?: number;
   royalty: number;
+  durationInMonths: number;
   totalPrice: number;
   inventoryItems: Array<{
     id: number;
@@ -115,7 +116,6 @@ export interface SingleOrderResponse extends Response {
 
 import { api } from "@/lib/axios";
 
-// Franchisee endpoints
 export async function createOrder(
   orderData: CreateOrderDto
 ): Promise<OrderData> {
@@ -146,7 +146,6 @@ export async function updateFranchiseeOrder(
   return response.data.result;
 }
 
-// Admin endpoints
 export interface GroupedOrdersResponse extends Response {
   result: {
     data: Record<string, OrderData[]>;

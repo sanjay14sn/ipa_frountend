@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { AdminTable } from "@/components/shared";
 import type {
   AdminTableColumn,
@@ -14,6 +13,12 @@ import {
   getPaginatedRequestedIdDetails,
   getPaginatedIssuedIds,
 } from "@/services/student.service";
+import FranchiseIdDetails from "./FranchiseIdDetails";
+
+interface FranchiseIdGroup {
+  franchiseName: string;
+  students: RequestedIdDetail[];
+}
 
 interface RequestedIdTableProps {
   onIssueId: (student: RequestedIdDetail) => void;
@@ -24,7 +29,12 @@ export default function RequestedIdTable({
   onIssueId,
   refreshTrigger,
 }: RequestedIdTableProps) {
-  const [students, setStudents] = useState<RequestedIdDetail[]>([]);
+  const [expandedChildren, setExpandedChildren] = useState<Set<string>>(
+    new Set()
+  );
+  const [franchiseGroups, setFranchiseGroups] = useState<
+    FranchiseIdGroup[]
+  >([]);
   const [loading, setLoading] = useState(true);
 
   // Filters & Pagination
@@ -58,7 +68,16 @@ export default function RequestedIdTable({
                 sortBy: sortBy === "createdAt" ? "idIssueDate" : sortBy,
                 sortOrder,
               });
-        setStudents(result.data);
+
+        // Convert grouped data to array
+        const groups: FranchiseIdGroup[] = Object.entries(result.data).map(
+          ([franchiseName, students]) => ({
+            franchiseName,
+            students: students as RequestedIdDetail[],
+          })
+        );
+
+        setFranchiseGroups(groups);
         setTotal(result.meta.total);
         setTotalPages(result.meta.totalPages);
       } catch (error) {
@@ -78,60 +97,55 @@ export default function RequestedIdTable({
     refreshTrigger,
   ]);
 
+  const toggleRow = (id: string) => {
+    if (id.includes("-")) {
+      const newExpandedChildren = new Set(expandedChildren);
+      if (newExpandedChildren.has(id)) {
+        newExpandedChildren.delete(id);
+      } else {
+        newExpandedChildren.add(id);
+      }
+      setExpandedChildren(newExpandedChildren);
+    }
+  };
+
+  const getTotalStudentsCount = () => {
+    return franchiseGroups.reduce(
+      (acc, group) => acc + group.students.length,
+      0
+    );
+  };
+
   // Table configuration
-  const columns: AdminTableColumn<RequestedIdDetail>[] = [
+  const columns: AdminTableColumn<FranchiseIdGroup>[] = [
     {
-      key: "student",
-      header: "Student",
+      key: "franchise",
+      header: "Franchise",
       className: "w-[300px]",
     },
     {
-      key: "rollNumber",
-      header: "Roll Number",
+      key: "students",
+      header: "Students",
       className: "text-center",
-      render: (student) => (
-        <Badge variant={statusFilter === "Issued" ? "default" : "outline"}>
-          {student.rollNo}
+      render: (group) => (
+        <Badge variant="secondary">
+          {group.students.length} student
+          {group.students.length !== 1 ? "s" : ""}
         </Badge>
       ),
     },
     {
-      key: "franchise",
-      header: "Franchise",
+      key: "franchiseAddress",
+      header: "Franchise Address",
       className: "text-center",
-      render: (student) => (
+      render: (group) => (
         <span className="text-sm text-gray-600">
-          {student.franchiseName || "N/A"}
+          {group.students[0]?.franchise?.address ||
+            group.students[0]?.franchiseeAddress ||
+            "N/A"}
         </span>
       ),
     },
-    statusFilter === "Requested"
-      ? {
-          key: "actions",
-          header: "Actions",
-          className: "text-center",
-          render: (student) => (
-            <Button
-              size="sm"
-              variant="default"
-              onClick={() => onIssueId(student)}
-            >
-              Issue ID
-            </Button>
-          ),
-        }
-      : {
-          key: "issueDate",
-          header: "Issue Date",
-          className: "text-center",
-          render: (student) => (
-            <span className="text-sm text-gray-600">
-              {student.idIssueDate
-                ? new Date(student.idIssueDate).toLocaleDateString()
-                : "N/A"}
-            </span>
-          ),
-        },
   ];
 
   const filters: AdminTableFilter[] = [
@@ -153,43 +167,32 @@ export default function RequestedIdTable({
 
   return (
     <AdminTable
-      data={students}
+      data={franchiseGroups}
       loading={loading}
       columns={columns}
-      getRowId={(student) => student.rollNo}
-      renderMainCell={(student) => (
+      getRowId={(group) => group.franchiseName}
+      renderMainCell={(group) => (
         <div className="flex flex-col">
-          <div className="font-medium text-gray-900">{student.name}</div>
+          <div className="font-medium text-gray-900">
+            {group.franchiseName}
+          </div>
           <div className="text-sm text-gray-500">
-            DOB: {new Date(student.dateOfBirth).toLocaleDateString()}
+            {group.students[0]?.franchise?.address ||
+              group.students[0]?.franchiseeAddress ||
+              "N/A"}
           </div>
         </div>
       )}
-      renderExpandedContent={(student) => (
-        <div className="bg-gray-50 p-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="font-medium text-gray-700">
-                Residential Address:
-              </span>
-              <p className="text-gray-600">{student.residentialAddress}</p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Father Contact:</span>
-              <p className="text-gray-600">{student.fatherContactNo}</p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Mother Contact:</span>
-              <p className="text-gray-600">{student.motherContactNo}</p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">
-                Franchise Address:
-              </span>
-              <p className="text-gray-600">{student.franchiseeAddress}</p>
-            </div>
-          </div>
-        </div>
+      renderExpandedContent={(group) => (
+        <FranchiseIdDetails
+          franchiseName={group.franchiseName}
+          students={group.students}
+          lastRow={false}
+          expandedRows={expandedChildren}
+          onToggleRow={toggleRow}
+          onIssueId={onIssueId}
+          statusFilter={statusFilter}
+        />
       )}
       searchPlaceholder="Search students, roll numbers, or franchises..."
       onSearchChange={setSearchTerm}
@@ -210,7 +213,7 @@ export default function RequestedIdTable({
       itemsPerPage={limit}
       emptyMessage={`No ${statusFilter.toLowerCase()} IDs found matching your criteria`}
       resultsText={(count, total) =>
-        `Showing ${count} of ${total} ${statusFilter.toLowerCase()} IDs`
+        `Showing ${getTotalStudentsCount()} of ${total} ${statusFilter.toLowerCase()} IDs`
       }
     />
   );

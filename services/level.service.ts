@@ -8,6 +8,7 @@ export interface Level {
   totalMarks: number;
   passMark: number;
   displayOrder: number;
+  durationInMonths: number;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -22,6 +23,7 @@ export interface CreateLevelDto {
   totalMarks: number;
   passMark: number;
   displayOrder: number;
+  durationInMonths: number;
   isActive: boolean;
 }
 
@@ -31,6 +33,7 @@ export interface UpdateLevelDto {
   totalMarks?: number;
   passMark?: number;
   displayOrder?: number;
+  durationInMonths?: number;
   isActive?: boolean;
 }
 

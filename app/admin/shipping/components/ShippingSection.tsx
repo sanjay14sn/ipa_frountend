@@ -50,20 +50,6 @@ export default function ShippingSection({
     }
   };
 
-  const handleSendToShipping = async (orderId: number) => {
-    try {
-      setUpdatingOrderId(orderId);
-      await verifyOrderAdmin(orderId, "ship");
-      toast.success(`Order #${orderId} sent to shipping`);
-      onOrderUpdate();
-    } catch (error: any) {
-      console.error("Error sending order to shipping:", error);
-      toast.error(error.response?.data?.message || "Failed to send to shipping");
-    } finally {
-      setUpdatingOrderId(null);
-    }
-  };
-
   const handleRegenerateDc = async (orderId: number) => {
     try {
       setRegeneratingOrderId(orderId);
@@ -160,20 +146,6 @@ export default function ShippingSection({
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex items-center justify-center gap-2">
-                      {order.status === OrderStatus.VERIFIED || String(order.status).toUpperCase() === "VERIFIED" ? (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => handleSendToShipping(order.id)}
-                          disabled={updatingOrderId === order.id}
-                        >
-                          {updatingOrderId === order.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            "Send to shipping"
-                          )}
-                        </Button>
-                      ) : null}
                       {order.status === OrderStatus.SHIPPING || String(order.status).toUpperCase() === "SHIPPING" ? (
                         <>
                           <Button
@@ -210,9 +182,7 @@ export default function ShippingSection({
                           </Button>
                         </>
                       ) : null}
-                      {order.status !== OrderStatus.VERIFIED && 
-                       String(order.status).toUpperCase() !== "VERIFIED" && 
-                       order.status !== OrderStatus.SHIPPING && 
+                      {order.status !== OrderStatus.SHIPPING && 
                        String(order.status).toUpperCase() !== "SHIPPING" && (
                         <span className="text-xs text-muted-foreground">No actions</span>
                       )}

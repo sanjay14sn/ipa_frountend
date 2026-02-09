@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,7 +26,6 @@ export function LoginCard() {
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
   const [error, setError] = useState("");
 
   async function onSubmit(e: React.FormEvent) {
@@ -40,6 +39,7 @@ export function LoginCard() {
 
       if (response.statusCode !== 201) {
         setError(response.message || "Login failed");
+        setLoading(false);
         return;
       }
 
@@ -47,6 +47,7 @@ export function LoginCard() {
         setError(
           "This portal is for franchisees only. Please use the admin portal for admin access."
         );
+        setLoading(false);
         return;
       }
 
@@ -70,16 +71,12 @@ export function LoginCard() {
       };
 
       setUser(loggedInUser);
-      setDone(true);
-
-      setTimeout(() => {
-        router.push("/franchisee/dashboard");
-      }, 600);
-    } catch (err) {
+      router.push("/franchisee/dashboard");
+    } catch (err: any) {
       console.error("Login error:", err);
       const errorMessage = getUserFriendlyMessage(
         err,
-        "Invalid email or password. Please check your credentials and try again."
+        "Invalid username or password. Please check your credentials and try again."
       );
       setError(errorMessage);
     } finally {
@@ -142,7 +139,7 @@ export function LoginCard() {
           </div>
 
           {error && (
-            <div className="text-destructive-foreground text-sm text-center bg-destructive/10 border border-destructive/20 rounded-md p-2">
+            <div className="text-red-500 text-sm text-center">
               {error}
             </div>
           )}
@@ -154,13 +151,6 @@ export function LoginCard() {
           >
             {loading ? "Signing in..." : "Sign in"}
           </Button>
-
-          {done && (
-            <div className="flex items-center gap-2 rounded-md border border-brand-green-200 bg-brand-green-50 px-3 py-2 text-brand-green-700">
-              <CheckCircle2 className="h-4 w-4" />
-              <p className="text-sm">Success! Redirecting to dashboard…</p>
-            </div>
-          )}
         </form>
 
         <div className="space-y-2">

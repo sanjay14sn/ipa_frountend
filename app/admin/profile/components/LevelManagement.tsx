@@ -81,6 +81,7 @@ export function LevelManagement({
     totalMarks: 100,
     passMark: 40,
     displayOrder: 1,
+    durationInMonths: 3,
     isActive: true,
   });
 
@@ -131,6 +132,7 @@ export function LevelManagement({
       totalMarks: 100,
       passMark: 40,
       displayOrder: levels.length + 1,
+      durationInMonths: 3,
       isActive: true,
     });
   };
@@ -253,6 +255,14 @@ export function LevelManagement({
       render: (level) => <span>#{level.displayOrder}</span>,
     },
     {
+      key: "duration",
+      header: "Duration",
+      className: "text-center",
+      render: (level) => (
+        <span>{level.durationInMonths} {level.durationInMonths === 1 ? 'month' : 'months'}</span>
+      ),
+    },
+    {
       key: "status",
       header: "Status",
       className: "text-center",
@@ -297,6 +307,7 @@ export function LevelManagement({
                 totalMarks: level.totalMarks,
                 passMark: level.passMark,
                 displayOrder: level.displayOrder,
+                durationInMonths: level.durationInMonths,
                 isActive: level.isActive,
               });
               setIsEditDialogOpen(true);
@@ -435,13 +446,14 @@ export function LevelManagement({
                 <Input
                   id="totalMarks"
                   type="number"
-                  value={formData.totalMarks}
-                  onChange={(e) =>
+                  value={formData.totalMarks === 0 || formData.totalMarks === undefined || formData.totalMarks === null ? "" : formData.totalMarks}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setFormData({
                       ...formData,
-                      totalMarks: Number(e.target.value),
-                    })
-                  }
+                      totalMarks: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -449,13 +461,14 @@ export function LevelManagement({
                 <Input
                   id="passMark"
                   type="number"
-                  value={formData.passMark}
-                  onChange={(e) =>
+                  value={formData.passMark === 0 || formData.passMark === undefined || formData.passMark === null ? "" : formData.passMark}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setFormData({
                       ...formData,
-                      passMark: Number(e.target.value),
-                    })
-                  }
+                      passMark: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
             </div>
@@ -465,25 +478,42 @@ export function LevelManagement({
                 <Input
                   id="displayOrder"
                   type="number"
-                  value={formData.displayOrder}
-                  onChange={(e) =>
+                  value={formData.displayOrder === 0 || formData.displayOrder === undefined || formData.displayOrder === null ? "" : formData.displayOrder}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setFormData({
                       ...formData,
-                      displayOrder: Number(e.target.value),
-                    })
-                  }
+                      displayOrder: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
-              <div className="flex items-center space-x-2 pt-8">
-                <Switch
-                  id="isActive"
-                  checked={formData.isActive}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, isActive: checked })
-                  }
+              <div className="space-y-2">
+                <Label htmlFor="durationInMonths">Duration (Months)</Label>
+                <Input
+                  id="durationInMonths"
+                  type="number"
+                  min="1"
+                  value={formData.durationInMonths === 0 || formData.durationInMonths === undefined || formData.durationInMonths === null ? "" : formData.durationInMonths}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({
+                      ...formData,
+                      durationInMonths: val === "" ? 1 : Number(val),
+                    });
+                  }}
                 />
-                <Label htmlFor="isActive">Active</Label>
               </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="isActive"
+                checked={formData.isActive}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, isActive: checked })
+                }
+              />
+              <Label htmlFor="isActive">Active</Label>
             </div>
           </div>
           <DialogFooter>
@@ -536,13 +566,14 @@ export function LevelManagement({
                 <Input
                   id="editTotalMarks"
                   type="number"
-                  value={editFormData.totalMarks || 0}
-                  onChange={(e) =>
+                  value={editFormData.totalMarks === 0 || editFormData.totalMarks === undefined || editFormData.totalMarks === null ? "" : editFormData.totalMarks}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setEditFormData({
                       ...editFormData,
-                      totalMarks: Number(e.target.value),
-                    })
-                  }
+                      totalMarks: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -550,13 +581,14 @@ export function LevelManagement({
                 <Input
                   id="editPassMark"
                   type="number"
-                  value={editFormData.passMark || 0}
-                  onChange={(e) =>
+                  value={editFormData.passMark === 0 || editFormData.passMark === undefined || editFormData.passMark === null ? "" : editFormData.passMark}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setEditFormData({
                       ...editFormData,
-                      passMark: Number(e.target.value),
-                    })
-                  }
+                      passMark: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
             </div>
@@ -566,25 +598,42 @@ export function LevelManagement({
                 <Input
                   id="editDisplayOrder"
                   type="number"
-                  value={editFormData.displayOrder || 0}
-                  onChange={(e) =>
+                  value={editFormData.displayOrder === 0 || editFormData.displayOrder === undefined || editFormData.displayOrder === null ? "" : editFormData.displayOrder}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setEditFormData({
                       ...editFormData,
-                      displayOrder: Number(e.target.value),
-                    })
-                  }
+                      displayOrder: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
-              <div className="flex items-center space-x-2 pt-8">
-                <Switch
-                  id="editIsActive"
-                  checked={editFormData.isActive ?? false}
-                  onCheckedChange={(checked) =>
-                    setEditFormData({ ...editFormData, isActive: checked })
-                  }
+              <div className="space-y-2">
+                <Label htmlFor="editDurationInMonths">Duration (Months)</Label>
+                <Input
+                  id="editDurationInMonths"
+                  type="number"
+                  min="1"
+                  value={editFormData.durationInMonths === 0 || editFormData.durationInMonths === undefined || editFormData.durationInMonths === null ? "" : editFormData.durationInMonths}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEditFormData({
+                      ...editFormData,
+                      durationInMonths: val === "" ? 3 : Number(val),
+                    });
+                  }}
                 />
-                <Label htmlFor="editIsActive">Active</Label>
               </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="editIsActive"
+                checked={editFormData.isActive ?? false}
+                onCheckedChange={(checked) =>
+                  setEditFormData({ ...editFormData, isActive: checked })
+                }
+              />
+              <Label htmlFor="editIsActive">Active</Label>
             </div>
           </div>
           <DialogFooter>

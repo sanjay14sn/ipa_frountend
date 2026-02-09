@@ -155,9 +155,14 @@ export interface RequestedIdDetail {
   residentialAddress?: string;
   fatherContactNo?: string;
   motherContactNo?: string;
-  franchiseName: string;
+  franchiseName?: string;
   franchiseeAddress?: string;
   idIssueDate?: string; // Only present in issued IDs
+  franchise?: {
+    id: number;
+    name: string;
+    address?: string;
+  };
 }
 
 export interface RequestedIdDetailsByFranchise {
@@ -345,6 +350,15 @@ export interface PaginatedStudentsResponse {
   meta: PaginationMeta;
 }
 
+export interface GroupedIdDetailsData {
+  [franchiseName: string]: RequestedIdDetail[];
+}
+
+export interface PaginatedIdDetailsResponse {
+  data: GroupedIdDetailsData;
+  meta: PaginationMeta;
+}
+
 export interface StudentPaginationParams {
   page?: number;
   limit?: number;
@@ -375,7 +389,7 @@ export async function getPaginatedStudents(
 
 export async function getPaginatedRequestedIdDetails(
   params: StudentPaginationParams
-): Promise<PaginatedStudentsResponse> {
+): Promise<PaginatedIdDetailsResponse> {
   const queryParams = new URLSearchParams();
 
   if (params.page) queryParams.append("page", params.page.toString());
@@ -384,7 +398,7 @@ export async function getPaginatedRequestedIdDetails(
   if (params.sortBy) queryParams.append("sortBy", params.sortBy);
   if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
 
-  const response = await api.get<{ result: PaginatedStudentsResponse }>(
+  const response = await api.get<{ result: PaginatedIdDetailsResponse }>(
     `/students/id-details/paginated?${queryParams.toString()}`
   );
   return response.data.result;
@@ -392,7 +406,7 @@ export async function getPaginatedRequestedIdDetails(
 
 export async function getPaginatedIssuedIds(
   params: StudentPaginationParams
-): Promise<PaginatedStudentsResponse> {
+): Promise<PaginatedIdDetailsResponse> {
   const queryParams = new URLSearchParams();
 
   if (params.page) queryParams.append("page", params.page.toString());
@@ -401,7 +415,7 @@ export async function getPaginatedIssuedIds(
   if (params.sortBy) queryParams.append("sortBy", params.sortBy);
   if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
 
-  const response = await api.get<{ result: PaginatedStudentsResponse }>(
+  const response = await api.get<{ result: PaginatedIdDetailsResponse }>(
     `/students/issued-ids/paginated?${queryParams.toString()}`
   );
   return response.data.result;

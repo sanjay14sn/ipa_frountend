@@ -587,10 +587,11 @@ export function CreateFranchiseDialog({
                         <Input
                           type="number"
                           min="0"
-                          value={payroll?.franchiseFee || 0}
-                          onChange={(e) =>
-                            updateProgramPayroll(programId, "franchiseFee", Number(e.target.value))
-                          }
+                          value={payroll?.franchiseFee === 0 || payroll?.franchiseFee === undefined || payroll?.franchiseFee === null ? "" : payroll?.franchiseFee}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateProgramPayroll(programId, "franchiseFee", val === "" ? 0 : Number(val));
+                          }}
                         />
                       </div>
 
@@ -599,10 +600,11 @@ export function CreateFranchiseDialog({
                         <Input
                           type="number"
                           min="0"
-                          value={payroll?.kitCost || 0}
-                          onChange={(e) =>
-                            updateProgramPayroll(programId, "kitCost", Number(e.target.value))
-                          }
+                          value={payroll?.kitCost === 0 || payroll?.kitCost === undefined || payroll?.kitCost === null ? "" : payroll?.kitCost}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateProgramPayroll(programId, "kitCost", val === "" ? 0 : Number(val));
+                          }}
                         />
                       </div>
 
@@ -611,10 +613,11 @@ export function CreateFranchiseDialog({
                         <Input
                           type="number"
                           min="0"
-                          value={payroll?.materialCost || 0}
-                          onChange={(e) =>
-                            updateProgramPayroll(programId, "materialCost", Number(e.target.value))
-                          }
+                          value={payroll?.materialCost === 0 || payroll?.materialCost === undefined || payroll?.materialCost === null ? "" : payroll?.materialCost}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateProgramPayroll(programId, "materialCost", val === "" ? 0 : Number(val));
+                          }}
                         />
                       </div>
                     </div>
@@ -625,10 +628,11 @@ export function CreateFranchiseDialog({
                         <Input
                           type="number"
                           min="0"
-                          value={payroll?.monthlyFee || 0}
-                          onChange={(e) =>
-                            updateProgramPayroll(programId, "monthlyFee", Number(e.target.value))
-                          }
+                          value={payroll?.monthlyFee === 0 || payroll?.monthlyFee === undefined || payroll?.monthlyFee === null ? "" : payroll?.monthlyFee}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateProgramPayroll(programId, "monthlyFee", val === "" ? 0 : Number(val));
+                          }}
                         />
                       </div>
 
@@ -638,10 +642,11 @@ export function CreateFranchiseDialog({
                           type="number"
                           min="0"
                           max="100"
-                          value={payroll?.ciShare || 0}
-                          onChange={(e) =>
-                            updateProgramPayroll(programId, "ciShare", Number(e.target.value))
-                          }
+                          value={payroll?.ciShare === 0 || payroll?.ciShare === undefined || payroll?.ciShare === null ? "" : payroll?.ciShare}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateProgramPayroll(programId, "ciShare", val === "" ? 0 : Number(val));
+                          }}
                         />
                       </div>
 
@@ -651,10 +656,11 @@ export function CreateFranchiseDialog({
                           type="number"
                           min="0"
                           max="100"
-                          value={payroll?.franchiseShare || 0}
-                          onChange={(e) =>
-                            updateProgramPayroll(programId, "franchiseShare", Number(e.target.value))
-                          }
+                          value={payroll?.franchiseShare === 0 || payroll?.franchiseShare === undefined || payroll?.franchiseShare === null ? "" : payroll?.franchiseShare}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateProgramPayroll(programId, "franchiseShare", val === "" ? 0 : Number(val));
+                          }}
                         />
                       </div>
                     </div>
@@ -666,10 +672,11 @@ export function CreateFranchiseDialog({
                           type="number"
                           min="0"
                           max="100"
-                          value={payroll?.royalty || 0}
-                          onChange={(e) =>
-                            updateProgramPayroll(programId, "royalty", Number(e.target.value))
-                          }
+                          value={payroll?.royalty === 0 || payroll?.royalty === undefined || payroll?.royalty === null ? "" : payroll?.royalty}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateProgramPayroll(programId, "royalty", val === "" ? 0 : Number(val));
+                          }}
                         />
                       </div>
 
@@ -678,10 +685,11 @@ export function CreateFranchiseDialog({
                         <Input
                           type="number"
                           min="0"
-                          value={payroll?.installment || 0}
-                          onChange={(e) =>
-                            updateProgramPayroll(programId, "installment", Number(e.target.value))
-                          }
+                          value={payroll?.installment === 0 || payroll?.installment === undefined || payroll?.installment === null ? "" : payroll?.installment}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateProgramPayroll(programId, "installment", val === "" ? 0 : Number(val));
+                          }}
                         />
                       </div>
 
@@ -690,10 +698,11 @@ export function CreateFranchiseDialog({
                         <Input
                           type="number"
                           min="0"
-                          value={payroll?.totalAmount || 0}
-                          onChange={(e) =>
-                            updateProgramPayroll(programId, "totalAmount", Number(e.target.value))
-                          }
+                          value={payroll?.totalAmount === 0 || payroll?.totalAmount === undefined || payroll?.totalAmount === null ? "" : payroll?.totalAmount}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateProgramPayroll(programId, "totalAmount", val === "" ? 0 : Number(val));
+                          }}
                         />
                       </div>
                     </div>

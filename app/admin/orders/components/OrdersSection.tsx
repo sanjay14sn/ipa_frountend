@@ -95,7 +95,7 @@ export default function OrdersSection({
     try {
       setUpdatingOrderId(orderId);
       await verifyOrderAdmin(orderId, "verified");
-      toast.success(`Order #${orderId} verified`);
+      toast.success(`Order #${orderId} verified and sent to shipping`);
       onOrderUpdate();
     } catch (error: any) {
       console.error("Error verifying order:", error);

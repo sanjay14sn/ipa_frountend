@@ -129,10 +129,10 @@ export function getUserFriendlyMessage(error: unknown, fallback?: string): strin
   // Map common error codes to user-friendly messages
   const friendlyMessages: Record<string, string> = {
     INVALID_CREDENTIALS: 'Invalid email or password',
-    INVALID_PASSWORD: 'Invalid password',
-    USER_NOT_FOUND: 'User not found',
-    FRANCHISEE_NOT_FOUND: 'User not found',
-    ADMIN_USER_NOT_FOUND: 'User not found',
+    INVALID_PASSWORD: 'Invalid username or password',
+    USER_NOT_FOUND: 'Invalid username or password',
+    FRANCHISEE_NOT_FOUND: 'Invalid username or password',
+    ADMIN_USER_NOT_FOUND: 'Invalid username or password',
     INSUFFICIENT_INVENTORY: message,
     INVALID_ORDER_STATUS: message,
     ORDER_NOT_FOUND: 'Order not found',

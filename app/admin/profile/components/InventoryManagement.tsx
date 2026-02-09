@@ -476,10 +476,11 @@ export function InventoryManagement({
                   type="number"
                   min="0"
                   step="0.01"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: Number(e.target.value) })
-                  }
+                  value={formData.price === 0 || formData.price === undefined || formData.price === null ? "" : formData.price}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({ ...formData, price: val === "" ? 0 : Number(val) });
+                  }}
                 />
               </div>
             </div>
@@ -490,13 +491,14 @@ export function InventoryManagement({
                   id="quantity"
                   type="number"
                   min="0"
-                  value={formData.quantity}
-                  onChange={(e) =>
+                  value={formData.quantity === 0 || formData.quantity === undefined || formData.quantity === null ? "" : formData.quantity}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setFormData({
                       ...formData,
-                      quantity: Number(e.target.value),
-                    })
-                  }
+                      quantity: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -505,13 +507,14 @@ export function InventoryManagement({
                   id="restockQuantity"
                   type="number"
                   min="0"
-                  value={formData.restockQuantity}
-                  onChange={(e) =>
+                  value={formData.restockQuantity === 0 || formData.restockQuantity === undefined || formData.restockQuantity === null ? "" : formData.restockQuantity}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setFormData({
                       ...formData,
-                      restockQuantity: Number(e.target.value),
-                    })
-                  }
+                      restockQuantity: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
             </div>
@@ -595,13 +598,14 @@ export function InventoryManagement({
                   type="number"
                   min="0"
                   step="0.01"
-                  value={editFormData.price || 0}
-                  onChange={(e) =>
+                  value={editFormData.price === 0 || editFormData.price === undefined || editFormData.price === null ? "" : editFormData.price}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setEditFormData({
                       ...editFormData,
-                      price: Number(e.target.value),
-                    })
-                  }
+                      price: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
             </div>
@@ -612,13 +616,14 @@ export function InventoryManagement({
                   id="editQuantity"
                   type="number"
                   min="0"
-                  value={editFormData.quantity || 0}
-                  onChange={(e) =>
+                  value={editFormData.quantity === 0 || editFormData.quantity === undefined || editFormData.quantity === null ? "" : editFormData.quantity}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setEditFormData({
                       ...editFormData,
-                      quantity: Number(e.target.value),
-                    })
-                  }
+                      quantity: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -627,13 +632,14 @@ export function InventoryManagement({
                   id="editRestockQuantity"
                   type="number"
                   min="0"
-                  value={editFormData.restockQuantity || 0}
-                  onChange={(e) =>
+                  value={editFormData.restockQuantity === 0 || editFormData.restockQuantity === undefined || editFormData.restockQuantity === null ? "" : editFormData.restockQuantity}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setEditFormData({
                       ...editFormData,
-                      restockQuantity: Number(e.target.value),
-                    })
-                  }
+                      restockQuantity: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
             </div>
@@ -681,8 +687,11 @@ export function InventoryManagement({
                 id="stockQuantity"
                 type="number"
                 min="0"
-                value={stockQuantity}
-                onChange={(e) => setStockQuantity(Number(e.target.value))}
+                value={stockQuantity === 0 || stockQuantity === undefined || stockQuantity === null ? "" : stockQuantity}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setStockQuantity(val === "" ? 0 : Number(val));
+                }}
               />
             </div>
             {stockItem && stockQuantity <= stockItem.restockQuantity && (

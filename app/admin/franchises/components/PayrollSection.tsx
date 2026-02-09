@@ -392,24 +392,24 @@ export default function PayrollSection({
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         {renderEditableField(
                           index,
-                          "CI Share",
+                          "CI Share (per month)",
                           "ciShare",
                           payroll.ciShare,
-                          "percentage"
+                          "currency"
                         )}
                         {renderEditableField(
                           index,
-                          "Franchise Share",
+                          "Franchise Share (per month)",
                           "franchiseShare",
                           payroll.franchiseShare,
-                          "percentage"
+                          "currency"
                         )}
                         {renderEditableField(
                           index,
-                          "Royalty",
+                          "Royalty (per month)",
                           "royalty",
                           payroll.royalty,
-                          "percentage"
+                          "currency"
                         )}
                         {renderEditableField(
                           index,

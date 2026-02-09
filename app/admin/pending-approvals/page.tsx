@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import {
   CheckCircle,
@@ -20,6 +26,7 @@ import {
   Calendar,
   Calculator,
   Users,
+  ChevronDown,
 } from "lucide-react";
 import {
   createPayrollDetails,
@@ -45,8 +52,15 @@ export default function PendingApprovals() {
     Record<number, ProgramKit[]>
   >({});
   const [selectedKits, setSelectedKits] = useState<
-    Record<number, Record<number, boolean>>
+    Record<number, Record<number, number>>
   >({});
+  const [openDropdowns, setOpenDropdowns] = useState<
+    Record<number, boolean>
+  >({});
+  const [dropdownWidths, setDropdownWidths] = useState<
+    Record<number, number>
+  >({});
+  const triggerRefs = useRef<Record<number, HTMLButtonElement | null>>({});
 
   const triggerRefresh = () => {
     setRefreshTrigger((prev) => prev + 1);
@@ -89,11 +103,8 @@ export default function PendingApprovals() {
         try {
           const kits = await getProgramKits(fp.program.id);
           kitsData[fp.program.id] = kits;
-          // Initialize all kits as selected (checked by default)
+          // Initialize with no items selected by default
           selectedData[fp.program.id] = {};
-          kits.forEach((kit) => {
-            selectedData[fp.program.id][kit.inventoryId] = true;
-          });
         } catch (error) {
           console.error(
             `Error fetching kits for program ${fp.program.id}:`,
@@ -107,6 +118,7 @@ export default function PendingApprovals() {
 
     setProgramKits(kitsData);
     setSelectedKits(selectedData);
+    setOpenDropdowns({});
     setShowPayrollDialog(true);
   };
 
@@ -135,11 +147,11 @@ export default function PendingApprovals() {
         .map((pp) => {
           const kits = programKits[pp.programId] || [];
           const selected = selectedKits[pp.programId] || {};
-          const kitItems = kits
-            .filter((kit) => selected[kit.inventoryId])
-            .map((kit) => ({
-              inventoryId: kit.inventoryId,
-              quantity: kit.defaultQuantity,
+          const kitItems = Object.entries(selected)
+            .filter(([_, quantity]) => quantity > 0)
+            .map(([inventoryId, quantity]) => ({
+              inventoryId: Number(inventoryId),
+              quantity: quantity,
             }));
 
           return kitItems.length > 0
@@ -177,6 +189,7 @@ export default function PendingApprovals() {
       setSelectedApplication(null);
       setProgramKits({});
       setSelectedKits({});
+      setOpenDropdowns({});
       triggerRefresh(); // Refresh the list
     } catch (error) {
       console.error("Error submitting payroll details:", error);
@@ -187,16 +200,45 @@ export default function PendingApprovals() {
   const handleKitToggle = (
     programId: number,
     inventoryId: number,
-    checked: boolean
+    checked: boolean,
+    defaultQuantity: number = 1
+  ) => {
+    setSelectedKits((prev) => {
+      const programKits = prev[programId] || {};
+
+      if (checked) {
+        return {
+          ...prev,
+          [programId]: {
+            ...programKits,
+            [inventoryId]: defaultQuantity,
+          },
+        };
+      } else {
+        const updated = { ...programKits };
+        delete updated[inventoryId];
+        return {
+          ...prev,
+          [programId]: updated,
+        };
+      }
+    });
+  };
+
+  const handleQuantityChange = (
+    programId: number,
+    inventoryId: number,
+    quantity: number
   ) => {
     setSelectedKits((prev) => ({
       ...prev,
       [programId]: {
         ...prev[programId],
-        [inventoryId]: checked,
+        [inventoryId]: Math.max(1, quantity),
       },
     }));
   };
+
 
   const handleProgramPayrollChange = (
     programIndex: number,
@@ -418,14 +460,15 @@ export default function PendingApprovals() {
                           <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
                             type="number"
-                            value={program.franchiseFee}
-                            onChange={(e) =>
+                            value={program.franchiseFee === 0 || program.franchiseFee === undefined || program.franchiseFee === null ? "" : program.franchiseFee}
+                            onChange={(e) => {
+                              const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "franchiseFee",
-                                e.target.value
-                              )
-                            }
+                                val === "" ? 0 : Number(val)
+                              );
+                            }}
                             className="pl-10 h-10"
                             placeholder="0"
                             disabled={program.freeload}
@@ -442,14 +485,15 @@ export default function PendingApprovals() {
                           <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
                             type="number"
-                            value={program.kitCost}
-                            onChange={(e) =>
+                            value={program.kitCost === 0 || program.kitCost === undefined || program.kitCost === null ? "" : program.kitCost}
+                            onChange={(e) => {
+                              const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "kitCost",
-                                e.target.value
-                              )
-                            }
+                                val === "" ? 0 : Number(val)
+                              );
+                            }}
                             className="pl-10 h-10"
                             placeholder="0"
                             disabled={program.freeload}
@@ -466,14 +510,15 @@ export default function PendingApprovals() {
                           <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
                             type="number"
-                            value={program.materialCost}
-                            onChange={(e) =>
+                            value={program.materialCost === 0 || program.materialCost === undefined || program.materialCost === null ? "" : program.materialCost}
+                            onChange={(e) => {
+                              const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "materialCost",
-                                e.target.value
-                              )
-                            }
+                                val === "" ? 0 : Number(val)
+                              );
+                            }}
                             className="pl-10 h-10"
                             placeholder="0"
                             disabled={program.freeload}
@@ -490,14 +535,15 @@ export default function PendingApprovals() {
                           <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
                             type="number"
-                            value={program.monthlyFee}
-                            onChange={(e) =>
+                            value={program.monthlyFee === 0 || program.monthlyFee === undefined || program.monthlyFee === null ? "" : program.monthlyFee}
+                            onChange={(e) => {
+                              const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "monthlyFee",
-                                e.target.value
-                              )
-                            }
+                                val === "" ? 0 : Number(val)
+                              );
+                            }}
                             className="pl-10 h-10"
                             placeholder="0"
                             disabled={program.freeload}
@@ -514,14 +560,15 @@ export default function PendingApprovals() {
                           <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
                             type="number"
-                            value={program.installment}
-                            onChange={(e) =>
+                            value={program.installment === 0 || program.installment === undefined || program.installment === null ? "" : program.installment}
+                            onChange={(e) => {
+                              const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "installment",
-                                e.target.value
-                              )
-                            }
+                                val === "" ? 0 : Number(val)
+                              );
+                            }}
                             className="pl-10 h-10"
                             placeholder="0"
                             disabled={program.freeload}
@@ -529,86 +576,89 @@ export default function PendingApprovals() {
                         </div>
                       </div>
 
-                      {/* Royalty % */}
+                      {/* Royalty */}
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-gray-700">
-                          Royalty/Student (%)
+                          Royalty/Student (per month)
                         </Label>
                         <div className="relative">
                           <Input
                             type="number"
                             min="0"
-                            max="100"
-                            value={program.royalty}
-                            onChange={(e) =>
+                            step="0.01"
+                            value={program.royalty === 0 || program.royalty === undefined || program.royalty === null ? "" : program.royalty}
+                            onChange={(e) => {
+                              const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "royalty",
-                                e.target.value
-                              )
-                            }
-                            className="pr-8 h-10"
+                                val === "" ? 0 : Number(val)
+                              );
+                            }}
+                            className="pl-10 h-10"
                             placeholder="0"
                             disabled={program.freeload}
                           />
-                          <span className="absolute right-3 top-3 text-sm text-gray-400">
-                            %
+                          <span className="absolute left-3 top-3 text-sm text-gray-400">
+                            ₹
                           </span>
                         </div>
                       </div>
 
-                      {/* CI Share % */}
+                      {/* CI Share */}
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-gray-700">
-                          CI Share (%)
+                          CI Share (per month)
                         </Label>
                         <div className="relative">
                           <Input
                             type="number"
                             min="0"
-                            max="100"
-                            value={program.ciShare}
-                            onChange={(e) =>
+                            step="0.01"
+                            value={program.ciShare === 0 || program.ciShare === undefined || program.ciShare === null ? "" : program.ciShare}
+                            onChange={(e) => {
+                              const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "ciShare",
-                                e.target.value
-                              )
-                            }
-                            className="pr-8 h-10"
+                                val === "" ? 0 : Number(val)
+                              );
+                            }}
+                            className="pl-10 h-10"
                             placeholder="0"
                             disabled={program.freeload}
                           />
-                          <span className="absolute right-3 top-3 text-sm text-gray-400">
-                            %
+                          <span className="absolute left-3 top-3 text-sm text-gray-400">
+                            ₹
                           </span>
                         </div>
                       </div>
 
-                      {/* Franchise Share % */}
+                      {/* Franchise Share */}
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-gray-700">
-                          Franchise Share (%)
+                          Franchise Share (per month)
                         </Label>
                         <div className="relative">
                           <Input
                             type="number"
                             min="0"
-                            max="100"
-                            value={program.franchiseShare}
-                            onChange={(e) =>
+                            step="0.01"
+                            value={program.franchiseShare === 0 || program.franchiseShare === undefined || program.franchiseShare === null ? "" : program.franchiseShare}
+                            onChange={(e) => {
+                              const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "franchiseShare",
-                                e.target.value
-                              )
-                            }
-                            className="pr-8 h-10"
+                                val === "" ? 0 : Number(val)
+                              );
+                            }}
+                            className="pl-10 h-10"
                             placeholder="0"
                             disabled={program.freeload}
                           />
-                          <span className="absolute right-3 top-3 text-sm text-gray-400">
-                            %
+                          <span className="absolute left-3 top-3 text-sm text-gray-400">
+                            ₹
                           </span>
                         </div>
                       </div>
@@ -727,13 +777,18 @@ export default function PendingApprovals() {
                   Starting Kit Items Selection
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Select which kit items to include for each program. Uncheck
-                  items to exclude them.
+                  Select kit items for each program using the dropdown below.
                 </p>
 
                 {payrollDetails.programPayrolls.map((program) => {
                   const kits = programKits[program.programId] || [];
                   const selected = selectedKits[program.programId] || {};
+                  const isDropdownOpen = openDropdowns[program.programId] || false;
+
+                  // Count selected items (with quantity > 0)
+                  const selectedCount = kits.filter(
+                    (kit) => selected[kit.inventoryId] && selected[kit.inventoryId] > 0
+                  ).length;
 
                   if (kits.length === 0) {
                     return (
@@ -765,47 +820,129 @@ export default function PendingApprovals() {
                         </p>
                       </div>
 
-                      <div className="space-y-3">
-                        {kits.map((kit) => (
-                          <div
-                            key={kit.id}
-                            className="flex items-center gap-3 p-3 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100 transition-colors"
+                      {/* Dropdown to Select Items */}
+                      <Popover
+                        open={isDropdownOpen}
+                        onOpenChange={(open) => {
+                          setOpenDropdowns((prev) => ({
+                            ...prev,
+                            [program.programId]: open,
+                          }));
+                          // Measure trigger width when opening
+                          if (open && triggerRefs.current[program.programId]) {
+                            const width = triggerRefs.current[program.programId]?.offsetWidth || 0;
+                            setDropdownWidths((prev) => ({
+                              ...prev,
+                              [program.programId]: width,
+                            }));
+                          }
+                        }}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            ref={(el) => {
+                              triggerRefs.current[program.programId] = el;
+                            }}
+                            variant="outline"
+                            className="w-full justify-between border-primary hover:bg-primary/10"
                           >
-                            <input
-                              type="checkbox"
-                              checked={selected[kit.inventoryId] || false}
-                              onChange={(e) =>
-                                handleKitToggle(
-                                  program.programId,
-                                  kit.inventoryId,
-                                  e.target.checked
-                                )
-                              }
-                              className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                            />
-                            <div className="flex-1">
-                              <p className="font-medium text-sm text-gray-900">
-                                {kit.inventory?.name || `Item #${kit.inventoryId}`}
-                              </p>
-                              {kit.inventory?.description && (
-                                <p className="text-xs text-gray-600 mt-1">
-                                  {kit.inventory.description}
-                                </p>
-                              )}
+                            <span className="flex items-center gap-2">
+                              <Users className="h-4 w-4" />
+                              {selectedCount > 0
+                                ? `${selectedCount} item${selectedCount > 1 ? "s" : ""} selected`
+                                : "Select Kit Items"}
+                            </span>
+                            <ChevronDown className="h-4 w-4 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent 
+                          className="p-0" 
+                          align="start"
+                          side="top"
+                          style={{
+                            width: dropdownWidths[program.programId] || triggerRefs.current[program.programId]?.offsetWidth || '100%',
+                            minWidth: '100%'
+                          }}
+                        >
+                          <div className="p-2">
+                            <div className="text-sm font-medium text-gray-900 mb-2 px-2">
+                              Select kit items
                             </div>
-                            <div className="text-right">
-                              <p className="text-sm font-medium text-gray-700">
-                                Qty: {kit.defaultQuantity}
-                              </p>
-                              {kit.inventory?.category && (
-                                <p className="text-xs text-gray-500">
-                                  {kit.inventory.category.name}
-                                </p>
-                              )}
+                            <div className="max-h-[300px] overflow-y-auto">
+                              {kits.map((kit) => {
+                                const isSelected = selected[kit.inventoryId] && selected[kit.inventoryId] > 0;
+                                const quantity = selected[kit.inventoryId] || 1;
+                                
+                                return (
+                                  <div
+                                    key={kit.id}
+                                    className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded"
+                                  >
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={(checked) =>
+                                        handleKitToggle(
+                                          program.programId,
+                                          kit.inventoryId,
+                                          checked === true,
+                                          1
+                                        )
+                                      }
+                                      className="flex-shrink-0"
+                                    />
+                                    <div className="flex-1 min-w-0 flex items-center gap-3">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-sm text-gray-900 truncate">
+                                          {kit.inventory?.name ||
+                                            `Item #${kit.inventoryId}`}
+                                        </p>
+                                        {kit.inventory?.description && (
+                                          <p className="text-xs text-gray-600 truncate">
+                                            {kit.inventory.description}
+                                          </p>
+                                        )}
+                                      </div>
+                                      {kit.inventory?.category && (
+                                        <span className="text-xs text-gray-500 whitespace-nowrap">
+                                          {kit.inventory.category.name}
+                                        </span>
+                                      )}
+                                      {isSelected && (
+                                        <div className="flex items-center gap-2">
+                                          <Label className="text-xs text-gray-600 whitespace-nowrap">
+                                            Qty:
+                                          </Label>
+                                          <Input
+                                            type="number"
+                                            min="1"
+                                            value={quantity === 0 || quantity === undefined || quantity === null ? "" : quantity}
+                                            onChange={(e) => {
+                                              const val = e.target.value;
+                                              handleQuantityChange(
+                                                program.programId,
+                                                kit.inventoryId,
+                                                val === "" ? 1 : parseInt(val) || 1
+                                              );
+                                            }}
+                                            className="w-16 h-8 text-sm"
+                                            onClick={(e) => e.stopPropagation()}
+                                            onFocus={(e) => e.stopPropagation()}
+                                          />
+                                        </div>
+                                      )}
+                                      {!isSelected && (
+                                        <span className="text-xs text-gray-500 whitespace-nowrap">
+                                          Default: 1
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-                        ))}
-                      </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   );
                 })}

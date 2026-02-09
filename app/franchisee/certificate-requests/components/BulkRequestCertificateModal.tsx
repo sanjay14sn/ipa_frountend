@@ -207,8 +207,11 @@ export default function BulkRequestCertificateModal({
                 id="applyToAllMarks"
                 type="number"
                 min="0"
-                value={applyToAllMarks}
-                onChange={(e) => setApplyToAllMarks(e.target.value)}
+                value={applyToAllMarks === "0" || applyToAllMarks === 0 ? "" : applyToAllMarks}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setApplyToAllMarks(val);
+                }}
                 placeholder="Enter marks (e.g., 85)"
                 className="flex-1"
               />
@@ -244,7 +247,7 @@ export default function BulkRequestCertificateModal({
                     <Input
                       type="number"
                       min="0"
-                      value={marksMap[student.id] || ""}
+                      value={marksMap[student.id] === "0" || marksMap[student.id] === 0 ? "" : marksMap[student.id] || ""}
                       onChange={(e) =>
                         handleMarksChange(student.id, e.target.value)
                       }

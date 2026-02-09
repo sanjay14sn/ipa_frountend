@@ -1138,10 +1138,11 @@ export function ProgramManagement() {
                       id="inventoryQuantity"
                       type="number"
                       min="0"
-                      value={newInventoryQuantity}
-                      onChange={(e) =>
-                        setNewInventoryQuantity(Number(e.target.value) || 0)
-                      }
+                      value={newInventoryQuantity === 0 || newInventoryQuantity === undefined || newInventoryQuantity === null ? "" : newInventoryQuantity}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewInventoryQuantity(val === "" ? 0 : Number(val));
+                      }}
                       className="h-10"
                     />
                   </div>
@@ -1153,12 +1154,11 @@ export function ProgramManagement() {
                       id="inventoryRestockQuantity"
                       type="number"
                       min="0"
-                      value={newInventoryRestockQuantity}
-                      onChange={(e) =>
-                        setNewInventoryRestockQuantity(
-                          Number(e.target.value) || 0
-                        )
-                      }
+                      value={newInventoryRestockQuantity === 0 || newInventoryRestockQuantity === undefined || newInventoryRestockQuantity === null ? "" : newInventoryRestockQuantity}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewInventoryRestockQuantity(val === "" ? 0 : Number(val));
+                      }}
                       className="h-10"
                     />
                   </div>
@@ -1171,10 +1171,11 @@ export function ProgramManagement() {
                       id="kitQuantity"
                       type="number"
                       min="1"
-                      value={newKitQuantity}
-                      onChange={(e) =>
-                        setNewKitQuantity(Number(e.target.value) || 1)
-                      }
+                      value={newKitQuantity === 0 || newKitQuantity === undefined || newKitQuantity === null ? "" : newKitQuantity}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewKitQuantity(val === "" ? 1 : Number(val));
+                      }}
                       className="h-10"
                     />
                   </div>

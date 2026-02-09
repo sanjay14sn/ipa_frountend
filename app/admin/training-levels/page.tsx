@@ -521,13 +521,14 @@ export default function TrainingLevelsPage() {
                     type="number"
                     min="0"
                     step="0.01"
-                    value={formData.amount}
-                    onChange={(e) =>
+                    value={formData.amount === 0 || formData.amount === undefined || formData.amount === null ? "" : formData.amount}
+                    onChange={(e) => {
+                      const val = e.target.value;
                       setFormData({
                         ...formData,
-                        amount: parseFloat(e.target.value) || 0,
-                      })
-                    }
+                        amount: val === "" ? 0 : parseFloat(val) || 0,
+                      });
+                    }}
                     placeholder="Enter training level amount"
                     required
                   />
@@ -541,13 +542,14 @@ export default function TrainingLevelsPage() {
                     id="rank"
                     type="number"
                     min="1"
-                    value={formData.rank || ""}
-                    onChange={(e) =>
+                    value={formData.rank === 0 || formData.rank === undefined || formData.rank === null ? "" : formData.rank}
+                    onChange={(e) => {
+                      const val = e.target.value;
                       setFormData({
                         ...formData,
-                        rank: e.target.value ? parseInt(e.target.value) : undefined,
-                      })
-                    }
+                        rank: val === "" ? undefined : parseInt(val),
+                      });
+                    }}
                     placeholder="Enter rank/order (optional)"
                   />
                   <p className="text-sm text-muted-foreground">

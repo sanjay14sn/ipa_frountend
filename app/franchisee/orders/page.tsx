@@ -379,9 +379,6 @@ export default function FranchiseeOrdersPage() {
   const pendingOrders = orders.filter(
     (o) => o.status === OrderStatus.PENDING
   ).length;
-  const processingOrders = orders.filter(
-    (o) => o.status === OrderStatus.VERIFIED
-  ).length;
   const shippedOrders = orders.filter(
     (o) => o.status === OrderStatus.SHIPPING
   ).length;
@@ -392,12 +389,10 @@ export default function FranchiseeOrdersPage() {
     (o) => o.status === OrderStatus.CANCELLED
   ).length;
 
-  // Get selected students data
   const selectedStudentsData = activeStudents.filter((s) =>
     selectedStudents.includes(s.id)
   );
 
-  // Helper function to safely get level display value
   const getLevelDisplay = (level: any): string => {
     if (typeof level === "string") {
       return level;
@@ -411,12 +406,11 @@ export default function FranchiseeOrdersPage() {
     return String(level || "");
   };
 
-  // Calculate invoice totals
   const invoiceSubtotal = invoiceItems.reduce(
     (sum, item) => sum + item.totalPrice,
     0
   );
-  const invoiceTax = 0; // Add tax calculation if needed
+  const invoiceTax = 0;
   const invoiceTotal = invoiceSubtotal + invoiceTax;
 
   return (
@@ -750,7 +744,7 @@ export default function FranchiseeOrdersPage() {
                                           </div>
                                         )}
                                       <div className="flex items-center justify-between text-muted-foreground">
-                                        <span>Royalty (3 months):</span>
+                                        <span>Royalty ({item.durationInMonths} {item.durationInMonths === 1 ? 'month' : 'months'}):</span>
                                         <div className="flex items-center gap-1">
                                           <IndianRupee className="h-3 w-3" />
                                           {item.royalty.toFixed(2)}

@@ -3,10 +3,12 @@ export interface FranchisePricingConfig {
   franchiseName: string;
 
   // Royalty Configuration
+  // Note: Royalty is now a fixed per-month amount (not percentage)
+  // The actual duration comes from level.durationInMonths in the backend
   royalty: {
-    baseRoyaltyPerMonth: number; // Base royalty amount per month (e.g., 250)
-    level1Months: number; // 4 months for Level 1
-    level2PlusMonths: number; // 3 months for Level 2+
+    baseRoyaltyPerMonth: number; // Fixed royalty amount per month (e.g., 250)
+    level1Months: number; // 4 months for Level 1 (deprecated - use level.durationInMonths)
+    level2PlusMonths: number; // 3 months for Level 2+ (deprecated - use level.durationInMonths)
     discountPercentage: number; // Admin controllable discount on royalty
   };
 
@@ -117,6 +119,8 @@ export function isLevel1(level: StudentLevel): boolean {
   return level === "Level1";
 }
 
+// Note: This function uses hardcoded values. For actual calculations,
+// use level.durationInMonths from the backend Level model.
 export function calculateRoyaltyMonths(level: StudentLevel): number {
   return isLevel1(level) ? 4 : 3;
 }

@@ -34,9 +34,11 @@ export default function PaymentBreakdown({
       </h3>
 
       {/* Per-Program Breakdown */}
-      {isPerProgram && paymentDetails.length > 1 && (
+      {isPerProgram && paymentDetails.length > 0 ? (
         <div className="mb-5 space-y-3">
-          <p className="text-sm font-semibold text-gray-700 mb-2">Program-wise Breakdown:</p>
+          <p className="text-sm font-semibold text-gray-700 mb-2">
+            {paymentDetails.length > 1 ? "Program-wise Breakdown:" : "Program Breakdown:"}
+          </p>
           {paymentDetails.map((program: any, idx: number) => (
             <div key={idx} className="bg-primary/5 p-4 rounded-lg border border-primary">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">
@@ -64,25 +66,71 @@ export default function PaymentBreakdown({
                   <span className="font-semibold text-gray-900">₹{fmt(program.installment)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Royalty (%):</span>
-                  <span className="font-semibold text-gray-900">{fmt(program.royalty)}%</span>
+                  <span className="text-gray-600">Royalty:</span>
+                  <span className="font-semibold text-gray-900">₹{fmt(program.royalty)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">CI Share (%):</span>
-                  <span className="font-semibold text-gray-900">{fmt(program.ciShare)}%</span>
+                  <span className="text-gray-600">CI Share:</span>
+                  <span className="font-semibold text-gray-900">₹{fmt(program.ciShare)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Franchise Share (%):</span>
-                  <span className="font-semibold text-gray-900">{fmt(program.franchiseShare)}%</span>
+                  <span className="text-gray-600">Franchise Share:</span>
+                  <span className="font-semibold text-gray-900">₹{fmt(program.franchiseShare)}</span>
                 </div>
               </div>
             </div>
           ))}
-          <div className="border-t-2 border-primary pt-3 mt-4">
-            <p className="text-sm font-semibold text-gray-900">Combined Summary:</p>
+          {paymentDetails.length > 1 && (
+            <div className="border-t-2 border-primary pt-3 mt-4">
+              <p className="text-sm font-semibold text-gray-900">Combined Summary:</p>
+            </div>
+          )}
+        </div>
+      ) : !isPerProgram && paymentDetails ? (
+        /* Legacy single object breakdown */
+        <div className="mb-5 space-y-3">
+          <p className="text-sm font-semibold text-gray-700 mb-2">Program Breakdown:</p>
+          <div className="bg-primary/5 p-4 rounded-lg border border-primary">
+            <h4 className="text-sm font-semibold text-gray-900 mb-3">
+              {paymentDetails.franchiseProgram?.program?.name || paymentDetails.program?.name || "Program"}
+            </h4>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Franchise Fee:</span>
+                <span className="font-semibold text-gray-900">₹{fmt(paymentDetails.franchiseFee)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Kit Cost:</span>
+                <span className="font-semibold text-gray-900">₹{fmt(paymentDetails.kitCost)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Material Cost:</span>
+                <span className="font-semibold text-gray-900">₹{fmt(paymentDetails.materialCost)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Monthly Fee:</span>
+                <span className="font-semibold text-gray-900">₹{fmt(paymentDetails.monthlyFee)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Installment:</span>
+                <span className="font-semibold text-gray-900">₹{fmt(paymentDetails.installment)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Royalty:</span>
+                <span className="font-semibold text-gray-900">₹{fmt(paymentDetails.royalty)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">CI Share:</span>
+                <span className="font-semibold text-gray-900">₹{fmt(paymentDetails.ciShare)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Franchise Share:</span>
+                <span className="font-semibold text-gray-900">₹{fmt(paymentDetails.franchiseShare)}</span>
+              </div>
+            </div>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Total Franchise Fee to Pay */}
       <div className="flex justify-between items-center pt-5 mt-5 border-t-2 border-primary bg-primary/5 px-4 py-3 rounded-lg">

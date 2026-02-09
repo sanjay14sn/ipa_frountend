@@ -272,13 +272,14 @@ export function InventoryDialogs({
                   id="quantity"
                   type="number"
                   min="0"
-                  value={formData.quantity}
-                  onChange={(e) =>
+                  value={formData.quantity === 0 || formData.quantity === undefined || formData.quantity === null ? "" : formData.quantity}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setFormData({
                       ...formData,
-                      quantity: Number(e.target.value),
-                    })
-                  }
+                      quantity: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -287,13 +288,14 @@ export function InventoryDialogs({
                   id="restockQuantity"
                   type="number"
                   min="0"
-                  value={formData.restockQuantity}
-                  onChange={(e) =>
+                  value={formData.restockQuantity === 0 || formData.restockQuantity === undefined || formData.restockQuantity === null ? "" : formData.restockQuantity}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setFormData({
                       ...formData,
-                      restockQuantity: Number(e.target.value),
-                    })
-                  }
+                      restockQuantity: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
             </div>
@@ -305,13 +307,14 @@ export function InventoryDialogs({
                 min="0"
                 step="0.01"
                 placeholder="0.00"
-                value={formData.price || 0}
-                onChange={(e) =>
+                value={formData.price === 0 || formData.price === undefined || formData.price === null ? "" : formData.price}
+                onChange={(e) => {
+                  const val = e.target.value;
                   setFormData({
                     ...formData,
-                    price: Number(e.target.value),
-                  })
-                }
+                    price: val === "" ? 0 : Number(val),
+                  });
+                }}
               />
             </div>
             <div className="flex items-center space-x-2">
@@ -398,13 +401,14 @@ export function InventoryDialogs({
                   id="editQuantity"
                   type="number"
                   min="0"
-                  value={editFormData.quantity || 0}
-                  onChange={(e) =>
+                  value={editFormData.quantity === 0 || editFormData.quantity === undefined || editFormData.quantity === null ? "" : editFormData.quantity}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setEditFormData({
                       ...editFormData,
-                      quantity: Number(e.target.value),
-                    })
-                  }
+                      quantity: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -413,13 +417,14 @@ export function InventoryDialogs({
                   id="editRestockQuantity"
                   type="number"
                   min="0"
-                  value={editFormData.restockQuantity || 0}
-                  onChange={(e) =>
+                  value={editFormData.restockQuantity === 0 || editFormData.restockQuantity === undefined || editFormData.restockQuantity === null ? "" : editFormData.restockQuantity}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setEditFormData({
                       ...editFormData,
-                      restockQuantity: Number(e.target.value),
-                    })
-                  }
+                      restockQuantity: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
             </div>
@@ -489,8 +494,11 @@ export function InventoryDialogs({
                 id="stockQuantity"
                 type="number"
                 min="0"
-                value={stockQuantity}
-                onChange={(e) => setStockQuantity(Number(e.target.value))}
+                value={stockQuantity === 0 || stockQuantity === undefined || stockQuantity === null ? "" : stockQuantity}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setStockQuantity(val === "" ? 0 : Number(val));
+                }}
               />
             </div>
             {stockItem && stockQuantity <= stockItem.restockQuantity && (
@@ -616,13 +624,14 @@ export function InventoryDialogs({
                   id="quantity"
                   type="number"
                   min="1"
-                  value={supplierOrderForm.quantity}
-                  onChange={(e) =>
+                  value={supplierOrderForm.quantity === 0 || supplierOrderForm.quantity === undefined || supplierOrderForm.quantity === null ? "" : supplierOrderForm.quantity}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setSupplierOrderForm({
                       ...supplierOrderForm,
-                      quantity: Number(e.target.value),
-                    })
-                  }
+                      quantity: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -632,13 +641,14 @@ export function InventoryDialogs({
                   type="number"
                   min="0"
                   step="0.01"
-                  value={supplierOrderForm.unitPrice}
-                  onChange={(e) =>
+                  value={supplierOrderForm.unitPrice === 0 || supplierOrderForm.unitPrice === undefined || supplierOrderForm.unitPrice === null ? "" : supplierOrderForm.unitPrice}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setSupplierOrderForm({
                       ...supplierOrderForm,
-                       unitPrice: Number(e.target.value),
-                    })
-                  }
+                      unitPrice: val === "" ? 0 : Number(val),
+                    });
+                  }}
                 />
               </div>
             </div>
@@ -740,13 +750,14 @@ export function InventoryDialogs({
                 type="number"
                 min="0"
                 step="0.01"
-                value={addSupplierForm.costPrice}
-                onChange={(e) =>
+                value={addSupplierForm.costPrice === 0 || addSupplierForm.costPrice === undefined || addSupplierForm.costPrice === null ? "" : addSupplierForm.costPrice}
+                onChange={(e) => {
+                  const val = e.target.value;
                   setAddSupplierForm({
                     ...addSupplierForm,
-                    costPrice: Number(e.target.value),
-                  })
-                }
+                    costPrice: val === "" ? 0 : Number(val),
+                  });
+                }}
               />
             </div>
           </div>

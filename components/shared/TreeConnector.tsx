@@ -18,10 +18,15 @@ export function TreeConnector({
       const calculateLineHeight = () => {
         if (containerRef.current && targetRef.current) {
           const containerTop = containerRef.current.getBoundingClientRect().top;
-          const dotCenter =
-            targetRef.current.getBoundingClientRect().top +
-            targetRef.current.offsetHeight / 2;
-          setLineHeight(dotCenter - containerTop);
+          // The targetRef points to the div containing the horizontal connector
+          // The horizontal connector div is positioned at top-4 (16px) from its parent
+          // The L-shaped border starts at top-0 of the horizontal connector div
+          // So the connection point is at: targetRef top + 16px (top-4)
+          const targetTop = targetRef.current.getBoundingClientRect().top;
+          // The dot is at top-4 (16px) within the horizontal connector, centered with translate
+          // Dot center is at: targetTop + 16px + 1px (half dot) - 1px (translate) = targetTop + 16px
+          const connectionPoint = targetTop + 16;
+          setLineHeight(connectionPoint - containerTop);
         }
       };
 
@@ -42,7 +47,7 @@ export function TreeConnector({
   return (
     <div
       className="absolute left-6 border-primary border bg-primary"
-      style={{ top: 0, height: `${lineHeight - 6}px` }}
+      style={{ top: 0, height: `${lineHeight}px` }}
     />
   );
 }

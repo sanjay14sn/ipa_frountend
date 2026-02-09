@@ -187,10 +187,8 @@ export default function AddStudentModal({
   const { user } = useUser();
 
   const [formData, setFormData] = useState<StudentFormData>({
-    // Student Type
     existing: false,
 
-    // Basic Information
     studentName: "",
     rollNo: "",
     dob: "",
@@ -204,7 +202,6 @@ export default function AddStudentModal({
     photoImage: null,
     programId: 0,
 
-    // Parent Information
     fatherName: "",
     fatherQualification: "",
     fatherOccupation: "",
@@ -214,16 +211,13 @@ export default function AddStudentModal({
     motherOccupation: "",
     motherContactNo: "",
 
-    // Contact & Address
     residentialAddress: "",
     mailId: "",
 
-    // Status Management
     isDiscontinued: false,
     discontinueReason: "",
   });
 
-  // Fetch programs on mount
   useEffect(() => {
     const fetchPrograms = async () => {
       setLoadingPrograms(true);
@@ -242,7 +236,6 @@ export default function AddStudentModal({
     }
   }, [open]);
 
-  // Fetch streams when program is selected
   useEffect(() => {
     const fetchStreams = async () => {
       if (formData.programId && formData.programId > 0) {
@@ -272,6 +265,28 @@ export default function AddStudentModal({
         try {
           const fetchedLevels = await getLevelsByStream(formData.streamId);
           setLevels(fetchedLevels);
+          if (fetchedLevels.length > 0) {
+            setFormData((prev) => {
+              if (!prev.existing) {
+                const firstLevel = fetchedLevels[0];
+                return {
+                  ...prev,
+                  levelId: firstLevel.id,
+                };
+              }
+              const currentLevelExists = fetchedLevels.some(
+                (level) => level.id === prev.levelId
+              );
+              if (prev.levelId === 0 || !currentLevelExists) {
+                const firstLevel = fetchedLevels[0];
+                return {
+                  ...prev,
+                  levelId: firstLevel.id,
+                };
+              }
+              return prev;
+            });
+          }
         } catch (error) {
           console.error("Error fetching levels:", error);
           setLevels([]);
@@ -553,7 +568,24 @@ export default function AddStudentModal({
                     id="newStudent"
                     name="studentType"
                     checked={!formData.existing}
-                    onChange={() => handleInputChange("existing", false)}
+                    onChange={() => {
+                      // For new students, auto-select first level if stream is selected
+                      setFormData((prev) => {
+                        if (prev.streamId > 0 && levels.length > 0) {
+                          const firstLevel = levels[0];
+                          return {
+                            ...prev,
+                            existing: false,
+                            levelId: firstLevel.id,
+                          };
+                        }
+                        return {
+                          ...prev,
+                          existing: false,
+                          levelId: 0,
+                        };
+                      });
+                    }}
                     className="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-primary"
                   />
                   <Label htmlFor="newStudent" className="text-sm font-medium">
@@ -801,6 +833,7 @@ export default function AddStudentModal({
                   value={formData.levelId.toString()}
                   onValueChange={(value) => handleInputChange("levelId", value)}
                   disabled={
+                    !formData.existing ||
                     !formData.streamId ||
                     formData.streamId === 0 ||
                     loadingLevels
@@ -815,6 +848,8 @@ export default function AddStudentModal({
                           ? "Loading levels..."
                           : formData.streamId === 0
                           ? "Select stream first"
+                          : !formData.existing
+                          ? "Auto-selected (first level)"
                           : "Select level"
                       }
                     />

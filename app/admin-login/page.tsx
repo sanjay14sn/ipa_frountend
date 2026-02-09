@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,7 +25,6 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,11 +38,13 @@ export default function AdminLoginPage() {
 
       if (response.statusCode !== 201) {
         setError(response.message || "Login failed");
+        setLoading(false);
         return;
       }
 
       if (data.role !== "admin") {
         setError("Access denied. Admin credentials required.");
+        setLoading(false);
         return;
       }
 
@@ -55,12 +56,8 @@ export default function AdminLoginPage() {
       };
 
       setUser(loggedInUser);
-      setDone(true);
-
-      setTimeout(() => {
-        router.push("/admin/dashboard");
-      }, 600);
-    } catch (err) {
+      router.push("/admin/dashboard");
+    } catch (err: any) {
       console.error("Admin login error:", err);
       const errorMessage = getUserFriendlyMessage(
         err,
@@ -120,7 +117,7 @@ export default function AdminLoginPage() {
             </div>
 
             {error && (
-              <div className="text-destructive-foreground text-sm text-center bg-destructive/10 border border-destructive/20 rounded-md p-2">
+              <div className="text-red-500 text-sm text-center">
                 {error}
               </div>
             )}
@@ -132,13 +129,6 @@ export default function AdminLoginPage() {
             >
               {loading ? "Signing in..." : "Sign in"}
             </Button>
-
-            {done && (
-              <div className="flex items-center gap-2 rounded-md border border-brand-green-200 bg-brand-green-50 px-3 py-2 text-brand-green-700">
-                <CheckCircle2 className="h-4 w-4" />
-                <p className="text-sm">Success! Redirecting to dashboard…</p>
-              </div>
-            )}
           </form>
 
           <div className="mt-6 p-4 bg-brand-white-100 rounded-lg border border-border">
