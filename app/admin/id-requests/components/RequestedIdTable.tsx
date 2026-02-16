@@ -16,6 +16,7 @@ import {
 import FranchiseIdDetails from "./FranchiseIdDetails";
 
 interface FranchiseIdGroup {
+  franchiseId: string;
   franchiseName: string;
   students: RequestedIdDetail[];
 }
@@ -69,12 +70,17 @@ export default function RequestedIdTable({
                 sortOrder,
               });
 
-        // Convert grouped data to array
+        // Convert grouped data to array - use franchiseId for row keys (avoids hyphen/space issues)
         const groups: FranchiseIdGroup[] = Object.entries(result.data).map(
-          ([franchiseName, students]) => ({
-            franchiseName,
-            students: students as RequestedIdDetail[],
-          })
+          ([franchiseName, students]) => {
+            const studentList = students as RequestedIdDetail[];
+            const franchiseId = studentList[0]?.franchise?.id ?? `fn-${franchiseName.replace(/\s+/g, "_")}`;
+            return {
+              franchiseId: String(franchiseId),
+              franchiseName,
+              students: studentList,
+            };
+          }
         );
 
         setFranchiseGroups(groups);
@@ -98,7 +104,7 @@ export default function RequestedIdTable({
   ]);
 
   const toggleRow = (id: string) => {
-    if (id.includes("-")) {
+    if (id.includes("-") && !franchiseGroups.some((g) => g.franchiseId === id)) {
       const newExpandedChildren = new Set(expandedChildren);
       if (newExpandedChildren.has(id)) {
         newExpandedChildren.delete(id);
@@ -170,7 +176,7 @@ export default function RequestedIdTable({
       data={franchiseGroups}
       loading={loading}
       columns={columns}
-      getRowId={(group) => group.franchiseName}
+      getRowId={(group) => group.franchiseId}
       renderMainCell={(group) => (
         <div className="flex flex-col">
           <div className="font-medium text-gray-900">
@@ -185,6 +191,7 @@ export default function RequestedIdTable({
       )}
       renderExpandedContent={(group) => (
         <FranchiseIdDetails
+          franchiseId={group.franchiseId}
           franchiseName={group.franchiseName}
           students={group.students}
           lastRow={false}

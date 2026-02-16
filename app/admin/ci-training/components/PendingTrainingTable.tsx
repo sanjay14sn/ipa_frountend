@@ -28,9 +28,6 @@ export default function PendingTrainingTable({
   onCompleteTraining,
 }: PendingTrainingTableProps) {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [expandedChildren, setExpandedChildren] = useState<Set<string>>(
-    new Set()
-  );
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -49,13 +46,18 @@ export default function PendingTrainingTable({
     return filtered;
   }, [data]);
 
-  // Convert object to array for easier processing
-  const franchiseEntries = Object.entries(pendingData);
+  // Convert object to array - use franchiseId for row keys (avoids hyphen/space issues in names like "IPA - Santhome")
+  const franchiseEntries = useMemo(() => {
+    return Object.entries(pendingData).map(([franchiseName, instructors]) => {
+      const franchiseId = instructors[0]?.franchise?.id ?? `fn-${franchiseName.replace(/\s+/g, "_")}`;
+      return [String(franchiseId), franchiseName, instructors] as const;
+    });
+  }, [pendingData]);
 
   // Filter data
   const filteredData = useMemo(() => {
     const term = searchTerm.toLowerCase();
-    return franchiseEntries.filter(([franchiseName, instructors]) => {
+    return franchiseEntries.filter(([, franchiseName, instructors]) => {
       const matchesSearch =
         franchiseName.toLowerCase().includes(term) ||
         instructors.some(
@@ -76,23 +78,7 @@ export default function PendingTrainingTable({
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
   const toggleRow = (id: string) => {
-    if (id.includes("-")) {
-      // This is an instructor row - only one instructor can be expanded at a time
-      const newExpandedChildren = new Set<string>();
-      if (!expandedChildren.has(id)) {
-        newExpandedChildren.add(id);
-      }
-      setExpandedChildren(newExpandedChildren);
-    } else {
-      // This is a franchise row
-      if (expandedRow === id) {
-        setExpandedRow(null);
-        setExpandedChildren(new Set());
-      } else {
-        setExpandedRow(id);
-        setExpandedChildren(new Set());
-      }
-    }
+    setExpandedRow((prev) => (prev === id ? null : id));
   };
 
   const totalInstructors = filteredData.reduce(
@@ -132,16 +118,16 @@ export default function PendingTrainingTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedData.map(([franchiseName, instructors], index) => (
-              <React.Fragment key={franchiseName}>
+            {paginatedData.map(([franchiseId, franchiseName, instructors], index) => (
+              <React.Fragment key={franchiseId}>
                 <TableRow className="hover:bg-gray-50">
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => toggleRow(franchiseName)}
+                        onClick={() => toggleRow(franchiseId)}
                         className="p-1 hover:bg-gray-100 rounded"
                       >
-                        {expandedRow === franchiseName ? (
+                        {expandedRow === franchiseId ? (
                           <ChevronDown className="w-4 h-4" />
                         ) : (
                           <ChevronRight className="w-4 h-4" />
@@ -169,14 +155,12 @@ export default function PendingTrainingTable({
                 </TableRow>
 
                 {/* Expanded Details Row */}
-                {expandedRow === franchiseName && (
+                {expandedRow === franchiseId && (
                   <TableRow>
                     <TableCell colSpan={3} className="p-0">
                       <InstructorDetails
                         instructors={instructors}
                         lastRow={index === paginatedData.length - 1}
-                        expandedRows={expandedChildren}
-                        onToggleRow={toggleRow}
                         onCompleteTraining={onCompleteTraining}
                         isCompleted={false}
                       />

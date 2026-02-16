@@ -193,6 +193,7 @@ export default function AdminShippingTable() {
         )}
         renderExpandedContent={(group) => (
           <FranchiseShippingDetails
+            franchiseId={group.franchiseId.toString()}
             franchiseName={group.franchiseName}
             orders={group.orders}
             lastRow={false}

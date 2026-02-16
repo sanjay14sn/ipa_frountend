@@ -16,14 +16,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertCircle } from "lucide-react";
 import {
-  getActiveTrainingLevels,
-  TrainingLevel,
-} from "@/services/training-level.service";
-import {
   requestAdditionalTraining,
   RequestAdditionalTrainingRequest,
-  getCITrainingProgress,
-  CITrainingProgress,
+  getAvailableTrainingLevelsForCI,
 } from "@/services/course-instructor.service";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,20 +37,20 @@ export function RequestTrainingModal({
   instructorName,
   onSuccess,
 }: RequestTrainingModalProps) {
-  const [trainingLevels, setTrainingLevels] = useState<TrainingLevel[]>([]);
+  const [trainingLevels, setTrainingLevels] = useState<
+    Array<{ id: number; name: string; description?: string; amount: number }>
+  >([]);
   const [selectedLevelIds, setSelectedLevelIds] = useState<number[]>([]);
   const [additionalDetails, setAdditionalDetails] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingLevels, setLoadingLevels] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentTrainings, setCurrentTrainings] = useState<CITrainingProgress | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen) {
       loadData();
     } else {
-      // Reset form when modal closes
       setSelectedLevelIds([]);
       setAdditionalDetails("");
       setError(null);
@@ -67,14 +62,8 @@ export function RequestTrainingModal({
       setLoadingLevels(true);
       setError(null);
 
-      // Load available training levels and current training progress
-      const [levels, progress] = await Promise.all([
-        getActiveTrainingLevels().catch(() => []), // Fallback to empty array if fails
-        getCITrainingProgress(instructorId),
-      ]);
-
+      const levels = await getAvailableTrainingLevelsForCI(instructorId);
       setTrainingLevels(levels || []);
-      setCurrentTrainings(progress);
     } catch (err: any) {
       setError(err.message || "Failed to load training levels");
     } finally {
@@ -127,30 +116,14 @@ export function RequestTrainingModal({
     }
   };
 
-  // Get active training level ID to exclude
-  const activeTrainingLevelId =
-    currentTrainings?.activeTraining?.trainingLevelId;
-
-  // Filter out active training level from available options
-  const availableLevels = trainingLevels.filter(
-    (level) => level.id !== activeTrainingLevelId
-  );
-
-  // Mark levels that are already completed (for redo)
-  const completedLevelIds = new Set(
-    currentTrainings?.trainings
-      .filter((t) => t.isCompleted)
-      .map((t) => t.trainingLevelId) || []
-  );
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Request Additional Training</DialogTitle>
           <DialogDescription>
-            Request training for {instructorName}. You can select any level
-            except the currently active one. Completed levels can be redone.
+            Request training for {instructorName}. Select levels that are not
+            yet completed, paid, or currently active.
           </DialogDescription>
         </DialogHeader>
 
@@ -171,19 +144,13 @@ export function RequestTrainingModal({
               {trainingLevels.length === 0 ? (
                 <Alert>
                   <AlertDescription>
-                    No training levels are currently available in the system.
-                  </AlertDescription>
-                </Alert>
-              ) : availableLevels.length === 0 ? (
-                <Alert>
-                  <AlertDescription>
-                    No training levels available. All levels are currently active or already requested.
+                    No training levels available to request. All levels may be
+                    active, paid, or completed.
                   </AlertDescription>
                 </Alert>
               ) : (
                 <div className="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-3">
-                  {availableLevels.map((level) => {
-                    const isCompleted = completedLevelIds.has(level.id);
+                  {trainingLevels.map((level) => {
                     const isSelected = selectedLevelIds.includes(level.id);
 
                     return (
@@ -205,11 +172,6 @@ export function RequestTrainingModal({
                           </Label>
                           <div className="text-sm text-gray-500 mt-0.5">
                             ₹{level.amount.toLocaleString()}
-                            {isCompleted && (
-                              <span className="ml-2 text-green-600">
-                                (Completed - can redo)
-                              </span>
-                            )}
                           </div>
                           {level.description && (
                             <p className="text-xs text-gray-400 mt-1">

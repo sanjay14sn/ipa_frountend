@@ -22,15 +22,11 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   User,
-  Users,
   ArrowRight,
   Save,
   AlertCircle,
   CheckCircle,
-  X,
-  ChevronDown,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import React from "react";
 import { BloodGroup } from "@/services/course-instructor.service";
 import { createCourseInstructorWithRevalidation } from "@/hooks/use-course-instructors";
@@ -91,8 +87,8 @@ const Stepper = ({
                   currentStep === step.id
                     ? "bg-blue-600 text-white border-blue-600 shadow-md"
                     : currentStep > step.id
-                    ? "bg-green-600 text-white border-green-600"
-                    : "bg-white text-gray-400 border-gray-300"
+                      ? "bg-green-600 text-white border-green-600"
+                      : "bg-white text-gray-400 border-gray-300"
                 }`}
               >
                 {currentStep > step.id ? "✓" : step.id}
@@ -149,7 +145,7 @@ interface CourseInstructorFormData {
   reference: string;
   expiryDate: string;
   trainingLevelId: number;
-  trainingLevelIds: number[];
+  numberOfLevels: number;
   additionalDetails: string;
   trainingProof: string;
   hasTrainingProof: boolean;
@@ -168,7 +164,6 @@ export default function AddCourseInstructorModal({
   const [trainingLevels, setTrainingLevels] = useState<TrainingLevel[]>([]);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
   const [loadingTrainingLevels, setLoadingTrainingLevels] = useState(false);
-  const [isTrainingDropdownOpen, setIsTrainingDropdownOpen] = useState(false);
 
   const { user } = useUser();
 
@@ -188,7 +183,14 @@ export default function AddCourseInstructorModal({
     try {
       setLoadingTrainingLevels(true);
       const data = await getActiveTrainingLevels();
-      setTrainingLevels(data.filter((level) => level.isActive));
+      const active = data.filter((level) => level.isActive);
+      const sorted = [...active].sort((a, b) => {
+        const orderA = a.rank ?? Number.MAX_SAFE_INTEGER;
+        const orderB = b.rank ?? Number.MAX_SAFE_INTEGER;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.id - b.id;
+      });
+      setTrainingLevels(sorted);
     } catch (error) {
       console.error("Error fetching training levels:", error);
       setTrainingLevels([]);
@@ -217,7 +219,7 @@ export default function AddCourseInstructorModal({
     reference: "",
     expiryDate: "",
     trainingLevelId: 0,
-    trainingLevelIds: [],
+    numberOfLevels: 0,
     additionalDetails: "",
     trainingProof: "",
     hasTrainingProof: false,
@@ -279,12 +281,9 @@ export default function AddCourseInstructorModal({
         }
         if (!formData.hasTrainingProof) {
           // If no training proof, at least one training level is required
-          if (
-            !formData.trainingLevelIds ||
-            formData.trainingLevelIds.length === 0
-          ) {
-            newErrors.trainingLevelIds =
-              "Please select at least one training level";
+          if (!formData.numberOfLevels || formData.numberOfLevels < 1) {
+            newErrors.numberOfLevels =
+              "Please select number of training levels";
           }
         } else {
           // If training proof is provided, it's required
@@ -312,9 +311,11 @@ export default function AddCourseInstructorModal({
   const handleInputChange = (field: string, value: string | boolean) => {
     let convertedValue: any = value;
 
-    // Convert programId and trainingLevelId to number
+    // Convert programId, trainingLevelId, numberOfLevels to number
     if (
-      (field === "programId" || field === "trainingLevelId") &&
+      (field === "programId" ||
+        field === "trainingLevelId" ||
+        field === "numberOfLevels") &&
       typeof value === "string"
     ) {
       convertedValue = parseInt(value, 10) || 0;
@@ -334,7 +335,7 @@ export default function AddCourseInstructorModal({
       setFormData((prev) => ({
         ...prev,
         trainingLevelId: 0,
-        trainingLevelIds: [],
+        numberOfLevels: 0,
       }));
     }
 
@@ -397,9 +398,12 @@ export default function AddCourseInstructorModal({
         courseInstructorData.trainingProof = formData.trainingProof;
       } else {
         // Otherwise, add training request fields
-        // Support multiple training levels
-        if (formData.trainingLevelIds && formData.trainingLevelIds.length > 0) {
-          courseInstructorData.trainingLevelIds = formData.trainingLevelIds;
+        // Take first N levels by rank; N = numberOfLevels
+        if (formData.numberOfLevels > 0 && trainingLevels.length > 0) {
+          const n = Math.min(formData.numberOfLevels, trainingLevels.length);
+          courseInstructorData.trainingLevelIds = trainingLevels
+            .slice(0, n)
+            .map((l) => l.id);
         }
         if (formData.additionalDetails) {
           courseInstructorData.additionalDetails = formData.additionalDetails;
@@ -407,9 +411,8 @@ export default function AddCourseInstructorModal({
       }
 
       // Call the course instructor service with SWR revalidation
-      const result = await createCourseInstructorWithRevalidation(
-        courseInstructorData
-      );
+      const result =
+        await createCourseInstructorWithRevalidation(courseInstructorData);
 
       setSubmitted(true);
       onSuccess();
@@ -438,7 +441,7 @@ export default function AddCourseInstructorModal({
       reference: "",
       expiryDate: "",
       trainingLevelId: 0,
-      trainingLevelIds: [],
+      numberOfLevels: 0,
       additionalDetails: "",
       trainingProof: "",
       hasTrainingProof: false,
@@ -802,231 +805,61 @@ export default function AddCourseInstructorModal({
               </div>
             ) : (
               <div className="space-y-2">
-                <Label htmlFor="trainingLevelIds">
-                  Training Levels (Select Multiple) *
+                <Label htmlFor="numberOfLevels">
+                  Number of Training Levels *
                 </Label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (
-                        !loadingTrainingLevels &&
-                        formData.programId &&
-                        formData.programId !== 0 &&
-                        trainingLevels.length > 0
-                      ) {
-                        setIsTrainingDropdownOpen(!isTrainingDropdownOpen);
-                      }
-                    }}
-                    disabled={
-                      !formData.programId ||
-                      formData.programId === 0 ||
-                      loadingTrainingLevels ||
-                      trainingLevels.length === 0
-                    }
-                    className={`w-full min-h-[40px] px-3 py-2 text-left border rounded-md flex items-center justify-between ${
-                      errors.trainingLevelIds
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    } ${
-                      !formData.programId ||
-                      formData.programId === 0 ||
-                      loadingTrainingLevels ||
-                      trainingLevels.length === 0
-                        ? "bg-gray-100 cursor-not-allowed"
-                        : "bg-white hover:border-gray-400"
-                    }`}
+                <Select
+                  value={
+                    formData.numberOfLevels > 0
+                      ? formData.numberOfLevels.toString()
+                      : undefined
+                  }
+                  onValueChange={(value) =>
+                    handleInputChange("numberOfLevels", value)
+                  }
+                  disabled={
+                    !formData.programId ||
+                    formData.programId === 0 ||
+                    loadingTrainingLevels ||
+                    trainingLevels.length === 0
+                  }
+                >
+                  <SelectTrigger
+                    className={errors.numberOfLevels ? "border-red-500" : ""}
                   >
-                    <div className="flex-1 flex flex-wrap gap-1 items-center">
-                      {formData.trainingLevelIds.length === 0 ? (
-                        <span className="text-gray-500 text-sm">
-                          {!formData.programId || formData.programId === 0
-                            ? "Select a program first"
-                            : loadingTrainingLevels
+                    <SelectValue
+                      placeholder={
+                        !formData.programId || formData.programId === 0
+                          ? "Select a program first"
+                          : loadingTrainingLevels
                             ? "Loading levels..."
                             : trainingLevels.length === 0
-                            ? "No training levels available"
-                            : "Select training levels"}
-                        </span>
-                      ) : (
-                        <>
-                          {formData.trainingLevelIds.map((levelId) => {
-                            const level = trainingLevels.find(
-                              (l) => l.id === levelId
-                            );
-                            return level ? (
-                              <Badge
-                                key={levelId}
-                                variant="secondary"
-                                className="flex items-center gap-1 pr-1"
-                              >
-                                {level.name}
-                                <span
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const updatedLevels =
-                                      formData.trainingLevelIds.filter(
-                                        (id) => id !== levelId
-                                      );
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      trainingLevelIds: updatedLevels,
-                                    }));
-                                    if (
-                                      errors.trainingLevelIds &&
-                                      updatedLevels.length > 0
-                                    ) {
-                                      setErrors((prev) => ({
-                                        ...prev,
-                                        trainingLevelIds: "",
-                                      }));
-                                    }
-                                  }}
-                                  className="ml-1 rounded-full p-0.5 hover:bg-gray-300 cursor-pointer inline-flex items-center justify-center"
-                                  role="button"
-                                  tabIndex={0}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      const updatedLevels =
-                                        formData.trainingLevelIds.filter(
-                                          (id) => id !== levelId
-                                        );
-                                      setFormData((prev) => ({
-                                        ...prev,
-                                        trainingLevelIds: updatedLevels,
-                                      }));
-                                      if (
-                                        errors.trainingLevelIds &&
-                                        updatedLevels.length > 0
-                                      ) {
-                                        setErrors((prev) => ({
-                                          ...prev,
-                                          trainingLevelIds: "",
-                                        }));
-                                      }
-                                    }
-                                  }}
-                                >
-                                  <X className="h-3 w-3" />
-                                </span>
-                              </Badge>
-                            ) : null;
-                          })}
-                        </>
-                      )}
-                    </div>
-                    <ChevronDown
-                      className={`h-4 w-4 text-gray-500 ml-2 flex-shrink-0 transition-transform ${
-                        isTrainingDropdownOpen ? "rotate-180" : ""
-                      }`}
+                              ? "No training levels available"
+                              : "Select number of levels"
+                      }
                     />
-                  </button>
-
-                  {/* Dropdown Menu */}
-                  {isTrainingDropdownOpen && trainingLevels.length > 0 && (
-                    <>
-                      {/* Backdrop */}
-                      <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setIsTrainingDropdownOpen(false)}
-                      />
-                      {/* Dropdown Content */}
-                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-[300px] overflow-y-auto">
-                        <div className="p-2">
-                          {trainingLevels.map((level) => (
-                            <div
-                              key={level.id}
-                              onClick={() => {
-                                const isSelected =
-                                  formData.trainingLevelIds.includes(level.id);
-                                const updatedLevels = isSelected
-                                  ? formData.trainingLevelIds.filter(
-                                      (id) => id !== level.id
-                                    )
-                                  : [...formData.trainingLevelIds, level.id];
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  trainingLevelIds: updatedLevels,
-                                }));
-                                if (
-                                  errors.trainingLevelIds &&
-                                  updatedLevels.length > 0
-                                ) {
-                                  setErrors((prev) => ({
-                                    ...prev,
-                                    trainingLevelIds: "",
-                                  }));
-                                }
-                              }}
-                              className={`flex items-start space-x-3 p-3 rounded cursor-pointer transition-colors ${
-                                formData.trainingLevelIds.includes(level.id)
-                                  ? "bg-blue-50 hover:bg-blue-100"
-                                  : "hover:bg-gray-50"
-                              }`}
-                            >
-                              <Checkbox
-                                checked={formData.trainingLevelIds.includes(
-                                  level.id
-                                )}
-                                onCheckedChange={() => {}}
-                                className="mt-0.5"
-                              />
-                              <div className="flex-1">
-                                <div className="font-medium text-sm">
-                                  {level.name}
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                  ₹{level.amount.toLocaleString()}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Summary Section */}
-                {formData.trainingLevelIds.length > 0 && (
-                  <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-md">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="font-medium text-gray-700">
-                        Selected Levels:
-                      </span>
-                      <span className="text-blue-600 font-semibold">
-                        {formData.trainingLevelIds.length} level(s)
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-gray-200">
-                      <span className="font-medium text-gray-700">
-                        Total Amount:
-                      </span>
-                      <span className="text-green-600 font-semibold text-base">
-                        ₹
-                        {trainingLevels
-                          .filter((level) =>
-                            formData.trainingLevelIds.includes(level.id)
-                          )
-                          .reduce((sum, level) => sum + level.amount, 0)
-                          .toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {errors.trainingLevelIds && (
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: trainingLevels.length }, (_, i) => {
+                      const n = i + 1;
+                      return (
+                        <SelectItem key={n} value={n.toString()}>
+                          {n} {n === 1 ? "level" : "levels"}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                {errors.numberOfLevels && (
                   <p className="text-red-500 text-sm flex items-center gap-1">
                     <AlertCircle className="w-4 h-4" />
-                    {errors.trainingLevelIds}
+                    {errors.numberOfLevels}
                   </p>
                 )}
                 <p className="text-sm text-muted-foreground">
                   {!formData.programId || formData.programId === 0
                     ? "Please select a program first to see available training levels"
-                    : "Select one or more training levels. The CI will progress through them sequentially."}
+                    : "Levels are selected by rank order (lowest first)."}
                 </p>
               </div>
             )}

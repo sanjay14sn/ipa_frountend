@@ -12,6 +12,7 @@ import OrderDetails from "../../orders/components/OrderDetails";
 
 interface ShippingSectionProps {
   orders: OrderData[];
+  franchiseId: string;
   franchiseName: string;
   isExpanded: boolean;
   onToggle: (id: string) => void;
@@ -22,6 +23,7 @@ export let shippingDotRef = createRef<HTMLDivElement>();
 
 export default function ShippingSection({
   orders,
+  franchiseId,
   franchiseName,
   isExpanded,
   onToggle,
@@ -94,7 +96,7 @@ export default function ShippingSection({
   return (
     <div ref={shippingDotRef}>
       <NestedSection
-        id={`${franchiseName}-orders`}
+        id={`${franchiseId}-orders`}
         title={`Orders (${orders.length})`}
         badge={<Badge variant="secondary">₹{getTotalAmount().toLocaleString("en-IN")}</Badge>}
         isExpanded={isExpanded}

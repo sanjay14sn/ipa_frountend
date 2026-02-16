@@ -6,6 +6,7 @@ import { useEffect, useState, useRef } from "react";
 import { TreeConnector } from "@/components/shared";
 
 interface FranchiseShippingDetailsProps {
+  franchiseId: string;
   franchiseName: string;
   orders: OrderData[];
   expandedRows: Set<string>;
@@ -15,6 +16,7 @@ interface FranchiseShippingDetailsProps {
 }
 
 export default function FranchiseShippingDetails({
+  franchiseId,
   franchiseName,
   orders,
   lastRow,
@@ -86,8 +88,9 @@ export default function FranchiseShippingDetails({
 
           <ShippingSection
             orders={orders}
+            franchiseId={franchiseId}
             franchiseName={franchiseName}
-            isExpanded={expandedRows.has(`${franchiseName}-orders`)}
+            isExpanded={expandedRows.has(`${franchiseId}-orders`)}
             onToggle={onToggleRow}
             onOrderUpdate={onOrderUpdate}
           />

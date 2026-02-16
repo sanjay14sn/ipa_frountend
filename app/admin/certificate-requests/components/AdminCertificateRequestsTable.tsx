@@ -62,8 +62,10 @@ export default function AdminCertificateRequestsTable({
 
       const matchesStatus = request.status === statusFilter;
 
+      const franchiseIdx = franchiseFilter.startsWith("f") ? parseInt(franchiseFilter.slice(1), 10) : NaN;
       const matchesFranchise =
-        franchiseFilter === "all" || request.franchiseName === franchiseFilter;
+        franchiseFilter === "all" ||
+        (!isNaN(franchiseIdx) && uniqueFranchises[franchiseIdx] === request.franchiseName);
 
       return matchesSearch && matchesStatus && matchesFranchise;
     });
@@ -96,6 +98,7 @@ export default function AdminCertificateRequestsTable({
     return filtered;
   }, [
     allRequests,
+    uniqueFranchises,
     searchTerm,
     statusFilter,
     franchiseFilter,
@@ -325,8 +328,8 @@ export default function AdminCertificateRequestsTable({
       label: "Franchise",
       options: [
         { value: "all", label: "All Franchises" },
-        ...uniqueFranchises.map((franchise) => ({
-          value: franchise,
+        ...uniqueFranchises.map((franchise, idx) => ({
+          value: `f${idx}`,
           label: franchise,
         })),
       ],

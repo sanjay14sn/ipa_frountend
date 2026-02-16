@@ -84,62 +84,61 @@ export interface CreateCourseInstructorResponse extends Response {
 import { api } from "@/lib/axios";
 
 export async function getAllCourseInstructors(): Promise<CourseInstructorsResponse> {
-  const response = await api.get<CourseInstructorsResponse>(
-    "/course-instructor"
-  );
+  const response =
+    await api.get<CourseInstructorsResponse>("/course-instructor");
   return response.data;
 }
 
 export async function getCourseInstructorById(
-  courseInstructorId: number
+  courseInstructorId: number,
 ): Promise<CourseInstructorData> {
   const response = await api.get<CourseInstructorData>(
-    `/course-instructors/${courseInstructorId}`
+    `/course-instructors/${courseInstructorId}`,
   );
   return response.data;
 }
 
 export async function createCourseInstructor(
-  courseInstructorData: CreateCourseInstructorRequest
+  courseInstructorData: CreateCourseInstructorRequest,
 ): Promise<CourseInstructorData> {
   const response = await api.post<CourseInstructorData>(
     "/course-instructor",
-    courseInstructorData
+    courseInstructorData,
   );
   return response.data;
 }
 
 export async function updateCourseInstructor(
   courseInstructorId: number,
-  courseInstructorData: Partial<CourseInstructorData>
+  courseInstructorData: Partial<CourseInstructorData>,
 ): Promise<CourseInstructorData> {
   const response = await api.put<CourseInstructorData>(
     `/course-instructors/${courseInstructorId}`,
-    courseInstructorData
+    courseInstructorData,
   );
   return response.data;
 }
 
 export async function deleteCourseInstructor(
-  courseInstructorId: number
+  courseInstructorId: number,
 ): Promise<void> {
   await api.delete(`/course-instructors/${courseInstructorId}`);
 }
 
 export async function activateCourseInstructor(
-  courseInstructorId: number
+  courseInstructorId: number,
 ): Promise<CourseInstructorData> {
   const response = await api.patch<CourseInstructorData>(
-    `/course-instructors/${courseInstructorId}/activate`
+    `/course-instructors/${courseInstructorId}/activate`,
   );
   return response.data;
 }
 
 export async function deactivateCourseInstructor(
-  courseInstructorId: number
+  courseInstructorId: number,
 ): Promise<CourseInstructorData> {
   const response = await api.patch<CourseInstructorData>(
-    `/course-instructors/${courseInstructorId}/deactivate`
+    `/course-instructors/${courseInstructorId}/deactivate`,
   );
   return response.data;
 }
@@ -150,6 +149,7 @@ export interface TrainingLevelInfo {
   name: string;
   amount: number;
   displayOrder: number;
+  rank?: number;
 }
 
 export interface AdminCourseInstructorData extends CourseInstructorData {
@@ -160,7 +160,23 @@ export interface AdminCourseInstructorData extends CourseInstructorData {
     name: string;
   };
   trainingLevels?: TrainingLevelInfo[];
+  ciTrainingLevels?: TrainingLevelInfo[];
   totalTrainingAmount?: number;
+}
+
+export function getInstructorTrainingLevels(
+  instructor: Pick<AdminCourseInstructorData, "trainingLevels" | "ciTrainingLevels">
+): TrainingLevelInfo[] {
+  if (instructor.ciTrainingLevels && instructor.ciTrainingLevels.length > 0) {
+    return instructor.ciTrainingLevels;
+  }
+  return instructor.trainingLevels || [];
+}
+
+export function getInstructorTrainingLevelCount(
+  instructor: Pick<AdminCourseInstructorData, "trainingLevels" | "ciTrainingLevels">
+): number {
+  return getInstructorTrainingLevels(instructor).length;
 }
 
 export interface AdminCourseInstructorsByFranchise {
@@ -191,19 +207,19 @@ export async function getAllAdminCourseInstructors(): Promise<AdminCourseInstruc
 }
 
 export async function approveCourseInstructor(
-  courseInstructorId: number
+  courseInstructorId: number,
 ): Promise<AdminCourseInstructorData> {
   const response = await api.patch<AdminCourseInstructorData>(
-    `/course-instructor/status/Approve/${courseInstructorId}`
+    `/course-instructor/status/Approve/${courseInstructorId}`,
   );
   return response.data;
 }
 
 export async function rejectCourseInstructor(
-  courseInstructorId: number
+  courseInstructorId: number,
 ): Promise<AdminCourseInstructorData> {
   const response = await api.patch<AdminCourseInstructorData>(
-    `/course-instructor/status/Reject/${courseInstructorId}`
+    `/course-instructor/status/Reject/${courseInstructorId}`,
   );
   return response.data;
 }
@@ -225,11 +241,11 @@ export interface ApproveTrainingResponse extends Response {
 
 export async function approveTraining(
   instructorId: string,
-  trainingData: ApproveTrainingRequest
+  trainingData: ApproveTrainingRequest,
 ): Promise<ApproveTrainingResponse> {
   const response = await api.post<ApproveTrainingResponse>(
     `/course-instructor/approve-training/${instructorId}`,
-    trainingData
+    trainingData,
   );
   return response.data;
 }
@@ -243,10 +259,11 @@ export interface CITrainingData {
   trainingLevelName: string;
   amount: number;
   additionalDetails?: string;
-  displayOrder: number;
+  displayOrder?: number;
   isActive: boolean;
   isCompleted: boolean;
   dateOfTraining?: string;
+  createdAt?: string;
   franchise: {
     id: number;
     name: string;
@@ -284,7 +301,7 @@ export interface CompleteTrainingWithGraduationResponse {
 
 export async function completeTraining(
   id: number,
-  data?: CompleteTrainingRequest
+  data?: CompleteTrainingRequest,
 ): Promise<CompleteTrainingWithGraduationResponse> {
   const response = await api.patch<{
     result: CompleteTrainingWithGraduationResponse;
@@ -310,7 +327,7 @@ export interface TrainingCourseInstructorsResponse extends Response {
 
 export async function getTrainingCourseInstructors(): Promise<TrainingCourseInstructorsResponse> {
   const response = await api.get<TrainingCourseInstructorsResponse>(
-    "/course-instructor/training"
+    "/course-instructor/training",
   );
   return response.data;
 }
@@ -337,7 +354,7 @@ export interface PaginatedCourseInstructorsResponse {
 
 export async function getPaginatedCourseInstructors(
   status: string,
-  params: CourseInstructorPaginationParams
+  params: CourseInstructorPaginationParams,
 ): Promise<PaginatedCourseInstructorsResponse> {
   const queryParams = new URLSearchParams();
 
@@ -357,7 +374,7 @@ export async function getPaginatedCourseInstructors(
 }
 
 export async function getPaginatedFranchiseeCourseInstructors(
-  params: CourseInstructorPaginationParams
+  params: CourseInstructorPaginationParams,
 ): Promise<PaginatedCourseInstructorsResponse> {
   const queryParams = new URLSearchParams();
 
@@ -398,10 +415,10 @@ export interface CIGraduationsResponse {
 }
 
 export async function getCIGraduations(
-  instructorId: number
+  instructorId: number,
 ): Promise<CILevelGraduation[]> {
   const response = await api.get<CIGraduationsResponse>(
-    `/ci-training/graduations/${instructorId}`
+    `/ci-training/graduations/${instructorId}`,
   );
   return response.data.result;
 }
@@ -425,7 +442,7 @@ export interface AllCIGraduationsResponse {
 
 export async function getAllCIGraduations(): Promise<CIGraduationsByFranchise> {
   const response = await api.get<AllCIGraduationsResponse>(
-    "/ci-training/graduations-all"
+    "/ci-training/graduations-all",
   );
   return response.data.result;
 }
@@ -440,6 +457,7 @@ export interface CITrainingProgressItem {
   isActive: boolean;
   paid: boolean;
   displayOrder: number;
+  marks?: number;
 }
 
 export interface CITrainingProgress {
@@ -459,12 +477,27 @@ export interface CITrainingProgressResponse {
 }
 
 export async function getCITrainingProgress(
-  instructorId: number
+  instructorId: number,
 ): Promise<CITrainingProgress> {
   const response = await api.get<CITrainingProgressResponse>(
-    `/ci-training/progress/${instructorId}`
+    `/ci-training/progress/${instructorId}`,
   );
   return response.data.result;
+}
+
+export interface AvailableTrainingLevelsResponse {
+  result: { data: Array<{ id: number; name: string; description?: string; isActive: boolean; amount: number; rank?: number }> };
+}
+
+export async function getAvailableTrainingLevelsForCI(
+  instructorId: number,
+): Promise<
+  Array<{ id: number; name: string; description?: string; isActive: boolean; amount: number; rank?: number }>
+> {
+  const response = await api.get<AvailableTrainingLevelsResponse>(
+    `/course-instructor/available-training-levels/${instructorId}`,
+  );
+  return response.data.result.data;
 }
 
 export interface RequestAdditionalTrainingRequest {
@@ -478,11 +511,11 @@ export interface RequestAdditionalTrainingResponse extends Response {
 
 export async function requestAdditionalTraining(
   instructorId: number,
-  data: RequestAdditionalTrainingRequest
+  data: RequestAdditionalTrainingRequest,
 ): Promise<RequestAdditionalTrainingResponse> {
   const response = await api.post<RequestAdditionalTrainingResponse>(
     `/course-instructor/request-training/${instructorId}`,
-    data
+    data,
   );
   return response.data;
 }

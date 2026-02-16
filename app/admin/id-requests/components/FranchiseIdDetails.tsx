@@ -6,6 +6,7 @@ import { useRef } from "react";
 import { TreeConnector } from "@/components/shared";
 
 interface FranchiseIdDetailsProps {
+  franchiseId: string;
   franchiseName: string;
   students: RequestedIdDetail[];
   expandedRows: Set<string>;
@@ -16,6 +17,7 @@ interface FranchiseIdDetailsProps {
 }
 
 export default function FranchiseIdDetails({
+  franchiseId,
   franchiseName,
   students,
   lastRow,

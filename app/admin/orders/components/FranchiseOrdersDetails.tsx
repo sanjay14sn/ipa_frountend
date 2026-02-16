@@ -7,6 +7,7 @@ import { ordersDotRef } from "./OrdersSection";
 import { TreeConnector } from "@/components/shared";
 
 interface FranchiseOrdersDetailsProps {
+  franchiseId: string;
   franchiseName: string;
   orders: OrderData[];
   expandedRows: Set<string>;
@@ -16,6 +17,7 @@ interface FranchiseOrdersDetailsProps {
 }
 
 export default function FranchiseOrdersDetails({
+  franchiseId,
   franchiseName,
   orders,
   lastRow,
@@ -103,8 +105,9 @@ export default function FranchiseOrdersDetails({
           {/* Orders Section */}
           <OrdersSection
             orders={orders}
+            franchiseId={franchiseId}
             franchiseName={franchiseName}
-            isExpanded={expandedRows.has(`${franchiseName}-orders`)}
+            isExpanded={expandedRows.has(`${franchiseId}-orders`)}
             onToggle={onToggleRow}
             onOrderUpdate={onOrderUpdate}
           />

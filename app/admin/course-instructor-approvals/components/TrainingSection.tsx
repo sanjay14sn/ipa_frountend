@@ -1,7 +1,13 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, FileText, CheckCircle, PlayCircle, DollarSign, Clock } from "lucide-react";
-import { AdminCourseInstructorData, getCITrainingProgress, CITrainingProgress } from "@/services/course-instructor.service";
+import {
+  AdminCourseInstructorData,
+  CITrainingProgress,
+  getCITrainingProgress,
+  getInstructorTrainingLevelCount,
+  getInstructorTrainingLevels,
+} from "@/services/course-instructor.service";
 import React, { useEffect, useState, useRef } from "react";
 import ApproveTrainingModal from "./ApproveTrainingModal";
 import { Loader2 } from "lucide-react";
@@ -75,6 +81,16 @@ export default function TrainingSection({
     return { status: "paid", label: "Paid", icon: DollarSign, color: "bg-blue-500" };
   };
 
+  const trainingLevels = getInstructorTrainingLevels(instructor);
+  const sortedTrainingLevels = [...trainingLevels].sort((a, b) => {
+    const orderA = a.rank ?? a.displayOrder ?? Number.MAX_SAFE_INTEGER;
+    const orderB = b.rank ?? b.displayOrder ?? Number.MAX_SAFE_INTEGER;
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+    return a.id - b.id;
+  });
+
   return (
     <div className="relative">
       <div ref={trainingDotRef} className="absolute -left-6 top-1 w-6 h-4">
@@ -97,14 +113,9 @@ export default function TrainingSection({
             )}
           </button>
           <h4 className="font-medium text-gray-900">Training Information</h4>
-          {instructor.trainingLevels && instructor.trainingLevels.length > 0 && (
+          {getInstructorTrainingLevelCount(instructor) > 0 && (
             <Badge variant="outline" className="ml-2">
-              {instructor.trainingLevels.length} level(s)
-            </Badge>
-          )}
-          {instructor.totalTrainingAmount !== undefined && instructor.totalTrainingAmount > 0 && (
-            <Badge variant="outline" className="ml-2 text-green-600">
-              ₹{instructor.totalTrainingAmount.toLocaleString()}
+              {getInstructorTrainingLevelCount(instructor)} level(s)
             </Badge>
           )}
         </div>
@@ -126,7 +137,7 @@ export default function TrainingSection({
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-4 border border-primary">
                   {/* Training Levels Section */}
-                  {instructor.trainingLevels && instructor.trainingLevels.length > 0 && (
+                  {sortedTrainingLevels.length > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <h5 className="font-semibold text-gray-900">
@@ -137,7 +148,7 @@ export default function TrainingSection({
                         )}
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {instructor.trainingLevels.map((level: any, index: number) => {
+                        {sortedTrainingLevels.map((level: any) => {
                           const levelStatus = getLevelStatus(level.id);
                           const StatusIcon = levelStatus?.icon || Clock;
                           const statusColor = levelStatus?.color || "bg-gray-400";
@@ -176,9 +187,6 @@ export default function TrainingSection({
                                     </Badge>
                                   )}
                                 </div>
-                                <span className="text-sm font-semibold text-green-600">
-                                  ₹{level.amount.toLocaleString()}
-                                </span>
                               </div>
                               <div className="flex items-center justify-between text-xs text-gray-500">
                                 {level.displayOrder && (
@@ -198,16 +206,6 @@ export default function TrainingSection({
                             </div>
                           );
                         })}
-                      </div>
-                      <div className="pt-2 border-t border-gray-200">
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-gray-900">
-                            Total Amount:
-                          </span>
-                          <span className="text-lg font-bold text-green-600">
-                            ₹{instructor.totalTrainingAmount?.toLocaleString() || 0}
-                          </span>
-                        </div>
                       </div>
                     </div>
                   )}
@@ -246,7 +244,7 @@ export default function TrainingSection({
                         </div>
                       )}
                       {!instructor.additionalDetails &&
-                        (!instructor.trainingLevels || instructor.trainingLevels.length === 0) && (
+                        getInstructorTrainingLevelCount(instructor) === 0 && (
                           <p className="text-gray-500">
                             No training information available
                           </p>

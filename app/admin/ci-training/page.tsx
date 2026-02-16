@@ -28,18 +28,20 @@ export default function AdminCITrainingPage() {
     setIsConfirmationOpen(true);
   };
 
-  const handleConfirmCompleteTraining = async () => {
+  const handleConfirmCompleteTraining = async (data: {
+    marksObtained?: number;
+    certificateNumber?: string;
+    notes?: string;
+  }) => {
     if (!selectedInstructor) return;
 
     try {
       setIsCompleting(true);
-      await completeTrainingWithRevalidation(selectedInstructor.id);
+      await completeTrainingWithRevalidation(selectedInstructor.id, data);
       setIsConfirmationOpen(false);
       setSelectedInstructor(null);
-      // Optionally show a success message or toast
     } catch (error) {
       console.error("Error completing training:", error);
-      // Optionally show an error message or toast
     } finally {
       setIsCompleting(false);
     }

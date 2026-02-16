@@ -213,6 +213,7 @@ export default function AdminOrdersTable() {
         )}
         renderExpandedContent={(group) => (
           <FranchiseOrdersDetails
+            franchiseId={group.franchiseId.toString()}
             franchiseName={group.franchiseName}
             orders={group.orders}
             lastRow={false}

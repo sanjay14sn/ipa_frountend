@@ -11,20 +11,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  ChevronDown,
-  ChevronRight,
-  GraduationCap,
-  CheckCircle,
-} from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import { CITrainingData } from "@/services/course-instructor.service";
-import InstructorDetailCard from "./InstructorDetailCard";
 
 interface InstructorDetailsProps {
   instructors: CITrainingData[];
   lastRow: boolean;
-  expandedRows: Set<string>;
-  onToggleRow: (id: string) => void;
   onCompleteTraining?: (instructor: CITrainingData) => void;
   isCompleted?: boolean;
 }
@@ -35,8 +27,6 @@ export const instructorDotRef = React.createRef<HTMLDivElement>();
 export default function InstructorDetails({
   instructors,
   lastRow,
-  expandedRows,
-  onToggleRow,
   onCompleteTraining,
   isCompleted = false,
 }: InstructorDetailsProps) {
@@ -54,11 +44,10 @@ export default function InstructorDetails({
       }
     };
 
-    // Add a small delay to ensure DOM has updated after expansion/collapse
     const timeoutId = setTimeout(calculateLineHeight, 10);
 
     return () => clearTimeout(timeoutId);
-  }, [instructors, expandedRows]);
+  }, [instructors]);
 
   const getTrainingLevelColor = (order: number) => {
     const colors = [
@@ -117,33 +106,18 @@ export default function InstructorDetails({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {instructors.map((instructor, index) => {
-                    const instructorKey = `training-${instructor.id}`;
-                    return (
-                      <React.Fragment key={instructorKey}>
-                        <TableRow className="hover:bg-gray-50/50">
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => onToggleRow(instructorKey)}
-                                className="p-1 hover:bg-gray-100 rounded"
-                              >
-                                {expandedRows.has(instructorKey) ? (
-                                  <ChevronDown className="w-4 h-4" />
-                                ) : (
-                                  <ChevronRight className="w-4 h-4" />
-                                )}
-                              </button>
-                              <div className="flex flex-col">
-                                <div className="font-medium text-gray-900">
-                                  {instructor.instructorName}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  ID: {instructor.instructorId}
-                                </div>
-                              </div>
-                            </div>
-                          </TableCell>
+                  {instructors.map((instructor) => (
+                    <TableRow key={`training-${instructor.id}`} className="hover:bg-gray-50/50">
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <div className="font-medium text-gray-900">
+                            {instructor.instructorName}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            ID: {instructor.instructorId}
+                          </div>
+                        </div>
+                      </TableCell>
                           <TableCell className="text-center">
                             <div className="flex flex-col items-center gap-1">
                               <Badge
@@ -191,21 +165,7 @@ export default function InstructorDetails({
                             )}
                           </TableCell>
                         </TableRow>
-
-                        {/* Expanded Instructor Details */}
-                        {expandedRows.has(instructorKey) && (
-                          <TableRow>
-                            <TableCell colSpan={5} className="p-0">
-                              <InstructorDetailCard
-                                instructor={instructor}
-                                lastRow={index === instructors.length - 1}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
+                  ))}
                 </TableBody>
               </Table>
             </div>

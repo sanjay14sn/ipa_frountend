@@ -10,6 +10,7 @@ import type {
 import {
   AdminCourseInstructorData,
   getPaginatedCourseInstructors,
+  getInstructorTrainingLevelCount,
 } from "@/services/course-instructor.service";
 import CourseInstructorDetails from "./CourseInstructorDetails";
 
@@ -173,43 +174,14 @@ export default function RejectedCourseInstructorsTable({
       header: "Training Levels",
       className: "w-[200px]",
       render: (instructor) => {
-        const levels = instructor.trainingLevels || [];
-        if (levels.length === 0) {
+        const levelCount = getInstructorTrainingLevelCount(instructor);
+        if (levelCount === 0) {
           return <span className="text-sm text-gray-400">No training levels</span>;
         }
         return (
-          <div className="flex flex-col gap-1">
-            {levels.slice(0, 2).map((level: any) => (
-              <Badge key={level.id} variant="outline" className="text-xs w-fit">
-                {level.name}
-              </Badge>
-            ))}
-            {levels.length > 2 && (
-              <span className="text-xs text-gray-500">
-                +{levels.length - 2} more
-              </span>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      key: "totalAmount",
-      header: "Total Amount",
-      className: "text-center w-[120px]",
-      render: (instructor) => {
-        const amount = instructor.totalTrainingAmount || 0;
-        return (
-          <div className="flex flex-col">
-            <span className="font-semibold text-green-600">
-              ₹{amount.toLocaleString()}
-            </span>
-            {instructor.trainingLevels && instructor.trainingLevels.length > 0 && (
-              <span className="text-xs text-gray-500">
-                {instructor.trainingLevels.length} level(s)
-              </span>
-            )}
-          </div>
+          <span className="text-sm font-medium text-gray-700">
+            {levelCount} level(s)
+          </span>
         );
       },
     },

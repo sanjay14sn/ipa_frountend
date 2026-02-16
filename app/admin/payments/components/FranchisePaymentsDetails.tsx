@@ -7,6 +7,7 @@ import { paymentsDotRef } from "./PaymentsSection";
 import { TreeConnector } from "@/components/shared";
 
 interface FranchisePaymentsDetailsProps {
+  franchiseId: string;
   franchiseName: string;
   payments: PaymentData[];
   expandedRows: Set<string>;
@@ -15,6 +16,7 @@ interface FranchisePaymentsDetailsProps {
 }
 
 export default function FranchisePaymentsDetails({
+  franchiseId,
   franchiseName,
   payments,
   lastRow,
@@ -118,8 +120,9 @@ export default function FranchisePaymentsDetails({
           {/* Payments Section */}
           <PaymentsSection
             payments={payments}
+            franchiseId={franchiseId}
             franchiseName={franchiseName}
-            isExpanded={expandedRows.has(`${franchiseName}-payments`)}
+            isExpanded={expandedRows.has(`${franchiseId}-payments`)}
             onToggle={onToggleRow}
           />
         </div>

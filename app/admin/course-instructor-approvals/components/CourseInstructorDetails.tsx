@@ -12,7 +12,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ChevronDown, ChevronRight, CheckCircle, XCircle } from "lucide-react";
-import { AdminCourseInstructorData } from "@/services/course-instructor.service";
+import {
+  AdminCourseInstructorData,
+  getInstructorTrainingLevelCount,
+} from "@/services/course-instructor.service";
 import CourseInstructorDetailCard from "./CourseInstructorDetailCard";
 
 interface CourseInstructorDetailsProps {
@@ -107,7 +110,6 @@ export default function CourseInstructorDetails({
                     <TableHead className="text-center">Professional</TableHead>
                     <TableHead className="text-center">Personal Info</TableHead>
                     <TableHead className="text-center">Training Levels</TableHead>
-                    <TableHead className="text-center">Total Amount</TableHead>
                     <TableHead className="text-center">Date of Birth</TableHead>
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
@@ -178,32 +180,12 @@ export default function CourseInstructorDetails({
                             </div>
                           </TableCell>
                           <TableCell className="text-center">
-                            {instructor.trainingLevels && instructor.trainingLevels.length > 0 ? (
-                              <div className="flex flex-col gap-1 items-center">
-                                {instructor.trainingLevels.map((level: any) => (
-                                  <Badge key={level.id} variant="outline" className="text-xs">
-                                    {level.name}
-                                  </Badge>
-                                ))}
-                              </div>
+                            {getInstructorTrainingLevelCount(instructor) > 0 ? (
+                              <span className="text-sm font-medium text-gray-700">
+                                {getInstructorTrainingLevelCount(instructor)} level(s)
+                              </span>
                             ) : (
                               <span className="text-sm text-gray-400">No levels</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {instructor.totalTrainingAmount !== undefined ? (
-                              <div className="flex flex-col">
-                                <span className="font-semibold text-green-600">
-                                  ₹{instructor.totalTrainingAmount.toLocaleString()}
-                                </span>
-                                {instructor.trainingLevels && (
-                                  <span className="text-xs text-gray-500">
-                                    {instructor.trainingLevels.length} level(s)
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-sm text-gray-400">N/A</span>
                             )}
                           </TableCell>
                           <TableCell className="text-center">
@@ -248,7 +230,7 @@ export default function CourseInstructorDetails({
                         {/* Expanded Instructor Details */}
                         {expandedRows.has(instructorId) && (
                           <TableRow>
-                            <TableCell colSpan={10} className="p-0">
+                            <TableCell colSpan={9} className="p-0">
                               <CourseInstructorDetailCard
                                 instructor={instructor}
                                 expandedRows={expandedRows}

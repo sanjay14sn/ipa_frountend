@@ -15,6 +15,7 @@ import { NestedSection } from "@/components/shared";
 
 interface PaymentsSectionProps {
   payments: PaymentData[];
+  franchiseId: string;
   franchiseName: string;
   isExpanded: boolean;
   onToggle: (id: string) => void;
@@ -24,6 +25,7 @@ export let paymentsDotRef = createRef<HTMLDivElement>();
 
 export default function PaymentsSection({
   payments,
+  franchiseId,
   franchiseName,
   isExpanded,
   onToggle,
@@ -62,7 +64,7 @@ export default function PaymentsSection({
   return (
     <div ref={paymentsDotRef}>
       <NestedSection
-        id={`${franchiseName}-payments`}
+        id={`${franchiseId}-payments`}
         title={`Payments (${payments.length})`}
         badge={
           <Badge variant="secondary">

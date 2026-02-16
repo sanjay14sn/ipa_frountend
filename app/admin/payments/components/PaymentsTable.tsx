@@ -15,6 +15,7 @@ import {
 import FranchisePaymentsDetails from "./FranchisePaymentsDetails";
 
 interface FranchisePaymentGroup {
+  franchiseId: string;
   franchiseName: string;
   payments: any[];
 }
@@ -52,12 +53,16 @@ export default function PaymentsTable() {
           sortOrder,
         });
 
-        // Convert grouped data to array
+        // Convert grouped data to array - use franchiseId for row keys (avoids hyphen/space issues)
         const groups: FranchisePaymentGroup[] = Object.entries(result.data).map(
-          ([franchiseName, payments]) => ({
-            franchiseName,
-            payments,
-          })
+          ([franchiseName, payments]) => {
+            const franchiseId = payments[0]?.franchisee?.franchise?.id ?? `fn-${franchiseName.replace(/\s+/g, "_")}`;
+            return {
+              franchiseId: String(franchiseId),
+              franchiseName,
+              payments,
+            };
+          }
         );
 
         setFranchiseGroups(groups);
@@ -74,7 +79,7 @@ export default function PaymentsTable() {
   }, [currentPage, searchTerm, statusFilter, sortBy, sortOrder]);
 
   const toggleRow = (id: string) => {
-    if (id.includes("-")) {
+    if (id.includes("-") && !franchiseGroups.some((g) => g.franchiseId === id)) {
       const newExpandedChildren = new Set(expandedChildren);
       if (newExpandedChildren.has(id)) {
         newExpandedChildren.delete(id);
@@ -164,7 +169,7 @@ export default function PaymentsTable() {
       data={franchiseGroups}
       loading={loading}
       columns={columns}
-      getRowId={(group) => group.franchiseName}
+      getRowId={(group) => group.franchiseId}
       renderMainCell={(group) => (
         <div className="flex flex-col">
           <div className="font-medium text-gray-900">{group.franchiseName}</div>
@@ -175,6 +180,7 @@ export default function PaymentsTable() {
       )}
       renderExpandedContent={(group) => (
         <FranchisePaymentsDetails
+          franchiseId={group.franchiseId}
           franchiseName={group.franchiseName}
           payments={group.payments}
           lastRow={false}

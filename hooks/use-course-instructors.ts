@@ -215,10 +215,11 @@ export async function approveTrainingWithRevalidation(
 
 // Helper function to complete training with SWR revalidation
 export async function completeTrainingWithRevalidation(
-  id: number
+  id: number,
+  data?: Parameters<typeof completeTraining>[1]
 ): Promise<void> {
   try {
-    await completeTraining(id);
+    await completeTraining(id, data);
 
     // Revalidate the CI training data to reflect the changes
     await mutate(CI_TRAINING_KEY);

@@ -234,6 +234,11 @@ export function TrainingProgressView({
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">
                         ₹{training.amount.toLocaleString()}
+                        {training.isCompleted && training.marks != null && (
+                          <span className="ml-2 font-medium text-gray-700">
+                            • Marks: {training.marks}%
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

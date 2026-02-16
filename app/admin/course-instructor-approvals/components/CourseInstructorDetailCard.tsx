@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { AdminCourseInstructorData } from "@/services/course-instructor.service";
+import {
+  AdminCourseInstructorData,
+  getInstructorTrainingLevelCount,
+} from "@/services/course-instructor.service";
 import ContactInfoSection, { contactDotRef } from "./ContactInfoSection";
 import ProfessionalInfoSection, {
   professionalDotRef,
@@ -129,33 +132,14 @@ export default function CourseInstructorDetailCard({
                     {instructor.franchise.name}
                   </p>
                 </div>
-                {instructor.trainingLevels &&
-                  instructor.trainingLevels.length > 0 && (
-                    <div>
-                      <span className="text-gray-500">Training Levels</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {instructor.trainingLevels.map((level: any) => (
-                          <span
-                            key={level.id}
-                            className="inline-block px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200"
-                          >
-                            {level.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                {instructor.totalTrainingAmount !== undefined &&
-                  instructor.totalTrainingAmount > 0 && (
-                    <div>
-                      <span className="text-gray-500">
-                        Total Training Amount
-                      </span>
-                      <p className="text-gray-900 mt-1 font-semibold text-green-600">
-                        ₹{instructor.totalTrainingAmount.toLocaleString()}
-                      </p>
-                    </div>
-                  )}
+                {getInstructorTrainingLevelCount(instructor) > 0 && (
+                  <div>
+                    <span className="text-gray-500">Training Levels</span>
+                    <p className="text-gray-900 mt-1 font-medium">
+                      {getInstructorTrainingLevelCount(instructor)} level(s)
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
