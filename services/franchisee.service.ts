@@ -13,7 +13,6 @@ export interface Franchisee {
   dob: Date;
   bloodGroup: string;
   communicationAddress: string;
-  city: string;
   phone: string;
   mail: string;
   education: string;
@@ -26,7 +25,10 @@ export interface Franchisee {
 export interface Franchise {
   name: string;
   type: string;
+  status: string;
   address: string;
+  city: string;
+  state?: string;
   programIds: number[];
   franchiseeId: number;
 }
@@ -37,6 +39,8 @@ export interface FranchiseResponse {
   type: string;
   status: string;
   address: string;
+  city?: string;
+  state?: string;
   franchisePrograms?: Array<{
     program: {
       id: number;
@@ -53,7 +57,6 @@ export interface FranchiseeResponse {
   dob: Date;
   bloodGroup: string;
   communicationAddress: string;
-  city: string;
   phone: string;
   mail: string;
   education: string;

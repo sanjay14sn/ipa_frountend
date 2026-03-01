@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import React from "react";
 import { BloodGroup } from "@/services/course-instructor.service";
+import { StateCitySelect } from "@/components/StateCitySelect";
 import { createCourseInstructorWithRevalidation } from "@/hooks/use-course-instructors";
 import { useUser } from "@/context/user-context";
 import { getAllPrograms, Program } from "@/services/program.service";
@@ -544,23 +545,14 @@ export default function AddCourseInstructorModal({
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="city">City *</Label>
-                <Input
-                  id="city"
-                  type="text"
-                  value={formData.city}
-                  onChange={(e) => handleInputChange("city", e.target.value)}
-                  className={errors.city ? "border-red-500" : ""}
-                  placeholder="Enter city"
-                />
-                {errors.city && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.city}
-                  </p>
-                )}
-              </div>
+              <StateCitySelect
+                id="city"
+                value={formData.city}
+                onChange={(val) => handleInputChange("city", val)}
+                label="City"
+                required
+                error={errors.city}
+              />
 
               <div className="space-y-2">
                 <Label htmlFor="programId">Program *</Label>

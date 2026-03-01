@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FranchiseType, FranchiseStatus, BloodGroup } from "@/services/franchise.enums";
+import { StateCitySelect } from "@/components/StateCitySelect";
 import { Program } from "@/services/program.service";
 import { Eye, EyeOff, ArrowRight, CheckCircle, UserPlus } from "lucide-react";
 import { toast } from "sonner";
@@ -130,6 +131,7 @@ export function CreateFranchiseDialog({
     bloodGroup: BloodGroup.O_POSITIVE,
     communicationAddress: "",
     city: "",
+    state: "",
     education: "",
     occupation: "",
     reference: "",
@@ -155,7 +157,8 @@ export function CreateFranchiseDialog({
           newErrors.email = "Please enter a valid email";
         }
         if (!formData.phone.trim()) newErrors.phone = "Phone is required";
-        if (!formData.city.trim()) newErrors.city = "City is required";
+        if (!formData.state.trim()) newErrors.city = "State is required";
+        else if (!formData.city.trim()) newErrors.city = "City is required";
         break;
 
       case 2: // Franchise Details
@@ -262,7 +265,6 @@ export function CreateFranchiseDialog({
           dob: new Date(formData.dob),
           bloodGroup: formData.bloodGroup,
           communicationAddress: formData.communicationAddress,
-          city: formData.city,
           education: formData.education,
           occupation: formData.occupation,
           reference: formData.reference,
@@ -274,6 +276,8 @@ export function CreateFranchiseDialog({
           type: formData.franchiseType,
           status: FranchiseStatus.ACTIVE,
           address: formData.franchiseAddress,
+          city: formData.city,
+          state: formData.state,
           programIds: formData.selectedPrograms,
           franchiseeId: 0,
         },
@@ -311,6 +315,7 @@ export function CreateFranchiseDialog({
       bloodGroup: BloodGroup.O_POSITIVE,
       communicationAddress: "",
       city: "",
+      state: "",
       education: "",
       occupation: "",
       reference: "",
@@ -398,7 +403,7 @@ export function CreateFranchiseDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="bloodGroup">Blood Group</Label>
                 <Select
@@ -421,20 +426,6 @@ export function CreateFranchiseDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="city">City *</Label>
-                <Input
-                  id="city"
-                  value={formData.city}
-                  onChange={(e) => {
-                    setFormData({ ...formData, city: e.target.value });
-                    if (errors.city) setErrors({ ...errors, city: "" });
-                  }}
-                  className={errors.city ? "border-red-500" : ""}
-                />
-                {errors.city && <p className="text-red-500 text-sm">{errors.city}</p>}
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="education">Education</Label>
                 <Input
                   id="education"
@@ -443,6 +434,23 @@ export function CreateFranchiseDialog({
                 />
               </div>
             </div>
+
+            <StateCitySelect
+              id="city"
+              value={formData.city}
+              stateValue={formData.state}
+              onChange={(val) => {
+                setFormData({ ...formData, city: val });
+                if (errors.city) setErrors({ ...errors, city: "" });
+              }}
+              onStateChange={(val) => {
+                setFormData({ ...formData, state: val });
+                if (errors.city) setErrors({ ...errors, city: "" });
+              }}
+              label="City"
+              required
+              error={errors.city}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">

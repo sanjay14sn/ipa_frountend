@@ -671,7 +671,7 @@ export default function TrainingLevelsPage() {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the
-              training level "{selectedLevel?.name}".
+              training level &quot;{selectedLevel?.name}&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

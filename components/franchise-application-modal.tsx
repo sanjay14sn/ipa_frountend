@@ -29,6 +29,7 @@ import {
   Franchise,
 } from "@/services/franchisee.service";
 import { getAllPrograms, Program } from "@/services/program.service";
+import { StateCitySelect } from "@/components/StateCitySelect";
 
 const FORM_STEPS = [
   {
@@ -115,7 +116,6 @@ export function FranchiseApplicationModal({
       dob: new Date(),
       bloodGroup: "",
       communicationAddress: "",
-      city: "",
       phone: "",
       mail: "",
       education: "",
@@ -125,7 +125,10 @@ export function FranchiseApplicationModal({
     franchise: {
       name: "",
       type: "",
+      status: "",
       address: "",
+      city: "",
+      state: "",
       programIds: [],
       franchiseeId: 0,
     } as Franchise,
@@ -171,7 +174,9 @@ export function FranchiseApplicationModal({
         if (!formData.franchise.address.trim()) {
           newErrors.address = "Centre address is required";
         }
-        if (!formData.franchisee.city.trim()) {
+        if (!formData.franchise.state?.trim()) {
+          newErrors.city = "State is required";
+        } else if (!formData.franchise.city.trim()) {
           newErrors.city = "City is required";
         }
         break;
@@ -300,7 +305,6 @@ export function FranchiseApplicationModal({
         dob: new Date(),
         bloodGroup: "",
         communicationAddress: "",
-        city: "",
         phone: "",
         mail: "",
         education: "",
@@ -311,7 +315,10 @@ export function FranchiseApplicationModal({
       franchise: {
         name: "",
         type: "",
+        status: "",
         address: "",
+        city: "",
+        state: "",
         programIds: [],
         franchiseeId: 0,
       } as Franchise,
@@ -427,19 +434,16 @@ export function FranchiseApplicationModal({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="city">City *</Label>
-              <Input
-                id="city"
-                type="text"
-                value={formData.franchisee.city}
-                onChange={(e) => handleInputChange("city", e.target.value)}
-                className={errors.city ? "border-red-500" : ""}
-              />
-              {errors.city && (
-                <p className="text-red-500 text-sm">{errors.city}</p>
-              )}
-            </div>
+            <StateCitySelect
+              id="city"
+              value={formData.franchise.city}
+              stateValue={formData.franchise.state}
+              onChange={(val) => handleInputChange("franchise.city", val)}
+              onStateChange={(val) => handleInputChange("franchise.state", val)}
+              label="City"
+              required
+              error={errors.city}
+            />
           </div>
         );
 

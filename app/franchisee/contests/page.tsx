@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -26,13 +26,8 @@ import { useUser } from "@/context/user-context";
 
 export default function FranchiseeContestsPage() {
   const { user: contextUser } = useUser();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<any>(() => getUserFromStorage());
   const [searchTerm, setSearchTerm] = useState("");
-
-  useEffect(() => {
-    const userData = getUserFromStorage();
-    setUser(userData);
-  }, []);
 
   if (!user || !user.franchiseId) {
     return <div>Loading...</div>;

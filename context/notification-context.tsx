@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { Notification, UserType } from "../lib/notification.types";
 import { useNotificationSocket } from "../hooks/useNotificationSocket";
 import {
@@ -32,8 +33,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Get user from UserContext
   const { user } = useUser();
+  const pathname = usePathname();
+  const isLoginPage = pathname === "/login" || pathname === "/admin-login";
+
   const userId = user?.id ? parseInt(user.id) : null;
   const userType = user?.role as UserType | null;
+
+  // Don't fetch/connect on login pages
+  const effectiveUserId = isLoginPage ? null : userId;
+  const effectiveUserType = isLoginPage ? null : userType;
 
   useEffect(() => {
     console.log("NotificationContext - user from context:", user);
@@ -51,10 +59,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     });
   }, []);
 
-  // Connect to WebSocket
+  // Connect to WebSocket (skip on login pages)
   const { isConnected } = useNotificationSocket({
-    userId,
-    userType,
+    userId: effectiveUserId,
+    userType: effectiveUserType,
     onNotification: handleNewNotification,
   });
 
@@ -121,13 +129,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [userType]);
 
-  // Initial fetch on mount
+  // Initial fetch on mount (skip on login pages)
   useEffect(() => {
-    if (userId && userType) {
+    if (effectiveUserId && effectiveUserType) {
       fetchNotifications();
       refreshUnreadCount();
     }
-  }, [userId, userType, fetchNotifications, refreshUnreadCount]);
+  }, [effectiveUserId, effectiveUserType, fetchNotifications, refreshUnreadCount]);
 
   return (
     <NotificationContext.Provider

@@ -96,7 +96,7 @@ export default function PendingApprovals() {
 
     // Fetch kit items for each program
     const kitsData: Record<number, ProgramKit[]> = {};
-    const selectedData: Record<number, Record<number, boolean>> = {};
+    const selectedData: Record<number, Record<number, number>> = {};
 
     if (application.franchisePrograms) {
       for (const fp of application.franchisePrograms) {
@@ -663,28 +663,6 @@ export default function PendingApprovals() {
                         </div>
                       </div>
 
-                      {/* Total Amount (Auto-calculated) */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">
-                          Total Amount
-                        </Label>
-                        <div className="relative">
-                          <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-primary" />
-                          <Input
-                            type="text"
-                            value={program.totalAmount.toLocaleString()}
-                            readOnly
-                            className="pl-10 h-10 bg-gray-50 font-semibold text-primary cursor-not-allowed"
-                          />
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          Auto-calculated{" "}
-                          {program.gstInclusive
-                            ? "(GST inclusive)"
-                            : "(+18% GST added)"}{" "}
-                          {program.freeload ? " - Freeload" : ""}
-                        </p>
-                      </div>
                     </div>
                   </div>
                 ))}
@@ -750,7 +728,7 @@ export default function PendingApprovals() {
                       <>
                         <div className="flex justify-between items-center py-2 px-3 bg-white border border-primary rounded">
                           <span className="text-sm font-medium text-gray-700">
-                            Admin Royalty (per student/month):
+                            Franchisor Royalty (per student/month):
                           </span>
                           <span className="text-base font-bold text-primary">
                             ₹{adminRoyaltyPerStudent.toLocaleString()}
@@ -758,7 +736,7 @@ export default function PendingApprovals() {
                         </div>
                         <div className="flex justify-between items-center py-2 px-3 bg-white border border-primary rounded">
                           <span className="text-sm font-medium text-gray-700">
-                            CI Royalty (per student/month):
+                            CI Share:
                           </span>
                           <span className="text-base font-bold text-primary">
                             ₹{ciRoyaltyPerStudent.toLocaleString()}
@@ -860,7 +838,7 @@ export default function PendingApprovals() {
                           align="start"
                           side="top"
                           style={{
-                            width: dropdownWidths[program.programId] || triggerRefs.current[program.programId]?.offsetWidth || '100%',
+                            width: dropdownWidths[program.programId] || '100%',
                             minWidth: '100%'
                           }}
                         >
@@ -870,7 +848,7 @@ export default function PendingApprovals() {
                             </div>
                             <div className="max-h-[300px] overflow-y-auto">
                               {kits.map((kit) => {
-                                const isSelected = selected[kit.inventoryId] && selected[kit.inventoryId] > 0;
+                                const isSelected = !!(selected[kit.inventoryId] && selected[kit.inventoryId] > 0);
                                 const quantity = selected[kit.inventoryId] || 1;
                                 
                                 return (

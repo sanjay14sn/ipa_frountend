@@ -1008,8 +1008,8 @@ export function ProgramManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the program "{deletingProgram?.name}
-              ". This action cannot be undone and will also delete all
+              This will permanently delete the program &quot;{deletingProgram?.name}
+              &quot;. This action cannot be undone and will also delete all
               associated levels and inventory.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1292,7 +1292,7 @@ export function ProgramManagement() {
                     />
                     <p className="text-sm text-gray-500 mt-1">
                       Upload a PDF file to use as the certificate template.
-                      Click "Edit Coordinates" to adjust field positions.
+                      Click &quot;Edit Coordinates&quot; to adjust field positions.
                     </p>
                   </div>
                   {templatePreviewUrl && (
@@ -1375,7 +1375,7 @@ export function ProgramManagement() {
                       {isEditMode && (
                         <p className="text-sm text-blue-600 mt-2">
                           💡 Drag the blue boxes to reposition field
-                          coordinates. Click "Save Template" to save changes.
+                          coordinates. Click &quot;Save Template&quot; to save changes.
                         </p>
                       )}
                     </div>

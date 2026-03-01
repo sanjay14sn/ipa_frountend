@@ -47,6 +47,16 @@ export default function AdminCertificateRequestsTable({
     return Object.values(certificateRequestsByFranchise).flat();
   }, [certificateRequestsByFranchise]);
 
+  // Get unique values for filters
+  const uniqueFranchises = useMemo(
+    () => [
+      ...new Set(
+        allRequests?.map((request) => request.franchiseName).filter(Boolean)
+      ),
+    ],
+    [allRequests]
+  );
+
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
     let filtered = allRequests.filter((request) => {
@@ -153,13 +163,6 @@ export default function AdminCertificateRequestsTable({
 
     return age;
   };
-
-  // Get unique values for filters
-  const uniqueFranchises = [
-    ...new Set(
-      allRequests?.map((request) => request.franchiseName).filter(Boolean)
-    ),
-  ];
 
   const handleApprove = async (requestId: number) => {
     try {

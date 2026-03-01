@@ -662,7 +662,7 @@ export function LevelManagement({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the level "{deletingLevel?.name}".
+              This will permanently delete the level &quot;{deletingLevel?.name}&quot;.
               This action cannot be undone and will also delete all associated
               inventory.
             </AlertDialogDescription>

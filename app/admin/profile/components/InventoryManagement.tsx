@@ -727,7 +727,7 @@ export function InventoryManagement({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete "{deletingItem?.name}". This action
+              This will permanently delete &quot;{deletingItem?.name}&quot;. This action
               cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

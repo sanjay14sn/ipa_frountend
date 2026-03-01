@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, createRef } from "react";
+import { useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -21,7 +21,7 @@ interface PaymentsSectionProps {
   onToggle: (id: string) => void;
 }
 
-export let paymentsDotRef = createRef<HTMLDivElement>();
+export const paymentsDotRef = { current: null as HTMLDivElement | null };
 
 export default function PaymentsSection({
   payments,
@@ -30,7 +30,13 @@ export default function PaymentsSection({
   isExpanded,
   onToggle,
 }: PaymentsSectionProps) {
-  paymentsDotRef = useRef<HTMLDivElement>(null);
+  const localRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    paymentsDotRef.current = localRef.current;
+    return () => {
+      paymentsDotRef.current = null;
+    };
+  });
 
   const getStatusBadgeVariant = (status: PaymentStatus) => {
     switch (status) {
@@ -62,7 +68,7 @@ export default function PaymentsSection({
   };
 
   return (
-    <div ref={paymentsDotRef}>
+    <div ref={localRef}>
       <NestedSection
         id={`${franchiseId}-payments`}
         title={`Payments (${payments.length})`}

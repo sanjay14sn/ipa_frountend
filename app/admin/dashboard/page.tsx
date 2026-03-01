@@ -200,7 +200,6 @@ export default function AdminDashboard() {
         </div>
         <div className="w-full flex flex-col gap-5">
           <RecentApplications />
-          <RecentApplications />
         </div>
       </div>
       {/* Recent Activity */}

@@ -29,7 +29,7 @@ export default function FranchiseTable({
   refreshTrigger,
 }: FranchiseTableProps) {
   const [expandedChildren, setExpandedChildren] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<FranchiseData[]>([]);
@@ -234,12 +234,11 @@ export default function FranchiseTable({
           <div className="font-medium text-gray-900">{client.name}</div>
           <div className="text-sm text-gray-500">
             {client.franchisee?.name || "Not specified"} •{" "}
-            {client.franchisee?.city || "Not specified"}
           </div>
           <div className="text-xs text-green-600 font-medium">
             {client.franchisePayroll?.totalAmount
               ? `₹${(client.franchisePayroll.totalAmount / 1000).toFixed(
-                  0
+                  0,
                 )}K/mo`
               : "N/A"}
           </div>

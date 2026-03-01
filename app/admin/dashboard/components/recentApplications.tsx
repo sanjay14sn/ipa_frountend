@@ -107,7 +107,12 @@ export function RecentApplications() {
                     </Badge>
                   </div>
                   <div className="text-sm text-gray-600 flex flex-wrap gap-x-4 gap-y-1">
-                    <span className="truncate">Programs: {app.franchisePrograms?.map((fp) => fp.program.name).join(", ") || "N/A"}</span>
+                    <span className="truncate">
+                      Programs:{" "}
+                      {app.franchisePrograms
+                        ?.map((fp) => fp.program.name)
+                        .join(", ") || "N/A"}
+                    </span>
                     <span className="truncate">Type: {app.type}</span>
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" /> {formatDate(app.createdAt)}
@@ -152,10 +157,13 @@ export function RecentApplications() {
                     <div className="md:col-span-1">
                       <div className="text-xs text-gray-500">Address</div>
                       <div className="font-medium truncate">
-                        {app.franchisee?.address
-                          ? `${app.franchisee.address}${
-                              app.franchisee.city
-                                ? ", " + app.franchisee.city
+                        {(app as any).address || (app as any).franchise?.address
+                          ? `${(app as any).address || (app as any).franchise?.address}${
+                              ((app as any).city ??
+                              (app as any).franchise?.city)
+                                ? ", " +
+                                  ((app as any).city ??
+                                    (app as any).franchise?.city)
                                 : ""
                             }`
                           : "-"}

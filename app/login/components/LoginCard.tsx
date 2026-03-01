@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { franchiseeLogin, getFranchiseeProfile } from "@/services/auth.service";
 import { useUser } from "@/context/user-context";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
+import type { User } from "@/lib/auth";
 
 export function LoginCard() {
   const router = useRouter();
@@ -61,16 +62,22 @@ export function LoginCard() {
         console.warn("Failed to fetch profile data:", profileError);
       }
 
-      const loggedInUser = {
+      const profile = profileData
+        ? {
+            ...profileData,
+            city: (profileData as any).franchise?.city ?? (profileData as any).city,
+            address: (profileData as any).franchise?.address ?? (profileData as any).address,
+          }
+        : undefined;
+
+      setUser({
         id: String(data.userId),
         name: data.name,
-        role: "franchisee" as const,
+        role: "franchisee",
         franchiseStatus: data.franchiseStatus,
         franchiseId: data.franchiseId,
-        profile: profileData || undefined,
-      };
-
-      setUser(loggedInUser);
+        profile,
+      } as User);
       router.push("/franchisee/dashboard");
     } catch (err: any) {
       try {

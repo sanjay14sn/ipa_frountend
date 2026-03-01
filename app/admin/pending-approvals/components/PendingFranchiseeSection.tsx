@@ -95,7 +95,7 @@ export default function PendingFranchiseeSection({
                     </div>
                     <div>
                       <span className="text-gray-500">City</span>
-                      <p className="text-gray-900 mt-1">{franchisee.city}</p>
+                      <p className="text-gray-900 mt-1">{(application as any).city ?? (application as any).franchise?.city ?? franchisee.city}</p>
                     </div>
                     <div>
                       <span className="text-gray-500">Education</span>

@@ -14,13 +14,13 @@ export interface User {
     bloodGroup: string;
     address: string;
     communicationAddress: string;
-    city: string;
+    city?: string;
     phone: string;
     mail: string;
     education: string;
     occupation: string;
     reference: string;
-    franchise: {
+    franchise?: {
       id: string;
       name: string;
       type: string;
@@ -31,6 +31,8 @@ export interface User {
       approvedAt: string;
       createdAt: string;
       updatedAt: string;
+      city?: string;
+      address?: string;
       franchisePayrolls?: Array<{
         franchiseFee: number;
         dateOfPayment: string;
