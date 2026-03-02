@@ -15,7 +15,7 @@ export function FranchiseCTA({
   onStartApplication: () => void;
 }) {
   return (
-    <Card className="order-1 border-border bg-card md:order-2">
+    <Card className="order-1 border-border bg-card md:order-2 w-[300px]">
       <CardHeader>
         <CardTitle className="text-primary pb-2 underline">
           Become a Franchisee
@@ -24,14 +24,8 @@ export function FranchiseCTA({
           Apply in minutes. We'll review and get back to you.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex items-center justify-between gap-3">
-        <div className="text-sm text-muted-foreground">
-          Streamlined process with clear next steps and timely updates.
-        </div>
-        <Button
-          className="bg-brand-yellow-400 text-brand-green-600 hover:bg-brand-yellow-500"
-          onClick={onStartApplication}
-        >
+      <CardContent>
+        <Button className="" onClick={onStartApplication}>
           Start Application
         </Button>
       </CardContent>

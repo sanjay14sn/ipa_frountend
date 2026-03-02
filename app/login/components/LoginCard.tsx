@@ -19,7 +19,11 @@ import { useUser } from "@/context/user-context";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import type { User } from "@/lib/auth";
 
-export function LoginCard() {
+export function LoginCard({
+  onStartApplication,
+}: {
+  onStartApplication: () => void;
+}) {
   const router = useRouter();
   const { setUser } = useUser();
 
@@ -46,7 +50,7 @@ export function LoginCard() {
 
       if (data.role !== "franchisee" && data.role !== "franchise") {
         setError(
-          "This portal is for franchisees only. Please use the admin portal for admin access."
+          "This portal is for franchisees only. Please use the admin portal for admin access.",
         );
         setLoading(false);
         return;
@@ -65,8 +69,17 @@ export function LoginCard() {
       const profile = profileData
         ? {
             ...profileData,
-            city: (profileData as any).franchise?.city ?? (profileData as any).city,
-            address: (profileData as any).franchise?.address ?? (profileData as any).address,
+            city:
+              (profileData as any).franchise?.city ?? (profileData as any).city,
+            state:
+              (profileData as any).franchise?.state ??
+              (profileData as any).state,
+            pincode:
+              (profileData as any).franchise?.pincode ??
+              (profileData as any).pincode,
+            address:
+              (profileData as any).franchise?.address ??
+              (profileData as any).address,
           }
         : undefined;
 
@@ -83,11 +96,13 @@ export function LoginCard() {
       try {
         const errorMessage = getUserFriendlyMessage(
           err,
-          "Invalid username or password. Please check your credentials and try again."
+          "Invalid username or password. Please check your credentials and try again.",
         );
         setError(errorMessage);
       } catch (errorHandlingError) {
-        setError("Invalid username or password. Please check your credentials and try again.");
+        setError(
+          "Invalid username or password. Please check your credentials and try again.",
+        );
       }
     } finally {
       setLoading(false);
@@ -95,7 +110,7 @@ export function LoginCard() {
   }
 
   return (
-    <Card className="order-2 border-border bg-card md:order-1">
+    <Card className="order-2 border-border bg-card md:order-1 w-[500px]">
       <CardHeader className="space-y-2">
         <CardTitle className="text-2xl text-primary">Sign in</CardTitle>
         <CardDescription>Access your franchisee dashboard</CardDescription>
@@ -149,9 +164,7 @@ export function LoginCard() {
           </div>
 
           {error && (
-            <div className="text-red-500 text-sm text-center">
-              {error}
-            </div>
+            <div className="text-red-500 text-sm text-center">{error}</div>
           )}
 
           <Button
@@ -169,6 +182,14 @@ export function LoginCard() {
             <a href="/admin-login" className="text-brand-green-600 underline">
               Admin Portal
             </a>
+            <br></br>
+            New user?{" "}
+            <button
+              onClick={onStartApplication}
+              className="text-brand-green-600 underline"
+            >
+              Apply Now
+            </button>
           </div>
         </div>
       </CardContent>

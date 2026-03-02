@@ -86,10 +86,10 @@ export function StateCitySelect({
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="space-y-1">
+        <div className="space-y-2">
           <Label
             htmlFor={`${id}-state`}
-            className="text-xs text-muted-foreground"
+            className="text-sm text-muted-foreground"
           >
             State
           </Label>
@@ -109,8 +109,8 @@ export function StateCitySelect({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1">
-          <Label htmlFor={id} className="text-xs text-muted-foreground">
+        <div className="space-y-2">
+          <Label htmlFor={id} className="text-sm text-muted-foreground">
             City
           </Label>
           <Select

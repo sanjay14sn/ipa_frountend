@@ -34,7 +34,7 @@ export default function FranchiseAgreementPage() {
   const [agreementContent, setAgreementContent] =
     useState<AgreementContent | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [razorpayOrderId, setRazorpayOrderId] = useState<string | null>(null);
   const [paymentDetails, setPaymentDetails] = useState<{
@@ -67,8 +67,12 @@ export default function FranchiseAgreementPage() {
   const initializeAgreementContent = () => {
     if (!user?.profile) return;
 
+    if (user.profile.franchise === undefined) {
+      return;
+    }
+
     const franchiseData = {
-      name: user.profile.franchise.name,
+      name: user.profile.franchise?.name,
       contactPerson: user.profile.name,
       email: user.profile.mail,
       phone: user.profile.phone,
@@ -78,17 +82,25 @@ export default function FranchiseAgreementPage() {
       presentOccupation: user.profile.occupation,
       address: user.profile.address,
       city: user.profile.city,
+      state: user.profile.state,
+      pincode: user.profile.pincode,
       communicationAddress: user.profile.communicationAddress,
       franchiseCode: `FR-${user.profile.franchise.id}`,
-      program: user.profile.franchise.franchisePayrolls?.map((payroll: any) => 
-        payroll.franchiseProgram?.program?.name || "N/A"
-      ).join(", ") || "N/A",
+      program:
+        user.profile.franchise.franchisePayrolls
+          ?.map(
+            (payroll: any) => payroll.franchiseProgram?.program?.name || "N/A",
+          )
+          .join(", ") || "N/A",
       franchiseType: user.profile.franchise.type,
       reference: user.profile.reference,
       date: user.profile.franchise.createdAt,
       // Support both new (per-program) and legacy (single) payroll
-      paymentDetails: user.profile.franchise.franchisePayrolls ||
-        (user.profile.franchise.franchisePayroll ? [user.profile.franchise.franchisePayroll] : []),
+      paymentDetails:
+        user.profile.franchise.franchisePayrolls ||
+        (user.profile.franchise.franchisePayroll
+          ? [user.profile.franchise.franchisePayroll]
+          : []),
     } as any;
 
     const processedContent = getProcessedAgreementContent(franchiseData);
@@ -255,6 +267,10 @@ export default function FranchiseAgreementPage() {
     );
   }
 
+  if (user.profile.franchise === undefined) {
+    return;
+  }
+
   const franchiseData = {
     name: user.profile.franchise.name,
     contactPerson: user.profile.name,
@@ -266,17 +282,25 @@ export default function FranchiseAgreementPage() {
     presentOccupation: user.profile.occupation,
     address: user.profile.address,
     city: user.profile.city,
+    state: user.profile.state,
+    pincode: user.profile.pincode,
     communicationAddress: user.profile.communicationAddress,
     franchiseCode: `FR-${user.profile.franchise.id}`,
-    program: user.profile.franchise.franchisePayrolls?.map((payroll: any) => 
-      payroll.franchiseProgram?.program?.name || "N/A"
-    ).join(", ") || "N/A",
+    program:
+      user.profile.franchise.franchisePayrolls
+        ?.map(
+          (payroll: any) => payroll.franchiseProgram?.program?.name || "N/A",
+        )
+        .join(", ") || "N/A",
     franchiseType: user.profile.franchise.type,
     reference: user.profile.reference,
     date: user.profile.franchise.createdAt,
-    // Support both new (per-program) and legacy (single) payroll
-    paymentDetails: user.profile.franchise.franchisePayrolls ||
-      (user.profile.franchise.franchisePayroll ? [user.profile.franchise.franchisePayroll] : []),
+
+    paymentDetails:
+      user.profile.franchise.franchisePayrolls ||
+      (user.profile.franchise.franchisePayroll
+        ? [user.profile.franchise.franchisePayroll]
+        : []),
   } as any;
 
   if (showPaymentSuccess) {
@@ -308,25 +332,25 @@ export default function FranchiseAgreementPage() {
 
   return (
     <div className="min-h-screen p-6 md:p-8 bg-gray-50">
-      {paymentDetails && 
-       user?.profile && 
-       !paymentDetails.isZeroAmount && 
-       paymentDetails.amount > 0 && (
-        <RazorpayPayment
-          orderId={paymentDetails.orderId}
-          amount={paymentDetails.amount}
-          currency={paymentDetails.currency}
-          franchiseName={paymentDetails.franchiseName}
-          razorpayKey={paymentDetails.key}
-          onSuccess={handlePaymentSuccess}
-          onFailure={handlePaymentFailure}
-          userDetails={{
-            name: user.profile.name,
-            email: user.profile.mail,
-            phone: user.profile.phone,
-          }}
-        />
-      )}
+      {paymentDetails &&
+        user?.profile &&
+        !paymentDetails.isZeroAmount &&
+        paymentDetails.amount > 0 && (
+          <RazorpayPayment
+            orderId={paymentDetails.orderId}
+            amount={paymentDetails.amount}
+            currency={paymentDetails.currency}
+            franchiseName={paymentDetails.franchiseName}
+            razorpayKey={paymentDetails.key}
+            onSuccess={handlePaymentSuccess}
+            onFailure={handlePaymentFailure}
+            userDetails={{
+              name: user.profile.name,
+              email: user.profile.mail,
+              phone: user.profile.phone,
+            }}
+          />
+        )}
       <div className="w-full max-w-[1600px] mx-auto">
         {/* Professional Header */}
         <div className="border-2 rounded-xl border-primary shadow-xl bg-white">
@@ -336,7 +360,8 @@ export default function FranchiseAgreementPage() {
                 Franchisee Agreement
               </h1>
               <p className="text-sm md:text-base text-gray-600">
-                Please review your franchise details and complete the payment to get started
+                Please review your franchise details and complete the payment to
+                get started
               </p>
             </div>
           </div>

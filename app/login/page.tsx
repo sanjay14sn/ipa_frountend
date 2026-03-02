@@ -12,26 +12,21 @@ export default function Page() {
 
   return (
     <PageShell brand={false} className="bg-brand-white-500">
-      <BrandBar label="Abacus Academy — Franchise Portal" />
-      <main className="mx-auto w-full max-w-6xl px-4 py-10">
-        <AbacusHero ctaPrimary={<></>} ctaSecondary={<></>} />
+      <BrandBar className="absolute w-full text-center" label="Abacus Academy — Franchise Portal" />
+      {/* <main className="flex w-full max-w-6xl px-4 py-10"> */}
+      {/* <AbacusHero ctaPrimary={<></>} ctaSecondary={<></>} /> */}
 
-        <div className="mt-10 grid gap-6 md:grid-cols-2">
-          <div>
-            <LoginCard />
-          </div>
-          <div>
-            <FranchiseCTA
-              onStartApplication={() => setFranchiseModalOpen(true)}
-            />
-          </div>
-        </div>
+      <div className="flex justify-center w-full h-screen items-center border">
+        {/* <div> */}
+          <LoginCard onStartApplication={() => setFranchiseModalOpen(true)} />
+        {/* </div> */}
+      </div>
 
-        <FranchiseApplicationModal
-          open={franchiseModalOpen}
-          onOpenChange={setFranchiseModalOpen}
-        />
-      </main>
+      <FranchiseApplicationModal
+        open={franchiseModalOpen}
+        onOpenChange={setFranchiseModalOpen}
+      />
+      {/* </main> */}
     </PageShell>
   );
 }

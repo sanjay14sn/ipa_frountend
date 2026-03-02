@@ -5,6 +5,7 @@ interface LocationDetailsProps {
 export default function LocationDetails({
   franchiseData,
 }: LocationDetailsProps) {
+  console.log(franchiseData);
   return (
     <div className="border-2 border-primary rounded-lg p-5 bg-white shadow-sm">
       <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b-2 border-primary">
@@ -16,8 +17,9 @@ export default function LocationDetails({
             Centre Address:
           </span>
           <p className="text-sm text-gray-900">{franchiseData.address}</p>
-          <p className="text-xs text-gray-600">
-            {franchiseData.city}, {franchiseData.pincode}
+          <p className="text-sm">
+            {" "}
+            {franchiseData.city} -{franchiseData.pincode}, {franchiseData.state}
           </p>
         </div>
         {franchiseData.communicationAddress && (

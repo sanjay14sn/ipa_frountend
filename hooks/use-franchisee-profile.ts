@@ -20,6 +20,7 @@ export function useFranchiseeProfile() {
           phone: profile.phone,
           email: profile.mail,
           city: (profile as any).franchise?.city ?? (profile as any).city,
+          state: (profile as any).franchise?.state ?? (profile as any).state,
           address: (profile as any).franchise?.address ?? (profile as any).address,
           education: profile.education,
           occupation: profile.occupation,

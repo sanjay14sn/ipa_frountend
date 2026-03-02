@@ -15,6 +15,8 @@ export interface User {
     address: string;
     communicationAddress: string;
     city?: string;
+    state?: string,
+    pincode?: string;
     phone: string;
     mail: string;
     education: string;

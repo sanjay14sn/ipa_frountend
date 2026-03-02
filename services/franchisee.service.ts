@@ -29,6 +29,7 @@ export interface Franchise {
   address: string;
   city: string;
   state?: string;
+  pincode?: string;
   programIds: number[];
   franchiseeId: number;
 }
@@ -41,6 +42,7 @@ export interface FranchiseResponse {
   address: string;
   city?: string;
   state?: string;
+  pincode?: string;
   franchisePrograms?: Array<{
     program: {
       id: number;

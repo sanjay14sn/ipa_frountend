@@ -68,8 +68,8 @@ const Stepper = ({
                   currentStep === step.id
                     ? "bg-blue-600 text-white border-blue-600 shadow-md"
                     : currentStep > step.id
-                    ? "bg-green-600 text-white border-green-600"
-                    : "bg-white text-gray-400 border-gray-300"
+                      ? "bg-green-600 text-white border-green-600"
+                      : "bg-white text-gray-400 border-gray-300"
                 }`}
               >
                 {currentStep > step.id ? "✓" : step.id}
@@ -178,6 +178,8 @@ export function FranchiseApplicationModal({
           newErrors.city = "State is required";
         } else if (!formData.franchise.city.trim()) {
           newErrors.city = "City is required";
+        } else if (!formData.franchise.pincode?.trim()) {
+          newErrors.pincode = "Pincode is required";
         }
         break;
 
@@ -319,6 +321,7 @@ export function FranchiseApplicationModal({
         address: "",
         city: "",
         state: "",
+        pincode: "",
         programIds: [],
         franchiseeId: 0,
       } as Franchise,
@@ -434,16 +437,30 @@ export function FranchiseApplicationModal({
               />
             </div>
 
-            <StateCitySelect
-              id="city"
-              value={formData.franchise.city}
-              stateValue={formData.franchise.state}
-              onChange={(val) => handleInputChange("franchise.city", val)}
-              onStateChange={(val) => handleInputChange("franchise.state", val)}
-              label="City"
-              required
-              error={errors.city}
-            />
+            <div className="flex justify-between gap-2">
+              <StateCitySelect
+                id="city"
+                className="w-full"
+                value={formData.franchise.city}
+                stateValue={formData.franchise.state}
+                onChange={(val) => handleInputChange("franchise.city", val)}
+                onStateChange={(val) =>
+                  handleInputChange("franchise.state", val)
+                }
+                label="City"
+                required
+                error={errors.city}
+              />
+
+              <div className="space-y-2 w-[50%]">
+                <Label htmlFor="pinCode">Pincode</Label>
+                <Input
+                  id="pinCode"
+                  value={formData.franchise.pincode}
+                  onChange={(e) => handleInputChange("pinCode", e.target.value)}
+                />
+              </div>
+            </div>
           </div>
         );
 
@@ -577,7 +594,7 @@ export function FranchiseApplicationModal({
                       <Checkbox
                         id={`program-${program.id}`}
                         checked={formData.franchise.programIds.includes(
-                          program.id
+                          program.id,
                         )}
                         onCheckedChange={() => handleProgramToggle(program.id)}
                       />
