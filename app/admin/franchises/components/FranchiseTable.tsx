@@ -25,7 +25,7 @@ interface FranchiseTableProps {
 }
 
 export default function FranchiseTable({
-  onClientUpdate,
+  onClientUpdate: externalOnClientUpdate,
   refreshTrigger,
 }: FranchiseTableProps) {
   const [expandedChildren, setExpandedChildren] = useState<Set<string>>(
@@ -33,6 +33,13 @@ export default function FranchiseTable({
   );
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<FranchiseData[]>([]);
+
+  const handleClientUpdate = (updatedClient: FranchiseData) => {
+    setClients((prev) =>
+      prev.map((c) => (c.id === updatedClient.id ? updatedClient : c))
+    );
+    externalOnClientUpdate?.(updatedClient);
+  };
   const [totalPages, setTotalPages] = useState(0);
   const [total, setTotal] = useState(0);
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -250,7 +257,7 @@ export default function FranchiseTable({
           lastRow={false}
           expandedRows={expandedChildren}
           onToggleRow={toggleRow}
-          onClientUpdate={onClientUpdate}
+          onClientUpdate={handleClientUpdate}
         />
       )}
       searchPlaceholder="Search franchises, franchisees, or cities..."

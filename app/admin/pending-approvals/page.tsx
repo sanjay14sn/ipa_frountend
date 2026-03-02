@@ -280,9 +280,9 @@ export default function PendingApprovals() {
       } else {
         const gstRate = 0.18;
         const gstExtra =
-          (program.gstFranchiseFee ? (Number(program.franchiseFee) || 0) * gstRate : 0) +
-          (program.gstRoyalty ? (Number(program.royalty) || 0) * gstRate : 0) +
-          (program.gstMaterialCost ? (Number(program.materialCost) || 0) * gstRate : 0);
+          (!program.gstFranchiseFee ? (Number(program.franchiseFee) || 0) * gstRate : 0) +
+          (!program.gstRoyalty ? (Number(program.royalty) || 0) * gstRate : 0) +
+          (!program.gstMaterialCost ? (Number(program.materialCost) || 0) * gstRate : 0);
         updatedProgramPayrolls[programIndex].totalAmount = baseSum + gstExtra;
       }
 
@@ -448,7 +448,7 @@ export default function PendingApprovals() {
                               }
                               disabled={program.freeload}
                             />
-                            <span className="text-xs text-gray-600">GST</span>
+                            <span className="text-xs text-gray-600" title="Check if amount includes GST; uncheck to add GST on checkout">GST Inc.</span>
                           </label>
                         </div>
                         <div className="relative">
@@ -515,7 +515,7 @@ export default function PendingApprovals() {
                               }
                               disabled={program.freeload}
                             />
-                            <span className="text-xs text-gray-600">GST</span>
+                            <span className="text-xs text-gray-600" title="Check if amount includes GST; uncheck to add GST on checkout">GST Inc.</span>
                           </label>
                         </div>
                         <div className="relative">
@@ -607,7 +607,7 @@ export default function PendingApprovals() {
                               }
                               disabled={program.freeload}
                             />
-                            <span className="text-xs text-gray-600">GST</span>
+                            <span className="text-xs text-gray-600" title="Check if amount includes GST; uncheck to add GST on checkout">GST Inc.</span>
                           </label>
                         </div>
                         <div className="relative">

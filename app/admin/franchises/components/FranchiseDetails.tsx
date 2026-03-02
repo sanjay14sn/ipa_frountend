@@ -26,11 +26,17 @@ export default function FranchiseDetails({
   const franchiseDetailsDotRef = useRef<HTMLDivElement>(null);
   const [lineHeight, setLineHeight] = useState(0);
 
-  const handlePayrollUpdate = (updatedPayroll: FranchisePayrollResponse) => {
+  const handlePayrollUpdate = (
+    updatedPayroll:
+      | FranchisePayrollResponse
+      | FranchisePayrollResponse[]
+  ) => {
     if (onClientUpdate) {
-      const updatedClient = {
+      const isArray = Array.isArray(updatedPayroll);
+      const updatedClient: FranchiseData = {
         ...client,
-        payrollDetails: updatedPayroll,
+        franchisePayrolls: isArray ? updatedPayroll : undefined,
+        franchisePayroll: isArray ? undefined : updatedPayroll,
       };
       onClientUpdate(updatedClient);
     }

@@ -605,7 +605,7 @@ export function CreateFranchiseDialog({
                                 updateProgramPayroll(programId, "gstFranchiseFee", e.target.checked)
                               }
                             />
-                            <span className="text-xs text-gray-500">GST Inclusive</span>
+                            <span className="text-xs text-gray-500" title="Check if amount includes GST; uncheck to add GST on checkout">GST Inc.</span>
                           </label>
                         </div>
                         <Input
@@ -643,7 +643,7 @@ export function CreateFranchiseDialog({
                                 updateProgramPayroll(programId, "gstMaterialCost", e.target.checked)
                               }
                             />
-                            <span className="text-xs text-gray-500">GST Inclusive</span>
+                            <span className="text-xs text-gray-500" title="Check if amount includes GST; uncheck to add GST on checkout">GST Inc.</span>
                           </label>
                         </div>
                         <Input
@@ -713,7 +713,7 @@ export function CreateFranchiseDialog({
                                 updateProgramPayroll(programId, "gstRoyalty", e.target.checked)
                               }
                             />
-                            <span className="text-xs text-gray-500">GST Inclusive</span>
+                            <span className="text-xs text-gray-500" title="Check if amount includes GST; uncheck to add GST on checkout">GST Inc.</span>
                           </label>
                         </div>
                         <Input

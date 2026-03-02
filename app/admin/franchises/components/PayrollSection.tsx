@@ -13,7 +13,9 @@ interface PayrollSectionProps {
   clientId: string;
   isExpanded: boolean;
   onToggle: (id: string) => void;
-  onPayrollUpdate?: (updatedPayroll: FranchisePayrollResponse) => void;
+  onPayrollUpdate?: (
+    updatedPayroll: FranchisePayrollResponse | FranchisePayrollResponse[]
+  ) => void;
 }
 
 export const payrollDotRef = React.createRef<HTMLDivElement>();
@@ -112,12 +114,17 @@ export default function PayrollSection({
             totalAmount: payroll.totalAmount,
             dateOfPayment: payroll.dateOfPayment,
             dateOfJoining: payroll.dateOfJoining,
+            gstFranchiseFee: payroll.gstFranchiseFee,
+            gstRoyalty: payroll.gstRoyalty,
+            gstMaterialCost: payroll.gstMaterialCost,
           })
         )
       );
 
-      if (onPayrollUpdate && editedDataArray[0]) {
-        onPayrollUpdate(editedDataArray[0]);
+      if (onPayrollUpdate) {
+        onPayrollUpdate(
+          editedDataArray.length === 1 ? editedDataArray[0] : editedDataArray
+        );
       }
       setIsEditing(false);
     } catch (error) {
@@ -126,6 +133,21 @@ export default function PayrollSection({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const recalcTotalWithGst = (p: FranchisePayrollResponse) => {
+    const baseSum =
+      (Number(p.franchiseFee) || 0) +
+      (Number(p.kitCost) || 0) +
+      (Number(p.materialCost) || 0) +
+      (Number(p.monthlyFee) || 0) +
+      (Number(p.installment) || 0);
+    const gstRate = 0.18;
+    const gstExtra =
+      (!p.gstFranchiseFee ? (Number(p.franchiseFee) || 0) * gstRate : 0) +
+      (!p.gstRoyalty ? (Number(p.royalty) || 0) * gstRate : 0) +
+      (!p.gstMaterialCost ? (Number(p.materialCost) || 0) * gstRate : 0);
+    return baseSum + gstExtra;
   };
 
   const handleInputChange = (
@@ -140,26 +162,82 @@ export default function PayrollSection({
         [field]: value,
       };
 
-      // Auto-calculate total amount when relevant fields change
-      if (
-        [
-          "franchiseFee",
-          "monthlyFee",
-          "kitCost",
-          "materialCost",
-          "installment",
-        ].includes(field)
-      ) {
-        updated[index].totalAmount =
-          (updated[index].franchiseFee || 0) +
-          (updated[index].monthlyFee || 0) +
-          (updated[index].kitCost || 0) +
-          (updated[index].materialCost || 0) +
-          (updated[index].installment || 0);
+      // Recalc totalAmount when amount or GST fields change
+      const affectsTotal = [
+        "franchiseFee",
+        "monthlyFee",
+        "kitCost",
+        "materialCost",
+        "installment",
+        "royalty",
+        "gstFranchiseFee",
+        "gstRoyalty",
+        "gstMaterialCost",
+      ].includes(field);
+      if (affectsTotal) {
+        updated[index].totalAmount = recalcTotalWithGst(updated[index]);
       }
 
       return updated;
     });
+  };
+
+  const renderEditableFieldWithGst = (
+    index: number,
+    label: string,
+    field: keyof FranchisePayrollResponse,
+    value: number | string | Date,
+    gstField: "gstFranchiseFee" | "gstRoyalty" | "gstMaterialCost",
+    gstValue: boolean | undefined
+  ) => {
+    const currentValue = isEditing ? editedDataArray[index][field] : value;
+    const currentGst = isEditing ? editedDataArray[index][gstField] : gstValue;
+
+    if (!isEditing) {
+      const displayValue = formatCurrency((currentValue as number) ?? 0);
+      return (
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500">{label}</span>
+            {currentGst && (
+              <span className="text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded">
+                GST Inc.
+              </span>
+            )}
+          </div>
+          <p className="text-gray-900 mt-1 font-medium">{displayValue}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500 text-sm">{label}</span>
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!currentGst}
+              onChange={(e) =>
+                handleInputChange(index, gstField, e.target.checked)
+              }
+            />
+            <span className="text-xs text-gray-600" title="Check if amount includes GST; uncheck to add GST on checkout">GST Inc.</span>
+          </label>
+        </div>
+        <Input
+          type="number"
+          value={currentValue?.toString() ?? ""}
+          onChange={(e) => {
+            const newValue = parseFloat(e.target.value) || 0;
+            handleInputChange(index, field, newValue);
+          }}
+          className="mt-1 h-8 text-sm"
+          step="0.01"
+          min="0"
+        />
+      </div>
+    );
   };
 
   const renderEditableField = (
@@ -348,12 +426,13 @@ export default function PayrollSection({
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 text-sm">
-                      {renderEditableField(
+                      {renderEditableFieldWithGst(
                         index,
                         "Franchise Fee",
                         "franchiseFee",
                         payroll.franchiseFee,
-                        "currency"
+                        "gstFranchiseFee",
+                        payroll.gstFranchiseFee
                       )}
                       {renderEditableField(
                         index,
@@ -369,12 +448,13 @@ export default function PayrollSection({
                         payroll.kitCost,
                         "currency"
                       )}
-                      {renderEditableField(
+                      {renderEditableFieldWithGst(
                         index,
                         "Material Cost",
                         "materialCost",
                         payroll.materialCost,
-                        "currency"
+                        "gstMaterialCost",
+                        payroll.gstMaterialCost
                       )}
                       {renderEditableField(
                         index,
@@ -404,12 +484,13 @@ export default function PayrollSection({
                           payroll.franchiseShare,
                           "currency"
                         )}
-                        {renderEditableField(
+                        {renderEditableFieldWithGst(
                           index,
                           "Royalty (per month)",
                           "royalty",
                           payroll.royalty,
-                          "currency"
+                          "gstRoyalty",
+                          payroll.gstRoyalty
                         )}
                         {renderEditableField(
                           index,
