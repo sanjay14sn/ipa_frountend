@@ -99,6 +99,7 @@ export default function PendingFranchiseDetails({
             applicationId={application.id.toString()}
             isExpanded={expandedRows.has(`${application.id}-franchisee`)}
             onToggle={onToggleRow}
+            city={application.city ?? application.franchise?.city}
           />
         </div>
       </div>

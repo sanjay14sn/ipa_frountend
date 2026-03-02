@@ -80,6 +80,9 @@ export interface FranchisePayrollResponse {
   installment: number;
   totalAmount: number;
   programId: number;
+  gstFranchiseFee?: boolean;
+  gstRoyalty?: boolean;
+  gstMaterialCost?: boolean;
   program?: {
     id: number;
     name: string;
@@ -141,7 +144,9 @@ export interface ProgramPayrollRequest {
   royalty: number;
   installment: number;
   totalAmount: number;
-  gstInclusive: boolean;
+  gstFranchiseFee?: boolean;
+  gstRoyalty?: boolean;
+  gstMaterialCost?: boolean;
   freeload: boolean;
 }
 

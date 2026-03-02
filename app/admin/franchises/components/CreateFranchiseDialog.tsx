@@ -106,7 +106,9 @@ interface ProgramPayroll {
   royalty: number;
   installment: number;
   totalAmount: number;
-  gstInclusive: boolean;
+  gstFranchiseFee: boolean;
+  gstRoyalty: boolean;
+  gstMaterialCost: boolean;
   freeload: boolean;
 }
 
@@ -231,7 +233,9 @@ export function CreateFranchiseDialog({
           royalty: 0,
           installment: 0,
           totalAmount: 0,
-          gstInclusive: false,
+          gstFranchiseFee: false,
+          gstRoyalty: false,
+          gstMaterialCost: false,
           freeload: false,
         },
       });
@@ -591,7 +595,19 @@ export function CreateFranchiseDialog({
 
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Franchise Fee (₹)</Label>
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs">Franchise Fee (₹)</Label>
+                          <label className="flex items-center gap-1 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={payroll?.gstFranchiseFee || false}
+                              onChange={(e) =>
+                                updateProgramPayroll(programId, "gstFranchiseFee", e.target.checked)
+                              }
+                            />
+                            <span className="text-xs text-gray-500">GST Inclusive</span>
+                          </label>
+                        </div>
                         <Input
                           type="number"
                           min="0"
@@ -617,7 +633,19 @@ export function CreateFranchiseDialog({
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-xs">Material Cost (₹)</Label>
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs">Material Cost (₹)</Label>
+                          <label className="flex items-center gap-1 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={payroll?.gstMaterialCost || false}
+                              onChange={(e) =>
+                                updateProgramPayroll(programId, "gstMaterialCost", e.target.checked)
+                              }
+                            />
+                            <span className="text-xs text-gray-500">GST Inclusive</span>
+                          </label>
+                        </div>
                         <Input
                           type="number"
                           min="0"
@@ -675,7 +703,19 @@ export function CreateFranchiseDialog({
 
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Royalty (%)</Label>
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs">Royalty (%)</Label>
+                          <label className="flex items-center gap-1 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={payroll?.gstRoyalty || false}
+                              onChange={(e) =>
+                                updateProgramPayroll(programId, "gstRoyalty", e.target.checked)
+                              }
+                            />
+                            <span className="text-xs text-gray-500">GST Inclusive</span>
+                          </label>
+                        </div>
                         <Input
                           type="number"
                           min="0"
@@ -716,19 +756,6 @@ export function CreateFranchiseDialog({
                     </div>
 
                     <div className="flex gap-6">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id={`gst-${programId}`}
-                          checked={payroll?.gstInclusive || false}
-                          onCheckedChange={(checked) =>
-                            updateProgramPayroll(programId, "gstInclusive", checked)
-                          }
-                        />
-                        <Label htmlFor={`gst-${programId}`} className="text-xs">
-                          GST Inclusive
-                        </Label>
-                      </div>
-
                       <div className="flex items-center space-x-2">
                         <Switch
                           id={`freeload-${programId}`}

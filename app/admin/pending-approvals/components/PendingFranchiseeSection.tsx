@@ -8,6 +8,7 @@ interface PendingFranchiseeSectionProps {
   applicationId: string;
   isExpanded: boolean;
   onToggle: (id: string) => void;
+  city?: string;
 }
 
 export const franchiseeDotRef = React.createRef<HTMLDivElement>();
@@ -17,6 +18,7 @@ export default function PendingFranchiseeSection({
   applicationId,
   isExpanded,
   onToggle,
+  city,
 }: PendingFranchiseeSectionProps) {
   const sectionId = `${applicationId}-franchisee`;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -95,7 +97,7 @@ export default function PendingFranchiseeSection({
                     </div>
                     <div>
                       <span className="text-gray-500">City</span>
-                      <p className="text-gray-900 mt-1">{(application as any).city ?? (application as any).franchise?.city ?? franchisee.city}</p>
+                      <p className="text-gray-900 mt-1">{city ?? "—"}</p>
                     </div>
                     <div>
                       <span className="text-gray-500">Education</span>

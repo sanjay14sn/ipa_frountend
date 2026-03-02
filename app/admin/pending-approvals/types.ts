@@ -10,7 +10,9 @@ export interface ProgramPayroll {
   royalty: number;
   installment: number;
   totalAmount: number;
-  gstInclusive: boolean;
+  gstFranchiseFee: boolean;
+  gstRoyalty: boolean;
+  gstMaterialCost: boolean;
   freeload: boolean;
 }
 

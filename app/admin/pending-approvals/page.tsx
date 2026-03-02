@@ -83,7 +83,9 @@ export default function PendingApprovals() {
         royalty: 0,
         installment: 0,
         totalAmount: 0,
-        gstInclusive: true,
+        gstFranchiseFee: false,
+        gstRoyalty: false,
+        gstMaterialCost: false,
         freeload: false,
       })) || [];
 
@@ -175,7 +177,9 @@ export default function PendingApprovals() {
           royalty: Number(pp.royalty) || 0,
           installment: Number(pp.installment) || 0,
           totalAmount: Number(pp.totalAmount) || 0,
-          gstInclusive: Boolean(pp.gstInclusive),
+          gstFranchiseFee: Boolean(pp.gstFranchiseFee ?? false),
+          gstRoyalty: Boolean(pp.gstRoyalty ?? false),
+          gstMaterialCost: Boolean(pp.gstMaterialCost ?? false),
           freeload: Boolean(pp.freeload),
         })),
         ...(franchiseProgramKits.length > 0 && {
@@ -263,7 +267,7 @@ export default function PendingApprovals() {
         program.installment = 0;
       }
 
-      // Always recalc totalAmount
+      // Recalc totalAmount: base sum + GST only on franchise fee, royalty, material cost when their flags are set
       const baseSum =
         (Number(program.franchiseFee) || 0) +
         (Number(program.kitCost) || 0) +
@@ -274,7 +278,11 @@ export default function PendingApprovals() {
       if (program.freeload) {
         updatedProgramPayrolls[programIndex].totalAmount = 0;
       } else {
-        const gstExtra = program.gstInclusive ? 0 : baseSum * 0.18;
+        const gstRate = 0.18;
+        const gstExtra =
+          (program.gstFranchiseFee ? (Number(program.franchiseFee) || 0) * gstRate : 0) +
+          (program.gstRoyalty ? (Number(program.royalty) || 0) * gstRate : 0) +
+          (program.gstMaterialCost ? (Number(program.materialCost) || 0) * gstRate : 0);
         updatedProgramPayrolls[programIndex].totalAmount = baseSum + gstExtra;
       }
 
@@ -401,61 +409,48 @@ export default function PendingApprovals() {
                       <p className="text-sm text-gray-600 mt-1">
                         Configure financial details for this program
                       </p>
+                      <div className="flex items-center gap-2 mt-3">
+                        <input
+                          type="checkbox"
+                          id={`freeload-${program.programId}`}
+                          checked={program.freeload}
+                          onChange={(e) =>
+                            handleProgramPayrollChange(
+                              index,
+                              "freeload",
+                              e.target.checked
+                            )
+                          }
+                        />
+                        <Label htmlFor={`freeload-${program.programId}`} className="text-sm font-medium text-gray-700 cursor-pointer">
+                          No Payment Required – Franchisee will not be charged
+                        </Label>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-4">
-                      {/* GST Inclusive Toggle */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">
-                          GST Inclusive
-                        </Label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={program.gstInclusive}
-                            onChange={(e) =>
-                              handleProgramPayrollChange(
-                                index,
-                                "gstInclusive",
-                                e.target.checked
-                              )
-                            }
-                          />
-                          <span className="text-sm text-gray-600">
-                            If unchecked, 18% GST will be added
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Freeload Toggle */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">
-                          No Payment Required
-                        </Label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={program.freeload}
-                            onChange={(e) =>
-                              handleProgramPayrollChange(
-                                index,
-                                "freeload",
-                                e.target.checked
-                              )
-                            }
-                          />
-                          <span className="text-sm text-gray-600">
-                            Franchisee will not be charged for this program.
-                          </span>
-                        </div>
-                      </div>
-
-                      <div />
                       {/* Franchise Fee */}
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">
-                          Franchise Fee
-                        </Label>
+                        <div className="flex items-center gap-2">
+                          <Label className="text-sm font-medium text-gray-700">
+                            Franchise Fee
+                          </Label>
+                          <label className="flex items-center gap-1 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={program.gstFranchiseFee}
+                              onChange={(e) =>
+                                handleProgramPayrollChange(
+                                  index,
+                                  "gstFranchiseFee",
+                                  e.target.checked
+                                )
+                              }
+                              disabled={program.freeload}
+                            />
+                            <span className="text-xs text-gray-600">GST</span>
+                          </label>
+                        </div>
                         <div className="relative">
                           <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
@@ -503,9 +498,26 @@ export default function PendingApprovals() {
 
                       {/* Material Cost */}
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">
-                          Material Cost
-                        </Label>
+                        <div className="flex items-center gap-2">
+                          <Label className="text-sm font-medium text-gray-700">
+                            Material Cost
+                          </Label>
+                          <label className="flex items-center gap-1 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={program.gstMaterialCost}
+                              onChange={(e) =>
+                                handleProgramPayrollChange(
+                                  index,
+                                  "gstMaterialCost",
+                                  e.target.checked
+                                )
+                              }
+                              disabled={program.freeload}
+                            />
+                            <span className="text-xs text-gray-600">GST</span>
+                          </label>
+                        </div>
                         <div className="relative">
                           <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
@@ -578,9 +590,26 @@ export default function PendingApprovals() {
 
                       {/* Royalty */}
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">
-                          Royalty/Student (per month)
-                        </Label>
+                        <div className="flex items-center gap-2">
+                          <Label className="text-sm font-medium text-gray-700">
+                            Royalty/Student (per month)
+                          </Label>
+                          <label className="flex items-center gap-1 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={program.gstRoyalty}
+                              onChange={(e) =>
+                                handleProgramPayrollChange(
+                                  index,
+                                  "gstRoyalty",
+                                  e.target.checked
+                                )
+                              }
+                              disabled={program.freeload}
+                            />
+                            <span className="text-xs text-gray-600">GST</span>
+                          </label>
+                        </div>
                         <div className="relative">
                           <Input
                             type="number"
