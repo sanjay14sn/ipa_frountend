@@ -25,6 +25,7 @@ import { StateCitySelect } from "@/components/StateCitySelect";
 import { Program } from "@/services/program.service";
 import { Eye, EyeOff, ArrowRight, CheckCircle, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/error-utils";
 import { createFranchiseeByAdmin, createPayrollDetails, type ProgramPayrollRequest } from "@/services/franchisee.service";
 import { Checkbox } from "@/components/ui/checkbox";
 import React from "react";
@@ -303,7 +304,7 @@ export function CreateFranchiseDialog({
       }, 2000);
     } catch (error: any) {
       console.error("Failed to create franchise:", error);
-      toast.error(error.response?.data?.message || "Failed to create franchise");
+      toast.error(getErrorMessage(error, "Failed to create franchise"));
     } finally {
       setLoading(false);
     }

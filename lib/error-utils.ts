@@ -28,8 +28,10 @@ export function extractErrorMessage(
       // Try to get message from error response
       if (typeof errorData === 'object') {
         // Handle ErrorException format: { code, message }
-        if ('message' in errorData && typeof errorData.message === 'string') {
-          return errorData.message;
+        if ('message' in errorData) {
+          const msg = errorData.message;
+          if (typeof msg === 'string') return msg;
+          if (Array.isArray(msg) && msg.length > 0) return msg[0];
         }
         
         // Handle nested error objects
@@ -151,6 +153,8 @@ export function getUserFriendlyMessage(error: unknown, fallback?: string): strin
     INVALID_PRICE: 'Invalid price',
     DUPLICATE_STUDENT: 'Student already exists',
     DUPLICATE_ROLL_NUMBER: 'Roll number already exists',
+    FRANCHISE_ALREADY_EXISTS: 'A franchise with this name already exists',
+    DUPLICATE_FRANCHISE: 'Franchise already exists',
   };
   
   if (code && friendlyMessages[code]) {

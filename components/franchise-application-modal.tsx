@@ -23,6 +23,8 @@ import {
 import { Calculator, ArrowRight, CheckCircle } from "lucide-react";
 import React from "react";
 import { applyFranchisee } from "@/services/franchisee.service";
+import { getErrorMessage } from "@/lib/error-utils";
+import { toast } from "sonner";
 import {
   FranchiseeApplication,
   Franchisee,
@@ -242,6 +244,7 @@ export function FranchiseApplicationModal({
       }
     } catch (error) {
       console.error("Error submitting application:", error);
+      toast.error(getErrorMessage(error, "Failed to submit application"));
     } finally {
       setIsLoading(false);
     }
