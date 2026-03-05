@@ -833,7 +833,6 @@ export default function AddStudentModal({
                   value={formData.levelId.toString()}
                   onValueChange={(value) => handleInputChange("levelId", value)}
                   disabled={
-                    !formData.existing ||
                     !formData.streamId ||
                     formData.streamId === 0 ||
                     loadingLevels
@@ -848,8 +847,6 @@ export default function AddStudentModal({
                           ? "Loading levels..."
                           : formData.streamId === 0
                           ? "Select stream first"
-                          : !formData.existing
-                          ? "Auto-selected (first level)"
                           : "Select level"
                       }
                     />
