@@ -129,6 +129,7 @@ export function FranchiseApplicationModal({
       address: "",
       city: "",
       state: "",
+      pincode: "",
       programIds: [],
       franchiseeId: 0,
     } as Franchise,
@@ -267,11 +268,14 @@ export function FranchiseApplicationModal({
       };
     });
 
-    if (errors[field]) {
-      setErrors((prev) => ({
-        ...prev,
-        [field]: "",
-      }));
+    const keysToClear = [field];
+    if (field === "franchise.pincode") keysToClear.push("pincode");
+    if (keysToClear.some((k) => errors[k])) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        keysToClear.forEach((k) => delete next[k]);
+        return next;
+      });
     }
   };
 
@@ -453,12 +457,18 @@ export function FranchiseApplicationModal({
               />
 
               <div className="space-y-2 w-[50%]">
-                <Label htmlFor="pinCode">Pincode</Label>
+                <Label htmlFor="pinCode">Pincode *</Label>
                 <Input
                   id="pinCode"
-                  value={formData.franchise.pincode}
-                  onChange={(e) => handleInputChange("pinCode", e.target.value)}
+                  value={formData.franchise.pincode ?? ""}
+                  onChange={(e) =>
+                    handleInputChange("franchise.pincode", e.target.value)
+                  }
+                  className={errors.pincode ? "border-red-500" : ""}
                 />
+                {errors.pincode && (
+                  <p className="text-red-500 text-sm">{errors.pincode}</p>
+                )}
               </div>
             </div>
           </div>
