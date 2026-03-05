@@ -705,21 +705,23 @@ export default function PendingApprovals() {
                       Grand Total (All Programs)
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
-                      Combined total franchise fee across all programs
+                      One-time payment (incl. GST where applicable)
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-3xl font-bold text-primary">
                       ₹
                       {payrollDetails.programPayrolls
-                        .reduce(
-                          (sum, p) => sum + Number(p.franchiseFee || 0),
-                          0
-                        )
+                        .reduce((sum, p) => {
+                          const fee = Number(p.franchiseFee || 0);
+                          const feeWithGst =
+                            p.gstFranchiseFee ? fee : fee + fee * 0.18;
+                          return sum + feeWithGst;
+                        }, 0)
                         .toLocaleString()}
                     </p>
                     <p className="text-sm text-gray-600 mt-1">
-                      Total: ₹
+                      Full Total: ₹
                       {payrollDetails.programPayrolls
                         .reduce((sum, p) => sum + Number(p.totalAmount || 0), 0)
                         .toLocaleString()}
@@ -727,31 +729,28 @@ export default function PendingApprovals() {
                   </div>
                 </div>
 
-                {/* Monthly Royalty Section */}
+                {/* Monthly Royalty Section - fixed amounts, not percentages */}
                 <div className="mt-5 pt-5 border-t-2 border-primary space-y-3">
                   {(() => {
-                    const totalMonthlyFee =
-                      payrollDetails.programPayrolls.reduce(
-                        (sum, p) => sum + Number(p.monthlyFee || 0),
-                        0
-                      );
-                    const avgRoyaltyPercent =
-                      payrollDetails.programPayrolls.length > 0
-                        ? payrollDetails.programPayrolls.reduce(
-                            (sum, p) => sum + Number(p.royalty || 0),
-                            0
-                          ) / payrollDetails.programPayrolls.length
-                        : 0;
+                    const programCount =
+                      payrollDetails.programPayrolls.length || 1;
                     const adminRoyaltyPerStudent =
-                      (totalMonthlyFee * avgRoyaltyPercent) / 100;
+                      payrollDetails.programPayrolls.reduce(
+                        (sum, p) => {
+                          const royalty = Number(p.royalty || 0);
+                          const royaltyWithGst = p.gstRoyalty
+                            ? royalty
+                            : royalty + royalty * 0.18;
+                          return sum + royaltyWithGst;
+                        },
+                        0
+                      ) / programCount;
 
-                    const totalCISharePercent =
+                    const ciSharePerStudent =
                       payrollDetails.programPayrolls.reduce(
                         (sum, p) => sum + Number(p.ciShare || 0),
                         0
-                      );
-                    const ciRoyaltyPerStudent =
-                      (totalMonthlyFee * totalCISharePercent) / 100;
+                      ) / programCount;
 
                     return (
                       <>
@@ -765,10 +764,10 @@ export default function PendingApprovals() {
                         </div>
                         <div className="flex justify-between items-center py-2 px-3 bg-white border border-primary rounded">
                           <span className="text-sm font-medium text-gray-700">
-                            CI Share:
+                            CI Share (per student/month):
                           </span>
                           <span className="text-base font-bold text-primary">
-                            ₹{ciRoyaltyPerStudent.toLocaleString()}
+                            ₹{ciSharePerStudent.toLocaleString()}
                           </span>
                         </div>
                       </>
