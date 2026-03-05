@@ -35,7 +35,10 @@ import {
 } from "@/services/franchisee.service";
 import { PayrollDetails } from "./types";
 import PendingApprovalsTable from "./components/PendingApprovalsTable";
-import { getProgramKits, type ProgramKit } from "@/services/starting-kit.service";
+import {
+  getProgramKits,
+  type ProgramKit,
+} from "@/services/starting-kit.service";
 
 export default function PendingApprovals() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -48,18 +51,18 @@ export default function PendingApprovals() {
     dateOfJoining: "",
     programPayrolls: [],
   });
-  const [programKits, setProgramKits] = useState<
-    Record<number, ProgramKit[]>
-  >({});
+  const [programKits, setProgramKits] = useState<Record<number, ProgramKit[]>>(
+    {},
+  );
   const [selectedKits, setSelectedKits] = useState<
     Record<number, Record<number, number>>
   >({});
-  const [openDropdowns, setOpenDropdowns] = useState<
-    Record<number, boolean>
-  >({});
-  const [dropdownWidths, setDropdownWidths] = useState<
-    Record<number, number>
-  >({});
+  const [openDropdowns, setOpenDropdowns] = useState<Record<number, boolean>>(
+    {},
+  );
+  const [dropdownWidths, setDropdownWidths] = useState<Record<number, number>>(
+    {},
+  );
   const triggerRefs = useRef<Record<number, HTMLButtonElement | null>>({});
 
   const triggerRefresh = () => {
@@ -110,7 +113,7 @@ export default function PendingApprovals() {
         } catch (error) {
           console.error(
             `Error fetching kits for program ${fp.program.id}:`,
-            error
+            error,
           );
           kitsData[fp.program.id] = [];
           selectedData[fp.program.id] = {};
@@ -127,7 +130,7 @@ export default function PendingApprovals() {
   const handleReject = async (application: FranchiseData) => {
     if (!application?.id) return;
     const confirmed = window.confirm(
-      `Reject franchise application for "${application.name}"? This will notify the franchisee.`
+      `Reject franchise application for "${application.name}"? This will notify the franchisee.`,
     );
     if (!confirmed) return;
 
@@ -205,7 +208,7 @@ export default function PendingApprovals() {
     programId: number,
     inventoryId: number,
     checked: boolean,
-    defaultQuantity: number = 1
+    defaultQuantity: number = 1,
   ) => {
     setSelectedKits((prev) => {
       const programKits = prev[programId] || {};
@@ -232,7 +235,7 @@ export default function PendingApprovals() {
   const handleQuantityChange = (
     programId: number,
     inventoryId: number,
-    quantity: number
+    quantity: number,
   ) => {
     setSelectedKits((prev) => ({
       ...prev,
@@ -243,11 +246,10 @@ export default function PendingApprovals() {
     }));
   };
 
-
   const handleProgramPayrollChange = (
     programIndex: number,
     field: keyof import("./types").ProgramPayroll,
-    value: string | number | boolean
+    value: string | number | boolean,
   ) => {
     setPayrollDetails((prev) => {
       const updatedProgramPayrolls = [...prev.programPayrolls];
@@ -280,9 +282,13 @@ export default function PendingApprovals() {
       } else {
         const gstRate = 0.18;
         const gstExtra =
-          (!program.gstFranchiseFee ? (Number(program.franchiseFee) || 0) * gstRate : 0) +
+          (!program.gstFranchiseFee
+            ? (Number(program.franchiseFee) || 0) * gstRate
+            : 0) +
           (!program.gstRoyalty ? (Number(program.royalty) || 0) * gstRate : 0) +
-          (!program.gstMaterialCost ? (Number(program.materialCost) || 0) * gstRate : 0);
+          (!program.gstMaterialCost
+            ? (Number(program.materialCost) || 0) * gstRate
+            : 0);
         updatedProgramPayrolls[programIndex].totalAmount = baseSum + gstExtra;
       }
 
@@ -295,7 +301,7 @@ export default function PendingApprovals() {
 
   const handleDateChange = (
     field: "dateOfPayment" | "dateOfJoining",
-    value: string
+    value: string,
   ) => {
     setPayrollDetails((prev) => ({
       ...prev,
@@ -418,11 +424,14 @@ export default function PendingApprovals() {
                             handleProgramPayrollChange(
                               index,
                               "freeload",
-                              e.target.checked
+                              e.target.checked,
                             )
                           }
                         />
-                        <Label htmlFor={`freeload-${program.programId}`} className="text-sm font-medium text-gray-700 cursor-pointer">
+                        <Label
+                          htmlFor={`freeload-${program.programId}`}
+                          className="text-sm font-medium text-gray-700 cursor-pointer"
+                        >
                           No Payment Required – Franchisee will not be charged
                         </Label>
                       </div>
@@ -443,25 +452,36 @@ export default function PendingApprovals() {
                                 handleProgramPayrollChange(
                                   index,
                                   "gstFranchiseFee",
-                                  e.target.checked
+                                  e.target.checked,
                                 )
                               }
                               disabled={program.freeload}
                             />
-                            <span className="text-xs text-gray-600" title="Check if amount includes GST; uncheck to add GST on checkout">GST Inc.</span>
+                            <span
+                              className="text-xs text-gray-600"
+                              title="Check if amount includes GST; uncheck to add GST on checkout"
+                            >
+                              GST Inc.
+                            </span>
                           </label>
                         </div>
                         <div className="relative">
                           <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
                             type="number"
-                            value={program.franchiseFee === 0 || program.franchiseFee === undefined || program.franchiseFee === null ? "" : program.franchiseFee}
+                            value={
+                              program.franchiseFee === 0 ||
+                              program.franchiseFee === undefined ||
+                              program.franchiseFee === null
+                                ? ""
+                                : program.franchiseFee
+                            }
                             onChange={(e) => {
                               const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "franchiseFee",
-                                val === "" ? 0 : Number(val)
+                                val === "" ? 0 : Number(val),
                               );
                             }}
                             className="pl-10 h-10"
@@ -480,13 +500,19 @@ export default function PendingApprovals() {
                           <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
                             type="number"
-                            value={program.kitCost === 0 || program.kitCost === undefined || program.kitCost === null ? "" : program.kitCost}
+                            value={
+                              program.kitCost === 0 ||
+                              program.kitCost === undefined ||
+                              program.kitCost === null
+                                ? ""
+                                : program.kitCost
+                            }
                             onChange={(e) => {
                               const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "kitCost",
-                                val === "" ? 0 : Number(val)
+                                val === "" ? 0 : Number(val),
                               );
                             }}
                             className="pl-10 h-10"
@@ -510,25 +536,36 @@ export default function PendingApprovals() {
                                 handleProgramPayrollChange(
                                   index,
                                   "gstMaterialCost",
-                                  e.target.checked
+                                  e.target.checked,
                                 )
                               }
                               disabled={program.freeload}
                             />
-                            <span className="text-xs text-gray-600" title="Check if amount includes GST; uncheck to add GST on checkout">GST Inc.</span>
+                            <span
+                              className="text-xs text-gray-600"
+                              title="Check if amount includes GST; uncheck to add GST on checkout"
+                            >
+                              GST Inc.
+                            </span>
                           </label>
                         </div>
                         <div className="relative">
                           <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
                             type="number"
-                            value={program.materialCost === 0 || program.materialCost === undefined || program.materialCost === null ? "" : program.materialCost}
+                            value={
+                              program.materialCost === 0 ||
+                              program.materialCost === undefined ||
+                              program.materialCost === null
+                                ? ""
+                                : program.materialCost
+                            }
                             onChange={(e) => {
                               const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "materialCost",
-                                val === "" ? 0 : Number(val)
+                                val === "" ? 0 : Number(val),
                               );
                             }}
                             className="pl-10 h-10"
@@ -547,13 +584,19 @@ export default function PendingApprovals() {
                           <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
                             type="number"
-                            value={program.monthlyFee === 0 || program.monthlyFee === undefined || program.monthlyFee === null ? "" : program.monthlyFee}
+                            value={
+                              program.monthlyFee === 0 ||
+                              program.monthlyFee === undefined ||
+                              program.monthlyFee === null
+                                ? ""
+                                : program.monthlyFee
+                            }
                             onChange={(e) => {
                               const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "monthlyFee",
-                                val === "" ? 0 : Number(val)
+                                val === "" ? 0 : Number(val),
                               );
                             }}
                             className="pl-10 h-10"
@@ -572,13 +615,19 @@ export default function PendingApprovals() {
                           <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
                             type="number"
-                            value={program.installment === 0 || program.installment === undefined || program.installment === null ? "" : program.installment}
+                            value={
+                              program.installment === 0 ||
+                              program.installment === undefined ||
+                              program.installment === null
+                                ? ""
+                                : program.installment
+                            }
                             onChange={(e) => {
                               const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "installment",
-                                val === "" ? 0 : Number(val)
+                                val === "" ? 0 : Number(val),
                               );
                             }}
                             className="pl-10 h-10"
@@ -602,12 +651,17 @@ export default function PendingApprovals() {
                                 handleProgramPayrollChange(
                                   index,
                                   "gstRoyalty",
-                                  e.target.checked
+                                  e.target.checked,
                                 )
                               }
                               disabled={program.freeload}
                             />
-                            <span className="text-xs text-gray-600" title="Check if amount includes GST; uncheck to add GST on checkout">GST Inc.</span>
+                            <span
+                              className="text-xs text-gray-600"
+                              title="Check if amount includes GST; uncheck to add GST on checkout"
+                            >
+                              GST Inc.
+                            </span>
                           </label>
                         </div>
                         <div className="relative">
@@ -615,13 +669,19 @@ export default function PendingApprovals() {
                             type="number"
                             min="0"
                             step="0.01"
-                            value={program.royalty === 0 || program.royalty === undefined || program.royalty === null ? "" : program.royalty}
+                            value={
+                              program.royalty === 0 ||
+                              program.royalty === undefined ||
+                              program.royalty === null
+                                ? ""
+                                : program.royalty
+                            }
                             onChange={(e) => {
                               const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "royalty",
-                                val === "" ? 0 : Number(val)
+                                val === "" ? 0 : Number(val),
                               );
                             }}
                             className="pl-10 h-10"
@@ -644,13 +704,19 @@ export default function PendingApprovals() {
                             type="number"
                             min="0"
                             step="0.01"
-                            value={program.ciShare === 0 || program.ciShare === undefined || program.ciShare === null ? "" : program.ciShare}
+                            value={
+                              program.ciShare === 0 ||
+                              program.ciShare === undefined ||
+                              program.ciShare === null
+                                ? ""
+                                : program.ciShare
+                            }
                             onChange={(e) => {
                               const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "ciShare",
-                                val === "" ? 0 : Number(val)
+                                val === "" ? 0 : Number(val),
                               );
                             }}
                             className="pl-10 h-10"
@@ -673,13 +739,19 @@ export default function PendingApprovals() {
                             type="number"
                             min="0"
                             step="0.01"
-                            value={program.franchiseShare === 0 || program.franchiseShare === undefined || program.franchiseShare === null ? "" : program.franchiseShare}
+                            value={
+                              program.franchiseShare === 0 ||
+                              program.franchiseShare === undefined ||
+                              program.franchiseShare === null
+                                ? ""
+                                : program.franchiseShare
+                            }
                             onChange={(e) => {
                               const val = e.target.value;
                               handleProgramPayrollChange(
                                 index,
                                 "franchiseShare",
-                                val === "" ? 0 : Number(val)
+                                val === "" ? 0 : Number(val),
                               );
                             }}
                             className="pl-10 h-10"
@@ -691,7 +763,6 @@ export default function PendingApprovals() {
                           </span>
                         </div>
                       </div>
-
                     </div>
                   </div>
                 ))}
@@ -714,16 +785,11 @@ export default function PendingApprovals() {
                       {payrollDetails.programPayrolls
                         .reduce((sum, p) => {
                           const fee = Number(p.franchiseFee || 0);
-                          const feeWithGst =
-                            p.gstFranchiseFee ? fee : fee + fee * 0.18;
+                          const feeWithGst = p.gstFranchiseFee
+                            ? fee
+                            : fee + fee * 0.18;
                           return sum + feeWithGst;
                         }, 0)
-                        .toLocaleString()}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Full Total: ₹
-                      {payrollDetails.programPayrolls
-                        .reduce((sum, p) => sum + Number(p.totalAmount || 0), 0)
                         .toLocaleString()}
                     </p>
                   </div>
@@ -735,21 +801,18 @@ export default function PendingApprovals() {
                     const programCount =
                       payrollDetails.programPayrolls.length || 1;
                     const adminRoyaltyPerStudent =
-                      payrollDetails.programPayrolls.reduce(
-                        (sum, p) => {
-                          const royalty = Number(p.royalty || 0);
-                          const royaltyWithGst = p.gstRoyalty
-                            ? royalty
-                            : royalty + royalty * 0.18;
-                          return sum + royaltyWithGst;
-                        },
-                        0
-                      ) / programCount;
+                      payrollDetails.programPayrolls.reduce((sum, p) => {
+                        const royalty = Number(p.royalty || 0);
+                        const royaltyWithGst = p.gstRoyalty
+                          ? royalty
+                          : royalty + royalty * 0.18;
+                        return sum + royaltyWithGst;
+                      }, 0) / programCount;
 
                     const ciSharePerStudent =
                       payrollDetails.programPayrolls.reduce(
                         (sum, p) => sum + Number(p.ciShare || 0),
-                        0
+                        0,
                       ) / programCount;
 
                     return (
@@ -789,11 +852,14 @@ export default function PendingApprovals() {
                 {payrollDetails.programPayrolls.map((program) => {
                   const kits = programKits[program.programId] || [];
                   const selected = selectedKits[program.programId] || {};
-                  const isDropdownOpen = openDropdowns[program.programId] || false;
+                  const isDropdownOpen =
+                    openDropdowns[program.programId] || false;
 
                   // Count selected items (with quantity > 0)
                   const selectedCount = kits.filter(
-                    (kit) => selected[kit.inventoryId] && selected[kit.inventoryId] > 0
+                    (kit) =>
+                      selected[kit.inventoryId] &&
+                      selected[kit.inventoryId] > 0,
                   ).length;
 
                   if (kits.length === 0) {
@@ -836,7 +902,9 @@ export default function PendingApprovals() {
                           }));
                           // Measure trigger width when opening
                           if (open && triggerRefs.current[program.programId]) {
-                            const width = triggerRefs.current[program.programId]?.offsetWidth || 0;
+                            const width =
+                              triggerRefs.current[program.programId]
+                                ?.offsetWidth || 0;
                             setDropdownWidths((prev) => ({
                               ...prev,
                               [program.programId]: width,
@@ -861,13 +929,13 @@ export default function PendingApprovals() {
                             <ChevronDown className="h-4 w-4 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent 
-                          className="p-0" 
+                        <PopoverContent
+                          className="p-0"
                           align="start"
                           side="top"
                           style={{
-                            width: dropdownWidths[program.programId] || '100%',
-                            minWidth: '100%'
+                            width: dropdownWidths[program.programId] || "100%",
+                            minWidth: "100%",
                           }}
                         >
                           <div className="p-2">
@@ -876,9 +944,12 @@ export default function PendingApprovals() {
                             </div>
                             <div className="max-h-[300px] overflow-y-auto">
                               {kits.map((kit) => {
-                                const isSelected = !!(selected[kit.inventoryId] && selected[kit.inventoryId] > 0);
+                                const isSelected = !!(
+                                  selected[kit.inventoryId] &&
+                                  selected[kit.inventoryId] > 0
+                                );
                                 const quantity = selected[kit.inventoryId] || 1;
-                                
+
                                 return (
                                   <div
                                     key={kit.id}
@@ -891,7 +962,7 @@ export default function PendingApprovals() {
                                           program.programId,
                                           kit.inventoryId,
                                           checked === true,
-                                          1
+                                          1,
                                         )
                                       }
                                       className="flex-shrink-0"
@@ -921,13 +992,21 @@ export default function PendingApprovals() {
                                           <Input
                                             type="number"
                                             min="1"
-                                            value={quantity === 0 || quantity === undefined || quantity === null ? "" : quantity}
+                                            value={
+                                              quantity === 0 ||
+                                              quantity === undefined ||
+                                              quantity === null
+                                                ? ""
+                                                : quantity
+                                            }
                                             onChange={(e) => {
                                               const val = e.target.value;
                                               handleQuantityChange(
                                                 program.programId,
                                                 kit.inventoryId,
-                                                val === "" ? 1 : parseInt(val) || 1
+                                                val === ""
+                                                  ? 1
+                                                  : parseInt(val) || 1,
                                               );
                                             }}
                                             className="w-16 h-8 text-sm"
