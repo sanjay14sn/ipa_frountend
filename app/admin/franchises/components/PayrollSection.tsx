@@ -14,7 +14,7 @@ interface PayrollSectionProps {
   isExpanded: boolean;
   onToggle: (id: string) => void;
   onPayrollUpdate?: (
-    updatedPayroll: FranchisePayrollResponse | FranchisePayrollResponse[]
+    updatedPayroll: FranchisePayrollResponse | FranchisePayrollResponse[],
   ) => void;
 }
 
@@ -37,13 +37,13 @@ export default function PayrollSection({
   const payrollArray = Array.isArray(payrollDetails)
     ? payrollDetails
     : payrollDetails
-    ? [payrollDetails]
-    : [];
+      ? [payrollDetails]
+      : [];
 
   // Calculate total amount across all programs
   const totalAmount = payrollArray.reduce(
     (sum, payroll) => sum + (payroll.totalAmount || 0),
-    0
+    0,
   );
 
   const [editedDataArray, setEditedDataArray] =
@@ -112,18 +112,16 @@ export default function PayrollSection({
             materialCost: payroll.materialCost,
             installment: payroll.installment,
             totalAmount: payroll.totalAmount,
-            dateOfPayment: payroll.dateOfPayment,
-            dateOfJoining: payroll.dateOfJoining,
             gstFranchiseFee: payroll.gstFranchiseFee,
             gstRoyalty: payroll.gstRoyalty,
             gstMaterialCost: payroll.gstMaterialCost,
-          })
-        )
+          }),
+        ),
       );
 
       if (onPayrollUpdate) {
         onPayrollUpdate(
-          editedDataArray.length === 1 ? editedDataArray[0] : editedDataArray
+          editedDataArray.length === 1 ? editedDataArray[0] : editedDataArray,
         );
       }
       setIsEditing(false);
@@ -153,7 +151,7 @@ export default function PayrollSection({
   const handleInputChange = (
     index: number,
     field: keyof FranchisePayrollResponse,
-    value: string | number | Date
+    value: string | number | Date | boolean,
   ) => {
     setEditedDataArray((prev) => {
       const updated = [...prev];
@@ -188,7 +186,7 @@ export default function PayrollSection({
     field: keyof FranchisePayrollResponse,
     value: number | string | Date,
     gstField: "gstFranchiseFee" | "gstRoyalty" | "gstMaterialCost",
-    gstValue: boolean | undefined
+    gstValue: boolean | undefined,
   ) => {
     const currentValue = isEditing ? editedDataArray[index][field] : value;
     const currentGst = isEditing ? editedDataArray[index][gstField] : gstValue;
@@ -222,7 +220,12 @@ export default function PayrollSection({
                 handleInputChange(index, gstField, e.target.checked)
               }
             />
-            <span className="text-xs text-gray-600" title="Check if amount includes GST; uncheck to add GST on checkout">GST Inc.</span>
+            <span
+              className="text-xs text-gray-600"
+              title="Check if amount includes GST; uncheck to add GST on checkout"
+            >
+              GST Inc.
+            </span>
           </label>
         </div>
         <Input
@@ -245,7 +248,7 @@ export default function PayrollSection({
     label: string,
     field: keyof FranchisePayrollResponse,
     value: number | string | Date,
-    type: "currency" | "percentage" | "date" | "number" = "number"
+    type: "currency" | "percentage" | "date" | "number" = "number",
   ) => {
     const currentValue = isEditing ? editedDataArray[index][field] : value;
 
@@ -281,7 +284,7 @@ export default function PayrollSection({
           value={
             type === "date"
               ? (currentValue as Date)?.toISOString?.()?.split("T")[0] || ""
-              : currentValue?.toString() ?? ""
+              : (currentValue?.toString() ?? "")
           }
           onChange={(e) => {
             let newValue: string | number | Date = e.target.value;
@@ -420,7 +423,7 @@ export default function PayrollSection({
                         {formatCurrency(
                           isEditing
                             ? editedDataArray[index].totalAmount
-                            : payroll.totalAmount
+                            : payroll.totalAmount,
                         )}
                       </Badge>
                     </div>
@@ -432,21 +435,21 @@ export default function PayrollSection({
                         "franchiseFee",
                         payroll.franchiseFee,
                         "gstFranchiseFee",
-                        payroll.gstFranchiseFee
+                        payroll.gstFranchiseFee,
                       )}
                       {renderEditableField(
                         index,
                         "Monthly Fee",
                         "monthlyFee",
                         payroll.monthlyFee,
-                        "currency"
+                        "currency",
                       )}
                       {renderEditableField(
                         index,
                         "Kit Cost",
                         "kitCost",
                         payroll.kitCost,
-                        "currency"
+                        "currency",
                       )}
                       {renderEditableFieldWithGst(
                         index,
@@ -454,14 +457,14 @@ export default function PayrollSection({
                         "materialCost",
                         payroll.materialCost,
                         "gstMaterialCost",
-                        payroll.gstMaterialCost
+                        payroll.gstMaterialCost,
                       )}
                       {renderEditableField(
                         index,
                         "Installment",
                         "installment",
                         payroll.installment,
-                        "currency"
+                        "currency",
                       )}
                     </div>
 
@@ -475,14 +478,14 @@ export default function PayrollSection({
                           "CI Share (per month)",
                           "ciShare",
                           payroll.ciShare,
-                          "currency"
+                          "currency",
                         )}
                         {renderEditableField(
                           index,
                           "Franchise Share (per month)",
                           "franchiseShare",
                           payroll.franchiseShare,
-                          "currency"
+                          "currency",
                         )}
                         {renderEditableFieldWithGst(
                           index,
@@ -490,14 +493,14 @@ export default function PayrollSection({
                           "royalty",
                           payroll.royalty,
                           "gstRoyalty",
-                          payroll.gstRoyalty
+                          payroll.gstRoyalty,
                         )}
                         {renderEditableField(
                           index,
                           "Date of Joining",
                           "dateOfJoining",
                           payroll.dateOfJoining,
-                          "date"
+                          "date",
                         )}
                         <div className="col-span-2">
                           {renderEditableField(
@@ -505,7 +508,7 @@ export default function PayrollSection({
                             "Last Payment Date",
                             "dateOfPayment",
                             payroll.dateOfPayment,
-                            "date"
+                            "date",
                           )}
                         </div>
                       </div>

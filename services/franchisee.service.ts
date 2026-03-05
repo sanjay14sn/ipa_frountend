@@ -210,7 +210,7 @@ export async function createPayrollDetails(
 }
 
 export async function updatePayrollDetails(
-  id: string,
+  id: number,
   payrollDetails: Partial<ProgramPayrollRequest>
 ) {
   const response = await api.put(`/franchise/payroll/${id}`, payrollDetails);
