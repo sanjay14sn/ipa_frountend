@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
@@ -24,9 +24,11 @@ import {
   verifyFranchiseFeePayment,
 } from "@/services/franchisee.service";
 
-export default function FranchiseAgreementPage() {
+function FranchiseAgreementContent() {
   const router = useRouter();
-  const { user, setUser } = useUser();
+  const searchParams = useSearchParams();
+  const franchiseIdParam = searchParams.get("franchiseId");
+  const { user, setUser, switchFranchise } = useUser();
   const [pageLoading, setPageLoading] = useState(true);
   const [agreementAccepted, setAgreementAccepted] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -57,12 +59,22 @@ export default function FranchiseAgreementPage() {
       return;
     }
 
-    if (user?.profile) {
+    const effectiveFranchiseId = franchiseIdParam || user?.franchiseId;
+
+    if (franchiseIdParam && franchiseIdParam !== user?.franchiseId && switchFranchise) {
+      switchFranchise(franchiseIdParam).then(() => {
+        if (user?.profile) initializeAgreementContent();
+        else setPageLoading(false);
+      });
+      return;
+    }
+
+    if (user?.profile && effectiveFranchiseId === user?.franchiseId) {
       initializeAgreementContent();
     } else {
       setPageLoading(false);
     }
-  }, [user]);
+  }, [user, franchiseIdParam]);
 
   const initializeAgreementContent = () => {
     if (!user?.profile) return;
@@ -149,7 +161,8 @@ export default function FranchiseAgreementPage() {
       return;
     }
 
-    if (!user?.franchiseId) {
+    const effectiveFranchiseId = franchiseIdParam || user?.franchiseId;
+    if (!effectiveFranchiseId) {
       alert("Missing franchise information. Please re-login.");
       return;
     }
@@ -157,13 +170,18 @@ export default function FranchiseAgreementPage() {
     setIsProcessingPayment(true);
 
     try {
-      const paymentOrder = await initiateFranchiseFeePayment(user.franchiseId);
+      const paymentOrder = await initiateFranchiseFeePayment(effectiveFranchiseId);
 
       if (paymentOrder.isZeroAmount || paymentOrder.amount === 0) {
+        const effectiveFranchiseId = franchiseIdParam || user?.franchiseId;
         if (user) {
+          const updatedFranchises = user.franchises?.map((f) =>
+            f.id === effectiveFranchiseId ? { ...f, status: "Active" } : f
+          );
           setUser({
             ...user,
             franchiseStatus: "Active",
+            franchises: updatedFranchises ?? user.franchises,
           });
         }
         setShowPaymentSuccess(true);
@@ -198,10 +216,15 @@ export default function FranchiseAgreementPage() {
       });
 
       if (verificationResult.message === "Payment verified successfully") {
+        const effectiveFranchiseId = franchiseIdParam || user?.franchiseId;
         if (user) {
+          const updatedFranchises = user.franchises?.map((f) =>
+            f.id === effectiveFranchiseId ? { ...f, status: "Active" } : f
+          );
           setUser({
             ...user,
             franchiseStatus: "Active",
+            franchises: updatedFranchises ?? user.franchises,
           });
         }
         setShowPaymentSuccess(true);
@@ -404,5 +427,20 @@ export default function FranchiseAgreementPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function FranchiseAgreementPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <FranchiseAgreementContent />
+    </Suspense>
   );
 }

@@ -7,6 +7,7 @@ export interface User {
   franchiseId?: string;
   franchiseName?: string;
   franchiseStatus?: string;
+  franchises?: Array<{ id: string; name: string; status: string }>;
   profile?: {
     id: number;
     name: string;

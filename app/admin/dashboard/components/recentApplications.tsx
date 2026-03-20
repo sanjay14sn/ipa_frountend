@@ -60,16 +60,16 @@ export function RecentApplications() {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-white rounded-md p-6 border border-primary max-h-[300px] overflow-y-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">
+    <div className="w-full bg-white rounded-lg p-4 border border-gray-400 max-h-[320px] overflow-y-auto">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-medium text-gray-700">
           Recent Applications
         </h2>
         <button
           onClick={() => router.push("/admin/pending-approvals")}
-          className="text-gray-600 hover:text-gray-900 hover:bg-secondary rounded-md px-4 py-2"
+          className="text-xs text-gray-400 hover:text-gray-600"
         >
-          See all Applications
+          See all
         </button>
       </div>
 
@@ -91,7 +91,7 @@ export function RecentApplications() {
           {recentPending.map((app) => (
             <Card
               key={app.id}
-              className="p-4 bg-white border border-gray-200 hover:shadow-sm transition-shadow"
+              className="p-4 bg-white border border-gray-400 hover:shadow-sm transition-shadow"
             >
               <div className="flex items-center gap-4">
                 <div className="flex-1 min-w-0">

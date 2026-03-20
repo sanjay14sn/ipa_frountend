@@ -38,7 +38,14 @@ import Link from "next/link";
 import { useUser } from "@/context/user-context";
 import { franchiseeLogout, logout } from "@/services/auth.service";
 import { useRouter, usePathname } from "next/navigation";
-import { useState } from "react";
+import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const adminNavigation = {
   navMain: [
@@ -74,6 +81,11 @@ const adminNavigation = {
           title: "Franchisee Approvals",
           url: "/admin/pending-approvals",
           icon: Clock,
+        },
+        {
+          title: "Program Requests",
+          url: "/admin/program-requests",
+          icon: FileText,
         },
         {
           title: "CI Approvals",
@@ -160,6 +172,11 @@ const franchiseNavigation = {
           url: "/franchisee/certificate-requests",
           icon: Award,
         },
+        {
+          title: "Program Agreements",
+          url: "/franchisee/program-agreements",
+          icon: FileText,
+        },
       ],
     },
   ],
@@ -184,7 +201,7 @@ const onboardingNavigation = {
 export function DynamicSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useUser();
+  const { user, switchFranchise } = useUser();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -205,10 +222,27 @@ export function DynamicSidebar({
     }
   }
 
-  // Helper function to check if a menu item is active
-  const isActive = (url: string) => {
-    return pathname === url;
+  const isActive = (url: string) => pathname === url;
+
+  const handleFranchiseSelect = async (franchiseId: string) => {
+    const franchise = user?.franchises?.find((f) => f.id === franchiseId);
+    if (!franchise || !switchFranchise) return;
+    if (franchise.status === "Pending") {
+      toast.info("This franchise is pending admin approval");
+      return;
+    }
+    await switchFranchise(franchiseId);
+    if (franchise.status === "Approved") {
+      router.push(`/franchisee/agreement?franchiseId=${franchiseId}`);
+    } else if (franchise.status === "Active") {
+      router.push("/franchisee/dashboard");
+    }
   };
+
+  const showFranchiseSwitcher =
+    user?.role === "franchisee" &&
+    user?.franchises &&
+    user.franchises.length > 1;
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -221,8 +255,8 @@ export function DynamicSidebar({
                   user?.role === "admin"
                     ? "/admin/dashboard"
                     : user?.franchiseStatus === "Active"
-                    ? "/franchisee/dashboard"
-                    : "/franchisee/agreement"
+                      ? "/franchisee/dashboard"
+                      : "/franchisee/agreement"
                 }
               >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-brand-yellow-400 text-brand-green-500 shadow-md">
@@ -234,7 +268,7 @@ export function DynamicSidebar({
                     <FileText className="size-4" />
                   )}
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
+                <div className="grid flex-1 text-left text-sm leading-tight min-w-0">
                   <span className="truncate font-semibold text-sidebar-foreground">
                     {sidebarTitle}
                   </span>
@@ -247,6 +281,31 @@ export function DynamicSidebar({
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+
+      {/* Franchise dropdown - separate below header */}
+      {showFranchiseSwitcher && (
+        <div className="px-3 py-2 border-t border-sidebar-border">
+          <Select
+            value={user?.franchiseId ?? ""}
+            onValueChange={handleFranchiseSelect}
+          >
+            <SelectTrigger className="w-full h-9 text-xs">
+              <SelectValue placeholder="Select franchise" />
+            </SelectTrigger>
+            <SelectContent>
+              {user?.franchises?.map((f) => (
+                <SelectItem
+                  key={f.id}
+                  value={f.id}
+                  disabled={f.status === "Pending"}
+                >
+                  {f.name} {f.status !== "Active" && `(${f.status})`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Onboarding Alert for incomplete franchisees */}
       {user?.role === "franchisee" && user?.franchiseStatus === "Pending" && (

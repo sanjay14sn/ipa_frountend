@@ -24,8 +24,10 @@ interface FranchiseeLoginResponse {
     userId: number;
     name: string;
     franchiseId: string;
+    franchiseName?: string;
     role: string;
     franchiseStatus: string;
+    franchises?: Array<{ id: string; name: string; status: string }>;
   };
 }
 
@@ -161,6 +163,17 @@ export async function franchiseeLogout(): Promise<void> {
 export async function getFranchiseeProfile(): Promise<FranchiseeProfileResponse> {
   const response = await api.get("/franchisee/profile");
   return response.data;
+}
+
+export async function switchFranchise(franchiseId: string): Promise<{
+  franchiseId: string;
+  franchiseName: string;
+  franchiseStatus: string;
+  franchises: Array<{ id: string; name: string; status: string }>;
+}> {
+  const response = await api.post("/franchisee/auth/switch", { franchiseId });
+  const data = response.data?.result ?? response.data;
+  return data;
 }
 
 export function getCurrentFranchiseeProfile() {

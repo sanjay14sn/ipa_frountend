@@ -89,6 +89,8 @@ export function LoginCard({
         role: "franchisee",
         franchiseStatus: data.franchiseStatus,
         franchiseId: data.franchiseId,
+        franchiseName: data.franchiseName,
+        franchises: data.franchises,
         profile,
       } as User);
       router.push("/franchisee/dashboard");
