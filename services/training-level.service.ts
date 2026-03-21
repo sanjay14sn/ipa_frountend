@@ -7,6 +7,8 @@ export interface TrainingLevel {
   isActive: boolean;
   amount: number;
   rank?: number;
+  /** Duration of this CI training level in months (default 2) */
+  durationMonths?: number;
   createdAt?: string;
   updatedAt?: string;
 }

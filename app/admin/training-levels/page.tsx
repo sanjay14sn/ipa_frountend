@@ -71,6 +71,7 @@ export default function TrainingLevelsPage() {
     description: "",
     isActive: true,
     amount: 0,
+    durationMonths: 2,
     rank: undefined as number | undefined,
   });
   const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
@@ -122,6 +123,28 @@ export default function TrainingLevelsPage() {
     }
   };
 
+  /** Find a program whose active level codes include every code in the training level name. */
+  const inferProgramIdForCodes = async (
+    codes: string[]
+  ): Promise<number | null> => {
+    if (codes.length === 0) return null;
+    const codeSet = new Set(codes);
+    for (const p of programs) {
+      try {
+        const data = await getLevelsByProgram(p.id);
+        const activeCodes = new Set(
+          data.filter((l) => l.isActive).map((l) => l.code)
+        );
+        if ([...codeSet].every((c) => activeCodes.has(c))) {
+          return p.id;
+        }
+      } catch {
+        /* skip */
+      }
+    }
+    return null;
+  };
+
   // Group levels by display order
   const groupedLevelsByOrder = programLevels.reduce((acc, level) => {
     const order = level.displayOrder;
@@ -155,16 +178,21 @@ export default function TrainingLevelsPage() {
             .filter((item) => item.length > 0)
         : [];
       setSelectedLevels(levels);
+      setSelectedProgramId(null);
+      void inferProgramIdForCodes(levels).then((programId) => {
+        if (programId != null) {
+          setSelectedProgramId(programId);
+        }
+      });
       // Populate all fields including rank
       setFormData({
         name: level.name || "",
         description: level.description || "",
         isActive: level.isActive ?? true,
         amount: level.amount ?? 0,
+        durationMonths: level.durationMonths ?? 2,
         rank: level.rank ?? undefined,
       });
-      // Don't reset program selection when editing - allow editing without program
-      // Keep existing program selection if any
     } else {
       setSelectedLevel(null);
       setSelectedLevels([]);
@@ -175,6 +203,7 @@ export default function TrainingLevelsPage() {
         description: "",
         isActive: true,
         amount: 0,
+        durationMonths: 2,
         rank: undefined,
       });
     }
@@ -194,6 +223,7 @@ export default function TrainingLevelsPage() {
       description: "",
       isActive: true,
       amount: 0,
+      durationMonths: 2,
       rank: undefined,
     });
   };
@@ -245,26 +275,23 @@ export default function TrainingLevelsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Only validate program selection for new training levels
     if (!selectedLevel && !selectedProgramId) {
       alert("Please select a program.");
       return;
     }
 
-    // Only validate level selection for new training levels
-    if (!selectedLevel && selectedLevels.length === 0) {
+    if (selectedLevels.length === 0) {
       alert("Please select at least one training level.");
       return;
     }
 
-    // Ensure formData.name is updated with selected levels (only for new entries)
-    // For editing, use the existing name or the selected levels
     const updatedFormData = {
       ...formData,
-      name: selectedLevel ? formData.name : selectedLevels.join(", "),
+      name: selectedLevels.join(", "),
       description: formData.description || "",
       isActive: formData.isActive ?? true,
       amount: formData.amount ?? 0,
+      durationMonths: formData.durationMonths ?? 2,
       rank: formData.rank || undefined,
     };
 
@@ -326,15 +353,18 @@ export default function TrainingLevelsPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
-                {!selectedLevel && (
                 <div className="space-y-2">
-                  <Label>Program *</Label>
+                  <Label>
+                    Program{!selectedLevel ? " *" : " (optional when editing)"}
+                  </Label>
                   <Select
                     value={selectedProgramId?.toString() || ""}
                     onValueChange={(value) => {
                       setSelectedProgramId(Number(value));
-                      setSelectedLevels([]);
-                      setFormData((form) => ({ ...form, name: "" }));
+                      if (!selectedLevel) {
+                        setSelectedLevels([]);
+                        setFormData((form) => ({ ...form, name: "" }));
+                      }
                     }}
                   >
                     <SelectTrigger>
@@ -352,27 +382,14 @@ export default function TrainingLevelsPage() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Select a program to view its levels
+                    Select a program to pick student levels from the catalog.
+                    When editing, you can change the linked levels or add custom
+                    codes without changing program.
                   </p>
                 </div>
-                )}
 
-                {selectedLevel ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Name *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                      placeholder="Enter training level name"
-                      required
-                    />
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label>Training Levels *</Label>
+                <div className="space-y-2">
+                    <Label>Student levels (CI training name) *</Label>
                     <div className="space-y-3">
                       {/* Selected Levels Display */}
                       {selectedLevels.length > 0 && (
@@ -498,10 +515,9 @@ export default function TrainingLevelsPage() {
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Select from existing levels or add custom ones. Selected
-                      levels will be combined.
+                      levels will be combined into the CI training level name.
                     </p>
                   </div>
-                )}
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea
@@ -534,6 +550,34 @@ export default function TrainingLevelsPage() {
                   />
                   <p className="text-sm text-muted-foreground">
                     Set the training fee amount for this level (default: 0)
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="durationMonths">Duration (months) *</Label>
+                  <Input
+                    id="durationMonths"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={
+                      formData.durationMonths === undefined ||
+                      formData.durationMonths === null
+                        ? ""
+                        : formData.durationMonths
+                    }
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({
+                        ...formData,
+                        durationMonths:
+                          val === "" ? 2 : Math.max(1, parseInt(val, 10) || 2),
+                      });
+                    }}
+                    placeholder="2"
+                    required
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    How long this CI training level runs (default: 2 months)
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -601,6 +645,8 @@ export default function TrainingLevelsPage() {
                 <TableHead>Rank</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Description</TableHead>
+                <TableHead className="text-center">Amount (₹)</TableHead>
+                <TableHead className="text-center">Duration (months)</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -622,6 +668,16 @@ export default function TrainingLevelsPage() {
                         No description
                       </span>
                     )}
+                  </TableCell>
+                  <TableCell className="text-center tabular-nums">
+                    ₹
+                    {Number(level.amount ?? 0).toLocaleString("en-IN", {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 2,
+                    })}
+                  </TableCell>
+                  <TableCell className="text-center tabular-nums">
+                    {level.durationMonths ?? 2}
                   </TableCell>
                   <TableCell>
                     <span
