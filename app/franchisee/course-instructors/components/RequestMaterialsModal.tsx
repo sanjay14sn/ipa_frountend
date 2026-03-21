@@ -159,12 +159,9 @@ export function RequestMaterialsModal({
                             {item.description}
                           </p>
                         )}
-                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                          <span>Quantity: {item.quantity}</span>
-                          <span>
-                            Available: {item.availableQuantity > 0 ? item.availableQuantity : "Out of stock"}
-                          </span>
-                        </div>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Quantity: {item.quantity}
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-lg flex items-center gap-1">

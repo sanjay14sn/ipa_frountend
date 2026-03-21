@@ -1,5 +1,11 @@
 import { api } from "@/lib/axios";
 
+export interface LinkedLevel {
+  id: number;
+  code: string;
+  name: string;
+}
+
 export interface TrainingLevel {
   id: number;
   name: string;
@@ -9,6 +15,10 @@ export interface TrainingLevel {
   rank?: number;
   /** Duration of this CI training level in months (default 2) */
   durationMonths?: number;
+  /** IDs of linked student levels — used when creating / updating */
+  levelIds?: number[];
+  /** Linked level objects returned by the API — used for display */
+  linkedLevels?: LinkedLevel[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -42,35 +52,35 @@ export async function getAllTrainingLevels(): Promise<TrainingLevel[]> {
 
 export async function getActiveTrainingLevels(): Promise<TrainingLevel[]> {
   const response = await api.get<TrainingLevelsResponse>(
-    "/training-level/active"
+    "/training-level/active",
   );
   return response.data.result.data;
 }
 
 export async function getTrainingLevelById(id: number): Promise<TrainingLevel> {
   const response = await api.get<TrainingLevelResponse>(
-    `/training-level/${id}`
+    `/training-level/${id}`,
   );
   return response.data.result.data;
 }
 
 export async function createTrainingLevel(
-  data: Partial<TrainingLevel>
+  data: Partial<TrainingLevel>,
 ): Promise<TrainingLevel> {
   const response = await api.post<TrainingLevelResponse>(
     "/training-level",
-    data
+    data,
   );
   return response.data.result.data;
 }
 
 export async function updateTrainingLevel(
   id: number,
-  data: Partial<TrainingLevel>
+  data: Partial<TrainingLevel>,
 ): Promise<TrainingLevel> {
   const response = await api.patch<TrainingLevelResponse>(
     `/training-level/update/${id}`,
-    data
+    data,
   );
   return response.data.result.data;
 }

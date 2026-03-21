@@ -165,7 +165,10 @@ export interface AdminCourseInstructorData extends CourseInstructorData {
 }
 
 export function getInstructorTrainingLevels(
-  instructor: Pick<AdminCourseInstructorData, "trainingLevels" | "ciTrainingLevels">
+  instructor: Pick<
+    AdminCourseInstructorData,
+    "trainingLevels" | "ciTrainingLevels"
+  >,
 ): TrainingLevelInfo[] {
   if (instructor.ciTrainingLevels && instructor.ciTrainingLevels.length > 0) {
     return instructor.ciTrainingLevels;
@@ -174,7 +177,10 @@ export function getInstructorTrainingLevels(
 }
 
 export function getInstructorTrainingLevelCount(
-  instructor: Pick<AdminCourseInstructorData, "trainingLevels" | "ciTrainingLevels">
+  instructor: Pick<
+    AdminCourseInstructorData,
+    "trainingLevels" | "ciTrainingLevels"
+  >,
 ): number {
   return getInstructorTrainingLevels(instructor).length;
 }
@@ -485,23 +491,28 @@ export async function getCITrainingProgress(
   return response.data.result;
 }
 
+export interface AvailableNextTrainingLevelCounts {
+  totalNextLevels: number;
+  halfOfAvailableCount: number;
+  allAvailableCount: number;
+  nextLevelNames: string[];
+}
+
 export interface AvailableTrainingLevelsResponse {
-  result: { data: Array<{ id: number; name: string; description?: string; isActive: boolean; amount: number; rank?: number }> };
+  result: { result: { data: AvailableNextTrainingLevelCounts } };
 }
 
 export async function getAvailableTrainingLevelsForCI(
   instructorId: number,
-): Promise<
-  Array<{ id: number; name: string; description?: string; isActive: boolean; amount: number; rank?: number }>
-> {
+): Promise<AvailableNextTrainingLevelCounts> {
   const response = await api.get<AvailableTrainingLevelsResponse>(
     `/course-instructor/available-training-levels/${instructorId}`,
   );
-  return response.data.result.data;
+  return response.data.result.result.data;
 }
 
 export interface RequestAdditionalTrainingRequest {
-  trainingLevelIds: number[];
+  scope: "half" | "all";
   additionalDetails?: string;
 }
 

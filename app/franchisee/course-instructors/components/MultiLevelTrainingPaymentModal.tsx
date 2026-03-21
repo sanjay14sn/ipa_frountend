@@ -130,6 +130,7 @@ export function MultiLevelTrainingPaymentModal({
       };
 
       const rzp = new window.Razorpay(options);
+      onClose(); // Close dialog before opening Razorpay so its overlay doesn't trap focus
       rzp.open();
     } catch (err: any) {
       toast({
