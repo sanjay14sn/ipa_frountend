@@ -65,8 +65,13 @@ export function RequestMaterialsModal({
     }
   };
 
+  const canPlaceRequest =
+    preview &&
+    !preview.hasExistingOrder &&
+    preview.inventoryItems.length > 0;
+
   const handleConfirm = async () => {
-    if (!preview || preview.hasExistingOrder) {
+    if (!canPlaceRequest) {
       return;
     }
 
@@ -178,7 +183,7 @@ export function RequestMaterialsModal({
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  No materials available for this training level.
+                  No materials available for request for this training level.
                 </AlertDescription>
               </Alert>
             )}
@@ -213,7 +218,7 @@ export function RequestMaterialsModal({
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             {preview?.hasExistingOrder ? "Close" : "Cancel"}
           </Button>
-          {preview && !preview.hasExistingOrder && preview.inventoryItems.length > 0 && (
+          {canPlaceRequest && (
             <Button onClick={handleConfirm} disabled={submitting}>
               {submitting ? (
                 <>
