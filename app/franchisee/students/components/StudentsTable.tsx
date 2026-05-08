@@ -99,13 +99,17 @@ export default function StudentsTable({
   );
   const [isCertificatesModalOpen, setIsCertificatesModalOpen] = useState(false);
 
-  const uniqueLevels = useMemo(
-    () =>
-      Array.from(
-        new Set((students ?? []).map(getStudentLevelName).filter(Boolean)),
-      ),
-    [students],
-  );
+  const uniqueLevelOptions = useMemo(() => {
+    const seen = new Map<number, string>();
+    for (const s of students ?? []) {
+      const id = s.levelId;
+      const name = getStudentLevelName(s);
+      if (id && name && !seen.has(id)) {
+        seen.set(id, name);
+      }
+    }
+    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+  }, [students]);
 
   const uniqueStreams = useMemo(
     () =>
@@ -267,7 +271,7 @@ export default function StudentsTable({
         label: "Level",
         options: [
           { value: "all", label: "All levels" },
-          ...uniqueLevels.map((l) => ({ value: l, label: l })),
+          ...uniqueLevelOptions.map(({ id, name }) => ({ value: String(id), label: name })),
         ],
         defaultValue: levelId ? String(levelId) : "all",
       },
@@ -292,7 +296,7 @@ export default function StudentsTable({
         defaultValue: idStatus ?? "all",
       },
     ],
-    [statusFilter, uniqueLevels, uniqueStreams, streamFilter, levelId, idStatus],
+    [statusFilter, uniqueLevelOptions, uniqueStreams, streamFilter, levelId, idStatus],
   );
 
   const sortOptions: DataTableSortOption[] = [
