@@ -856,26 +856,14 @@ function SessionsTab() {
   const [regionFilter, setRegionFilter] = useState("");
 
   const { data: sessions = [], isLoading } = useQuery({
-    queryKey: ["ci-training-sessions", regionFilter],
+    queryKey: ["ci-training-sessions", regionFilter, search],
     queryFn: () =>
-      listSessions(regionFilter ? { region: regionFilter } : undefined),
-    staleTime: Infinity,
-    gcTime: Infinity,
+      listSessions({
+        region: regionFilter || undefined,
+        search: search.trim() || undefined,
+      }),
+    staleTime: 30_000,
   });
-
-  const filteredSessions = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return sessions;
-    return sessions.filter((s) => {
-      return (
-        String(s.id).includes(term) ||
-        s.region.toLowerCase().includes(term) ||
-        String(s.trainingLevelId).includes(term) ||
-        (s.trainingLevelName ?? "").toLowerCase().includes(term) ||
-        s.sessionDate.toLowerCase().includes(term)
-      );
-    });
-  }, [sessions, search]);
 
   const columns = useMemo<DataTableColumn<CITrainingSession>[]>(
     () => [
@@ -950,7 +938,7 @@ function SessionsTab() {
       </div>
 
       <DataTable<CITrainingSession>
-        data={filteredSessions}
+        data={sessions}
         loading={isLoading}
         columns={columns}
         getRowId={(s) => String(s.id)}
@@ -1072,31 +1060,17 @@ function WaitingTab() {
   };
 
   const { data: waiting = [], isLoading } = useQuery({
-    queryKey: ["ci-training-waiting", regionFilter, trainingLevelFilter],
+    queryKey: ["ci-training-waiting", regionFilter, trainingLevelFilter, search],
     queryFn: () =>
       listWaiting({
         region: regionFilter || undefined,
         trainingLevelId: trainingLevelFilter
           ? Number(trainingLevelFilter)
           : undefined,
+        search: search.trim() || undefined,
       }),
-    staleTime: Infinity,
-    gcTime: Infinity,
+    staleTime: 30_000,
   });
-
-  const filteredWaiting = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return waiting;
-    return waiting.filter((w) => {
-      return (
-        (w.instructorName ?? "").toLowerCase().includes(term) ||
-        (w.instructorCode ?? "").toLowerCase().includes(term) ||
-        (w.franchiseName ?? "").toLowerCase().includes(term) ||
-        w.region.toLowerCase().includes(term) ||
-        String(w.trainingLevelId).includes(term)
-      );
-    });
-  }, [waiting, search]);
 
   const columns = useMemo<DataTableColumn<WaitingInstructor>[]>(
     () => [
@@ -1204,7 +1178,7 @@ function WaitingTab() {
       </div>
 
       <DataTable<WaitingInstructor>
-        data={filteredWaiting}
+        data={waiting}
         loading={isLoading}
         columns={columns}
         getRowId={(w) => `${w.instructorId}-${w.trainingLevelId}-${w.region}`}
