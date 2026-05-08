@@ -1,3 +1,11 @@
+import { api } from "@/lib/axios";
+import { getApiBaseUrl } from "@/lib/api-utils";
+import {
+  compactRequestParams,
+  normalizePaginatedResult,
+  unwrapData,
+} from "@/lib/unwrap-api";
+
 export interface Response {
   statusCode: number;
   timeStamp: string;
@@ -8,24 +16,6 @@ export interface Response {
 
 export enum StudentLevel {
   EL1 = "EL1",
-  EL2 = "EL2",
-  EL3 = "EL3",
-  EL4 = "EL4",
-  EL5 = "EL5",
-  EL6 = "EL6",
-  RL1 = "RL1",
-  RL2 = "RL2",
-  RL3 = "RL3",
-  RL4 = "RL4",
-  RL5 = "RL5",
-  RL6 = "RL6",
-  RL7 = "RL7",
-  RL8 = "RL8",
-  RL9 = "RL9",
-  RL10 = "RL10",
-  GML1 = "GML1",
-  GML2 = "GML2",
-  GML3 = "GML3",
 }
 
 export enum StudentStream {
@@ -59,11 +49,8 @@ export interface StudentData {
   mail: string;
   standard: string;
   levelId?: number;
-  level:
-    | StudentLevel
-    | string
-    | { id: number; name: string; code: string; streamId: number };
-  stream: StudentStream;
+  level: StudentLevel | string | { id: number; name: string; code: string; streamId: number };
+  stream: StudentStream | string;
   isActive: boolean;
   idIssued: StudentIdStatus;
   deactivateDate?: Date;
@@ -74,82 +61,206 @@ export interface StudentData {
   updatedBy: number;
 }
 
-export interface StudentsResponse extends Response {
+export interface StudentsResponse {
   result: StudentData[];
 }
 
-import { api } from "@/lib/axios";
-import { getApiBaseUrl } from "@/lib/api-utils";
+function normalizeStudentIdStatus(value: unknown): StudentIdStatus {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (raw === "issued") return StudentIdStatus.ISSUED;
+  if (raw === "requested") return StudentIdStatus.REQUESTED;
+  return StudentIdStatus.NOT_ISSUED;
+}
 
-export async function getAllStudents(): Promise<StudentsResponse> {
-  const response = await api.get<StudentsResponse>("/students/all");
-  return response.data;
+function normalizeStudentLevel(
+  row: Record<string, unknown>,
+): StudentData["level"] {
+  const rawLevel = row.level;
+  if (rawLevel && typeof rawLevel === "object") {
+    const level = rawLevel as Record<string, unknown>;
+    return {
+      id: Number(level.id ?? row.levelId ?? 0),
+      name: String(level.name ?? level.code ?? row.levelName ?? "N/A"),
+      code: String(level.code ?? level.name ?? row.levelName ?? "N/A"),
+      streamId: Number(level.streamId ?? 0),
+    };
+  }
+
+  const levelId = row.levelId != null ? Number(row.levelId) : 0;
+  if (row.levelName || row.levelCode || levelId > 0) {
+    return {
+      id: levelId,
+      name: String(row.levelName ?? row.levelCode ?? `Level ${levelId}`),
+      code: String(row.levelCode ?? row.levelName ?? `Level ${levelId}`),
+      streamId: Number(row.streamId ?? 0),
+    };
+  }
+
+  return StudentLevel.EL1;
+}
+
+function normalizeStudentStream(row: Record<string, unknown>): string {
+  const rawLevel = row.level;
+  const level =
+    rawLevel && typeof rawLevel === "object"
+      ? (rawLevel as Record<string, unknown>)
+      : undefined;
+  const nestedStream =
+    level?.stream && typeof level.stream === "object"
+      ? (level.stream as Record<string, unknown>)
+      : undefined;
+  return String(
+    row.stream ??
+      row.streamName ??
+      nestedStream?.name ??
+      nestedStream?.code ??
+      StudentStream.REGULAR,
+  );
+}
+
+function mapStudentRow(row: Record<string, unknown>): StudentData {
+  const idIssued = normalizeStudentIdStatus(row.idIssued);
+
+  return {
+    id: Number(row.id),
+    franchiseId: String(row.franchiseId ?? ""),
+    programId: Number(row.programId ?? 0),
+    name: String(row.name ?? ""),
+    rollNo: String(row.rollNo ?? ""),
+    dateOfBirth: new Date(String(row.dateOfBirth ?? "")),
+    sex: String(row.sex ?? ""),
+    fatherName: String(row.fatherName ?? ""),
+    fatherQualification: String(row.fatherQualification ?? ""),
+    fatherOccupation: String(row.fatherOccupation ?? ""),
+    motherName: String(row.motherName ?? ""),
+    motherQualification: String(row.motherQualification ?? ""),
+    motherOccupation: String(row.motherOccupation ?? ""),
+    residentialAddress: String(row.residentialAddress ?? ""),
+    fatherContactNo: String(row.fatherContactNo ?? ""),
+    motherContactNo: String(row.motherContactNo ?? ""),
+    mail: String(row.email ?? row.mail ?? ""),
+    standard: String(row.standard ?? ""),
+    levelId: row.levelId != null ? Number(row.levelId) : undefined,
+    level: normalizeStudentLevel(row),
+    stream: normalizeStudentStream(row),
+    isActive: Boolean(row.isActive ?? true),
+    idIssued,
+    dateOfJoining: row.dateOfJoining
+      ? new Date(String(row.dateOfJoining))
+      : undefined,
+    createdAt: new Date(String(row.createdAt ?? "")),
+    updatedAt: new Date(String(row.updatedAt ?? "")),
+    createdBy: Number(row.createdBy ?? 0),
+    updatedBy: Number(row.updatedBy ?? 0),
+  };
+}
+
+export async function getAllStudents(
+  params?: StudentPaginationParams,
+): Promise<StudentsResponse> {
+  const merged: StudentPaginationParams = {
+    page: params?.page ?? 1,
+    limit: params?.limit ?? 10_000,
+    ...params,
+  };
+  const response = await api.get("/student", {
+    params: compactRequestParams(
+      merged as Record<string, string | number | boolean | undefined | null>,
+    ),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows } = normalizePaginatedResult<unknown>(result);
+  const list = rows.map((r) => mapStudentRow(r as Record<string, unknown>));
+  return { result: list };
 }
 
 export async function getStudentById(studentId: number): Promise<StudentData> {
-  const response = await api.get<StudentData>(`/students/${studentId}`);
-  return response.data;
+  const response = await api.get(`/student/${studentId}`);
+  const row = unwrapData<Record<string, unknown>>(response);
+  return mapStudentRow(row);
 }
 
 export async function createStudent(
   studentData: Omit<
     StudentData,
     "id" | "createdAt" | "updatedAt" | "createdBy" | "updatedBy"
-  >
+  >,
 ): Promise<StudentData> {
-  const response = await api.post<StudentData>("/students/create", studentData);
-  return response.data;
+  const dob =
+    studentData.dateOfBirth instanceof Date
+      ? studentData.dateOfBirth.toISOString().slice(0, 10)
+      : String(studentData.dateOfBirth).slice(0, 10);
+  const response = await api.post("/student", {
+    programId: Number(studentData.programId),
+    levelId: Number(studentData.levelId),
+    name: studentData.name,
+    rollNo: studentData.rollNo,
+    sex: studentData.sex,
+    dateOfBirth: dob,
+    fatherName: studentData.fatherName,
+    fatherQualification: studentData.fatherQualification,
+    fatherOccupation: studentData.fatherOccupation,
+    motherName: studentData.motherName,
+    motherQualification: studentData.motherQualification,
+    motherOccupation: studentData.motherOccupation,
+    residentialAddress: studentData.residentialAddress,
+    fatherContactNo: studentData.fatherContactNo,
+    motherContactNo: studentData.motherContactNo,
+    email: studentData.mail,
+    standard: studentData.standard,
+    dateOfJoining:
+      studentData.dateOfJoining instanceof Date
+        ? studentData.dateOfJoining.toISOString().slice(0, 10)
+        : studentData.dateOfJoining
+          ? String(studentData.dateOfJoining).slice(0, 10)
+          : undefined,
+  });
+  const row = unwrapData<Record<string, unknown>>(response);
+  return mapStudentRow(row);
 }
 
 export async function updateStudent(
-  studentId: number,
-  studentData: Partial<StudentData>
+  _studentId: number,
+  _studentData: Partial<StudentData>,
 ): Promise<StudentData> {
-  const response = await api.put<StudentData>(
-    `/students/${studentId}`,
-    studentData
-  );
-  return response.data;
+  throw new Error("Student update not available in ipa-new");
 }
 
-export async function deleteStudent(studentId: number): Promise<void> {
-  await api.delete(`/students/${studentId}`);
+export async function deleteStudent(_studentId: number): Promise<void> {
+  throw new Error("Student delete not available in ipa-new");
 }
 
-export async function activateStudent(studentId: number): Promise<StudentData> {
-  const response = await api.patch<StudentData>(
-    `/students/${studentId}/activate`
-  );
-  return response.data;
+export async function activateStudent(_studentId: number): Promise<StudentData> {
+  throw new Error("Not available in ipa-new");
 }
 
-export async function deactivateStudent(
-  studentId: number
-): Promise<StudentData> {
-  const response = await api.patch<StudentData>(
-    `/students/${studentId}/deactivate`
-  );
-  return response.data;
+export async function deactivateStudent(_studentId: number): Promise<StudentData> {
+  throw new Error("Not available in ipa-new");
 }
 
-export async function issueStudentId(studentId: number): Promise<StudentData> {
-  const response = await api.patch<StudentData>(
-    `/students/${studentId}/issue-id`
-  );
-  return response.data;
+export async function issueStudentId(_studentId: number): Promise<StudentData> {
+  const row = await issueIdCard(_studentId);
+  return mapStudentRow(row as Record<string, unknown>);
 }
 
-export async function requestStudentIds(
-  studentIds: number[]
-): Promise<Response> {
-  const response = await api.post<Response>("/students/request-id", {
-    ids: studentIds,
-  });
-  return response.data;
+export async function requestStudentIds(studentIds: number[]): Promise<Response> {
+  const unique = [
+    ...new Set(studentIds.filter((id) => Number.isInteger(id) && id > 0)),
+  ];
+  for (const studentId of unique) {
+    await api.post("/id-card/request", { studentId });
+  }
+  return {
+    statusCode: 200,
+    timeStamp: new Date().toISOString(),
+    method: "POST",
+    path: "/id-card/request",
+    message: "ID card requests submitted",
+  };
 }
 
 export interface RequestedIdDetail {
-  id?: number; // Student ID for issuing
+  id?: number;
   name: string;
   rollNo: string;
   dateOfBirth?: string;
@@ -158,7 +269,7 @@ export interface RequestedIdDetail {
   motherContactNo?: string;
   franchiseName?: string;
   franchiseeAddress?: string;
-  idIssueDate?: string; // Only present in issued IDs
+  idIssueDate?: string;
   franchise?: {
     id: string;
     name: string;
@@ -170,40 +281,76 @@ export interface RequestedIdDetailsByFranchise {
   [franchiseName: string]: RequestedIdDetail[];
 }
 
-export async function getAllRequestedIdDetails(): Promise<RequestedIdDetailsByFranchise> {
-  const response = await api.get("/students/id-details");
-  const data = response.data as any;
-  if (
-    data?.result &&
-    typeof data.result === "object" &&
-    !Array.isArray(data.result)
-  ) {
-    return data.result as RequestedIdDetailsByFranchise;
-  }
-  return {};
+function mapRequestedIdDetail(row: Record<string, unknown>): RequestedIdDetail {
+  const franchiseRaw =
+    row.franchise && typeof row.franchise === "object"
+      ? (row.franchise as Record<string, unknown>)
+      : undefined;
+  const franchiseId = String(
+    row.franchiseId ?? franchiseRaw?.id ?? row.franchiseID ?? "",
+  );
+  const franchiseName = String(
+    row.franchiseName ??
+      franchiseRaw?.name ??
+      (franchiseId ? `Franchise ${franchiseId}` : "Franchise"),
+  );
+  const franchiseAddress = String(
+    row.franchiseeAddress ?? row.franchiseAddress ?? franchiseRaw?.address ?? "",
+  );
+
+  return {
+    id: row.id != null ? Number(row.id) : undefined,
+    name: String(row.name ?? ""),
+    rollNo: String(row.rollNo ?? ""),
+    dateOfBirth: row.dateOfBirth ? String(row.dateOfBirth) : undefined,
+    residentialAddress: row.residentialAddress
+      ? String(row.residentialAddress)
+      : undefined,
+    fatherContactNo: row.fatherContactNo
+      ? String(row.fatherContactNo)
+      : undefined,
+    motherContactNo: row.motherContactNo
+      ? String(row.motherContactNo)
+      : undefined,
+    franchiseName,
+    franchiseeAddress: franchiseAddress || undefined,
+    idIssueDate: row.idIssueDate ? String(row.idIssueDate) : undefined,
+    franchise: {
+      id: franchiseId,
+      name: franchiseName,
+      address: franchiseAddress || undefined,
+    },
+  };
 }
 
-export async function issueIdCard(rollNo: string): Promise<any> {
-  const response = await api.patch(`/students/issue-id/${rollNo}`);
-  return response.data;
+function groupRequestedIdDetails(
+  rows: Record<string, unknown>[],
+): RequestedIdDetailsByFranchise {
+  const grouped: RequestedIdDetailsByFranchise = {};
+  for (const row of rows) {
+    const detail = mapRequestedIdDetail(row);
+    const groupName = detail.franchiseName || "Franchise";
+    if (!grouped[groupName]) grouped[groupName] = [];
+    grouped[groupName].push(detail);
+  }
+  return grouped;
+}
+
+export async function getAllRequestedIdDetails(): Promise<RequestedIdDetailsByFranchise> {
+  return (await getPaginatedRequestedIdDetails({ page: 1, limit: 5000 })).data;
+}
+
+export async function issueIdCard(studentId: number): Promise<unknown> {
+  const response = await api.patch(`/admin/id-card/${studentId}/issue`);
+  return unwrapData(response);
 }
 
 export async function getIssuedIdDetails(): Promise<RequestedIdDetailsByFranchise> {
-  const response = await api.get("/students/issued-ids");
-  const data = response.data as any;
-  if (
-    data?.result &&
-    typeof data.result === "object" &&
-    !Array.isArray(data.result)
-  ) {
-    return data.result as RequestedIdDetailsByFranchise;
-  }
-  return {};
+  return (await getPaginatedIssuedIds({ page: 1, limit: 5000 })).data;
 }
 
-// Certificate-related interfaces and functions
 export interface RequestedCertificateDetail {
-  id?: number; // Student ID for issuing
+  id?: number;
   name: string;
   rollNo: string;
   dateOfBirth?: string;
@@ -216,7 +363,7 @@ export interface RequestedCertificateDetail {
   totalMarks: number;
   courseInstructorId: number;
   courseInstructorName?: string;
-  certificateIssueDate?: string; // Only present in issued certificates
+  certificateIssueDate?: string;
 }
 
 export interface RequestedCertificateDetailsByFranchise {
@@ -224,38 +371,21 @@ export interface RequestedCertificateDetailsByFranchise {
 }
 
 export async function getAllRequestedCertificateDetails(): Promise<RequestedCertificateDetailsByFranchise> {
-  const response = await api.get("/students/certificate-details");
-  const data = response.data as any;
-  if (
-    data?.result &&
-    typeof data.result === "object" &&
-    !Array.isArray(data.result)
-  ) {
-    return data.result as RequestedCertificateDetailsByFranchise;
-  }
   return {};
 }
 
 export async function getIssuedCertificateDetails(): Promise<RequestedCertificateDetailsByFranchise> {
-  const response = await api.get("/students/issued-certificates");
-  const data = response.data as any;
-  if (
-    data?.result &&
-    typeof data.result === "object" &&
-    !Array.isArray(data.result)
-  ) {
-    return data.result as RequestedCertificateDetailsByFranchise;
-  }
   return {};
 }
 
-export async function issueCertificate(studentId: number): Promise<any> {
-  const response = await api.patch(`/students/issue-certificate/${studentId}`);
-  return response.data;
+export async function issueCertificate(_studentId: number): Promise<unknown> {
+  throw new Error("Use admin certification approve in ipa-new");
 }
 
 export interface EligibleStudent {
   id: number;
+  programId: number;
+  levelId: number;
   name: string;
   rollNo: string;
   dateOfBirth: string;
@@ -264,17 +394,37 @@ export interface EligibleStudent {
   stream: string;
   levelName: string;
   isActive: boolean;
+  lastCertIssuedAt: string | null;
+  eligibilityReason: "no_certificate" | "duration_exceeded";
 }
 
-export interface EligibleStudentsResponse extends Response {
+export interface EligibleStudentsResponse {
   result: EligibleStudent[];
 }
 
 export async function getEligibleStudents(): Promise<EligibleStudentsResponse> {
-  const response = await api.get<EligibleStudentsResponse>(
-    "/certificate/eligible-students"
-  );
-  return response.data;
+  const response = await api.get("/student/eligible");
+  const list = unwrapData<unknown[]>(response) ?? [];
+  const mapped: EligibleStudent[] = list.map((r) => {
+    const s = r as Record<string, unknown>;
+    const level = s.level as Record<string, unknown> | null | undefined;
+    return {
+      id: s.id as number,
+      programId: s.programId as number,
+      levelId: s.levelId as number,
+      name: s.name as string,
+      rollNo: s.rollNo as string,
+      dateOfBirth: String(s.dateOfBirth ?? ""),
+      sex: s.sex as string,
+      standard: (s.standard as string) ?? "",
+      stream: (s.stream as string) ?? StudentStream.REGULAR,
+      levelName: level?.name ? String(level.name) : String(s.levelId ?? ""),
+      isActive: Boolean(s.isActive),
+      lastCertIssuedAt: (s.lastCertIssuedAt as string | null) ?? null,
+      eligibilityReason: (s.eligibilityReason as "no_certificate" | "duration_exceeded") ?? "no_certificate",
+    };
+  });
+  return { result: mapped };
 }
 
 export interface AdminCertificateRequest {
@@ -283,7 +433,7 @@ export interface AdminCertificateRequest {
   instructorId: number;
   franchiseId: string;
   requestDate: string;
-  status: "Pending" | "Approved" | "Rejected";
+  status: "Pending" | "Issued" | "Rejected";
   marksObtained: number;
   totalMarks: number;
   studentName: string;
@@ -298,7 +448,10 @@ export interface AdminCertificateRequest {
   studentIdIssued: string;
   studentIdIssueDate?: string;
   instructorName: string;
+  instructorInstructorId: string;
   franchiseName: string;
+  levelPassMark: number;
+  levelTotalMarks: number;
   certificatePdfPath?: string;
   issueDate?: string;
 }
@@ -307,36 +460,124 @@ export interface AdminCertificateRequestsByFranchise {
   [franchiseName: string]: AdminCertificateRequest[];
 }
 
-export interface AdminCertificateRequestsResponse extends Response {
+export interface AdminCertificateRequestsResponse {
   result: AdminCertificateRequestsByFranchise;
 }
 
-export async function getAllAdminCertificateRequests(): Promise<AdminCertificateRequestsResponse> {
-  const response = await api.get<AdminCertificateRequestsResponse>(
-    "/certificate/all-admin"
-  );
-  return response.data;
+type CertificateRow = Record<string, unknown>;
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function getLevelLabel(level: Record<string, unknown>, fallbackId: unknown): string {
+  const name = String(level.name ?? "").trim();
+  const code = String(level.code ?? "").trim();
+  if (name) return name;
+  if (code) return code;
+  const numericId = Number(fallbackId ?? level.id ?? 0);
+  return numericId > 0 ? `Level ${numericId}` : "N/A";
+}
+
+function mapCertRow(c: CertificateRow): AdminCertificateRequest {
+  const student = asRecord(c.student);
+  const instructor = asRecord(c.instructor);
+  const franchise = asRecord(c.franchise);
+  const level = asRecord(c.level);
+  const stream = asRecord(level.stream);
+  const fid = String(c.franchiseId ?? franchise.id ?? "");
+  const fallbackStudentId = Number(c.studentId ?? student.id ?? 0);
+  const fallbackInstructorId = Number(c.instructorId ?? instructor.id ?? 0);
+  const marksObtained = Number(c.marksObtained ?? 0);
+  const totalMarks = Number(c.totalMarks ?? level.totalMarks ?? 0);
+  const passMark = Number(level.passMark ?? 0);
+  const studentStream = String(stream.name ?? stream.code ?? "");
+
+  return {
+    id: Number(c.id),
+    studentId: fallbackStudentId,
+    instructorId: fallbackInstructorId,
+    franchiseId: fid,
+    requestDate: String(c.requestDate ?? ""),
+    status: (c.status as AdminCertificateRequest["status"]) ?? "Pending",
+    marksObtained,
+    totalMarks,
+    studentName: String(student.name ?? `Student #${fallbackStudentId}`),
+    studentRollNo: String(student.rollNo ?? ""),
+    studentDateOfBirth: String(student.dateOfBirth ?? ""),
+    studentSex: String(student.sex ?? ""),
+    studentStandard: String(student.standard ?? ""),
+    studentStream,
+    studentLevel: getLevelLabel(level, c.levelId),
+    studentIsActive: Boolean(student.isActive ?? true),
+    studentDateOfJoining: student.dateOfJoining
+      ? String(student.dateOfJoining)
+      : undefined,
+    studentIdIssued: String(student.idIssued ?? ""),
+    studentIdIssueDate: student.idIssueDate ? String(student.idIssueDate) : undefined,
+    instructorName: String(instructor.name ?? ""),
+    instructorInstructorId: String(instructor.instructorCode ?? fallbackInstructorId),
+    franchiseName: String(franchise.name ?? `Franchise ${fid}`),
+    levelPassMark: passMark,
+    levelTotalMarks: Number(level.totalMarks ?? totalMarks),
+    certificatePdfPath: c.certificatePdfPath
+      ? String(c.certificatePdfPath)
+      : undefined,
+    issueDate: c.issueDate ? String(c.issueDate) : undefined,
+  };
+}
+
+export async function getAllAdminCertificateRequests(
+  params?: CertificatePaginationParams,
+): Promise<AdminCertificateRequestsResponse> {
+  const merged = {
+    page: params?.page ?? 1,
+    limit: params?.limit ?? 5000,
+    search: params?.search,
+    sortBy: params?.sortBy,
+    sortOrder: params?.sortOrder,
+    status: params?.status,
+    programId: params?.programId,
+  };
+  const response = await api.get("/admin/certification/requests", {
+    params: compactRequestParams(
+      merged as Record<string, string | number | boolean | undefined | null>,
+    ),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows: rawRows } = normalizePaginatedResult<unknown>(result);
+  const grouped: AdminCertificateRequestsByFranchise = {};
+  for (const raw of rawRows) {
+    const req = mapCertRow(raw as CertificateRow);
+    const gkey = req.franchiseName;
+    if (!grouped[gkey]) grouped[gkey] = [];
+    grouped[gkey].push(req);
+  }
+  return { result: grouped };
 }
 
 export async function approveCertificateRequest(
-  certificateRequestId: number
-): Promise<any> {
+  certificateRequestId: number,
+): Promise<unknown> {
   const response = await api.patch(
-    `/certificate/approve/${certificateRequestId}`
+    `/admin/certification/certificate/${certificateRequestId}/approve`,
   );
-  return response.data;
+  return unwrapData(response);
 }
 
 export async function rejectCertificateRequest(
-  certificateRequestId: number
-): Promise<any> {
+  certificateRequestId: number,
+  reason = "Rejected by admin",
+): Promise<unknown> {
   const response = await api.patch(
-    `/certificate/reject/${certificateRequestId}`
+    `/admin/certification/certificate/${certificateRequestId}/reject`,
+    { reason },
   );
-  return response.data;
+  return unwrapData(response);
 }
 
-// Pagination interfaces
 export interface PaginationMeta {
   total: number;
   page: number;
@@ -367,59 +608,137 @@ export interface StudentPaginationParams {
   status?: string;
   sortBy?: string;
   sortOrder?: string;
+  /** Admin list: scope to franchise (ipa-new). */
+  franchiseId?: string;
+  levelId?: number;   // NEW
+  idStatus?: string;  // NEW — "Not Issued" | "Requested" | "Issued"
 }
 
-// Pagination functions
 export async function getPaginatedStudents(
-  params: StudentPaginationParams
+  params: StudentPaginationParams,
 ): Promise<PaginatedStudentsResponse> {
-  const queryParams = new URLSearchParams();
+  const response = await api.get("/student", {
+    params: compactRequestParams({
+      page: params.page,
+      limit: params.limit,
+      search: params.search,
+      status: params.status,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+      levelId: params.levelId,    // ADD
+      idStatus: params.idStatus,  // ADD
+    } as Record<string, string | number | boolean | undefined | null>),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows: raw, total, page, limit } = normalizePaginatedResult<unknown>(result);
+  const data = raw.map((r) => mapStudentRow(r as Record<string, unknown>));
+  const lim = limit || 20;
+  const totalPages = Math.ceil(total / lim) || 1;
+  const pageNum = page || 1;
+  return {
+    data,
+    meta: {
+      total,
+      page: pageNum,
+      limit: lim,
+      totalPages,
+      hasNextPage: pageNum < totalPages,
+      hasPreviousPage: pageNum > 1,
+    },
+  };
+}
 
-  if (params.page) queryParams.append("page", params.page.toString());
-  if (params.limit) queryParams.append("limit", params.limit.toString());
-  if (params.search) queryParams.append("search", params.search);
-  if (params.status) queryParams.append("status", params.status);
-  if (params.sortBy) queryParams.append("sortBy", params.sortBy);
-  if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+/** Admin: paginated students; pass franchiseId to scope (ipa-new GET /admin/student). */
+export async function getPaginatedStudentsAdmin(
+  params: StudentPaginationParams,
+): Promise<PaginatedStudentsResponse> {
+  const response = await api.get("/admin/student", {
+    params: compactRequestParams({
+      page: params.page,
+      limit: params.limit,
+      search: params.search,
+      status: params.status,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+      franchiseId: params.franchiseId,
+    } as Record<string, string | number | boolean | undefined | null>),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows: raw, total, page, limit } = normalizePaginatedResult<unknown>(result);
+  const data = raw.map((r) => mapStudentRow(r as Record<string, unknown>));
+  const lim = limit || 20;
+  const totalPages = Math.ceil(total / lim) || 1;
+  const pageNum = page || 1;
+  return {
+    data,
+    meta: {
+      total,
+      page: pageNum,
+      limit: lim,
+      totalPages,
+      hasNextPage: pageNum < totalPages,
+      hasPreviousPage: pageNum > 1,
+    },
+  };
+}
 
-  const response = await api.get<{ result: PaginatedStudentsResponse }>(
-    `/students/paginated?${queryParams.toString()}`
-  );
-  return response.data.result;
+function buildIdMeta(
+  total: number,
+  page: number,
+  limit: number,
+): PaginationMeta {
+  const totalPages = Math.ceil(total / limit) || 0;
+  return {
+    total,
+    page,
+    limit,
+    totalPages,
+    hasNextPage: page < totalPages,
+    hasPreviousPage: page > 1,
+  };
 }
 
 export async function getPaginatedRequestedIdDetails(
-  params: StudentPaginationParams
+  params: StudentPaginationParams,
 ): Promise<PaginatedIdDetailsResponse> {
-  const queryParams = new URLSearchParams();
-
-  if (params.page) queryParams.append("page", params.page.toString());
-  if (params.limit) queryParams.append("limit", params.limit.toString());
-  if (params.search) queryParams.append("search", params.search);
-  if (params.sortBy) queryParams.append("sortBy", params.sortBy);
-  if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
-
-  const response = await api.get<{ result: PaginatedIdDetailsResponse }>(
-    `/students/id-details/paginated?${queryParams.toString()}`
-  );
-  return response.data.result;
+  const response = await api.get("/admin/id-card", {
+    params: compactRequestParams({
+      status: "Requested",
+      page: params.page,
+      limit: params.limit,
+      search: params.search,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+    } as Record<string, string | number | boolean | undefined | null>),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows, total, page, limit } = normalizePaginatedResult<unknown>(result);
+  const rawRows = rows as Record<string, unknown>[];
+  return {
+    data: groupRequestedIdDetails(rawRows),
+    meta: buildIdMeta(total, page || 1, limit || 20),
+  };
 }
 
 export async function getPaginatedIssuedIds(
-  params: StudentPaginationParams
+  params: StudentPaginationParams,
 ): Promise<PaginatedIdDetailsResponse> {
-  const queryParams = new URLSearchParams();
-
-  if (params.page) queryParams.append("page", params.page.toString());
-  if (params.limit) queryParams.append("limit", params.limit.toString());
-  if (params.search) queryParams.append("search", params.search);
-  if (params.sortBy) queryParams.append("sortBy", params.sortBy);
-  if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
-
-  const response = await api.get<{ result: PaginatedIdDetailsResponse }>(
-    `/students/issued-ids/paginated?${queryParams.toString()}`
-  );
-  return response.data.result;
+  const response = await api.get("/admin/id-card", {
+    params: compactRequestParams({
+      status: "Issued",
+      page: params.page,
+      limit: params.limit,
+      search: params.search,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+    } as Record<string, string | number | boolean | undefined | null>),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows, total, page, limit } = normalizePaginatedResult<unknown>(result);
+  return {
+    data: groupRequestedIdDetails(rows as Record<string, unknown>[]),
+    meta: buildIdMeta(total, page || 1, limit || 20),
+  };
 }
 
 export interface CertificatePaginationParams {
@@ -428,6 +747,8 @@ export interface CertificatePaginationParams {
   search?: string;
   sortBy?: string;
   sortOrder?: string;
+  status?: string;
+  programId?: number;
 }
 
 export interface PaginatedCertificatesResponse {
@@ -441,20 +762,26 @@ export interface PaginatedCertificatesResponse {
 }
 
 export async function getPaginatedCertificates(
-  params: CertificatePaginationParams
+  params: CertificatePaginationParams,
 ): Promise<PaginatedCertificatesResponse> {
-  const queryParams = new URLSearchParams();
-
-  if (params.page) queryParams.append("page", params.page.toString());
-  if (params.limit) queryParams.append("limit", params.limit.toString());
-  if (params.search) queryParams.append("search", params.search);
-  if (params.sortBy) queryParams.append("sortBy", params.sortBy);
-  if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
-
-  const response = await api.get<{ result: PaginatedCertificatesResponse }>(
-    `/certificate/paginated?${queryParams.toString()}`
-  );
-  return response.data.result;
+  const response = await api.get("/admin/certification/requests", {
+    params: compactRequestParams({
+      page: params.page,
+      limit: params.limit,
+      search: params.search,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+    } as Record<string, string | number | boolean | undefined | null>),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows: raw, total, page, limit } = normalizePaginatedResult<unknown>(result);
+  const data = raw.map((row) => mapCertRow(row as CertificateRow));
+  const lim = limit || 20;
+  const totalPages = Math.ceil(total / lim) || 1;
+  return {
+    data,
+    meta: { total, page: page || 1, limit: lim, totalPages },
+  };
 }
 
 export interface FranchiseeCertificate {
@@ -463,7 +790,7 @@ export interface FranchiseeCertificate {
   instructorId: number;
   franchiseId: string;
   requestDate: string;
-  status: "Pending" | "Approved" | "Rejected";
+  status: "Pending" | "Issued" | "Rejected";
   marksObtained: number;
   totalMarks: number;
   issueDate?: string;
@@ -477,25 +804,50 @@ export interface FranchiseeCertificate {
   studentLevel: string;
   instructorName: string;
   instructorInstructorId: string;
+  levelPassMark: number;
+  levelTotalMarks: number;
 }
 
-export interface FranchiseeCertificatesResponse extends Response {
+export interface FranchiseeCertificatesResponse {
   result: FranchiseeCertificate[];
 }
 
-export async function getFranchiseeCertificates(): Promise<FranchiseeCertificatesResponse> {
-  const response = await api.get<FranchiseeCertificatesResponse>(
-    "/certificate/my-certificates"
-  );
-  return response.data;
+export async function getFranchiseeCertificates(
+  params?: CertificatePaginationParams & { status?: string; programId?: number },
+): Promise<FranchiseeCertificatesResponse> {
+  const response = await api.get("/certification", {
+    params: compactRequestParams(
+      params as Record<string, string | number | boolean | undefined | null>,
+    ),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows } = normalizePaginatedResult<unknown>(result);
+  const list = rows.map((raw) => mapCertRow(raw as CertificateRow));
+  return { result: list };
 }
 
 export function getCertificatePdfUrl(certificatePdfPath: string): string {
   if (!certificatePdfPath) return "";
-  // certificatePdfPath is stored as "certificates/filename.pdf"
-  // Backend serves static files at /uploads/ prefix
   const baseUrl = api.defaults.baseURL || getApiBaseUrl();
-  return `${baseUrl}/uploads/${certificatePdfPath}`;
+  const normalized = certificatePdfPath.replace(/\\/g, "/").trim();
+  if (/^https?:\/\//i.test(normalized)) return normalized;
+  const uploadsIndex = normalized.toLowerCase().indexOf("/uploads/");
+  if (uploadsIndex >= 0) {
+    return `${baseUrl}${normalized.slice(uploadsIndex)}`;
+  }
+  if (normalized.startsWith("/uploads/")) return `${baseUrl}${normalized}`;
+  if (normalized.startsWith("uploads/")) return `${baseUrl}/${normalized}`;
+  return `${baseUrl}/uploads/${normalized.replace(/^\/+/, "")}`;
+}
+
+export function getAdminCertificatePdfUrl(certificateId: number): string {
+  const baseUrl = api.defaults.baseURL || getApiBaseUrl();
+  return `${baseUrl}/admin/certification/certificate/${certificateId}/pdf`;
+}
+
+export function getFranchiseeCertificatePdfUrl(certificateId: number): string {
+  const baseUrl = api.defaults.baseURL || getApiBaseUrl();
+  return `${baseUrl}/certification/${certificateId}/pdf`;
 }
 
 export interface BulkCertificateRequestItem {
@@ -504,22 +856,41 @@ export interface BulkCertificateRequestItem {
 }
 
 export interface BulkCertificateRequestDto {
-  courseInstructerId: number;
+  courseInstructorId: number;
   students: BulkCertificateRequestItem[];
 }
 
-export interface BulkCertificateRequestResponse extends Response {
-  result: any[];
+export async function bulkRequestCertificates(
+  data: BulkCertificateRequestDto,
+): Promise<unknown[]> {
+  const out: unknown[] = [];
+  const students = await getAllStudents();
+  const byId = new Map((students.result ?? []).map((s) => [s.id, s]));
+  for (const s of data.students) {
+    const st = byId.get(s.studentId);
+    if (!st) continue;
+    const res = await api.post("/certification/request", {
+      studentId: s.studentId,
+      programId: st.programId,
+      levelId: st.levelId,
+      marksObtained: s.marksObtained,
+      courseInstructorId: data.courseInstructorId,
+    });
+    out.push(unwrapData(res));
+  }
+  return out;
 }
 
-export async function bulkRequestCertificates(
-  data: BulkCertificateRequestDto
-): Promise<BulkCertificateRequestResponse> {
-  const response = await api.post<BulkCertificateRequestResponse>(
-    "/certificate/bulk-request",
-    data
-  );
-  return response.data;
+export async function requestCertificateForStudent(body: {
+  studentId: number;
+  programId: number;
+  levelId: number;
+  marksObtained?: number;
+  totalMarks?: number;
+  courseInstructorId?: number;
+}) {
+  const response = await api.post("/certification/request", body);
+  return unwrapData(response);
 }
 
 export interface StudentCertificate {
@@ -529,7 +900,7 @@ export interface StudentCertificate {
   franchiseId: string;
   levelId: number;
   requestDate: string;
-  status: "Pending" | "Approved" | "Rejected";
+  status: "Pending" | "Issued" | "Rejected";
   marksObtained: number;
   totalMarks: number;
   issueDate?: string;
@@ -539,19 +910,46 @@ export interface StudentCertificate {
   studentLevel: string;
   certificateLevel: string;
   levelDisplayOrder: number;
+  levelPassMark: number;
+  levelTotalMarks: number;
   instructorName: string;
   instructorInstructorId: string;
 }
 
-export interface StudentCertificatesResponse extends Response {
+export interface StudentCertificatesResponse {
   result: StudentCertificate[];
 }
 
 export async function getStudentCertificates(
-  studentId: number
+  studentId: number,
 ): Promise<StudentCertificatesResponse> {
-  const response = await api.get<StudentCertificatesResponse>(
-    `/certificate/student/${studentId}`
-  );
-  return response.data;
+  const response = await api.get(`/certification/student/${studentId}`);
+  const result = unwrapData<unknown>(response);
+  const { rows } = normalizePaginatedResult<unknown>(result);
+  const list = rows.map((row) => {
+    const mapped = mapCertRow(row as CertificateRow);
+    return {
+      id: mapped.id,
+      studentId: mapped.studentId,
+      instructorId: mapped.instructorId,
+      franchiseId: mapped.franchiseId,
+      levelId: Number((row as CertificateRow).levelId ?? 0),
+      requestDate: mapped.requestDate,
+      status: mapped.status,
+      marksObtained: mapped.marksObtained,
+      totalMarks: mapped.totalMarks,
+      issueDate: mapped.issueDate,
+      certificatePdfPath: mapped.certificatePdfPath,
+      studentName: mapped.studentName,
+      studentRollNo: mapped.studentRollNo,
+      studentLevel: mapped.studentLevel,
+      certificateLevel: mapped.studentLevel,
+      levelDisplayOrder: Number(asRecord((row as CertificateRow).level).displayOrder ?? 0),
+      levelPassMark: mapped.levelPassMark,
+      levelTotalMarks: mapped.levelTotalMarks,
+      instructorName: mapped.instructorName,
+      instructorInstructorId: mapped.instructorInstructorId,
+    } as StudentCertificate;
+  });
+  return { result: list };
 }
