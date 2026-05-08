@@ -1,189 +1,57 @@
-import React, { useEffect, useState, useRef } from "react";
-import { CourseInstructorData } from "@/services/course-instructor.service";
-import ProfessionalInfoSection, {
-  professionalDotRef,
-} from "./ProfessionalInfoSection";
-import ContactInfoSection, { contactDotRef } from "./ContactInfoSection";
-import { TrainingProgressView } from "./TrainingProgressView";
+"use client";
 
-export const trainingProgressDotRef = React.createRef<HTMLDivElement>();
+import React from "react";
+import {
+  DetailField,
+  DetailFieldsGrid,
+  ExpandedDetailSection,
+  ExpandedDetailSurface,
+} from "@/components/shared";
+import { CourseInstructorData } from "@/services/course-instructor.service";
+
+function calculateAge(dob: Date | string | undefined): string {
+  if (!dob) return "N/A";
+  const today = new Date();
+  const birthDate = new Date(dob);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return `${age} years`;
+}
+
+function fmtDate(value: Date | string | undefined): string {
+  if (!value) return "N/A";
+  return new Date(value).toLocaleDateString();
+}
 
 interface CourseInstructorDetailsProps {
   courseInstructor: CourseInstructorData;
-  expandedRows: Set<string>;
-  onToggleRow: (id: string) => void;
-  lastRow: boolean;
-  onCourseInstructorUpdate?: (
-    updatedCourseInstructor: CourseInstructorData
-  ) => void;
 }
 
 export default function CourseInstructorDetails({
   courseInstructor,
-  lastRow,
-  expandedRows,
-  onToggleRow,
-  onCourseInstructorUpdate,
 }: CourseInstructorDetailsProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [lineHeight, setLineHeight] = useState(0);
-
-  // Helper function to calculate age
-  const calculateAge = (dateOfBirth: Date): number => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
-
-    return age;
-  };
-
-  useEffect(() => {
-    const calculateLineHeight = () => {
-      if (containerRef.current) {
-        const containerTop = containerRef.current.getBoundingClientRect().top;
-
-        // Use training progress section dot as reference (last section)
-        // Fallback to contact section dot, then professional dot
-        let dotRef = trainingProgressDotRef.current;
-        if (!dotRef) {
-          dotRef = contactDotRef.current;
-        }
-        if (!dotRef) {
-          dotRef = professionalDotRef.current;
-        }
-
-        if (dotRef) {
-          const dotCenter =
-            dotRef.getBoundingClientRect().top +
-            dotRef.offsetHeight / 2;
-          setLineHeight(dotCenter - containerTop);
-        } else {
-          // Fallback if no section is rendered yet
-          const firstSection = containerRef.current.querySelector(".relative");
-          if (firstSection) {
-            const sectionTop = firstSection.getBoundingClientRect().top;
-            setLineHeight(sectionTop - containerTop + 20);
-          }
-        }
-      }
-    };
-
-    // Add a small delay to ensure DOM has updated after expansion/collapse
-    const timeoutId = setTimeout(calculateLineHeight, 10);
-
-    return () => clearTimeout(timeoutId);
-  }, [courseInstructor, expandedRows]);
-
   return (
-    <div
-      className={`bg-gray-50 border-t border-black/20 ${
-        lastRow ? "rounded-b-lg" : "border-b border-black/20"
-      }`}
-    >
-      <div className="relative">
-        {/* Vertical connecting line from main row */}
-        <div
-          className="absolute left-6 border-primary border bg-primary"
-          style={{ top: 0, height: `${lineHeight - 6}px` }}
-        ></div>
-
-        <div className="pl-12 pr-6 py-6 space-y-6" ref={containerRef}>
-          {/* Course Instructor Details */}
-          <div className="relative">
-            {/* Curved horizontal connecting line with dot */}
-            <div className="absolute -left-6 top-4 w-6 h-4">
-              <div className="absolute top-0 left-0 w-6 h-4 border-l-2 border-b-2 border-primary rounded-bl-lg"></div>
-              <div className="absolute top-4 left-6 w-2 h-2 bg-primary rounded-full -translate-x-1 -translate-y-1"></div>
-            </div>
-            <div className="bg-white rounded-lg p-4 space-y-4 border border-primary">
-              <h3 className="font-semibold text-lg text-gray-900">
-                {courseInstructor.name}
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-500">Instructor ID</span>
-                  <p className="text-gray-900 mt-1">
-                    {courseInstructor.instructorId}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Age</span>
-                  <p className="text-gray-900 mt-1">
-                    {calculateAge(courseInstructor.dob)} years
-                  </p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Blood Group</span>
-                  <p className="text-gray-900 mt-1">
-                    {courseInstructor.bloodGroup}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-gray-500">City</span>
-                  <p className="text-gray-900 mt-1">{courseInstructor.city}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Education</span>
-                  <p className="text-gray-900 mt-1">
-                    {courseInstructor.education}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Occupation</span>
-                  <p className="text-gray-900 mt-1">
-                    {courseInstructor.occupation}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Status</span>
-                  <p className="text-gray-900 mt-1">
-                    {courseInstructor.status}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Professional Section */}
-          <ProfessionalInfoSection
-            courseInstructor={courseInstructor}
-            courseInstructorId={courseInstructor.id.toString()}
-            isExpanded={expandedRows.has(`${courseInstructor.id}-professional`)}
-            onToggle={onToggleRow}
-          />
-
-          {/* Contact Section */}
-          <ContactInfoSection
-            courseInstructor={courseInstructor}
-            courseInstructorId={courseInstructor.id.toString()}
-            isExpanded={expandedRows.has(`${courseInstructor.id}-contact`)}
-            onToggle={onToggleRow}
-          />
-
-          {/* Training Progress Section */}
-          <div className="relative">
-            <div ref={trainingProgressDotRef} className="absolute -left-6 top-4 w-6 h-4">
-              <div className="absolute top-0 left-0 w-6 h-4 border-l-2 border-b-2 border-primary rounded-bl-lg"></div>
-              <div className="absolute top-4 left-6 w-2 h-2 bg-primary rounded-full -translate-x-1 -translate-y-1"></div>
-            </div>
-            <TrainingProgressView
-              instructorId={courseInstructor.id}
-              instructorName={courseInstructor.name}
-              onPaymentSuccess={() => {
-                onCourseInstructorUpdate?.(courseInstructor);
-              }}
-            />
-          </div>
-        </div>
-      </div>
+    <div className="p-4">
+      <ExpandedDetailSurface>
+        <ExpandedDetailSection title="Course Instructor Information">
+          <DetailFieldsGrid columns={3}>
+            <DetailField label="Instructor ID" value={courseInstructor.instructorId || "N/A"} />
+            <DetailField label="Date of birth" value={fmtDate(courseInstructor.dob)} />
+            <DetailField label="Age"           value={calculateAge(courseInstructor.dob)} />
+            <DetailField label="Blood group"   value={courseInstructor.bloodGroup || "N/A"} />
+            <DetailField label="City"          value={courseInstructor.city || "N/A"} />
+            <DetailField label="Email"         value={courseInstructor.mail || "N/A"} />
+            <DetailField label="Phone"         value={courseInstructor.phone || "N/A"} />
+            <DetailField label="Education"     value={courseInstructor.education || "N/A"} />
+            <DetailField label="Occupation"    value={courseInstructor.occupation || "N/A"} />
+            <DetailField label="Status"        value={courseInstructor.status || "N/A"} />
+            <DetailField label="Address"       value={courseInstructor.address || "N/A"} span={3} />
+          </DetailFieldsGrid>
+        </ExpandedDetailSection>
+      </ExpandedDetailSurface>
     </div>
   );
 }

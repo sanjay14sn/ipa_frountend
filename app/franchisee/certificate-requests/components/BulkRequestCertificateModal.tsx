@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,10 +21,12 @@ import {
 } from "@/components/ui/select";
 import { Award, Loader2, Users } from "lucide-react";
 import { EligibleStudent } from "@/services/student.service";
-import { bulkRequestCertificates } from "@/services/student.service";
 import { useToast } from "@/hooks/use-toast";
-import { CourseInstructorData } from "@/services/course-instructor.service";
-import { revalidateCertificateRequests } from "@/hooks/use-students";
+import {
+  CourseInstructorData,
+  getEligibleCourseInstructorsForCertificate,
+} from "@/services/course-instructor.service";
+import { useBulkRequestCertificates } from "@/hooks/api/student.hooks";
 
 interface BulkRequestCertificateModalProps {
   open: boolean;
@@ -38,14 +40,49 @@ export default function BulkRequestCertificateModal({
   open,
   onOpenChange,
   students,
-  courseInstructors,
   onSuccess,
 }: BulkRequestCertificateModalProps) {
-  const [isLoading, setIsLoading] = useState(false);
   const [courseInstructorId, setCourseInstructorId] = useState<string>("");
   const [marksMap, setMarksMap] = useState<Record<number, string>>({});
   const [applyToAllMarks, setApplyToAllMarks] = useState<string>("");
+  const [eligibleInstructors, setEligibleInstructors] = useState<CourseInstructorData[]>([]);
+  const [isLoadingInstructors, setIsLoadingInstructors] = useState(false);
   const { toast } = useToast();
+  const bulkCert = useBulkRequestCertificates();
+  const requestedLevelIds = useMemo(
+    () => [...new Set(students.map((student) => student.levelId).filter((id) => id > 0))],
+    [students],
+  );
+  const programId = useMemo(
+    () => students[0]?.programId ?? undefined,
+    [students],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadEligible() {
+      if (!open || requestedLevelIds.length === 0) return;
+      setIsLoadingInstructors(true);
+      try {
+        const rows = await getEligibleCourseInstructorsForCertificate(
+          requestedLevelIds,
+          programId,
+        );
+        if (!cancelled) setEligibleInstructors(rows);
+      } catch (error) {
+        if (!cancelled) {
+          setEligibleInstructors([]);
+          console.error("Error loading eligible course instructors:", error);
+        }
+      } finally {
+        if (!cancelled) setIsLoadingInstructors(false);
+      }
+    }
+    void loadEligible();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, requestedLevelIds]);
 
   const handleApplyToAll = () => {
     if (!applyToAllMarks) return;
@@ -118,47 +155,50 @@ export default function BulkRequestCertificateModal({
       return;
     }
 
-    setIsLoading(true);
     try {
       const requestData = {
-        courseInstructerId: parseInt(courseInstructorId),
+        courseInstructorId: parseInt(courseInstructorId, 10),
         students: students.map((student) => ({
           studentId: student.id,
-          marksObtained: parseInt(marksMap[student.id]),
+          marksObtained: parseInt(marksMap[student.id], 10),
         })),
       };
 
-      await bulkRequestCertificates(requestData);
-
-      // Revalidate both admin and franchisee certificate requests
-      await revalidateCertificateRequests();
+      await bulkCert.mutateAsync(requestData);
 
       toast({
         title: "Success",
         description: `Certificate requests created successfully for ${students.length} student(s)`,
       });
 
-      // Reset form
       setCourseInstructorId("");
       setMarksMap({});
       setApplyToAllMarks("");
 
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error creating bulk certificate requests:", error);
+      let description = "Failed to create certificate requests. Please try again.";
+      if (
+        error &&
+        typeof error === "object" &&
+        "response" in error
+      ) {
+        const msg = (error as { response?: { data?: { message?: string } } })
+          .response?.data?.message;
+        if (typeof msg === "string" && msg) description = msg;
+      }
       toast({
         title: "Error",
-        description:
-          error.response?.data?.message ||
-          "Failed to create certificate requests. Please try again.",
+        description,
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const selectedInstructor = courseInstructors.find(
+  const isLoading = bulkCert.isPending;
+
+  const selectedInstructorDetails = eligibleInstructors.find(
     (ci) => ci.id.toString() === courseInstructorId
   );
 
@@ -187,7 +227,15 @@ export default function BulkRequestCertificateModal({
                 <SelectValue placeholder="Select course instructor" />
               </SelectTrigger>
               <SelectContent>
-                {courseInstructors.map((instructor) => (
+                {isLoadingInstructors ? (
+                  <SelectItem value="loading" disabled>
+                    Loading eligible instructors...
+                  </SelectItem>
+                ) : eligibleInstructors.length === 0 ? (
+                  <SelectItem value="none" disabled>
+                    No instructor is eligible for all selected levels
+                  </SelectItem>
+                ) : eligibleInstructors.map((instructor) => (
                   <SelectItem
                     key={instructor.id}
                     value={instructor.id.toString()}
@@ -207,7 +255,7 @@ export default function BulkRequestCertificateModal({
                 id="applyToAllMarks"
                 type="number"
                 min="0"
-                value={applyToAllMarks === "0" || applyToAllMarks === 0 ? "" : applyToAllMarks}
+                value={applyToAllMarks === "0" ? "" : applyToAllMarks}
                 onChange={(e) => {
                   const val = e.target.value;
                   setApplyToAllMarks(val);
@@ -247,7 +295,11 @@ export default function BulkRequestCertificateModal({
                     <Input
                       type="number"
                       min="0"
-                      value={marksMap[student.id] === "0" || marksMap[student.id] === 0 ? "" : marksMap[student.id] || ""}
+                      value={
+                        marksMap[student.id] === "0"
+                          ? ""
+                          : marksMap[student.id] || ""
+                      }
                       onChange={(e) =>
                         handleMarksChange(student.id, e.target.value)
                       }
@@ -261,14 +313,14 @@ export default function BulkRequestCertificateModal({
           </div>
 
           {/* Selected Instructor Info */}
-          {selectedInstructor && (
+          {selectedInstructorDetails && (
             <div className="p-3 bg-blue-50 rounded-lg">
               <div className="text-sm">
                 <div className="font-medium text-blue-900">
                   Selected Instructor:
                 </div>
                 <div className="text-blue-700">
-                  {selectedInstructor.name} ({selectedInstructor.instructorId})
+                  {selectedInstructorDetails.name} ({selectedInstructorDetails.instructorId})
                 </div>
               </div>
             </div>
@@ -279,13 +331,18 @@ export default function BulkRequestCertificateModal({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isLoading}
+              disabled={isLoading || isLoadingInstructors}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={isLoading || !courseInstructorId}
+              disabled={
+                isLoading ||
+                isLoadingInstructors ||
+                !courseInstructorId ||
+                eligibleInstructors.length === 0
+              }
               className="bg-primary hover:bg-primary/90"
             >
               {isLoading ? (

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Bell, Check, CheckCheck } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Bell, CheckCheck } from "lucide-react";
+import { formatDistanceToNow, isValid } from "date-fns";
 import { Button } from "../ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { ScrollArea } from "../ui/scroll-area";
@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation";
 
 export function NotificationBell() {
   const {
-    notifications,
+    notifications: notificationsRaw,
     unreadCount,
     isLoading,
     isConnected,
@@ -22,8 +22,23 @@ export function NotificationBell() {
     markAllNotificationsAsRead,
   } = useNotifications();
 
+  const notifications = Array.isArray(notificationsRaw)
+    ? notificationsRaw
+    : [];
+
   const [open, setOpen] = useState(false);
   const router = useRouter();
+
+  const relativeTime = (createdAt: Notification["createdAt"]) => {
+    const d =
+      createdAt instanceof Date ? createdAt : new Date(createdAt as string);
+    if (!isValid(d)) return "Recently";
+    try {
+      return formatDistanceToNow(d, { addSuffix: true });
+    } catch {
+      return "Recently";
+    }
+  };
 
   const getRedirectUrl = (notification: Notification) => {
     switch (notification.type) {
@@ -35,42 +50,42 @@ export function NotificationBell() {
       case "student_level_promoted":
       case "student_level_stuck":
       case "student_registered":
-        return "/admin/id-requests";
+        return "/admin/students?tab=ids";
 
       // Franchise notifications
       case "franchise_application_submitted":
-        return "/admin/franchises";
+        return "/admin/franchise?tab=franchises";
       case "franchise_payment_pending":
       case "franchise_payment_received":
       case "franchise_payment_due":
       case "franchise_payment_confirmed":
-        return "/admin/payments";
+        return "/admin/operations?tab=payments";
       case "franchise_approved":
       case "franchise_rejected":
-        return "/admin/pending-approvals";
+        return "/admin/franchise?tab=applications";
 
       // Course Instructor (CI) notifications
       case "ci_application_submitted":
       case "ci_application_approved":
       case "ci_application_rejected":
-        return "/admin/course-instructor-approvals";
+        return "/admin/course-instructors?tab=applications";
       case "ci_training_requested":
       case "ci_training_approved":
       case "ci_training_rejected":
       case "ci_training_scheduled":
-        return "/admin/ci-training";
+        return "/admin/course-instructors?tab=training";
 
       // Certificate notifications
       case "certificate_requested":
       case "certificate_approved":
       case "certificate_rejected":
       case "certificate_sent":
-        return "/admin/certificate-requests";
+        return "/admin/students?tab=certificates";
 
       // Order notifications
       case "order_placed":
       case "order_updated":
-        return "/admin/orders";
+        return "/admin/operations?tab=orders";
       default:
         return undefined;
     }
@@ -93,7 +108,11 @@ export function NotificationBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative text-primary hover:bg-accent hover:text-primary"
+        >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <Badge
@@ -151,9 +170,7 @@ export function NotificationBell() {
                         {notification.message}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(notification.createdAt), {
-                          addSuffix: true,
-                        })}
+                        {relativeTime(notification.createdAt)}
                       </p>
                     </div>
                     {!notification.isRead && (

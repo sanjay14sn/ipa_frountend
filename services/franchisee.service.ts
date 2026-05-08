@@ -1,4 +1,10 @@
-
+import { api } from "@/lib/axios";
+import {
+  compactRequestParams,
+  normalizePaginatedResult,
+  unwrapData,
+} from "@/lib/unwrap-api";
+import type { AgreementRecord } from "@/services/agreement.service";
 
 export interface Response {
   statusCode: number;
@@ -26,6 +32,9 @@ export interface Franchise {
   name: string;
   type: string;
   status: string;
+  assignedAdminId?: number | null;
+  assignedAt?: string | null;
+  assignedByAdminId?: number | null;
   address: string;
   city: string;
   state?: string;
@@ -40,6 +49,14 @@ export interface FranchiseResponse {
   type: string;
   status: string;
   address: string;
+  programId?: number;
+  program?: {
+    id: number;
+    name: string;
+    code?: string | null;
+    description?: string | null;
+    isActive?: boolean;
+  } | null;
   city?: string;
   state?: string;
   pincode?: string;
@@ -49,6 +66,8 @@ export interface FranchiseResponse {
       name: string;
     };
   }>;
+  /** ipa-new: agreements nested on franchise in admin list/detail */
+  agreements?: AgreementRecord[];
   createdAt: string;
   updatedAt: string;
 }
@@ -64,6 +83,30 @@ export interface FranchiseeResponse {
   education: string;
   occupation: string;
   reference: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** GET /admin/franchise/:id — pending application detail for payroll setup */
+export interface FranchiseProgramRequestRow {
+  id: number;
+  franchiseId: string;
+  programId: number;
+  status: string;
+  program: { id: number; name: string };
+}
+
+export interface FranchiseApplicationDetail {
+  franchise: FranchiseResponse;
+  franchisee?: FranchiseeResponse;
+  agreements?: AgreementRecord[];
+  programRequest?: unknown;
+  programRequests?: FranchiseProgramRequestRow[];
+  payroll?: FranchisePayrollResponse | null;
+  selectedProgram?: {
+    id: number;
+    name: string;
+  } | null;
 }
 
 export interface FranchisePayrollResponse {
@@ -100,8 +143,8 @@ export interface PendingFranchise extends Response {
 
 export interface FranchiseData extends FranchiseResponse {
   franchisee: FranchiseeResponse;
-  franchisePayroll?: FranchisePayrollResponse; // Legacy - for backward compatibility
-  franchisePayrolls?: FranchisePayrollResponse[]; // New - per program payrolls
+  franchisePayroll?: FranchisePayrollResponse;
+  franchisePayrolls?: FranchisePayrollResponse[];
 }
 
 export interface FranchisesResponse extends Response {
@@ -122,6 +165,21 @@ export interface PaginatedFranchisesResponse {
   meta: PaginationMeta;
 }
 
+/** Admin grouped list: franchisee → franchises → agreements (ipa-new). */
+export interface FranchiseWithAgreements extends FranchiseResponse {
+  agreements: AgreementRecord[];
+}
+
+export interface FranchiseeGroupedItem {
+  franchisee: FranchiseeResponse;
+  franchises: FranchiseWithAgreements[];
+}
+
+export interface PaginatedFranchiseeGroupedResponse {
+  data: FranchiseeGroupedItem[];
+  meta: PaginationMeta;
+}
+
 export interface PaginationParams {
   page?: number;
   limit?: number;
@@ -133,6 +191,7 @@ export interface PaginationParams {
   sortOrder?: string;
 }
 
+/** Body fields for ipa-new `SetFranchiseTermsDto` (per program). */
 export interface ProgramPayrollRequest {
   programId: number;
   franchiseFee: number;
@@ -142,116 +201,422 @@ export interface ProgramPayrollRequest {
   ciShare: number;
   franchiseShare: number;
   royalty: number;
-  installment: number;
-  totalAmount: number;
+  installment: boolean;
+  tenure: number;
+  installmentMonths?: number;
+  downPaymentAmount?: number | null;
   gstFranchiseFee?: boolean;
   gstRoyalty?: boolean;
   gstMaterialCost?: boolean;
-  freeload: boolean;
 }
 
 export interface CreatePayrollRequest {
-  programPayrolls: ProgramPayrollRequest[];
+  programPayroll?: ProgramPayrollRequest;
+  programPayrolls?: ProgramPayrollRequest[];
 }
 
-import { api } from "@/lib/axios";
+function toPlain<T extends object>(
+  row: T | { get?: (opts?: { plain?: boolean }) => T },
+): T {
+  const r = row as { get?: (opts?: { plain?: boolean }) => T };
+  if (r?.get && typeof r.get === "function") return r.get({ plain: true });
+  return row as T;
+}
 
-export async function applyFranchisee(franchisee: FranchiseeApplication) {
-  const response = await api.post("/franchisee/apply", franchisee);
+function coerceAgreementArray(raw: unknown): AgreementRecord[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((a) => toPlain(a as object)) as AgreementRecord[];
+}
+
+/** Backend may return `{ franchise, franchisee }` or a flat franchise row. */
+function mapFranchiseRowToFranchiseData(row: unknown): FranchiseData {
+  const r = row as Record<string, unknown>;
+  if (r?.franchise != null) {
+    const f = toPlain(r.franchise as object) as FranchiseResponse;
+    const fe = r.franchisee
+      ? normalizeFranchiseeResponse(
+          toPlain(r.franchisee as object) as Record<string, unknown>,
+        )
+      : ({} as FranchiseeResponse);
+    const agreements = coerceAgreementArray(
+      f.agreements ?? (r as { agreements?: unknown }).agreements,
+    );
+    return { ...f, franchisee: fe, agreements };
+  }
+  const flat = toPlain(row as object) as FranchiseData;
+  return {
+    ...flat,
+    agreements: coerceAgreementArray(flat.agreements),
+  };
+}
+
+function normalizeFranchiseeResponse(
+  raw: Record<string, unknown>,
+): FranchiseeResponse {
+  const plain = toPlain(raw as object) as FranchiseeResponse & {
+    email?: string;
+  };
+  const mail =
+    (plain as { mail?: string }).mail ??
+    plain.email ??
+    "";
+  return { ...plain, mail } as FranchiseeResponse;
+}
+
+function mapGroupedRow(row: unknown): FranchiseeGroupedItem {
+  const r = row as Record<string, unknown>;
+  const feRaw = r.franchisee as Record<string, unknown>;
+  const franchisee = normalizeFranchiseeResponse(feRaw);
+  const franchisesRaw = (r.franchises ?? []) as unknown[];
+  const franchises: FranchiseWithAgreements[] = franchisesRaw.map((f) => {
+    const plain = toPlain(f as object) as Record<string, unknown>;
+    const agreements = (plain.agreements as unknown[] | undefined)?.map((a) =>
+      toPlain(a as object),
+    ) as AgreementRecord[];
+    const { agreements: _a, ...rest } = plain;
+    return {
+      ...(rest as unknown as FranchiseResponse),
+      agreements: agreements ?? [],
+    };
+  });
+  return { franchisee, franchises };
+}
+
+function formatDobForApi(d: Date | string): string {
+  if (d instanceof Date) {
+    return d.toISOString().slice(0, 10);
+  }
+  if (typeof d === "string" && d.length >= 10) {
+    return d.slice(0, 10);
+  }
+  return String(d);
+}
+
+/** Public franchise application (no auth). ipa-new: POST /franchisee/apply */
+export async function applyFranchisee(application: FranchiseeApplication) {
+  const fe = application.franchisee;
+  const f = application.franchise;
+  const response = await api.post("/franchisee/apply", {
+    franchisee: {
+      name: fe.name,
+      dob: formatDobForApi(fe.dob),
+      bloodGroup: fe.bloodGroup || undefined,
+      communicationAddress: fe.communicationAddress || undefined,
+      phone: fe.phone,
+      mail: fe.mail,
+      education: fe.education || undefined,
+      occupation: fe.occupation || undefined,
+      reference: fe.reference || undefined,
+    },
+    franchise: {
+      name: f.name,
+      type: f.type,
+      city: f.city,
+      state: f.state ?? "",
+      address: f.address,
+      pincode: f.pincode,
+      programIds: f.programIds ?? [],
+    },
+  });
   return response;
 }
 
-export async function createFranchiseeByAdmin(franchisee: FranchiseeApplication) {
-  const response = await api.post("/franchisee/admin/create", franchisee);
-  return response.data;
+/** Not available in ipa-new — use franchise onboarding flow in admin UI. */
+export async function createFranchiseeByAdmin(
+  _franchisee: FranchiseeApplication,
+): Promise<{
+  result: { franchise: FranchiseResponse; franchisee: FranchiseeResponse };
+}> {
+  throw new Error("createFranchiseeByAdmin is not supported in ipa-new");
 }
 
-export async function getPendingFranchise(): Promise<FranchisesResponse> {
-  const response = await api.get<FranchisesResponse>("/franchise/pending");
-  return response.data;
+/** Admin: pending applications only (used by dashboard cards). */
+export async function getPendingFranchise(
+  params?: PaginationParams,
+): Promise<FranchisesResponse> {
+  const merged: PaginationParams = {
+    page: params?.page ?? 1,
+    limit: params?.limit ?? 10_000,
+    ...params,
+    status: params?.status ?? 'Pending',
+  };
+  const response = await api.get("/admin/franchise/applications", {
+    params: compactRequestParams(
+      merged as Record<string, string | number | boolean | undefined | null>,
+    ),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows } = normalizePaginatedResult<unknown>(result);
+  const list = rows.map((row) => {
+    const fd = mapFranchiseRowToFranchiseData(row);
+    return {
+      ...fd,
+      franchisee: fd.franchisee ?? ({} as FranchiseeResponse),
+    } as FranchiseData;
+  });
+  return { result: list } as FranchisesResponse;
 }
 
-export async function getAllFranchise(): Promise<FranchisesResponse> {
-  const response = await api.get<FranchisesResponse>("/franchise/all");
-  return response.data;
+/** Admin: all franchises. */
+export async function getAllFranchise(
+  params?: PaginationParams,
+): Promise<FranchisesResponse> {
+  const merged: PaginationParams = {
+    page: params?.page ?? 1,
+    limit: params?.limit ?? 10_000,
+    ...params,
+  };
+  const response = await api.get("/admin/franchise/all", {
+    params: compactRequestParams(
+      merged as Record<string, string | number | boolean | undefined | null>,
+    ),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows } = normalizePaginatedResult<unknown>(result);
+  const list = rows.map((row) => mapFranchiseRowToFranchiseData(row));
+  return { result: list } as FranchisesResponse;
+}
+
+/** Server-side pagination + filters via ipa-new `ListQueryDto`. */
+export async function getFranchiseApplicationDetail(
+  franchiseId: string,
+): Promise<FranchiseApplicationDetail> {
+  const response = await api.get(`/admin/franchise/${franchiseId}`);
+  const raw = unwrapData<FranchiseApplicationDetail>(response);
+  const agreements = Array.isArray(raw.agreements) ? raw.agreements : [];
+  const firstAgreement = agreements[0];
+  const franchiseProgram = (raw.franchise as FranchiseResponse | undefined)?.program;
+  const selectedProgramId =
+    firstAgreement?.programId ??
+    franchiseProgram?.id ??
+    (raw.franchise as FranchiseResponse | undefined)?.programId ??
+    raw.programRequests?.[0]?.programId;
+  const selectedProgramName =
+    firstAgreement?.programName ??
+    firstAgreement?.program?.name ??
+    firstAgreement?.programs?.[0]?.name ??
+    franchiseProgram?.name ??
+    raw.programRequests?.[0]?.program?.name ??
+    (selectedProgramId != null ? `Program #${selectedProgramId}` : undefined);
+
+  return {
+    ...raw,
+    agreements,
+    selectedProgram:
+      selectedProgramId != null
+        ? {
+            id: selectedProgramId,
+            name: selectedProgramName ?? `Program #${selectedProgramId}`,
+          }
+        : null,
+  };
+}
+
+/** Assigned inventory lines (starting kit) per program. ipa-new: GET /admin/franchise/:id/starting-kits */
+export interface FranchiseStartingKitRow {
+  id: number;
+  programId: number;
+  programName: string;
+  inventoryId: number;
+  itemName: string;
+  sku: string | null;
+  quantity: number;
+  status: string;
+  assignedAt: string;
+  dispatchedAt: string | null;
+}
+
+export async function getFranchiseStartingKits(
+  franchiseId: string,
+): Promise<FranchiseStartingKitRow[]> {
+  const response = await api.get(
+    `/admin/franchise/${franchiseId}/starting-kits`,
+  );
+  const data = unwrapData<unknown>(response);
+  return Array.isArray(data) ? (data as FranchiseStartingKitRow[]) : [];
+}
+
+/** Admin: franchisees with nested franchises and agreements (ipa-new). */
+export async function getPaginatedFranchiseesGrouped(
+  params: PaginationParams,
+): Promise<PaginatedFranchiseeGroupedResponse> {
+  const response = await api.get("/admin/franchise/by-franchisee", {
+    params: compactRequestParams({
+      page: params.page,
+      limit: params.limit,
+      search: params.search,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+    } as Record<string, string | number | boolean | undefined | null>),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows: raw, total, page, limit } =
+    normalizePaginatedResult<unknown>(result);
+  const data = raw.map((row) => mapGroupedRow(row));
+  const lim = limit || 20;
+  const totalPages = Math.ceil(total / lim) || 1;
+  const pageNum = page || 1;
+  return {
+    data,
+    meta: {
+      total,
+      page: pageNum,
+      limit: lim,
+      totalPages,
+      hasNextPage: pageNum < totalPages,
+      hasPreviousPage: pageNum > 1,
+    },
+  };
 }
 
 export async function getPaginatedFranchises(
-  status: string,
-  params: PaginationParams
+  params: PaginationParams,
 ): Promise<PaginatedFranchisesResponse> {
-  const queryParams = new URLSearchParams();
-
-  if (params.page) queryParams.append("page", params.page.toString());
-  if (params.limit) queryParams.append("limit", params.limit.toString());
-  if (params.search) queryParams.append("search", params.search);
-  if (params.status) queryParams.append("status", params.status);
-  if (params.type) queryParams.append("type", params.type);
-  if (params.program) queryParams.append("program", params.program);
-  if (params.sortBy) queryParams.append("sortBy", params.sortBy);
-  if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
-
-  const response = await api.get<{ result: PaginatedFranchisesResponse }>(
-    `/franchise/paginated/${status}?${queryParams.toString()}`
-  );
-  return response.data.result;
+  const status =
+    params.status != null &&
+    params.status !== "" &&
+    params.status !== "all"
+      ? params.status
+      : undefined;
+  const response = await api.get("/admin/franchise/all", {
+    params: compactRequestParams({
+      page: params.page,
+      limit: params.limit,
+      search: params.search,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+      status,
+      type: params.type,
+      program: params.program,
+    } as Record<string, string | number | boolean | undefined | null>),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows: raw, total, page, limit } = normalizePaginatedResult<unknown>(result);
+  const data = raw.map((row) => mapFranchiseRowToFranchiseData(row));
+  const lim = limit || 20;
+  const totalPages = Math.ceil(total / lim) || 1;
+  const pageNum = page || 1;
+  return {
+    data,
+    meta: {
+      total,
+      page: pageNum,
+      limit: lim,
+      totalPages,
+      hasNextPage: pageNum < totalPages,
+      hasPreviousPage: pageNum > 1,
+    },
+  };
 }
 
+export async function getPaginatedFranchiseApplications(
+  params: PaginationParams,
+): Promise<PaginatedFranchisesResponse> {
+  const status =
+    params.status != null &&
+    params.status !== '' &&
+    params.status !== 'all'
+      ? params.status
+      : undefined;
+  const response = await api.get("/admin/franchise/applications", {
+    params: compactRequestParams({
+      page: params.page,
+      limit: params.limit,
+      search: params.search,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+      status,
+      type: params.type,
+      program: params.program,
+    } as Record<string, string | number | boolean | undefined | null>),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows: raw, total, page, limit } =
+    normalizePaginatedResult<unknown>(result);
+  const data = raw.map((row) => mapFranchiseRowToFranchiseData(row));
+  const lim = limit || 20;
+  const totalPages = Math.ceil(total / lim) || 1;
+  const pageNum = page || 1;
+  return {
+    data,
+    meta: {
+      total,
+      page: pageNum,
+      limit: lim,
+      totalPages,
+      hasNextPage: pageNum < totalPages,
+      hasPreviousPage: pageNum > 1,
+    },
+  };
+}
+
+/** Set payroll terms — ipa-new: one POST per program in the payload. */
 export async function createPayrollDetails(
   id: string,
-  payrollDetails: CreatePayrollRequest
+  payrollDetails: CreatePayrollRequest,
 ) {
-  const response = await api.post(`/franchise/payroll/${id}`, payrollDetails);
-  if (response.status === 201) {
-    return response.data;
-  } else {
-    throw new Error(response.data.message);
+  const row =
+    payrollDetails.programPayroll ?? payrollDetails.programPayrolls?.[0];
+  if (!row?.programId) {
+    throw new Error("A single selected program is required");
   }
+  const response = await api.post(`/admin/franchise/${id}/set-terms`, {
+    programId: row.programId,
+    franchiseFee: row.franchiseFee,
+    monthlyFee: row.monthlyFee,
+    royalty: row.royalty,
+    materialCost: row.materialCost,
+    kitCost: row.kitCost,
+    ciShare: row.ciShare,
+    franchiseShare: row.franchiseShare,
+    gstFranchiseFee: row.gstFranchiseFee ?? false,
+    gstRoyalty: row.gstRoyalty ?? false,
+    gstMaterialCost: row.gstMaterialCost ?? false,
+    installment: Boolean(row.installment),
+    installmentMonths: Math.max(1, Math.floor(Number(row.installmentMonths) || 0)),
+    downPaymentAmount: Number(row.downPaymentAmount) || 0,
+    tenure: Math.max(1, Math.floor(Number(row.tenure) || 12)),
+  });
+  return unwrapData(response);
 }
 
 export async function updatePayrollDetails(
-  id: number,
-  payrollDetails: Partial<ProgramPayrollRequest>
+  _id: number,
+  _payrollDetails: Partial<ProgramPayrollRequest>,
 ) {
-  const response = await api.put(`/franchise/payroll/${id}`, payrollDetails);
-  if (response.status === 200) {
-    return response.data;
-  } else {
-    throw new Error(response.data.message);
-  }
+  throw new Error("updatePayrollDetails is not supported in ipa-new — use set-terms");
 }
 
-export async function onboardingPayment(franchiseId: string) {
-  const response = await api.post(`/franchisee/onboarding/${franchiseId}`);
-  if (response.status === 201) {
-    return response.data;
-  } else {
-    throw new Error(response.data.message);
-  }
-}
-
-export interface UpdateFranchiseStatusDto {
-  status: "Approved" | "Rejected" | "Pending";
+export async function onboardingPayment(_franchiseId: string) {
+  throw new Error("onboardingPayment is not supported in ipa-new");
 }
 
 export async function updateFranchiseStatus(
-  franchiseId: string,
-  dto: UpdateFranchiseStatusDto
+  _franchiseId: string,
+  _dto: { status: "Approved" | "Rejected" | "Pending" },
 ) {
-  const response = await api.patch(`/franchise/status/${franchiseId}`, dto);
-  if (response.status === 200) {
-    return response.data;
-  } else {
-    throw new Error(response.data.message);
-  }
+  throw new Error("Use approveFranchiseAdmin or rejectFranchiseAdmin");
+}
+
+export async function approveFranchiseAdmin(
+  franchiseId: string,
+  programId?: number,
+) {
+  const response = await api.post(`/admin/franchise/${franchiseId}/approve`, {
+    programId,
+  });
+  return unwrapData(response);
 }
 
 export async function rejectFranchise(franchiseId: string) {
-  return updateFranchiseStatus(franchiseId, { status: "Rejected" });
+  const response = await api.post(`/admin/franchise/${franchiseId}/reject`);
+  return unwrapData(response);
 }
 
-export interface InitiateFranchiseFeePaymentDto {
-  franchiseId: string;
+export interface VerifyPaymentDto {
+  paymentId: string;
+  orderId: string;
+  signature: string;
 }
 
 export interface PaymentOrderResponse {
@@ -265,33 +630,75 @@ export interface PaymentOrderResponse {
   isZeroAmount?: boolean;
 }
 
-export interface VerifyPaymentDto {
-  paymentId: string;
-  orderId: string;
-  signature: string;
-}
-
 export interface PaymentVerificationResponse {
-  message: string;
+  ok?: boolean;
+  message?: string;
   status?: string;
 }
 
 export async function initiateFranchiseFeePayment(
-  franchiseId: string
+  _franchiseId: string,
+  _amount: number,
 ): Promise<PaymentOrderResponse> {
-  const response = await api.post<{ result: PaymentOrderResponse }>(
-    "/payment/franchise-fee/initiate",
-    { franchiseId }
+  throw new Error(
+    "Direct franchise fee payment is not available. Please sign the agreement and use the agreement payment flow.",
   );
-  return response.data.result;
+}
+
+/** Amount and payment type come from the agreement row; SPA sends only agreementId. */
+export async function initiateAgreementFeePayment(
+  agreementId: number,
+): Promise<PaymentOrderResponse> {
+  const response = await api.post(`/billing/payment/initiate-agreement`, {
+    agreementId,
+  });
+  const raw = unwrapData(response) as Record<string, unknown>;
+  const key =
+    String(raw.keyId ?? raw.razorpayKeyId ?? "").trim() ||
+    process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+    "";
+  return {
+    orderId: String(raw.razorpayOrderId ?? raw.orderId ?? ""),
+    amount: Number(raw.amount ?? 0),
+    currency: "INR",
+    franchiseId: String(raw.franchiseId ?? ""),
+    franchiseName: String(raw.franchiseName ?? ""),
+    paymentType: String(raw.paymentType ?? raw.type ?? "FRANCHISE_FEE"),
+    key,
+    isZeroAmount: Boolean(raw.isZeroAmount),
+  };
+}
+
+export async function initiateReceivableItemPayment(
+  agreementId: number,
+): Promise<PaymentOrderResponse> {
+  const response = await api.post(`/billing/payment/initiate-receivable-item`, {
+    agreementId,
+  });
+  const raw = unwrapData(response) as Record<string, unknown>;
+  const key =
+    String(raw.keyId ?? raw.razorpayKeyId ?? "").trim() ||
+    process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+    "";
+  return {
+    orderId: String(raw.razorpayOrderId ?? raw.orderId ?? ""),
+    amount: Number(raw.amount ?? 0),
+    currency: "INR",
+    franchiseId: String(raw.franchiseId ?? ""),
+    franchiseName: String(raw.franchiseName ?? ""),
+    paymentType: String(raw.paymentType ?? raw.type ?? "FRANCHISE_FEE"),
+    key,
+    isZeroAmount: Boolean(raw.isZeroAmount),
+  };
 }
 
 export async function verifyFranchiseFeePayment(
-  paymentData: VerifyPaymentDto
+  paymentData: VerifyPaymentDto,
 ): Promise<PaymentVerificationResponse> {
-  const response = await api.post<{ result: PaymentVerificationResponse }>(
-    "/payment/franchise-fee/verify",
-    paymentData
-  );
-  return response.data.result;
+  const response = await api.post(`/billing/payment/verify`, {
+    razorpayOrderId: paymentData.orderId,
+    razorpayPaymentId: paymentData.paymentId,
+    signature: paymentData.signature,
+  });
+  return unwrapData<PaymentVerificationResponse>(response);
 }

@@ -1,4 +1,10 @@
-
+import { api } from "@/lib/axios";
+import { getApiBaseUrl } from "@/lib/api-utils";
+import {
+  compactRequestParams,
+  normalizePaginatedResult,
+  unwrapData,
+} from "@/lib/unwrap-api";
 
 export interface Response {
   statusCode: number;
@@ -10,21 +16,48 @@ export interface Response {
 
 export enum OrderStatus {
   PENDING = "Pending",
+  PROCESSING = "Processing",
   VERIFIED = "Verified",
-  SHIPPING = "Shipping",
+  SHIPPED = "Shipped",
+  SHIPPING = "Shipped",
   DELIVERED = "Delivered",
   CANCELLED = "Cancelled",
+  READY_TO_SHIP = "Ready to ship",
+  BACKORDERED = "Backordered",
+  ALLOCATED = "Allocated",
 }
+
+export type OrderAllocationStatus =
+  | "PENDING_ALLOCATION"
+  | "ALLOCATED"
+  | "BACKORDERED"
+  | "RELEASED";
+
+export type OrderFulfillmentStatus =
+  | "PENDING_ALLOCATION"
+  | "BACKORDERED"
+  | "READY_TO_SHIP"
+  | "PENDING"
+  | "VERIFIED"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "CANCELLED";
 
 export interface OrderItemData {
   id: number;
   quantity: number;
   unitPrice: string;
   totalPrice: string;
+  reservedQty?: number;
+  backorderedQty?: number;
+  fulfilledQty?: number;
+  studentId?: number | null;
+  instructorId?: number | null;
   inventory: {
     id: number;
     name: string;
-  };
+    sku?: string | null;
+  } | null;
 }
 
 export interface PaymentDetails {
@@ -42,34 +75,49 @@ export interface PaymentDetails {
   tax: number | null;
 }
 
+export interface ShipmentSummary {
+  id: number;
+  status: string;
+  trackingNumber?: string | null;
+  carrier?: string | null;
+  dcPdfPath?: string | null;
+}
+
 export interface OrderData {
   id: number;
   totalItems?: number;
   totalStudents?: number;
   totalInstructors?: number;
   totalAmount: string | number;
-  status: OrderStatus;
+  status: OrderStatus | string;
+  adminStatus?: string;
+  franchiseeStatus?: string;
+  paymentStatus?: string;
+  allocationStatus?: OrderAllocationStatus | string;
+  fulfillmentStatus?: OrderFulfillmentStatus | string;
   orderType: string;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
-  // Extended fields (may not be present in list view)
   orderNumber?: string;
   referenceId?: string;
-  franchiseId?: string | number; // Support both string (new format) and number (legacy)
+  franchiseId?: string | number;
+  franchiseeId?: number;
   createdBy?: number;
   city?: string;
   phone?: string;
   updatedBy?: number;
+  readyToShipAt?: string | null;
+  backorderedAt?: string | null;
   franchise?: {
-    id: string | number; // Support both string (new format) and number (legacy)
+    id: string | number;
     name: string;
+    city?: string;
   };
-  // Detailed view: order items grouped by student/instructor
   orderItems?: Record<string, OrderItemData[]>;
-  // DC PDF path for shipping orders
+  lineItems?: OrderItemData[];
   dcPdfPath?: string | null;
-  // Payment details
+  shipment?: ShipmentSummary | null;
   paymentDetails?: PaymentDetails | null;
 }
 
@@ -79,8 +127,25 @@ export interface CreateOrderDto {
 }
 
 export interface UpdateOrderDto {
-  status?: OrderStatus;
+  status?: OrderStatus | string;
   notes?: string;
+}
+
+export interface InvoiceLine {
+  code: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface InvoicePreview {
+  franchiseId: string;
+  programId: number;
+  levelId: number;
+  isFirstLevel: boolean;
+  lines: InvoiceLine[];
+  totalAmount: number;
 }
 
 export interface InvoiceItem {
@@ -102,51 +167,6 @@ export interface InvoiceItem {
   }>;
 }
 
-export interface InvoiceResponse extends Response {
-  result: InvoiceItem[];
-}
-
-export interface OrdersResponse extends Response {
-  result: OrderData[];
-}
-
-export interface SingleOrderResponse extends Response {
-  result: OrderData;
-}
-
-import { api } from "@/lib/axios";
-import { getApiBaseUrl } from "@/lib/api-utils";
-
-export async function createOrder(
-  orderData: CreateOrderDto
-): Promise<OrderData> {
-  const response = await api.post<SingleOrderResponse>("/orders", orderData);
-  return response.data.result;
-}
-
-export async function getFranchiseeOrders(): Promise<OrderData[]> {
-  const response = await api.get<OrdersResponse>("/orders/franchise");
-  return response.data.result;
-}
-
-export async function getOrderById(orderId: number): Promise<OrderData> {
-  const response = await api.get<SingleOrderResponse>(
-    `/orders/franchise/${orderId}`
-  );
-  return response.data.result;
-}
-
-export async function updateFranchiseeOrder(
-  orderId: number,
-  updateData: UpdateOrderDto
-): Promise<OrderData> {
-  const response = await api.patch<SingleOrderResponse>(
-    `/orders/franchise/${orderId}`,
-    updateData
-  );
-  return response.data.result;
-}
-
 export interface GroupedOrdersResponse extends Response {
   result: {
     data: Record<string, OrderData[]>;
@@ -161,82 +181,26 @@ export interface GroupedOrdersResponse extends Response {
   };
 }
 
-export async function getAllOrdersAdmin(params?: {
+export interface FranchiseeOrderListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: string;
+  status?: string;
+  orderType?: string;
+  paymentStatus?: string;
+}
+
+export interface AdminOrderListParams {
   page?: number;
   limit?: number;
   search?: string;
   status?: string;
-  minAmount?: number;
-  maxAmount?: number;
-  sortBy?: string;
-  sortOrder?: string;
-}): Promise<GroupedOrdersResponse["result"]> {
-  const response = await api.get<GroupedOrdersResponse>("/orders/admin", {
-    params,
-  });
-  return response.data.result;
+  phase?: "orders" | "shipping";
+  franchiseId?: string;
 }
 
-export async function getOrdersByFranchise(): Promise<any> {
-  const response = await api.get("/orders/admin/by-franchise");
-  return response.data.result;
-}
-
-export async function getOrderByIdAdmin(orderId: number): Promise<OrderData> {
-  const response = await api.get<SingleOrderResponse>(
-    `/orders/admin/${orderId}`
-  );
-  return response.data.result;
-}
-
-export function getDcPdfUrl(dcPdfPath: string): string {
-  if (!dcPdfPath) return "";
-  // dcPdfPath is stored as "delivery-challans/filename.pdf"
-  // Backend serves static files at /uploads/ prefix
-  const baseUrl = api.defaults.baseURL || getApiBaseUrl();
-  return `${baseUrl}/uploads/${dcPdfPath}`;
-}
-
-export async function regenerateDcPdf(orderId: number): Promise<OrderData> {
-  const response = await api.post<SingleOrderResponse>(
-    `/orders/admin/${orderId}/regenerate-dc`,
-    {}
-  );
-  return response.data.result;
-}
-
-export async function updateOrderAdmin(
-  orderId: number,
-  updateData: UpdateOrderDto
-): Promise<OrderData> {
-  const response = await api.patch<SingleOrderResponse>(
-    `/orders/admin/${orderId}`,
-    updateData
-  );
-  return response.data.result;
-}
-
-export async function verifyOrderAdmin(
-  orderId: number,
-  status: string = "verify"
-): Promise<OrderData> {
-  const response = await api.patch<SingleOrderResponse>(
-    `/orders/admin/${orderId}/${status}`
-  );
-  return response.data.result;
-}
-
-// Get invoice details
-export async function getInvoiceDetails(
-  studentIds: number[]
-): Promise<InvoiceItem[]> {
-  const response = await api.post<InvoiceResponse>("/orders/invoice", {
-    studentIds,
-  });
-  return response.data.result;
-}
-
-// Payment related interfaces and functions
 export interface InitiateOrderPaymentDto {
   studentIds: number[];
   notes?: string;
@@ -244,61 +208,34 @@ export interface InitiateOrderPaymentDto {
 
 export interface OrderPaymentResponse {
   orderId: string;
+  businessOrderId: number;
+  paymentRecordId?: number;
   amount: number;
   currency: string;
-  franchiseId: number;
+  franchiseId: string | number;
   franchiseName: string;
   paymentType: string;
   key: string;
   studentIds: number[];
-  customItems?: CustomOrderItem[];
   notes?: string;
   isZeroAmount?: boolean;
 }
 
 export interface VerifyOrderPaymentDto {
-  paymentId: string;
-  orderId: string;
-  signature: string;
+  paymentId?: string;
+  orderId?: string;
+  signature?: string;
+  razorpayPaymentId?: string;
+  razorpayOrderId?: string;
+  razorpaySignature?: string;
 }
 
 export interface VerifyOrderPaymentResponse {
   message: string;
   status: string;
-  order: OrderData;
+  order?: OrderData;
 }
 
-export interface OrderPaymentInitResponse extends Response {
-  result: OrderPaymentResponse;
-}
-
-export interface OrderPaymentVerifyResponse extends Response {
-  result: VerifyOrderPaymentResponse;
-}
-
-// Initiate order payment
-export async function initiateOrderPayment(
-  paymentData: InitiateOrderPaymentDto
-): Promise<OrderPaymentResponse> {
-  const response = await api.post<OrderPaymentInitResponse>(
-    "/orders/payment/initiate",
-    paymentData
-  );
-  return response.data.result;
-}
-
-// Verify order payment
-export async function verifyOrderPayment(
-  verifyData: VerifyOrderPaymentDto
-): Promise<VerifyOrderPaymentResponse> {
-  const response = await api.post<OrderPaymentVerifyResponse>(
-    "/orders/payment/verify",
-    verifyData
-  );
-  return response.data.result;
-}
-
-// Custom order interfaces and functions
 export interface CustomOrderItem {
   studentId: number;
   inventoryId: number;
@@ -339,10 +276,6 @@ export interface StudentAvailableItems {
   allItems?: AvailableItem[];
 }
 
-export interface AvailableItemsResponse extends Response {
-  result: StudentAvailableItems[];
-}
-
 export interface StudentOrderHistory {
   studentId: number;
   studentName: string;
@@ -352,50 +285,423 @@ export interface StudentOrderHistory {
   orderCount: number;
   orders: Array<{
     orderId: number;
-    orderStatus: OrderStatus;
+    orderStatus: OrderStatus | string;
     orderDate: string;
     inventoryId: number;
     inventoryName: string;
   }>;
 }
 
-export interface StudentOrderHistoryResponse extends Response {
-  result: StudentOrderHistory;
+type RawOrderLine = {
+  id: number;
+  quantity: number;
+  unitPrice: number | string;
+  totalPrice: number | string;
+  reservedQty?: number;
+  backorderedQty?: number;
+  fulfilledQty?: number;
+  studentId?: number | null;
+  instructorId?: number | null;
+  inventory?: {
+    id: number;
+    name: string;
+    sku?: string | null;
+  } | null;
+};
+
+function toCurrencyString(value: number | string | null | undefined): string {
+  return Number(value ?? 0).toFixed(2);
 }
 
-// Initiate custom order payment
-export async function initiateCustomOrderPayment(
-  orderData: CreateCustomOrderDto
+function normalizeOrderLine(raw: any): OrderItemData {
+  return {
+    id: Number(raw?.id ?? 0),
+    quantity: Number(raw?.quantity ?? 0),
+    unitPrice: toCurrencyString(raw?.unitPrice),
+    totalPrice: toCurrencyString(raw?.totalPrice),
+    reservedQty: Number(raw?.reservedQty ?? 0),
+    backorderedQty: Number(raw?.backorderedQty ?? 0),
+    fulfilledQty: Number(raw?.fulfilledQty ?? 0),
+    studentId: raw?.studentId ?? null,
+    instructorId: raw?.instructorId ?? null,
+    inventory: raw?.inventory
+      ? {
+          id: Number(raw.inventory.id ?? 0),
+          name: String(raw.inventory.name ?? ""),
+          sku: raw.inventory.sku ?? null,
+        }
+      : null,
+  };
+}
+
+function groupOrderItems(lines: OrderItemData[]): Record<string, OrderItemData[]> {
+  return lines.reduce(
+    (acc, line) => {
+      const key = line.studentId
+        ? `Student ${line.studentId}`
+        : line.instructorId
+          ? `CI:${line.instructorId}`
+          : "Order items";
+      acc[key] = acc[key] ?? [];
+      acc[key].push(line);
+      return acc;
+    },
+    {} as Record<string, OrderItemData[]>,
+  );
+}
+
+function normalizeOrder(row: any): OrderData {
+  const lineItems = Array.isArray(row?.orderItems)
+    ? (row.orderItems as RawOrderLine[]).map(normalizeOrderLine)
+    : [];
+  const groupedItems = groupOrderItems(lineItems);
+  const status =
+    row?.status ??
+    row?.franchiseeStatus ??
+    row?.adminStatus ??
+    OrderStatus.PENDING;
+
+  return {
+    id: Number(row?.id ?? 0),
+    totalItems: Number(row?.totalItems ?? lineItems.length),
+    totalStudents: Number(row?.totalStudents ?? 0),
+    totalInstructors: Number(row?.totalInstructors ?? 0),
+    totalAmount: toCurrencyString(row?.totalAmount),
+    status,
+    adminStatus: row?.adminStatus ?? undefined,
+    franchiseeStatus: row?.franchiseeStatus ?? undefined,
+    paymentStatus: row?.paymentStatus ?? undefined,
+    allocationStatus: row?.allocationStatus ?? undefined,
+    fulfillmentStatus: row?.fulfillmentStatus ?? undefined,
+    orderType: String(row?.orderType ?? ""),
+    notes: row?.notes ?? null,
+    createdAt: String(row?.createdAt ?? new Date().toISOString()),
+    updatedAt: String(row?.updatedAt ?? row?.createdAt ?? new Date().toISOString()),
+    referenceId: row?.referenceId ?? undefined,
+    franchiseId: row?.franchiseId ?? undefined,
+    franchiseeId: row?.franchiseeId ?? undefined,
+    createdBy: row?.createdBy ?? undefined,
+    updatedBy: row?.updatedBy ?? undefined,
+    readyToShipAt: row?.readyToShipAt ?? null,
+    backorderedAt: row?.backorderedAt ?? null,
+    franchise: row?.franchise
+      ? {
+          id: row.franchise.id ?? row.franchiseId ?? "",
+          name: String(row.franchise.name ?? ""),
+          city: row.franchise.city ?? undefined,
+        }
+      : undefined,
+    orderItems: groupedItems,
+    lineItems,
+    dcPdfPath: row?.dcPdfPath ?? row?.shipment?.dcPdfPath ?? null,
+    shipment: row?.shipment
+      ? {
+          id: Number(row.shipment.id ?? 0),
+          status: String(row.shipment.status ?? ""),
+          trackingNumber: row.shipment.trackingNumber ?? null,
+          carrier: row.shipment.carrier ?? null,
+          dcPdfPath: row.shipment.dcPdfPath ?? null,
+        }
+      : null,
+    paymentDetails: row?.paymentDetails ?? null,
+  };
+}
+
+function normalizeGroupedOrdersResult(result: any): GroupedOrdersResponse["result"] {
+  const rawData = result?.data ?? {};
+  return {
+    data: Object.fromEntries(
+      Object.entries(rawData).map(([key, value]) => [
+        key,
+        Array.isArray(value) ? value.map(normalizeOrder) : [],
+      ]),
+    ),
+    meta: {
+      total: Number(result?.meta?.total ?? 0),
+      page: Number(result?.meta?.page ?? 1),
+      limit: Number(result?.meta?.limit ?? 20),
+      totalPages: Number(result?.meta?.totalPages ?? 1),
+      hasNextPage: Boolean(result?.meta?.hasNextPage ?? false),
+      hasPreviousPage: Boolean(result?.meta?.hasPreviousPage ?? false),
+    },
+  };
+}
+
+export async function createOrderFromPayload(
+  payload: CreateOrderDto,
+): Promise<OrderData> {
+  const response = await api.post("/order", payload);
+  return normalizeOrder(unwrapData(response));
+}
+
+export async function createOrder(orderData: CreateOrderDto): Promise<OrderData> {
+  return createOrderFromPayload(orderData);
+}
+
+export async function getFranchiseeOrders(
+  params?: FranchiseeOrderListParams,
+): Promise<OrderData[]> {
+  const merged: FranchiseeOrderListParams = {
+    page: params?.page ?? 1,
+    limit: params?.limit ?? 10_000,
+    ...params,
+  };
+  const response = await api.get("/order", {
+    params: compactRequestParams(
+      merged as Record<string, string | number | boolean | undefined | null>,
+    ),
+  });
+  const result = unwrapData<unknown>(response);
+  const normalized = normalizePaginatedResult<any>(result);
+  return Array.isArray(normalized.rows) ? normalized.rows.map(normalizeOrder) : [];
+}
+
+export async function getOrderById(orderId: number): Promise<OrderData> {
+  const response = await api.get(`/order/${orderId}`);
+  return normalizeOrder(unwrapData(response));
+}
+
+export async function updateFranchiseeOrder(
+  _orderId: number,
+  _updateData: UpdateOrderDto,
+): Promise<OrderData> {
+  throw new Error("updateFranchiseeOrder not supported in ipa-new");
+}
+
+export async function getAllOrdersAdmin(
+  params?: AdminOrderListParams,
+): Promise<GroupedOrdersResponse["result"]> {
+  const response = await api.get("/admin/order/by-franchise", {
+    params: compactRequestParams(
+      params as Record<string, string | number | boolean | undefined | null>,
+    ),
+  });
+  return normalizeGroupedOrdersResult(unwrapData(response));
+}
+
+export async function getAdminOrdersFlat(params?: AdminOrderListParams) {
+  const response = await api.get("/admin/order", {
+    params: compactRequestParams(
+      params as Record<string, string | number | boolean | undefined | null>,
+    ),
+  });
+  const result = unwrapData<unknown>(response);
+  const normalized = normalizePaginatedResult<any>(result);
+  return {
+    rows: normalized.rows.map(normalizeOrder),
+    total: normalized.total,
+    page: normalized.page,
+    limit: normalized.limit,
+    totalPages: Math.max(1, Math.ceil(normalized.total / (normalized.limit || 20))),
+  };
+}
+
+export async function getOrdersByFranchise(): Promise<Record<string, OrderData[]>> {
+  return (await getAllOrdersAdmin()).data;
+}
+
+export async function getOrderByIdAdmin(orderId: number): Promise<OrderData> {
+  const response = await api.get(`/admin/order/${orderId}`);
+  return normalizeOrder(unwrapData(response));
+}
+
+export async function markOrderPaidAdmin(orderId: number): Promise<OrderData> {
+  await api.post(`/admin/order/${orderId}/pay`);
+  return getOrderByIdAdmin(orderId);
+}
+
+export async function cancelOrderAdmin(orderId: number): Promise<OrderData> {
+  await api.post(`/admin/order/${orderId}/cancel`);
+  return getOrderByIdAdmin(orderId);
+}
+
+export function getDcPdfUrl(dcPdfPath: string): string {
+  if (!dcPdfPath) return "";
+  const baseUrl = api.defaults.baseURL || getApiBaseUrl();
+  return `${baseUrl}/uploads/${dcPdfPath}`;
+}
+
+export async function regenerateDcPdf(orderId: number): Promise<OrderData> {
+  return getOrderByIdAdmin(orderId);
+}
+
+export async function updateOrderAdmin(
+  _orderId: number,
+  _updateData: UpdateOrderDto,
+): Promise<OrderData> {
+  throw new Error("updateOrderAdmin not supported in ipa-new");
+}
+
+export async function verifyOrderAdmin(
+  orderId: number,
+  action: "verify" | "ship" | "deliver" | "cancel" = "verify",
+): Promise<OrderData> {
+  const path =
+    action === "verify"
+      ? `/admin/fulfillment/order/${orderId}/verify`
+      : action === "ship"
+        ? `/admin/fulfillment/order/${orderId}/ship`
+        : action === "deliver"
+          ? `/admin/fulfillment/order/${orderId}/deliver`
+          : `/admin/fulfillment/order/${orderId}/cancel`;
+  await api.post(path);
+  return getOrderByIdAdmin(orderId);
+}
+
+export async function previewOrderInvoice(
+  studentIds: number[],
+): Promise<InvoicePreview> {
+  const response = await api.post("/order/preview-invoice", { studentIds });
+  const data = unwrapData<any>(response);
+  return {
+    franchiseId: String(data?.franchiseId ?? ""),
+    programId: Number(data?.programId ?? 0),
+    levelId: Number(data?.levelId ?? 0),
+    isFirstLevel: Boolean(data?.isFirstLevel ?? false),
+    totalAmount: Number(data?.totalAmount ?? 0),
+    lines: Array.isArray(data?.lines)
+      ? data.lines.map((line: any) => ({
+          code: String(line?.code ?? ""),
+          description: String(line?.description ?? ""),
+          quantity: Number(line?.quantity ?? 0),
+          unitPrice: Number(line?.unitPrice ?? 0),
+          totalPrice: Number(line?.totalPrice ?? 0),
+        }))
+      : [],
+  };
+}
+
+export async function getInvoiceDetails(
+  studentIds: number[],
+): Promise<InvoiceItem[]> {
+  const preview = await previewOrderInvoice(studentIds);
+  return preview.lines.map((line, index) => ({
+    studentId: studentIds[index] ?? studentIds[0] ?? 0,
+    studentName: line.description,
+    rollNo: "",
+    levelId: preview.levelId,
+    levelName: "",
+    programId: preview.programId,
+    isFirstLevel: preview.isFirstLevel,
+    materialCost: line.code === "PROGRAM_FEES" ? line.totalPrice : 0,
+    kitCost: line.code === "KIT" ? line.totalPrice : 0,
+    royalty: 0,
+    durationInMonths: 0,
+    totalPrice: line.totalPrice,
+    inventoryItems: [],
+  }));
+}
+
+export async function initiateOrderPayment(
+  paymentData: InitiateOrderPaymentDto,
 ): Promise<OrderPaymentResponse> {
-  const response = await api.post<OrderPaymentInitResponse>(
-    "/orders/custom/payment/initiate",
-    orderData
-  );
-  return response.data.result;
+  const createdOrder = await createOrder({
+    studentIds: paymentData.studentIds,
+    notes: paymentData.notes,
+  });
+  const amount = Number(createdOrder.totalAmount ?? 0);
+
+  if ((createdOrder.paymentStatus ?? "").toUpperCase() === "FREE" || amount <= 0) {
+    return {
+      orderId: "",
+      businessOrderId: createdOrder.id,
+      amount: 0,
+      currency: "INR",
+      franchiseId: createdOrder.franchiseId ?? "",
+      franchiseName: createdOrder.franchise?.name ?? "",
+      paymentType: "ORDER_PAYMENT",
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
+      studentIds: paymentData.studentIds,
+      notes: paymentData.notes,
+      isZeroAmount: true,
+    };
+  }
+
+  const response = await api.post("/billing/payment/initiate", {
+    type: "ORDER_PAYMENT",
+    amount,
+    franchiseId: createdOrder.franchiseId,
+    orderId: createdOrder.id,
+    acquirerData: paymentData.notes ? { notes: paymentData.notes } : undefined,
+  });
+  const billing = unwrapData<{
+    razorpayOrderId: string;
+    paymentId: number;
+    amount: number;
+    keyId?: string;
+  }>(response);
+
+  return {
+    orderId: billing.razorpayOrderId,
+    businessOrderId: createdOrder.id,
+    paymentRecordId: Number(billing.paymentId ?? 0),
+    amount: Number(billing.amount ?? amount),
+    currency: "INR",
+    franchiseId: createdOrder.franchiseId ?? "",
+    franchiseName: createdOrder.franchise?.name ?? "",
+    paymentType: "ORDER_PAYMENT",
+    key:
+      billing.keyId ||
+      process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+      process.env.NEXT_PUBLIC_RAZORPAY_KEY ||
+      "",
+    studentIds: paymentData.studentIds,
+    notes: paymentData.notes,
+    isZeroAmount: false,
+  };
 }
 
-// Get available items for custom order
+export async function verifyOrderPayment(
+  verifyData: VerifyOrderPaymentDto,
+): Promise<VerifyOrderPaymentResponse> {
+  const razorpayOrderId = verifyData.razorpayOrderId ?? verifyData.orderId ?? "";
+  const razorpayPaymentId =
+    verifyData.razorpayPaymentId ?? verifyData.paymentId ?? "";
+  const signature = verifyData.razorpaySignature ?? verifyData.signature ?? "";
+
+  const response = await api.post("/billing/payment/verify", {
+    razorpayOrderId,
+    razorpayPaymentId,
+    signature,
+  });
+  const data = unwrapData<{ ok?: boolean }>(response);
+  return {
+    message: data?.ok ? "ok" : "verified",
+    status: "success",
+  };
+}
+
+export async function abandonOrderPayment(input: {
+  paymentId?: number;
+  razorpayOrderId?: string;
+  note?: string;
+}) {
+  const response = await api.post("/billing/payment/abandon", {
+    paymentId: input.paymentId,
+    razorpayOrderId: input.razorpayOrderId,
+    note: input.note,
+  });
+  return unwrapData(response);
+}
+
+export async function initiateCustomOrderPayment(
+  _orderData: CreateCustomOrderDto,
+): Promise<OrderPaymentResponse> {
+  throw new Error("Custom orders are disabled in this cutover");
+}
+
 export async function getAvailableItems(
-  studentIds: number[]
+  _studentIds: number[],
 ): Promise<StudentAvailableItems[]> {
-  const response = await api.post<AvailableItemsResponse>(
-    "/orders/available-items",
-    { studentIds }
-  );
-  return response.data.result;
+  return [];
 }
 
-// Get student order history for their level
 export async function getStudentOrderHistory(
-  studentId: number
+  _studentId: number,
 ): Promise<StudentOrderHistory> {
-  const response = await api.get<StudentOrderHistoryResponse>(
-    `/orders/student-order-history/${studentId}`
-  );
-  return response.data.result;
+  throw new Error("Student order history not available in ipa-new");
 }
 
-// CI Materials Order interfaces and functions
 export interface CIMaterialsPreview {
   ciId: number;
   ciName: string;
@@ -416,24 +722,59 @@ export interface CIMaterialsPreview {
   totalAmount: number;
 }
 
-export interface CIMaterialsPreviewResponse extends Response {
-  result: CIMaterialsPreview;
-}
-
 export async function getCIMaterialsPreview(
-  ciId: number
+  _ciId: number,
 ): Promise<CIMaterialsPreview> {
-  const response = await api.get<CIMaterialsPreviewResponse>(
-    `/orders/ci-materials/preview/${ciId}`
-  );
-  return response.data.result;
+  throw new Error("CI materials preview not available in ipa-new");
 }
 
-export async function createCIMaterialsOrder(
-  ciId: number
-): Promise<OrderData> {
-  const response = await api.post<SingleOrderResponse>(
-    `/orders/ci-materials/${ciId}`
-  );
-  return response.data.result;
+export async function createCIMaterialsOrder(_ciId: number): Promise<OrderData> {
+  throw new Error("CI materials order not available in ipa-new");
+}
+
+export async function previewCIOrderInvoice(
+  instructorIds: number[],
+): Promise<InvoicePreview> {
+  const response = await api.post("/order/ci/preview-invoice", { instructorIds });
+  const data = unwrapData<any>(response);
+  return {
+    franchiseId: String(data?.franchiseId ?? ""),
+    programId: 0,
+    levelId: 0,
+    isFirstLevel: false,
+    totalAmount: Number(data?.totalAmount ?? 0),
+    lines: Array.isArray(data?.lines)
+      ? data.lines.map((line: any) => ({
+          code: String(line?.code ?? ""),
+          description: String(line?.description ?? ""),
+          quantity: Number(line?.quantity ?? 0),
+          unitPrice: Number(line?.unitPrice ?? 0),
+          totalPrice: Number(line?.totalPrice ?? 0),
+        }))
+      : [],
+  };
+}
+
+export async function initiateCIOrderPayment(data: {
+  instructorIds: number[];
+  notes?: string;
+}): Promise<OrderPaymentResponse> {
+  const response = await api.post("/order/ci", {
+    instructorIds: data.instructorIds,
+    notes: data.notes,
+  });
+  const created = normalizeOrder(unwrapData(response));
+  return {
+    orderId: "",
+    businessOrderId: created.id,
+    amount: 0,
+    currency: "INR",
+    franchiseId: created.franchiseId ?? "",
+    franchiseName: created.franchise?.name ?? "",
+    paymentType: "ORDER_PAYMENT",
+    key: "",
+    studentIds: [],
+    notes: data.notes,
+    isZeroAmount: true,
+  };
 }

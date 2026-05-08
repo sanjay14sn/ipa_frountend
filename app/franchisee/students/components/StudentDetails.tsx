@@ -1,169 +1,118 @@
-import { useEffect, useState, useRef } from "react";
-import { StudentData } from "@/services/student.service";
-import ParentSection, { parentDotRef } from "./ParentSection";
-import AcademicSection, { academicDotRef } from "./AcademicSection";
-import ContactSection, { contactDotRef } from "./ContactSection";
+"use client";
+
+import { Separator } from "@/components/ui/separator";
+import {
+  DetailField,
+  DetailFieldsGrid,
+  ExpandedDetailSection,
+  ExpandedDetailSurface,
+} from "@/components/shared";
+import type { StudentData } from "@/services/student.service";
+import { getStudentLevelName } from "../utils/student-helpers";
 
 interface StudentDetailsProps {
   student: StudentData;
-  expandedRows: Set<string>;
-  onToggleRow: (id: string) => void;
-  lastRow: boolean;
-  onStudentUpdate?: (updatedStudent: StudentData) => void;
 }
 
-export default function StudentDetails({
-  student,
-  lastRow,
-  expandedRows,
-  onToggleRow,
-  onStudentUpdate,
-}: StudentDetailsProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [lineHeight, setLineHeight] = useState(0);
+function formatDate(value: Date | string | undefined): string {
+  if (!value) return "N/A";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "N/A" : date.toLocaleDateString();
+}
 
-  // Helper function to calculate age
-  const calculateAge = (dateOfBirth: Date): number => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
+function calculateAge(value: Date | string | undefined): string {
+  if (!value) return "N/A";
+  const birthDate = new Date(value);
+  if (Number.isNaN(birthDate.getTime())) return "N/A";
 
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (
+    monthDiff < 0 ||
+    (monthDiff === 0 && today.getDate() < birthDate.getDate())
+  ) {
+    age -= 1;
+  }
+  return `${age} years`;
+}
 
-    return age;
-  };
-
-  useEffect(() => {
-    const calculateLineHeight = () => {
-      if (containerRef.current) {
-        const containerTop = containerRef.current.getBoundingClientRect().top;
-
-        // Always use contact section dot as reference for the vertical line
-        if (contactDotRef.current) {
-          const dotCenter =
-            contactDotRef.current.getBoundingClientRect().top +
-            contactDotRef.current.offsetHeight / 2;
-          setLineHeight(dotCenter - containerTop);
-        } else {
-          // Fallback if contact section is not rendered yet
-          const firstSection = containerRef.current.querySelector(".relative");
-          if (firstSection) {
-            const sectionTop = firstSection.getBoundingClientRect().top;
-            setLineHeight(sectionTop - containerTop + 20);
-          }
-        }
-      }
-    };
-
-    // Add a small delay to ensure DOM has updated after expansion/collapse
-    const timeoutId = setTimeout(calculateLineHeight, 10);
-
-    return () => clearTimeout(timeoutId);
-  }, [student, expandedRows]);
-
+export default function StudentDetails({ student }: StudentDetailsProps) {
   return (
-    <div
-      className={`bg-gray-50 border-t border-black/20 ${
-        lastRow ? "rounded-b-lg" : "border-b border-black/20"
-      }`}
-    >
-      <div className="relative">
-        {/* Vertical connecting line from main row */}
-        <div
-          className="absolute left-6 border-primary border bg-primary"
-          style={{ top: 0, height: `${lineHeight - 6}px` }}
-        ></div>
+    <ExpandedDetailSurface>
+      <ExpandedDetailSection title="Student information">
+        <DetailFieldsGrid columns={4}>
+          <DetailField label="Roll number" value={student.rollNo || "N/A"} />
+          <DetailField label="Age" value={calculateAge(student.dateOfBirth)} />
+          <DetailField label="Date of birth" value={formatDate(student.dateOfBirth)} />
+          <DetailField label="Gender" value={student.sex || "N/A"} />
+          <DetailField label="Status" value={student.isActive ? "Active" : "Inactive"} />
+          <DetailField label="ID status" value={student.idIssued || "N/A"} />
+          <DetailField label="Joined" value={formatDate(student.dateOfJoining ?? student.createdAt)} />
+          <DetailField label="Student ID" value={student.id} />
+        </DetailFieldsGrid>
+      </ExpandedDetailSection>
 
-        <div className="pl-12 pr-6 py-6 space-y-6" ref={containerRef}>
-          {/* Student Details */}
-          <div className="relative">
-            {/* Curved horizontal connecting line with dot */}
-            <div className="absolute -left-6 top-4 w-6 h-4">
-              <div className="absolute top-0 left-0 w-6 h-4 border-l-2 border-b-2 border-primary rounded-bl-lg"></div>
-              <div className="absolute top-4 left-6 w-2 h-2 bg-primary rounded-full -translate-x-1 -translate-y-1"></div>
-            </div>
-            <div className="bg-white rounded-lg p-4 space-y-4 border border-primary">
-              <h3 className="font-semibold text-lg text-gray-900">
-                {student.name}
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-500">Roll Number</span>
-                  <p className="text-gray-900 mt-1">{student.rollNo}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Age</span>
-                  <p className="text-gray-900 mt-1">
-                    {calculateAge(student.dateOfBirth)} years
-                  </p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Gender</span>
-                  <p className="text-gray-900 mt-1">{student.sex}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Standard</span>
-                  <p className="text-gray-900 mt-1">{student.standard}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Level</span>
-                  <p className="text-gray-900 mt-1">
-                    {typeof student.level === 'object' && student.level !== null && 'name' in student.level 
-                      ? student.level.name 
-                      : typeof student.level === 'string' 
-                      ? student.level 
-                      : 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Stream</span>
-                  <p className="text-gray-900 mt-1">{student.stream}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Status</span>
-                  <p className="text-gray-900 mt-1">
-                    {student.isActive ? "Active" : "Inactive"}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-gray-500">ID Status</span>
-                  <p className="text-gray-900 mt-1">{student.idIssued}</p>
-                </div>
-              </div>
-            </div>
-          </div>
+      <Separator />
 
-          {/* Parent Section */}
-          <ParentSection
-            student={student}
-            studentId={student.id.toString()}
-            isExpanded={expandedRows.has(`${student.id}-parents`)}
-            onToggle={onToggleRow}
+      <ExpandedDetailSection title="Academic information">
+        <DetailFieldsGrid columns={4}>
+          <DetailField label="Program" value={student.programId || "N/A"} />
+          <DetailField label="Level" value={getStudentLevelName(student)} />
+          <DetailField label="Standard" value={student.standard || "N/A"} />
+          <DetailField label="Stream" value={student.stream || "N/A"} />
+        </DetailFieldsGrid>
+      </ExpandedDetailSection>
+
+      <Separator />
+
+      <ExpandedDetailSection title="Parent information">
+        <DetailFieldsGrid columns={3}>
+          <DetailField label="Father" value={student.fatherName || "N/A"} />
+          <DetailField
+            label="Father contact"
+            value={student.fatherContactNo || "N/A"}
           />
-
-          {/* Academic Section */}
-          <AcademicSection
-            student={student}
-            studentId={student.id.toString()}
-            isExpanded={expandedRows.has(`${student.id}-academic`)}
-            onToggle={onToggleRow}
+          <DetailField
+            label="Father occupation"
+            value={student.fatherOccupation || "N/A"}
           />
-
-          {/* Contact Section */}
-          <ContactSection
-            student={student}
-            studentId={student.id.toString()}
-            isExpanded={expandedRows.has(`${student.id}-contact`)}
-            onToggle={onToggleRow}
+          <DetailField label="Mother" value={student.motherName || "N/A"} />
+          <DetailField
+            label="Mother contact"
+            value={student.motherContactNo || "N/A"}
           />
-        </div>
-      </div>
-    </div>
+          <DetailField
+            label="Mother occupation"
+            value={student.motherOccupation || "N/A"}
+          />
+          <DetailField
+            label="Father qualification"
+            value={student.fatherQualification || "N/A"}
+          />
+          <DetailField
+            label="Mother qualification"
+            value={student.motherQualification || "N/A"}
+          />
+        </DetailFieldsGrid>
+      </ExpandedDetailSection>
+
+      <Separator />
+
+      <ExpandedDetailSection title="Contact information">
+        <DetailFieldsGrid columns={3}>
+          <DetailField label="Email" value={student.mail || "N/A"} />
+          <DetailField
+            label="Primary phone"
+            value={student.fatherContactNo || student.motherContactNo || "N/A"}
+          />
+          <DetailField
+            label="Residential address"
+            value={student.residentialAddress || "N/A"}
+            span={3}
+          />
+        </DetailFieldsGrid>
+      </ExpandedDetailSection>
+    </ExpandedDetailSurface>
   );
 }

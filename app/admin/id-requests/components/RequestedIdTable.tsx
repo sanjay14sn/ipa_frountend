@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-import { AdminTable } from "@/components/shared";
+import { DataTable } from "@/components/shared";
 import type {
-  AdminTableColumn,
-  AdminTableFilter,
-  AdminTableSortOption,
-} from "@/components/shared/AdminTable";
+  DataTableColumn,
+  DataTableFilter,
+  DataTableSortOption,
+} from "@/components/shared";
 import {
   RequestedIdDetail,
   getPaginatedRequestedIdDetails,
@@ -24,11 +24,14 @@ interface FranchiseIdGroup {
 interface RequestedIdTableProps {
   onIssueId: (student: RequestedIdDetail) => void;
   refreshTrigger: number;
+  /** When set, only rows for this franchise id are shown (client-side filter). */
+  scopedFranchiseId?: string;
 }
 
 export default function RequestedIdTable({
   onIssueId,
   refreshTrigger,
+  scopedFranchiseId,
 }: RequestedIdTableProps) {
   const [expandedChildren, setExpandedChildren] = useState<Set<string>>(
     new Set()
@@ -83,9 +86,20 @@ export default function RequestedIdTable({
           }
         );
 
-        setFranchiseGroups(groups);
-        setTotal(result.meta.total);
-        setTotalPages(result.meta.totalPages);
+        const scoped = scopedFranchiseId?.trim();
+        const filteredGroups = scoped
+          ? groups.filter((g) => g.franchiseId === scoped)
+          : groups;
+
+        setFranchiseGroups(filteredGroups);
+        if (scoped) {
+          const n = filteredGroups.reduce((a, g) => a + g.students.length, 0);
+          setTotal(n);
+          setTotalPages(Math.max(1, Math.ceil(n / limit)));
+        } else {
+          setTotal(result.meta.total);
+          setTotalPages(result.meta.totalPages);
+        }
       } catch (error) {
         console.error("Error fetching ID details:", error);
       } finally {
@@ -101,6 +115,7 @@ export default function RequestedIdTable({
     sortBy,
     sortOrder,
     refreshTrigger,
+    scopedFranchiseId,
   ]);
 
   const toggleRow = (id: string) => {
@@ -123,7 +138,7 @@ export default function RequestedIdTable({
   };
 
   // Table configuration
-  const columns: AdminTableColumn<FranchiseIdGroup>[] = [
+  const columns: DataTableColumn<FranchiseIdGroup>[] = [
     {
       key: "franchise",
       header: "Franchise",
@@ -154,7 +169,7 @@ export default function RequestedIdTable({
     },
   ];
 
-  const filters: AdminTableFilter[] = [
+  const filters: DataTableFilter[] = [
     {
       key: "status",
       label: "Status",
@@ -166,13 +181,13 @@ export default function RequestedIdTable({
     },
   ];
 
-  const sortOptions: AdminTableSortOption[] = [
+  const sortOptions: DataTableSortOption[] = [
     { value: "name", label: "Name" },
     { value: "createdAt", label: "Date" },
   ];
 
   return (
-    <AdminTable
+    <DataTable
       data={franchiseGroups}
       loading={loading}
       columns={columns}

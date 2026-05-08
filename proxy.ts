@@ -1,52 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_URL ||
-    process.env.API_URL ||
-    "http://localhost:5000";
-}
-
-export async function proxy(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-
-  if (pathname.startsWith("/franchisee")) {
-    try {
-      const apiBase = getApiBaseUrl();
-      const apiUrl = `${apiBase}/franchisee/isActive`;
-      const apiRes = await fetch(apiUrl, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          cookie: req.headers.get("cookie") ?? "",
-        },
-        cache: "no-store",
-      });
-
-      if (!apiRes.ok) {
-        return NextResponse.redirect(new URL("/login", req.url));
-      }
-
-      const data = await apiRes.json();
-
-      if (data.result === "Approved") {
-        // force user to /franchisee/agreement
-        if (pathname !== "/franchisee/agreement") {
-          return NextResponse.redirect(
-            new URL("/franchisee/agreement", req.url)
-          );
-        }
-      } else if (data.result === "Active") {
-        return NextResponse.next();
-      } else {
-        return NextResponse.redirect(new URL("/login", req.url));
-      }
-    } catch (err) {
-      console.error("Middleware error:", err);
-      return NextResponse.redirect(new URL("/login", req.url));
-    }
-  }
-
+/**
+ * ipa-new has no `/franchisee/isActive`. Franchise-gating is handled client-side.
+ * API auth uses httpOnly cookies from ipa-new; with `enableCors({ credentials: true })`
+ * the browser sends them on cross-origin XHR when `NEXT_PUBLIC_API_URL` points at the API.
+ */
+export async function proxy(_req: NextRequest) {
   return NextResponse.next();
 }
 

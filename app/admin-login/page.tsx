@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { login, getAdminProfile } from "@/services/auth.service";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUser } from "@/context/user-context";
-import { login } from "@/services/auth.service";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 export default function AdminLoginPage() {
@@ -33,35 +33,30 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-      const response = await login(email.trim(), password.trim());
-      const data = response.result;
-
-      if (response.statusCode !== 201) {
-        setError(response.message || "Login failed");
-        setLoading(false);
-        return;
-      }
-
-      if (data.role !== "admin") {
+      await login(email.trim(), password.trim());
+      const me = await getAdminProfile();
+      if (me.role !== "super" && me.role !== "staff") {
         setError("Access denied. Admin credentials required.");
         setLoading(false);
         return;
       }
 
       const loggedInUser = {
-        id: String(data.userId),
-        email,
-        name: email,
+        id: String(me.id),
+        email: me.emailId?.trim() || email.trim(),
+        name: me.name || email.trim(),
         role: "admin" as const,
+        adminRole: me.role,
+        state: me.state ?? null,
       };
 
       setUser(loggedInUser);
       router.push("/admin/dashboard");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Admin login error:", err);
       const errorMessage = getUserFriendlyMessage(
         err,
-        "Invalid username or password. Please check your credentials and try again."
+        "Invalid username or password. Please check your credentials and try again.",
       );
       setError(errorMessage);
     } finally {
@@ -70,8 +65,8 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-      <Card className="w-full max-w-md border-border bg-card">
+    <div className="flex min-h-screen items-center justify-center bg-surface p-6">
+      <Card className="w-full max-w-md rounded-2xl border-border bg-card shadow-sm">
         <CardHeader className="space-y-2">
           <CardTitle className="text-2xl text-primary">Admin Sign in</CardTitle>
           <CardDescription>Access the administrative dashboard</CardDescription>
@@ -122,18 +117,14 @@ export default function AdminLoginPage() {
               </div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full bg-brand-green-500 hover:bg-brand-green-600 text-white"
-              disabled={loading}
-            >
+            <Button type="submit" className="w-full rounded-lg" disabled={loading}>
               {loading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
 
-          <div className="mt-6 p-4 bg-brand-white-100 rounded-lg border border-border">
-            <div className="text-xs text-muted-foreground text-center">
-              <Link href="/" className="text-brand-green-600 underline">
+          <div className="mt-6 rounded-xl border border-border bg-card p-4">
+            <div className="text-center text-xs text-muted-foreground">
+              <Link href="/" className="text-primary underline">
                 ← Back to Franchisee Portal
               </Link>
             </div>

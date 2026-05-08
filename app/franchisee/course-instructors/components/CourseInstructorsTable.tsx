@@ -1,20 +1,42 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Mail, Phone } from "lucide-react";
-import { AdminTable } from "@/components/shared";
+import { Edit, Trash2, BarChart2 } from "lucide-react";
+import { DataTable } from "@/components/shared";
 import type {
-  AdminTableColumn,
-  AdminTableFilter,
-  AdminTableSortOption,
-} from "@/components/shared/AdminTable";
+  DataTableColumn,
+  DataTableFilter,
+  DataTableSortOption,
+} from "@/components/shared";
 import {
   CourseInstructorData,
-  BloodGroup,
+  getCITrainingProgress,
 } from "@/services/course-instructor.service";
 import CourseInstructorDetails from "./CourseInstructorDetails";
+import { TrainingProgressModal } from "./TrainingProgressModal";
+
+function CILevelBadge({ instructorId }: { instructorId: number }) {
+  const { data: progress } = useQuery({
+    queryKey: ["ci-training-progress", instructorId],
+    queryFn: () => getCITrainingProgress(instructorId),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const highestCompleted = progress?.trainings
+    ?.filter((t) => t.isCompleted)
+    .sort((a, b) => (b.displayOrder ?? 0) - (a.displayOrder ?? 0))[0];
+
+  if (!highestCompleted) return null;
+
+  return (
+    <Badge variant="default" className="mt-1 text-xs">
+      {highestCompleted.trainingLevelName}
+    </Badge>
+  );
+}
 
 interface CourseInstructorsTableProps {
   courseInstructors?: CourseInstructorData[];
@@ -31,9 +53,6 @@ export default function CourseInstructorsTable({
   onCourseInstructorDelete,
   onCourseInstructorEdit,
 }: CourseInstructorsTableProps) {
-  const [expandedChildren, setExpandedChildren] = useState<Set<string>>(
-    new Set()
-  );
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [bloodGroupFilter, setBloodGroupFilter] = useState<string>("all");
@@ -43,51 +62,37 @@ export default function CourseInstructorsTable({
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
+  const [progressModal, setProgressModal] = useState<{ id: number; name: string } | null>(null);
   const itemsPerPage = 10;
 
-  // Filter and sort data
   const filteredData = useMemo(() => {
-    if (!courseInstructors) {
-      return [];
-    }
+    if (!courseInstructors) return [];
 
-    let filtered = courseInstructors.filter((courseInstructor) => {
+    let filtered = courseInstructors.filter((ci) => {
       const matchesSearch =
-        courseInstructor.name
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        courseInstructor.instructorId
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        courseInstructor.phone
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        courseInstructor.mail
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        courseInstructor.education
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase());
+        ci.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ci.instructorId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ci.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ci.mail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ci.education.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus =
         statusFilter === "all" ||
-        (statusFilter === "active" && courseInstructor.status === "Active") ||
-        (statusFilter === "training" && courseInstructor.status === "Training") ||
-        (statusFilter === "inactive" && courseInstructor.status !== "Active" && courseInstructor.status !== "Training");
+        (statusFilter === "active" && ci.status === "Active") ||
+        (statusFilter === "training" && ci.status === "Training") ||
+        (statusFilter === "inactive" &&
+          ci.status !== "Active" &&
+          ci.status !== "Training");
 
       const matchesBloodGroup =
-        bloodGroupFilter === "all" ||
-        courseInstructor.bloodGroup === bloodGroupFilter;
-      const matchesCity =
-        cityFilter === "all" || courseInstructor.city === cityFilter;
+        bloodGroupFilter === "all" || ci.bloodGroup === bloodGroupFilter;
+      const matchesCity = cityFilter === "all" || ci.city === cityFilter;
 
       return matchesSearch && matchesStatus && matchesBloodGroup && matchesCity;
     });
 
-    // Sort the filtered data
     filtered.sort((a, b) => {
       let comparison = 0;
-
       switch (sortBy) {
         case "name":
           comparison = a.name.localeCompare(b.name);
@@ -99,25 +104,13 @@ export default function CourseInstructorsTable({
         case "city":
           comparison = a.city.localeCompare(b.city);
           break;
-        default:
-          comparison = 0;
       }
-
       return sortOrder === "asc" ? comparison : -comparison;
     });
 
     return filtered;
-  }, [
-    courseInstructors,
-    searchTerm,
-    statusFilter,
-    bloodGroupFilter,
-    cityFilter,
-    sortBy,
-    sortOrder,
-  ]);
+  }, [courseInstructors, searchTerm, statusFilter, bloodGroupFilter, cityFilter, sortBy, sortOrder]);
 
-  // Paginate data
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredData.slice(startIndex, startIndex + itemsPerPage);
@@ -125,46 +118,12 @@ export default function CourseInstructorsTable({
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
-  const toggleRow = (id: string) => {
-    if (id.includes("-")) {
-      const newExpandedChildren = new Set(expandedChildren);
-      if (newExpandedChildren.has(id)) {
-        newExpandedChildren.delete(id);
-      } else {
-        newExpandedChildren.add(id);
-      }
-      setExpandedChildren(newExpandedChildren);
-    }
-  };
-
-  const getBloodGroupColor = (bloodGroup: BloodGroup) => {
-    return "bg-red-100 text-red-800 border-red-200";
-  };
-
   const getStatusColor = (status: string) => {
-    return status === "Active"
-      ? "bg-primary/10 text-primary border-primary/20"
-      : "bg-gray-50 text-gray-600 border-gray-200";
+    if (status === "Active") return "bg-primary/10 text-primary border-primary/20";
+    if (status === "Training") return "bg-amber-50 text-amber-700 border-amber-200";
+    return "bg-muted text-muted-foreground border-border";
   };
 
-  // Helper function to calculate age
-  const calculateAge = (dateOfBirth: Date): number => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
-
-    return age;
-  };
-
-  // Get unique values for filters
   const uniqueBloodGroups = [
     ...new Set(courseInstructors?.map((ci) => ci.bloodGroup).filter(Boolean)),
   ];
@@ -172,93 +131,77 @@ export default function CourseInstructorsTable({
     ...new Set(courseInstructors?.map((ci) => ci.city).filter(Boolean)),
   ];
 
-  // Table configuration
-  const columns: AdminTableColumn<CourseInstructorData>[] = [
-    {
-      key: "courseInstructor",
-      header: "Course Instructor",
-      className: "w-[300px]",
-    },
-    {
-      key: "personalInfo",
-      header: "Personal Info",
-      className: "text-center",
-      render: (courseInstructor) => (
-        <div className="space-y-1">
-          <Badge
-            className={`${getBloodGroupColor(
-              courseInstructor.bloodGroup
-            )} border`}
-          >
-            {courseInstructor.bloodGroup}
-          </Badge>
-          <div className="text-sm text-gray-600">{courseInstructor.city}</div>
-        </div>
-      ),
-    },
+  const columns: DataTableColumn<CourseInstructorData>[] = [
     {
       key: "contact",
       header: "Contact",
-      className: "text-center",
-      render: (courseInstructor) => (
-        <div className="text-sm space-y-1">
-          <div className="flex items-center justify-center">
-            <Mail className="w-3 h-3 mr-1" />
-            <span className="truncate max-w-[120px]">
-              {courseInstructor.mail}
-            </span>
-          </div>
-          <div className="flex items-center justify-center">
-            <Phone className="w-3 h-3 mr-1" />
-            {courseInstructor.phone}
-          </div>
-        </div>
+      className: "w-[170px]",
+      render: (ci) => (
+        <span className="text-sm text-card-foreground">{ci.phone || "N/A"}</span>
       ),
     },
     {
-      key: "educationWork",
-      header: "Education & Work",
-      className: "text-center",
-      render: (courseInstructor) => (
-        <div className="text-sm space-y-1">
-          <div>
-            <strong>Education:</strong> {courseInstructor.education}
-          </div>
-          <div>
-            <strong>Occupation:</strong> {courseInstructor.occupation}
-          </div>
-        </div>
+      key: "location",
+      header: "Location",
+      className: "w-[170px]",
+      render: (ci) => (
+        <span className="text-sm text-card-foreground">{ci.city || "N/A"}</span>
       ),
+    },
+    {
+      key: "professional",
+      header: "Professional",
+      className: "w-[220px]",
+      render: (ci) => (
+        <span className="text-sm text-card-foreground">
+          {[ci.education, ci.occupation].filter(Boolean).join(" · ") || "N/A"}
+        </span>
+      ),
+    },
+    {
+      key: "eligibility",
+      header: "Eligibility",
+      className: "w-[180px]",
+      render: (ci) => <CILevelBadge instructorId={ci.id} />,
     },
     {
       key: "status",
       header: "Status",
-      className: "text-center",
-      render: (courseInstructor) => (
-        <Badge className={`${getStatusColor(courseInstructor.status)} border`}>
-          {courseInstructor.status}
+      className: "w-[120px]",
+      render: (ci) => (
+        <Badge className={`${getStatusColor(ci.status)} border`}>
+          {ci.status}
         </Badge>
       ),
     },
     {
       key: "actions",
       header: "Actions",
-      className: "text-center",
-      render: (courseInstructor) => (
-        <div className="flex items-center justify-center gap-1">
+      className: "w-[140px]",
+      render: (ci) => (
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
-            size="sm"
-            onClick={() => onCourseInstructorEdit?.(courseInstructor)}
+            size="icon"
+            className="h-8 w-8"
+            title="View training progress"
+            onClick={() => setProgressModal({ id: ci.id, name: ci.name })}
+          >
+            <BarChart2 className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onCourseInstructorEdit?.(ci)}
           >
             <Edit className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
-            size="sm"
-            onClick={() =>
-              onCourseInstructorDelete?.(courseInstructor.id.toString())
-            }
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onCourseInstructorDelete?.(ci.id.toString())}
           >
             <Trash2 className="w-4 h-4" />
           </Button>
@@ -267,7 +210,7 @@ export default function CourseInstructorsTable({
     },
   ];
 
-  const filters: AdminTableFilter[] = [
+  const filters: DataTableFilter[] = [
     {
       key: "status",
       label: "Status",
@@ -284,10 +227,7 @@ export default function CourseInstructorsTable({
       label: "Blood Group",
       options: [
         { value: "all", label: "All Blood Groups" },
-        ...uniqueBloodGroups.map((bloodGroup) => ({
-          value: bloodGroup,
-          label: bloodGroup,
-        })),
+        ...uniqueBloodGroups.map((bg) => ({ value: bg, label: bg })),
       ],
       defaultValue: "all",
     },
@@ -302,40 +242,29 @@ export default function CourseInstructorsTable({
     },
   ];
 
-  const sortOptions: AdminTableSortOption[] = [
+  const sortOptions: DataTableSortOption[] = [
     { value: "dateJoined", label: "Date Joined" },
     { value: "name", label: "Name" },
     { value: "city", label: "City" },
   ];
 
   return (
-    <AdminTable
+    <>
+    <DataTable
       data={paginatedData}
       loading={false}
       columns={columns}
-      getRowId={(courseInstructor) => courseInstructor.id.toString()}
-      renderMainCell={(courseInstructor) => (
+      getRowId={(ci) => ci.id.toString()}
+      renderMainCell={(ci) => (
         <div className="flex flex-col">
-          <div className="font-medium text-gray-900">
-            {courseInstructor.name}
-          </div>
-          <div className="text-sm text-gray-500">
-            {courseInstructor.instructorId} • Age{" "}
-            {calculateAge(courseInstructor.dob)} • {courseInstructor.bloodGroup}
-          </div>
-          <div className="text-xs text-primary font-medium">
-            {courseInstructor.city} • {courseInstructor.education}
+          <div className="font-medium text-card-foreground">{ci.name}</div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {[ci.education, ci.city].filter(Boolean).join(" · ") || "N/A"}
           </div>
         </div>
       )}
-      renderExpandedContent={(courseInstructor) => (
-        <CourseInstructorDetails
-          courseInstructor={courseInstructor}
-          lastRow={false}
-          expandedRows={expandedChildren}
-          onToggleRow={toggleRow}
-          onCourseInstructorUpdate={onCourseInstructorUpdate}
-        />
+      renderExpandedContent={(ci) => (
+        <CourseInstructorDetails courseInstructor={ci} />
       )}
       searchPlaceholder="Search course instructors, instructor IDs, or contact info..."
       onSearchChange={setSearchTerm}
@@ -361,5 +290,15 @@ export default function CourseInstructorsTable({
         `Showing ${count} of ${total} course instructors`
       }
     />
+
+    {progressModal && (
+      <TrainingProgressModal
+        isOpen={true}
+        onClose={() => setProgressModal(null)}
+        instructorId={progressModal.id}
+        instructorName={progressModal.name}
+      />
+    )}
+    </>
   );
 }

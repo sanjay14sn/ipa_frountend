@@ -1,109 +1,124 @@
-
+import { api } from "@/lib/axios";
+import {
+  compactRequestParams,
+  normalizePaginatedResult,
+  unwrapData,
+} from "@/lib/unwrap-api";
 
 export interface Program {
   id: number;
   name: string;
   createdAt?: string;
   updatedAt?: string;
-  createdBy?: number;
-  updatedBy?: number;
-}
-
-export interface ProgramsResponse {
-  statusCode: number;
-  timeStamp: string;
-  method: string;
-  path: string;
-  message: string;
-  result: Program[] | Program;
-}
-
-import { api } from "@/lib/axios";
-
-export async function getAllPrograms(): Promise<Program[]> {
-  const response = await api.get<ProgramsResponse>("/program");
-  return Array.isArray(response.data.result) ? response.data.result : [];
-}
-
-export async function createProgram(name: string): Promise<Program> {
-  const response = await api.post<ProgramsResponse>("/program", { name });
-  return response.data.result as Program;
-}
-
-export async function updateProgram(id: number, name: string): Promise<void> {
-  await api.patch(`/program/update/${id}`, { name });
-}
-
-export async function deleteProgram(id: number): Promise<void> {
-  await api.delete(`/program/delete/${id}`);
 }
 
 export interface FieldCoordinate {
-  rect: [number, number, number, number];
-  label: string;
+  xPercent?: number;
+  yPercent?: number;
+  x?: number;
+  y?: number;
+  /** PDF bounding box [x1, y1, x2, y2] from legacy template editor */
+  rect?: number[];
+  label?: string;
 }
 
 export interface CertificateTemplate {
-  id: number;
-  programId: number;
-  templatePdfPath?: string;
-  certificateTitle: string;
-  issuerName: string;
-  signatureField1Label?: string;
-  signatureField1Name?: string;
-  signatureField2Label?: string;
-  signatureField2Name?: string;
-  additionalText?: string;
+  id?: number;
+  programId?: number;
   fieldCoordinates?: Record<string, FieldCoordinate> | null;
-  isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  templateImagePath?: string;
+  [key: string]: unknown;
 }
 
-export interface CertificateTemplateResponse {
-  statusCode: number;
-  timeStamp: string;
-  method: string;
-  path: string;
-  message: string;
-  result: CertificateTemplate | null;
+export async function getAllPrograms(): Promise<Program[]> {
+  const response = await api.get("/catalog/program");
+  const data = unwrapData<Program[]>(response);
+  return Array.isArray(data) ? data : [];
+}
+
+function programNamePayload(nameOrData: string | { name: string }): {
+  name: string;
+} {
+  const name =
+    typeof nameOrData === "string" ? nameOrData : nameOrData.name;
+  return { name };
+}
+
+export async function createProgram(
+  nameOrData: string | { name: string },
+): Promise<Program> {
+  const response = await api.post("/catalog/program", programNamePayload(nameOrData));
+  return unwrapData<Program>(response);
+}
+
+export async function updateProgram(
+  id: number,
+  nameOrData: string | { name: string },
+): Promise<Program> {
+  const response = await api.patch(
+    `/catalog/program/update/${id}`,
+    programNamePayload(nameOrData),
+  );
+  return unwrapData<Program>(response);
+}
+
+export async function deleteProgram(id: number): Promise<void> {
+  await api.delete(`/catalog/program/delete/${id}`);
 }
 
 export async function getCertificateTemplate(
-  programId: number
-): Promise<CertificateTemplate | null> {
-  const response = await api.get<CertificateTemplateResponse>(
-    `/certificate/template/${programId}`
-  );
-  return response.data.result;
+  programId?: number,
+  listParams?: { page?: number; limit?: number; search?: string },
+): Promise<CertificateTemplate> {
+  const response = await api.get("/admin/certification/template", {
+    params: compactRequestParams({
+      programId,
+      page: listParams?.page ?? 1,
+      limit: listParams?.limit ?? (programId != null ? 100 : 500),
+      search: listParams?.search,
+    } as Record<string, string | number | boolean | undefined | null>),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows } = normalizePaginatedResult<CertificateTemplate>(result);
+  if (programId != null) {
+    const row = rows.find((t) => Number(t.programId) === programId);
+    return row ?? rows[0] ?? { fieldCoordinates: {} };
+  }
+  return rows[0] ?? { fieldCoordinates: {} };
 }
 
 export async function updateCertificateTemplate(
   programId: number,
-  templateData: Omit<CertificateTemplate, "id" | "programId" | "createdAt" | "updatedAt">
-): Promise<CertificateTemplate> {
-  const response = await api.post<CertificateTemplateResponse>(
-    `/certificate/template/${programId}`,
-    templateData
-  );
-  return response.data.result as CertificateTemplate;
+  data: Record<string, unknown> & { id?: number },
+): Promise<void> {
+  const { id, ...payload } = data;
+  if (id != null) {
+    await api.patch(`/admin/certification/template/${id}`, payload);
+  } else {
+    await api.post("/admin/certification/template", {
+      ...payload,
+      programId,
+      templatePdfPath: payload.templatePdfPath ?? "",
+    });
+  }
 }
 
 export async function uploadCertificateTemplate(
   programId: number,
-  file: File
-): Promise<CertificateTemplate> {
-  const formData = new FormData();
-  formData.append("file", file);
-  
-  const response = await api.post<CertificateTemplateResponse>(
-    `/certificate/template/${programId}/upload`,
-    formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    }
-  );
-  return response.data.result as CertificateTemplate;
+  file: File,
+  data?: {
+    certificateTitle?: string;
+    issuerName?: string;
+    fieldCoordinates?: Record<string, unknown>;
+    additionalText?: string;
+    isActive?: boolean;
+  },
+): Promise<void> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("programId", String(programId));
+  if (data) form.append("data", JSON.stringify(data));
+  await api.post("/admin/certification/template/upload", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 }

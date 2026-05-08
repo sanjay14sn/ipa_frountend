@@ -1,0 +1,162 @@
+"use client";
+
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+
+interface ExpandedDetailSurfaceProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export function ExpandedDetailSurface({
+  children,
+  className,
+}: ExpandedDetailSurfaceProps) {
+  return <div className={cn("bg-accent/30", className)}>{children}</div>;
+}
+
+interface ExpandedDetailSectionProps {
+  title: ReactNode;
+  children: ReactNode;
+  className?: string;
+  description?: ReactNode;
+  actions?: ReactNode;
+}
+
+export function ExpandedDetailSection({
+  title,
+  children,
+  className,
+  description,
+  actions,
+}: ExpandedDetailSectionProps) {
+  return (
+    <section className={cn("p-3 md:p-4", className)}>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
+            {title}
+          </h3>
+          {description ? (
+            <p className="text-sm text-muted-foreground">{description}</p>
+          ) : null}
+        </div>
+        {actions ? <div className="shrink-0">{actions}</div> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+interface DetailFieldsGridProps {
+  children: ReactNode;
+  className?: string;
+  columns?: 2 | 3 | 4;
+}
+
+const fieldGridCols: Record<NonNullable<DetailFieldsGridProps["columns"]>, string> =
+  {
+    2: "sm:grid-cols-2",
+    3: "sm:grid-cols-2 lg:grid-cols-3",
+    4: "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+  };
+
+export function DetailFieldsGrid({
+  children,
+  className,
+  columns = 3,
+}: DetailFieldsGridProps) {
+  return (
+    <dl
+      className={cn(
+        "grid grid-cols-1 gap-x-5 gap-y-2 text-sm text-foreground",
+        fieldGridCols[columns],
+        className,
+      )}
+    >
+      {children}
+    </dl>
+  );
+}
+
+interface DetailFieldProps {
+  label: ReactNode;
+  value: ReactNode;
+  className?: string;
+  span?: 1 | 2 | 3 | 4;
+}
+
+const fieldSpanClasses: Record<NonNullable<DetailFieldProps["span"]>, string> = {
+  1: "",
+  2: "sm:col-span-2",
+  3: "sm:col-span-2 lg:col-span-3",
+  4: "sm:col-span-2 lg:col-span-3 xl:col-span-4",
+};
+
+export function DetailField({
+  label,
+  value,
+  className,
+  span = 1,
+}: DetailFieldProps) {
+  return (
+    <div className={cn("min-w-0", fieldSpanClasses[span], className)}>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 break-words font-medium text-foreground">
+        {value ?? "—"}
+      </dd>
+    </div>
+  );
+}
+
+interface DetailCardProps {
+  children: ReactNode;
+  className?: string;
+  title?: ReactNode;
+  meta?: ReactNode;
+}
+
+export function DetailCard({
+  children,
+  className,
+  title,
+  meta,
+}: DetailCardProps) {
+  return (
+    <div className={cn("rounded-lg border bg-card p-3 shadow-sm", className)}>
+      {title || meta ? (
+        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
+          <div className="font-medium text-card-foreground">{title}</div>
+          {meta ? (
+            <div className="text-xs text-muted-foreground">{meta}</div>
+          ) : null}
+        </div>
+      ) : null}
+      {children}
+    </div>
+  );
+}
+
+interface DetailMessageProps {
+  children: ReactNode;
+  className?: string;
+  tone?: "default" | "destructive";
+}
+
+export function DetailMessage({
+  children,
+  className,
+  tone = "default",
+}: DetailMessageProps) {
+  return (
+    <p
+      className={cn(
+        "text-sm",
+        tone === "destructive" ? "text-destructive" : "text-muted-foreground",
+        className,
+      )}
+    >
+      {children}
+    </p>
+  );
+}

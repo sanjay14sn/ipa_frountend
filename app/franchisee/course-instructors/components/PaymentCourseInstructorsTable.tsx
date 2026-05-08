@@ -4,12 +4,12 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, Award, Target, Phone, MapPin } from "lucide-react";
-import { AdminTable } from "@/components/shared";
+import { DataTable } from "@/components/shared";
 import type {
-  AdminTableColumn,
-  AdminTableFilter,
-  AdminTableSortOption,
-} from "@/components/shared/AdminTable";
+  DataTableColumn,
+  DataTableFilter,
+  DataTableSortOption,
+} from "@/components/shared";
 import { CourseInstructorData } from "@/services/course-instructor.service";
 import {
   initiateCITrainingPayment,
@@ -25,18 +25,25 @@ import { toast } from "sonner";
 import { MultiLevelTrainingPaymentModal } from "./MultiLevelTrainingPaymentModal";
 import { GraduationHistoryModal } from "./GraduationHistoryModal";
 import { TrainingProgressModal } from "./TrainingProgressModal";
+import { abandonOrderPayment } from "@/services/order.service";
 
 interface PaymentCourseInstructorsTableProps {
   courseInstructors?: CourseInstructorData[];
   onCourseInstructorUpdate?: (
     updatedCourseInstructor: CourseInstructorData
   ) => void;
+  onCourseInstructorDelete?: (courseInstructorId: string) => void;
+  onCourseInstructorEdit?: (courseInstructor: CourseInstructorData) => void;
 }
 
 export default function PaymentCourseInstructorsTable({
   courseInstructors,
   onCourseInstructorUpdate,
+  onCourseInstructorDelete: _onCourseInstructorDelete,
+  onCourseInstructorEdit: _onCourseInstructorEdit,
 }: PaymentCourseInstructorsTableProps) {
+  void _onCourseInstructorDelete;
+  void _onCourseInstructorEdit;
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"name" | "dateJoined" | "city">(
@@ -193,25 +200,12 @@ export default function PaymentCourseInstructorsTable({
     console.error("Payment failed:", error);
     toast.error(error.error || "Payment failed. Please try again.");
 
-    // Send cancellation to backend if order was created
-    if (paymentData?.orderData.orderId) {
-      try {
-        await verifyCITrainingPayment({
-          paymentId: "",
-          orderId: paymentData.orderData.orderId,
-          signature: "",
-        });
-      } catch (err) {
-        console.error("Error updating payment status:", err);
-      }
-    }
-
     setPaymentData(null);
     setProcessingPayment(null);
     setIsProcessingPayment(false);
   };
 
-  const columns: AdminTableColumn<CourseInstructorData>[] = [
+  const columns: DataTableColumn<CourseInstructorData>[] = [
     {
       key: "name",
       header: "Instructor Details",
@@ -304,6 +298,7 @@ export default function PaymentCourseInstructorsTable({
             }}
             className="h-9 px-3"
             title="View Graduation History"
+            aria-label={`View graduation history for ${row.name}`}
           >
             <Award className="h-4 w-4" />
           </Button>
@@ -312,7 +307,7 @@ export default function PaymentCourseInstructorsTable({
     },
   ];
 
-  const filters: AdminTableFilter[] = [
+  const filters: DataTableFilter[] = [
     {
       key: "status",
       label: "Status",
@@ -324,7 +319,7 @@ export default function PaymentCourseInstructorsTable({
     },
   ];
 
-  const sortOptions: AdminTableSortOption[] = [
+  const sortOptions: DataTableSortOption[] = [
     { value: "name", label: "Name" },
     { value: "dateJoined", label: "Date Joined" },
     { value: "city", label: "City" },
@@ -332,7 +327,7 @@ export default function PaymentCourseInstructorsTable({
 
   return (
     <div className="space-y-4">
-      <AdminTable
+      <DataTable
         data={paginatedData}
         columns={columns}
         getRowId={(courseInstructor) => courseInstructor.id.toString()}
@@ -348,12 +343,12 @@ export default function PaymentCourseInstructorsTable({
                     {courseInstructor.instructorId}
                   </Badge>
                 </span>
-                <span className="text-gray-400">•</span>
+                <span className="text-gray-400">|</span>
                 <span className="text-gray-600 flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5" />
                   {courseInstructor.city}
                 </span>
-                <span className="text-gray-400">•</span>
+                <span className="text-gray-400">|</span>
                 <span className="text-gray-600 flex items-center gap-1">
                   <Phone className="h-3.5 w-3.5" />
                   {courseInstructor.phone}
@@ -401,6 +396,12 @@ export default function PaymentCourseInstructorsTable({
           razorpayKey={paymentData.orderData.key}
           onSuccess={handlePaymentSuccess}
           onFailure={handlePaymentFailure}
+          onAbandon={async ({ orderId, reason }) => {
+            await abandonOrderPayment({
+              razorpayOrderId: orderId,
+              note: reason,
+            });
+          }}
           userDetails={{
             name: user.name || "",
             email: user.profile?.mail || "",

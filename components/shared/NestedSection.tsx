@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { ReactNode, useRef } from "react";
-import { TreeConnector } from "./TreeConnector";
+import { cn } from "@/lib/utils";
 
 interface NestedSectionProps {
   id: string;
@@ -21,34 +21,35 @@ export function NestedSection({
   children,
   showConnector = true,
 }: NestedSectionProps) {
-  const dotRef = useRef<HTMLDivElement>(null);
-
   return (
-    <div className="relative">
-      {showConnector && (
-        <div ref={dotRef}>
-          <TreeConnector type="horizontal" />
-        </div>
+    <div
+      className={cn(
+        "overflow-hidden rounded-xl border border-border bg-card shadow-sm",
+        showConnector && "ml-0",
       )}
-
-      <div className="bg-white rounded-lg border border-primary overflow-hidden">
-        <div
-          className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
-          onClick={() => onToggle(id)}
-        >
-          <div className="flex items-center gap-2">
-            {isExpanded ? (
-              <ChevronDown className="w-4 h-4" />
-            ) : (
-              <ChevronRight className="w-4 h-4" />
-            )}
-            <h4 className="font-semibold text-gray-900">{title}</h4>
-          </div>
-          {badge}
+    >
+      <button
+        type="button"
+        className={cn(
+          "flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition-colors hover:bg-accent/40",
+          isExpanded && "border-b border-border bg-accent/20",
+        )}
+        onClick={() => onToggle(id)}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          {isExpanded ? (
+            <ChevronDown className="h-4 w-4 text-primary" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-primary" />
+          )}
+          <h4 className="truncate font-semibold text-card-foreground">
+            {title}
+          </h4>
         </div>
+        {badge}
+      </button>
 
-        {isExpanded && <div className="border-t">{children}</div>}
-      </div>
+      {isExpanded && <div className="bg-muted/20">{children}</div>}
     </div>
   );
 }

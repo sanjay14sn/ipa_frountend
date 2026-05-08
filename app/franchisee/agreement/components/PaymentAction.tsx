@@ -1,50 +1,68 @@
 import { Button } from "@/components/ui/button";
 import { CreditCard } from "lucide-react";
-import { onboardingPayment } from "@/services/franchisee.service";
 
 interface PaymentActionProps {
   agreementAccepted: boolean;
   isProcessingPayment: boolean;
   onPaymentSubmit: () => void;
+  /** When set, payment is blocked and this message is shown (e.g. signature / loading). */
+  signatureHint?: string | null;
+  /** Shown on agreement onboarding step 4 */
+  variant?: "default" | "final";
 }
 
 export default function PaymentAction({
   agreementAccepted,
   isProcessingPayment,
   onPaymentSubmit,
+  signatureHint,
+  variant = "default",
 }: PaymentActionProps) {
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="bg-white border-2 border-primary rounded-xl p-8 shadow-lg">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="text-center md:text-left flex-1">
-            <h4 className="text-xl font-bold text-gray-900 mb-2">
-              Complete Your Registration
+    <div className="mx-auto max-w-4xl">
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+          <div className="flex-1 text-center md:text-left">
+            <h4 className="mb-2 text-lg font-normal text-card-foreground">
+              {variant === "final"
+                ? "Activate your franchise"
+                : "Complete your registration"}
             </h4>
-            <p className="text-sm text-gray-600">
-              Finalize payment to access your franchise dashboard and begin operations.
+            <p className="text-sm text-muted-foreground">
+              {variant === "final"
+                ? "Complete your signed agreement payment to unlock your dashboard. Activation happens after the backend verifies the payment."
+                : "Finalize payment to access your franchise dashboard and begin operations."}
             </p>
             {!agreementAccepted && (
-              <p className="text-xs text-red-600 mt-2 font-medium">
-                ⚠ Please accept terms and conditions to proceed
+              <p className="mt-2 text-xs font-medium text-destructive">
+                Please accept terms and conditions to proceed
               </p>
             )}
+            {signatureHint ? (
+              <p className="mt-2 text-xs font-medium text-amber-800">
+                {signatureHint}
+              </p>
+            ) : null}
           </div>
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <Button
               onClick={onPaymentSubmit}
-              disabled={!agreementAccepted || isProcessingPayment}
+              disabled={
+                !agreementAccepted ||
+                isProcessingPayment ||
+                Boolean(signatureHint)
+              }
               size="lg"
-              className="bg-primary hover:bg-primary/90 text-white px-10 py-6 text-base font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-lg px-6 py-5 text-sm font-medium shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isProcessingPayment ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  <div className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   Processing Payment...
                 </>
               ) : (
                 <>
-                  <CreditCard className="h-5 w-5 mr-2" />
+                  <CreditCard className="mr-2 h-5 w-5" />
                   Complete Payment
                 </>
               )}

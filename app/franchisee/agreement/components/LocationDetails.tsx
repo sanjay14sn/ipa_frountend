@@ -5,34 +5,34 @@ interface LocationDetailsProps {
 export default function LocationDetails({
   franchiseData,
 }: LocationDetailsProps) {
-  console.log(franchiseData);
   return (
-    <div className="border-2 border-primary rounded-lg p-5 bg-white shadow-sm">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b-2 border-primary">
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <h3 className="mb-3 border-b border-border pb-2 text-base font-medium text-card-foreground">
         Location Details
       </h3>
       <div className="space-y-3">
         <div>
-          <span className="text-sm font-medium text-gray-600 block mb-1">
+          <span className="mb-1 block text-sm font-medium text-muted-foreground">
             Centre Address:
           </span>
-          <p className="text-sm text-gray-900">{franchiseData.address}</p>
-          <p className="text-sm">
-            {" "}
-            {franchiseData.city} -{franchiseData.pincode}, {franchiseData.state}
+          <p className="text-sm text-card-foreground">{franchiseData.address}</p>
+          <p className="text-sm text-muted-foreground">
+            {franchiseData.city} - {franchiseData.pincode}, {franchiseData.state}
           </p>
         </div>
         {franchiseData.communicationAddress && (
           <div>
-            <span className="text-sm font-medium text-gray-600 block mb-1">
+            <span className="mb-1 block text-sm font-medium text-muted-foreground">
               Communication Address:
             </span>
-            <p className="text-sm text-gray-900">
+            <p className="text-sm text-card-foreground">
               {franchiseData.communicationAddress}
             </p>
-            <p className="text-xs text-gray-600">
-              {franchiseData.communicationPincode}
-            </p>
+            {franchiseData.communicationPincode ? (
+              <p className="text-xs text-muted-foreground">
+                {franchiseData.communicationPincode}
+              </p>
+            ) : null}
           </div>
         )}
       </div>

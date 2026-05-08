@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,17 +11,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  FileText,
-  Calendar,
-  Award,
-  User,
-  Download,
-  Loader2,
-} from "lucide-react";
+import { Award, Download, Loader2 } from "lucide-react";
 import {
   getStudentCertificates,
-  getCertificatePdfUrl,
+  getFranchiseeCertificatePdfUrl,
   StudentCertificate,
 } from "@/services/student.service";
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +24,7 @@ interface StudentCertificatesModalProps {
   onOpenChange: (open: boolean) => void;
   studentId: number;
   studentName?: string;
-  certificateId?: number; // Optional: if provided, only show this specific certificate
+  certificateId?: number;
 }
 
 export default function StudentCertificatesModal({
@@ -43,288 +36,152 @@ export default function StudentCertificatesModal({
 }: StudentCertificatesModalProps) {
   const [certificates, setCertificates] = useState<StudentCertificate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<string>("");
   const { toast } = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
 
   useEffect(() => {
-    if (open && studentId) {
-      loadCertificates();
-    }
+    if (!open || !studentId) return;
+
+    let cancelled = false;
+    setIsLoading(true);
+
+    getStudentCertificates(studentId)
+      .then((response) => {
+        if (cancelled) return;
+        const certs = response.result || [];
+        const filtered = certificateId
+          ? certs.filter((cert) => cert.id === certificateId)
+          : certs;
+        setCertificates(filtered);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("Error loading certificates:", error);
+        toastRef.current({
+          title: "Error",
+          description: "Failed to load certificates",
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [open, studentId, certificateId]);
 
-  const loadCertificates = async () => {
-    setIsLoading(true);
-    try {
-      const response = await getStudentCertificates(studentId);
-      const certs = response.result || [];
+  const getStatusColor = (_status: string) =>
+    "bg-primary/10 text-primary border-primary/20";
 
-      // If certificateId is provided, filter to show only that specific certificate
-      const filteredCerts = certificateId
-        ? certs.filter((cert) => cert.id === certificateId)
-        : certs;
-
-      setCertificates(filteredCerts);
-      if (filteredCerts.length > 0) {
-        setSelectedTab(filteredCerts[0].id.toString());
-      }
-    } catch (error) {
-      console.error("Error loading certificates:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load certificates",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const formatDate = (date?: string) => {
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "Approved":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "Rejected":
-        return "bg-red-100 text-red-800 border-red-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
+  const getTotalMarks = (certificate: StudentCertificate) =>
+    certificate.totalMarks || certificate.levelTotalMarks || 0;
 
   const handleDownload = (certificate: StudentCertificate) => {
-    if (!certificate.certificatePdfPath) {
-      toast({
-        title: "Error",
-        description: "Certificate PDF not available",
-        variant: "destructive",
-      });
-      return;
-    }
-    const url = getCertificatePdfUrl(certificate.certificatePdfPath);
+    const url = getFranchiseeCertificatePdfUrl(certificate.id);
     window.open(url, "_blank");
   };
 
-  if (isLoading) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-          <DialogTitle className="sr-only">Loading certificates</DialogTitle>
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-full max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Award className="h-5 w-5 text-primary" />
+            View Certificates
+          </DialogTitle>
+          <DialogDescription>
+            {isLoading
+              ? "Loading certificate records"
+              : certificates.length === 0
+              ? `No certificates found for ${studentName || "this student"}`
+              : `${studentName || certificates[0]?.studentName || "Student"} — ${
+                  certificateId ? "1 certificate" : `${certificates.length} total`
+                }`}
+          </DialogDescription>
+        </DialogHeader>
 
-  if (certificates.length === 0) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Award className="w-5 h-5" />
-              Certificates - {studentName || "Student"}
-            </DialogTitle>
-            <DialogDescription>
-              No certificates found for this student
-            </DialogDescription>
-          </DialogHeader>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : certificates.length === 0 ? (
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Close
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+        ) : (
+          <>
+            <div className="space-y-2">
+              {certificates.map((certificate) => {
+                const hasPdf = certificate.status === "Issued";
+                const totalMarks = getTotalMarks(certificate);
+                const requestedDate = formatDate(certificate.requestDate);
+                const issueDate = formatDate(certificate.issueDate);
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Award className="w-5 h-5" />
-            Certificates -{" "}
-            {studentName || certificates[0]?.studentName || "Student"}
-          </DialogTitle>
-          <DialogDescription>
-            {certificateId
-              ? "View certificate details."
-              : "View all certificates for this student. Use tabs to switch between certificates."}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="w-full space-y-4">
-          {/* Custom Tab Navigation - Only show if multiple certificates */}
-          {!certificateId && certificates.length > 1 && (
-            <div className="border-b border-gray-200">
-              <div className="flex gap-0 overflow-x-auto scrollbar-hide">
-                {certificates.map((cert, index) => {
-                  const isActive = selectedTab === cert.id.toString();
-                  return (
-                    <button
-                      key={cert.id}
-                      onClick={() => setSelectedTab(cert.id.toString())}
-                      className={`
-                        relative flex flex-col items-center justify-center gap-1.5
-                        min-w-[120px] px-4 py-3
-                        transition-all duration-200 ease-in-out
-                        border-b-2 border-transparent
-                        ${
-                          isActive
-                            ? "bg-gray-50 text-gray-900 border-b-green-600"
-                            : "bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                        }
-                      `}
+                return (
+                  <div
+                    key={certificate.id}
+                    className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate text-sm font-semibold text-card-foreground">
+                          {certificate.certificateLevel}
+                        </h3>
+                        <Badge
+                          className={`${getStatusColor(
+                            certificate.status,
+                          )} h-5 rounded-full border px-2 text-[10px] font-medium`}
+                        >
+                          {certificate.status}
+                        </Badge>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span className="font-medium text-card-foreground">
+                          {certificate.marksObtained}/{totalMarks}
+                        </span>
+                        <span>{certificate.instructorName}</span>
+                        <span>
+                          {issueDate || (requestedDate && `Requested ${requestedDate}`)}
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={!hasPdf}
+                      onClick={() => handleDownload(certificate)}
+                      title={hasPdf ? "Download PDF" : "PDF not yet available"}
+                      aria-label={hasPdf ? "Download PDF" : "PDF not yet available"}
+                      className="h-8 w-8 shrink-0 rounded-md"
                     >
-                      <span
-                        className={`text-sm font-semibold ${
-                          isActive ? "text-gray-900" : "text-gray-600"
-                        }`}
-                      >
-                        {cert.certificateLevel || `Level ${index + 1}`}
-                      </span>
-                      <Badge
-                        className={`${getStatusColor(
-                          cert.status
-                        )} border text-xs px-2 py-0.5`}
-                      >
-                        {cert.status}
-                      </Badge>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Tab Content */}
-          {certificates.map((certificate) => {
-            if (selectedTab !== certificate.id.toString()) return null;
-            return (
-              <div
-                key={certificate.id}
-                className="space-y-4 animate-in fade-in-50"
-              >
-                <div className="border rounded-lg p-6 space-y-4">
-                  {/* Certificate Details */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-sm text-gray-500">Level</div>
-                      <div className="font-medium">
-                        {certificate.certificateLevel}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-500">Status</div>
-                      <Badge
-                        className={`${getStatusColor(
-                          certificate.status
-                        )} border`}
-                      >
-                        {certificate.status}
-                      </Badge>
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-500">Marks</div>
-                      <div className="font-medium">
-                        {certificate.marksObtained}/{certificate.totalMarks} (
-                        {(
-                          (certificate.marksObtained / certificate.totalMarks) *
-                          100
-                        ).toFixed(1)}
-                        %)
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-500">Request Date</div>
-                      <div className="font-medium flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(certificate.requestDate).toLocaleDateString()}
-                      </div>
-                    </div>
-                    {certificate.issueDate && (
-                      <div>
-                        <div className="text-sm text-gray-500">Issue Date</div>
-                        <div className="font-medium flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {new Date(certificate.issueDate).toLocaleDateString()}
-                        </div>
-                      </div>
-                    )}
-                    <div>
-                      <div className="text-sm text-gray-500">Instructor</div>
-                      <div className="font-medium">
-                        {certificate.instructorName} (
-                        {certificate.instructorInstructorId})
-                      </div>
-                    </div>
+                      <Download className="h-4 w-4" />
+                    </Button>
                   </div>
+                );
+              })}
+            </div>
 
-                  {/* Certificate PDF Viewer */}
-                  {certificate.status === "Approved" &&
-                    certificate.certificatePdfPath && (
-                      <div className="border-t pt-4 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium flex items-center gap-2">
-                            <FileText className="w-4 h-4" />
-                            Certificate PDF
-                          </h4>
-                          <Button
-                            size="sm"
-                            onClick={() => handleDownload(certificate)}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            Download
-                          </Button>
-                        </div>
-                        <div className="border rounded-lg overflow-hidden">
-                          <iframe
-                            src={getCertificatePdfUrl(
-                              certificate.certificatePdfPath
-                            )}
-                            className="w-full h-96"
-                            title={`Certificate ${certificate.id}`}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                  {certificate.status === "Pending" && (
-                    <div className="border-t pt-4">
-                      <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                        <div className="text-sm text-yellow-800">
-                          This certificate request is pending approval. You will
-                          be notified once it is approved.
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {certificate.status === "Rejected" && (
-                    <div className="border-t pt-4">
-                      <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                        <div className="text-sm text-red-800">
-                          This certificate request has been rejected.
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-        </DialogFooter>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

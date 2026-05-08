@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, FileText, CheckCircle, PlayCircle, DollarSig
 import {
   AdminCourseInstructorData,
   CITrainingProgress,
+  CITrainingProgressLevel,
   getCITrainingProgress,
   getInstructorTrainingLevelCount,
   getInstructorTrainingLevels,
@@ -66,8 +67,8 @@ export default function TrainingSection({
 
   const getLevelStatus = (levelId: number) => {
     if (!trainingProgress) return null;
-    const training = trainingProgress.trainings.find(
-      (t) => t.trainingLevelId === levelId
+    const training = trainingProgress.trainings?.find(
+      (t: CITrainingProgressLevel) => t.trainingLevelId === levelId
     );
     if (!training) return null;
     

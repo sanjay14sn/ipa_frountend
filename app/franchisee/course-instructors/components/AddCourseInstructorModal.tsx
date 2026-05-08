@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   User,
   ArrowRight,
@@ -30,13 +29,9 @@ import {
 import React from "react";
 import { BloodGroup } from "@/services/course-instructor.service";
 import { StateCitySelect } from "@/components/StateCitySelect";
-import { createCourseInstructorWithRevalidation } from "@/hooks/use-course-instructors";
+import { useCreateCourseInstructor } from "@/hooks/api/course-instructor.hooks";
 import { useUser } from "@/context/user-context";
 import { getAllPrograms, Program } from "@/services/program.service";
-import {
-  getActiveTrainingLevels,
-  TrainingLevel,
-} from "@/services/training-level.service";
 
 // Define the steps for the form
 const FORM_STEPS = [
@@ -144,12 +139,7 @@ interface CourseInstructorFormData {
   education: string;
   occupation: string;
   reference: string;
-  expiryDate: string;
-  trainingLevelId: number;
-  numberOfLevels: number;
   additionalDetails: string;
-  trainingProof: string;
-  hasTrainingProof: boolean;
 }
 
 export default function AddCourseInstructorModal({
@@ -162,11 +152,10 @@ export default function AddCourseInstructorModal({
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [trainingLevels, setTrainingLevels] = useState<TrainingLevel[]>([]);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
-  const [loadingTrainingLevels, setLoadingTrainingLevels] = useState(false);
 
   const { user } = useUser();
+  const createCourseInstructorMutation = useCreateCourseInstructor();
 
   const fetchPrograms = async () => {
     try {
@@ -177,26 +166,6 @@ export default function AddCourseInstructorModal({
       console.error("Error fetching programs:", error);
     } finally {
       setLoadingPrograms(false);
-    }
-  };
-
-  const fetchTrainingLevels = async () => {
-    try {
-      setLoadingTrainingLevels(true);
-      const data = await getActiveTrainingLevels();
-      const active = data.filter((level) => level.isActive);
-      const sorted = [...active].sort((a, b) => {
-        const orderA = a.rank ?? Number.MAX_SAFE_INTEGER;
-        const orderB = b.rank ?? Number.MAX_SAFE_INTEGER;
-        if (orderA !== orderB) return orderA - orderB;
-        return a.id - b.id;
-      });
-      setTrainingLevels(sorted);
-    } catch (error) {
-      console.error("Error fetching training levels:", error);
-      setTrainingLevels([]);
-    } finally {
-      setLoadingTrainingLevels(false);
     }
   };
 
@@ -218,12 +187,7 @@ export default function AddCourseInstructorModal({
     education: "",
     occupation: "",
     reference: "",
-    expiryDate: "",
-    trainingLevelId: 0,
-    numberOfLevels: 0,
     additionalDetails: "",
-    trainingProof: "",
-    hasTrainingProof: false,
   });
 
   const validateCurrentStep = () => {
@@ -277,21 +241,6 @@ export default function AddCourseInstructorModal({
         break;
 
       case 4:
-        if (!formData.expiryDate) {
-          newErrors.expiryDate = "Expiry date is required";
-        }
-        if (!formData.hasTrainingProof) {
-          // If no training proof, at least one training level is required
-          if (!formData.numberOfLevels || formData.numberOfLevels < 1) {
-            newErrors.numberOfLevels =
-              "Please select number of training levels";
-          }
-        } else {
-          // If training proof is provided, it's required
-          if (!formData.trainingProof.trim()) {
-            newErrors.trainingProof = "Training proof is required";
-          }
-        }
         break;
     }
 
@@ -326,19 +275,6 @@ export default function AddCourseInstructorModal({
       ...prev,
       [field]: convertedValue,
     }));
-
-    // Fetch training levels when program is selected
-    if (field === "programId" && convertedValue && convertedValue !== 0) {
-      fetchTrainingLevels();
-    } else if (field === "programId") {
-      // Clear training levels if program is cleared
-      setTrainingLevels([]);
-      setFormData((prev) => ({
-        ...prev,
-        trainingLevelId: 0,
-        numberOfLevels: 0,
-      }));
-    }
 
     // Clear error when user starts typing
     if (errors[field]) {
@@ -391,29 +327,9 @@ export default function AddCourseInstructorModal({
         education: formData.education,
         occupation: formData.occupation,
         reference: formData.reference,
-        expiryDate: new Date(formData.expiryDate),
       };
 
-      // If training proof is provided, add it and skip training fields
-      if (formData.hasTrainingProof && formData.trainingProof) {
-        courseInstructorData.trainingProof = formData.trainingProof;
-      } else {
-        // Otherwise, add training request fields
-        // Take first N levels by rank; N = numberOfLevels
-        if (formData.numberOfLevels > 0 && trainingLevels.length > 0) {
-          const n = Math.min(formData.numberOfLevels, trainingLevels.length);
-          courseInstructorData.trainingLevelIds = trainingLevels
-            .slice(0, n)
-            .map((l) => l.id);
-        }
-        if (formData.additionalDetails) {
-          courseInstructorData.additionalDetails = formData.additionalDetails;
-        }
-      }
-
-      // Call the course instructor service with SWR revalidation
-      const result =
-        await createCourseInstructorWithRevalidation(courseInstructorData);
+      await createCourseInstructorMutation.mutateAsync(courseInstructorData);
 
       setSubmitted(true);
       onSuccess();
@@ -440,12 +356,7 @@ export default function AddCourseInstructorModal({
       education: "",
       occupation: "",
       reference: "",
-      expiryDate: "",
-      trainingLevelId: 0,
-      numberOfLevels: 0,
       additionalDetails: "",
-      trainingProof: "",
-      hasTrainingProof: false,
     });
     setErrors({});
     setSubmitted(false);
@@ -733,143 +644,29 @@ export default function AddCourseInstructorModal({
       case 4:
         return (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="expiryDate">Expiry Date *</Label>
-              <Input
-                id="expiryDate"
-                type="date"
-                value={formData.expiryDate}
-                onChange={(e) =>
-                  handleInputChange("expiryDate", e.target.value)
-                }
-                className={errors.expiryDate ? "border-red-500" : ""}
-              />
-              {errors.expiryDate && (
-                <p className="text-red-500 text-sm flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.expiryDate}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hasTrainingProof"
-                  checked={formData.hasTrainingProof}
-                  onCheckedChange={(checked) =>
-                    handleInputChange("hasTrainingProof", checked as boolean)
-                  }
-                />
-                <Label htmlFor="hasTrainingProof" className="font-medium">
-                  CI has training proof (skip training request)
-                </Label>
-              </div>
-              <p className="text-sm text-muted-foreground ml-6">
-                If the CI already has training proof, they can be added directly
-                without requesting training.
+            <div className="rounded-lg border bg-gray-50 p-4">
+              <p className="text-sm font-medium text-gray-900">
+                Training is mandatory for every new course instructor.
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                After admin approval, the CI will receive validity dates through
+                the agreement workflow and will then continue to agreement
+                signing and training purchase.
               </p>
             </div>
 
-            {formData.hasTrainingProof ? (
-              <div className="space-y-2">
-                <Label htmlFor="trainingProof">Training Proof URL *</Label>
-                <Input
-                  id="trainingProof"
-                  type="text"
-                  value={formData.trainingProof}
-                  onChange={(e) =>
-                    handleInputChange("trainingProof", e.target.value)
-                  }
-                  className={errors.trainingProof ? "border-red-500" : ""}
-                  placeholder="Enter URL or path to training proof document"
-                />
-                {errors.trainingProof && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.trainingProof}
-                  </p>
-                )}
-                <p className="text-sm text-muted-foreground">
-                  Provide the URL or file path to the training proof document.
-                  The CI will be approved directly.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Label htmlFor="numberOfLevels">
-                  Number of Training Levels *
-                </Label>
-                <Select
-                  value={
-                    formData.numberOfLevels > 0
-                      ? formData.numberOfLevels.toString()
-                      : undefined
-                  }
-                  onValueChange={(value) =>
-                    handleInputChange("numberOfLevels", value)
-                  }
-                  disabled={
-                    !formData.programId ||
-                    formData.programId === 0 ||
-                    loadingTrainingLevels ||
-                    trainingLevels.length === 0
-                  }
-                >
-                  <SelectTrigger
-                    className={errors.numberOfLevels ? "border-red-500" : ""}
-                  >
-                    <SelectValue
-                      placeholder={
-                        !formData.programId || formData.programId === 0
-                          ? "Select a program first"
-                          : loadingTrainingLevels
-                            ? "Loading levels..."
-                            : trainingLevels.length === 0
-                              ? "No training levels available"
-                              : "Select number of levels"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: trainingLevels.length }, (_, i) => {
-                      const n = i + 1;
-                      return (
-                        <SelectItem key={n} value={n.toString()}>
-                          {n} {n === 1 ? "level" : "levels"}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-                {errors.numberOfLevels && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.numberOfLevels}
-                  </p>
-                )}
-                <p className="text-sm text-muted-foreground">
-                  {!formData.programId || formData.programId === 0
-                    ? "Please select a program first to see available training levels"
-                    : "Levels are selected by rank order (lowest first)."}
-                </p>
-              </div>
-            )}
-
-            {!formData.hasTrainingProof && (
-              <div className="space-y-2">
-                <Label htmlFor="additionalDetails">Additional Details</Label>
-                <Textarea
-                  id="additionalDetails"
-                  value={formData.additionalDetails}
-                  onChange={(e) =>
-                    handleInputChange("additionalDetails", e.target.value)
-                  }
-                  placeholder="Enter any additional details"
-                  rows={3}
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="additionalDetails">Additional Details</Label>
+              <Textarea
+                id="additionalDetails"
+                value={formData.additionalDetails}
+                onChange={(e) =>
+                  handleInputChange("additionalDetails", e.target.value)
+                }
+                placeholder="Optional notes for admin review"
+                rows={4}
+              />
+            </div>
           </div>
         );
 

@@ -1,25 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, CreditCard } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CourseInstructorsTable from "./CourseInstructorsTable";
 import PaymentCourseInstructorsTable from "./PaymentCourseInstructorsTable";
-import {
-  CourseInstructorData,
-} from "@/services/course-instructor.service";
+import type { CourseInstructorData } from "@/services/course-instructor.service";
 
 interface CourseInstructorTabsProps {
   courseInstructors: CourseInstructorData[];
   paymentCourseInstructors: CourseInstructorData[];
   onCourseInstructorUpdate?: (
-    updatedCourseInstructor: CourseInstructorData
+    updatedCourseInstructor: CourseInstructorData,
   ) => void;
   onCourseInstructorDelete?: (courseInstructorId: string) => void;
   onCourseInstructorEdit?: (courseInstructor: CourseInstructorData) => void;
   onPaymentCourseInstructorUpdate?: (
-    updatedCourseInstructor: CourseInstructorData
+    updatedCourseInstructor: CourseInstructorData,
   ) => void;
   onPaymentCourseInstructorDelete?: (courseInstructorId: string) => void;
   onPaymentCourseInstructorEdit?: (courseInstructor: CourseInstructorData) => void;
@@ -35,56 +31,37 @@ export default function CourseInstructorTabs({
   onPaymentCourseInstructorDelete,
   onPaymentCourseInstructorEdit,
 }: CourseInstructorTabsProps) {
-  const [activeTab, setActiveTab] = useState<"regular" | "payment">("regular");
-
   return (
-    <div className="space-y-6">
-      {/* Tab Navigation */}
-      <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-        <Button
-          variant={activeTab === "regular" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("regular")}
-          className="flex items-center gap-2"
-        >
-          <Users className="h-4 w-4" />
-          Regular Course Instructors
-          <Badge variant="secondary" className="ml-1">
-            {courseInstructors.length}
-          </Badge>
-        </Button>
-        <Button
-          variant={activeTab === "payment" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("payment")}
-          className="flex items-center gap-2"
-        >
-          <CreditCard className="h-4 w-4" />
+    <Tabs defaultValue="regular" className="space-y-4">
+      <TabsList className="h-auto flex-wrap justify-start gap-1">
+        <TabsTrigger value="regular" className="gap-2">
+          Active & Training
+          <Badge variant="secondary">{courseInstructors.length}</Badge>
+        </TabsTrigger>
+        <TabsTrigger value="payment" className="gap-2">
           Payment Pending
-          <Badge variant="secondary" className="ml-1">
-            {paymentCourseInstructors.length}
-          </Badge>
-        </Button>
-      </div>
+          <Badge variant="secondary">{paymentCourseInstructors.length}</Badge>
+        </TabsTrigger>
+      </TabsList>
 
-      {/* Tab Content */}
-      {activeTab === "regular" && (
+      <TabsContent value="regular">
         <CourseInstructorsTable
           courseInstructors={courseInstructors}
           onCourseInstructorUpdate={onCourseInstructorUpdate}
           onCourseInstructorDelete={onCourseInstructorDelete}
           onCourseInstructorEdit={onCourseInstructorEdit}
         />
-      )}
+      </TabsContent>
 
-      {activeTab === "payment" && (
+      <TabsContent value="payment">
         <PaymentCourseInstructorsTable
           courseInstructors={paymentCourseInstructors}
           onCourseInstructorUpdate={onPaymentCourseInstructorUpdate}
           onCourseInstructorDelete={onPaymentCourseInstructorDelete}
           onCourseInstructorEdit={onPaymentCourseInstructorEdit}
         />
-      )}
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }
+

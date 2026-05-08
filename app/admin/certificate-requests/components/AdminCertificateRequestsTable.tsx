@@ -1,15 +1,12 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Check, X, FileText } from "lucide-react";
-import { AdminTable } from "@/components/shared";
+import { DataTable } from "@/components/shared";
 import type {
-  AdminTableColumn,
-  AdminTableFilter,
-  AdminTableSortOption,
-} from "@/components/shared/AdminTable";
+  DataTableColumn,
+  DataTableFilter,
+} from "@/components/shared";
 import {
   AdminCertificateRequest,
   AdminCertificateRequestsByFranchise,
@@ -18,151 +15,80 @@ import { useToast } from "@/hooks/use-toast";
 import {
   approveCertificateRequestWithRevalidation,
   rejectCertificateRequestWithRevalidation,
-} from "@/hooks/use-students";
-import { getCertificatePdfUrl } from "@/services/student.service";
+} from "@/hooks/api/student.hooks";
+import FranchiseCertificateDetails from "./FranchiseCertificateDetails";
+
+interface FranchiseCertGroup {
+  franchiseId: string;
+  franchiseName: string;
+  requests: AdminCertificateRequest[];
+}
 
 interface AdminCertificateRequestsTableProps {
   certificateRequestsByFranchise?: AdminCertificateRequestsByFranchise;
   onRefresh?: () => void;
+  scopedFranchiseId?: string;
 }
 
 export default function AdminCertificateRequestsTable({
   certificateRequestsByFranchise,
   onRefresh,
+  scopedFranchiseId,
 }: AdminCertificateRequestsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("Pending");
-  const [franchiseFilter, setFranchiseFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"requestDate" | "studentName" | "marks">(
-    "requestDate"
-  );
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const { toast } = useToast();
 
-  // Flatten the grouped data into a single array
-  const allRequests = useMemo(() => {
+  const allGroups = useMemo((): FranchiseCertGroup[] => {
     if (!certificateRequestsByFranchise) return [];
-    return Object.values(certificateRequestsByFranchise).flat();
+    return Object.entries(certificateRequestsByFranchise).map(
+      ([franchiseName, requests]) => ({
+        franchiseId: String(requests[0]?.franchiseId ?? franchiseName),
+        franchiseName,
+        requests,
+      })
+    );
   }, [certificateRequestsByFranchise]);
 
-  // Get unique values for filters
-  const uniqueFranchises = useMemo(
-    () => [
-      ...new Set(
-        allRequests?.map((request) => request.franchiseName).filter(Boolean)
-      ),
-    ],
-    [allRequests]
+  const filteredGroups = useMemo((): FranchiseCertGroup[] => {
+    const scoped = scopedFranchiseId?.trim();
+    return allGroups
+      .map((group) => ({
+        ...group,
+        requests: group.requests.filter((r) => r.status === statusFilter),
+      }))
+      .filter((group) => {
+        if (group.requests.length === 0) return false;
+        if (scoped && group.franchiseId !== scoped) return false;
+        if (searchTerm) {
+          const term = searchTerm.toLowerCase();
+          return (
+            group.franchiseName.toLowerCase().includes(term) ||
+            group.requests.some(
+              (r) =>
+                r.studentName.toLowerCase().includes(term) ||
+                r.studentRollNo.toLowerCase().includes(term) ||
+                r.instructorName.toLowerCase().includes(term)
+            )
+          );
+        }
+        return true;
+      });
+  }, [allGroups, statusFilter, scopedFranchiseId, searchTerm]);
+
+  const totalRequests = useMemo(
+    () => filteredGroups.reduce((a, g) => a + g.requests.length, 0),
+    [filteredGroups]
   );
 
-  // Filter and sort data
-  const filteredAndSortedData = useMemo(() => {
-    let filtered = allRequests.filter((request) => {
-      const matchesSearch =
-        request.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.studentRollNo
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        request.instructorName
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        request.franchiseName.toLowerCase().includes(searchTerm.toLowerCase());
+  const paginatedGroups = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredGroups.slice(start, start + itemsPerPage);
+  }, [filteredGroups, currentPage]);
 
-      const matchesStatus = request.status === statusFilter;
-
-      const franchiseIdx = franchiseFilter.startsWith("f") ? parseInt(franchiseFilter.slice(1), 10) : NaN;
-      const matchesFranchise =
-        franchiseFilter === "all" ||
-        (!isNaN(franchiseIdx) && uniqueFranchises[franchiseIdx] === request.franchiseName);
-
-      return matchesSearch && matchesStatus && matchesFranchise;
-    });
-
-    // Sort the filtered data
-    filtered.sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortBy) {
-        case "requestDate":
-          comparison =
-            new Date(a.requestDate).getTime() -
-            new Date(b.requestDate).getTime();
-          break;
-        case "studentName":
-          comparison = a.studentName.localeCompare(b.studentName);
-          break;
-        case "marks":
-          const aPercentage = (a.marksObtained / a.totalMarks) * 100;
-          const bPercentage = (b.marksObtained / b.totalMarks) * 100;
-          comparison = aPercentage - bPercentage;
-          break;
-        default:
-          comparison = 0;
-      }
-
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
-
-    return filtered;
-  }, [
-    allRequests,
-    uniqueFranchises,
-    searchTerm,
-    statusFilter,
-    franchiseFilter,
-    sortBy,
-    sortOrder,
-  ]);
-
-  // Paginate data
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredAndSortedData.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredAndSortedData, currentPage]);
-
-  const totalPages = Math.ceil(filteredAndSortedData.length / itemsPerPage);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "Approved":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "Rejected":
-        return "bg-red-100 text-red-800 border-red-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
-  const getLevelColor = (level: string) => {
-    if (level.startsWith("EL"))
-      return "bg-gray-100 text-gray-800 border-gray-200";
-    if (level.startsWith("RL"))
-      return "bg-gray-100 text-gray-800 border-gray-200";
-    if (level.startsWith("GML"))
-      return "bg-gray-100 text-gray-800 border-gray-200";
-    return "bg-gray-100 text-gray-800 border-gray-200";
-  };
-
-  // Helper function to calculate age
-  const calculateAge = (dateOfBirth: string): number => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
-
-    return age;
-  };
+  const totalPages = Math.ceil(filteredGroups.length / itemsPerPage);
 
   const handleApprove = async (requestId: number) => {
     try {
@@ -172,8 +98,7 @@ export default function AdminCertificateRequestsTable({
         description: "Certificate request approved successfully",
       });
       onRefresh?.();
-    } catch (error) {
-      console.error("Error approving certificate request:", error);
+    } catch {
       toast({
         title: "Error",
         description: "Failed to approve certificate request",
@@ -190,8 +115,7 @@ export default function AdminCertificateRequestsTable({
         description: "Certificate request rejected successfully",
       });
       onRefresh?.();
-    } catch (error) {
-      console.error("Error rejecting certificate request:", error);
+    } catch {
       toast({
         title: "Error",
         description: "Failed to reject certificate request",
@@ -200,198 +124,92 @@ export default function AdminCertificateRequestsTable({
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Pending":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "Issued":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "Rejected":
+        return "bg-red-100 text-red-800 border-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
 
-  // Table configuration
-  const columns: AdminTableColumn<AdminCertificateRequest>[] = [
-    {
-      key: "student",
-      header: "Student",
-      className: "w-[250px]",
-    },
-    {
-      key: "instructor",
-      header: "Instructor",
-      className: "text-center",
-      render: (request) => (
-        <div className="text-sm">
-          <div className="font-medium">{request.instructorName}</div>
-          <div className="text-gray-500">ID: {request.instructorId}</div>
-        </div>
-      ),
-    },
+  const columns: DataTableColumn<FranchiseCertGroup>[] = [
     {
       key: "franchise",
       header: "Franchise",
-      className: "text-center",
-      render: (request) => (
-        <div className="text-sm font-medium">{request.franchiseName}</div>
-      ),
+      className: "w-[300px]",
     },
     {
-      key: "marks",
-      header: "Marks & Percentage",
+      key: "students",
+      header: "Students",
       className: "text-center",
-      render: (request) => (
-        <div className="text-sm">
-          <div className="font-medium">
-            {request.marksObtained}/{request.totalMarks}
-          </div>
-          <div className="text-gray-500">
-            {((request.marksObtained / request.totalMarks) * 100).toFixed(1)}%
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: "requestDate",
-      header: "Request Date",
-      className: "text-center",
-      render: (request) => (
-        <div className="text-sm">
-          <div className="flex items-center justify-center">
-            <Calendar className="w-3 h-3 mr-1" />
-            <span>{new Date(request.requestDate).toLocaleDateString()}</span>
-          </div>
-          <div className="text-xs text-gray-500">
-            {new Date(request.requestDate).toLocaleTimeString()}
-          </div>
-        </div>
+      render: (group) => (
+        <Badge variant="secondary">
+          {group.requests.length} student
+          {group.requests.length !== 1 ? "s" : ""}
+        </Badge>
       ),
     },
     {
       key: "status",
       header: "Status",
       className: "text-center",
-      render: (request) => (
-        <Badge className={`${getStatusColor(request.status)} border`}>
-          {request.status}
+      render: () => (
+        <Badge className={`${getStatusColor(statusFilter)} border`}>
+          {statusFilter}
         </Badge>
       ),
     },
-    {
-      key: "actions",
-      header: "Actions",
-      className: "text-center",
-      render: (request) =>
-        request.status === "Pending" ? (
-          <div className="flex items-center justify-center gap-1">
-            <Button
-              size="sm"
-              onClick={() => handleApprove(request.id)}
-              className="bg-green-600 hover:bg-green-700 h-8 w-8 p-0"
-              title="Approve"
-            >
-              <Check className="w-4 h-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => handleReject(request.id)}
-              className="h-8 w-8 p-0"
-              title="Reject"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        ) : request.status === "Approved" && request.certificatePdfPath ? (
-          <div className="flex items-center justify-center gap-1">
-            <Button
-              size="sm"
-              onClick={() => {
-                const url = getCertificatePdfUrl(request.certificatePdfPath);
-                window.open(url, "_blank");
-              }}
-              className="bg-blue-600 hover:bg-blue-700 h-8 w-8 p-0"
-              title="View Certificate"
-            >
-              <FileText className="w-4 h-4" />
-            </Button>
-          </div>
-        ) : (
-          <Badge className={`${getStatusColor(request.status)} border`}>
-            {request.status}
-          </Badge>
-        ),
-    },
   ];
 
-  const filters: AdminTableFilter[] = [
+  const filters: DataTableFilter[] = [
     {
       key: "status",
       label: "Status",
       options: [
         { value: "Pending", label: "Pending" },
-        { value: "Approved", label: "Approved" },
+        { value: "Issued", label: "Issued" },
         { value: "Rejected", label: "Rejected" },
       ],
       defaultValue: "Pending",
     },
-    {
-      key: "franchise",
-      label: "Franchise",
-      options: [
-        { value: "all", label: "All Franchises" },
-        ...uniqueFranchises.map((franchise, idx) => ({
-          value: `f${idx}`,
-          label: franchise,
-        })),
-      ],
-      defaultValue: "all",
-    },
-  ];
-
-  const sortOptions: AdminTableSortOption[] = [
-    { value: "requestDate", label: "Request Date" },
-    { value: "studentName", label: "Student Name" },
-    { value: "marks", label: "Marks" },
   ];
 
   return (
-    <AdminTable
-      data={paginatedData}
+    <DataTable
+      data={paginatedGroups}
       loading={false}
       columns={columns}
-      getRowId={(request) => request.id.toString()}
-      renderMainCell={(request) => (
-        <div className="flex flex-col">
-          <div className="font-medium text-gray-900">{request.studentName}</div>
-          <div className="text-sm text-gray-500">
-            {request.studentRollNo} • Age{" "}
-            {calculateAge(request.studentDateOfBirth)} • {request.studentSex}
-          </div>
-          <div className="text-xs text-primary font-medium">
-            {request.studentStandard} • {request.studentStream}
-          </div>
-          <Badge
-            className={`${getLevelColor(
-              request.studentLevel
-            )} border text-xs mt-1 w-fit`}
-          >
-            {request.studentLevel}
-          </Badge>
-        </div>
+      getRowId={(group) => group.franchiseId}
+      renderMainCell={(group) => (
+        <div className="font-medium text-gray-900">{group.franchiseName}</div>
+      )}
+      renderExpandedContent={(group) => (
+        <FranchiseCertificateDetails
+          franchiseName={group.franchiseName}
+          requests={group.requests}
+          statusFilter={statusFilter}
+          onApprove={handleApprove}
+          onReject={handleReject}
+        />
       )}
       searchPlaceholder="Search by student name, roll number, instructor, or franchise..."
       onSearchChange={setSearchTerm}
       filters={filters}
       onFilterChange={(key, value) => {
         if (key === "status") setStatusFilter(value as string);
-        else if (key === "franchise") setFranchiseFilter(value as string);
       }}
-      sortOptions={sortOptions}
-      defaultSortBy="requestDate"
-      defaultSortOrder="DESC"
-      onSortChange={(newSortBy, newSortOrder) => {
-        setSortBy(newSortBy as "requestDate" | "studentName" | "marks");
-        setSortOrder(newSortOrder.toLowerCase() as "asc" | "desc");
-      }}
-      pagination={{ total: filteredAndSortedData.length, totalPages }}
+      pagination={{ total: filteredGroups.length, totalPages }}
       currentPage={currentPage}
       onPageChange={setCurrentPage}
       itemsPerPage={itemsPerPage}
       emptyMessage="No certificate requests found matching your criteria"
-      resultsText={(count, total) =>
-        `Showing ${count} of ${total} certificate requests`
+      resultsText={(_, total) =>
+        `Showing ${totalRequests} ${statusFilter.toLowerCase()} certificate request${totalRequests !== 1 ? "s" : ""} across ${total} franchise${total !== 1 ? "s" : ""}`
       }
     />
   );

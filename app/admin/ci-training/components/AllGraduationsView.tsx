@@ -128,7 +128,10 @@ export function AllGraduationsView() {
                   <div className="space-y-3">
                     {franchiseGrads.map((grad) => (
                       <div
-                        key={grad.id}
+                        key={
+                          grad.id ??
+                          `${grad.instructorCode}-${grad.levelName}`
+                        }
                         className="flex items-start justify-between p-3 border rounded-lg hover:bg-gray-50"
                       >
                         <div className="flex-1">
@@ -146,8 +149,12 @@ export function AllGraduationsView() {
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
                               {format(
-                                new Date(grad.graduationDate),
-                                "MMM dd, yyyy"
+                                new Date(
+                                  grad.graduationDate ??
+                                    grad.graduatedAt ??
+                                   0,
+                                ),
+                                "MMM dd, yyyy",
                               )}
                             </span>
                           </div>

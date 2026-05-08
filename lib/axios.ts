@@ -1,7 +1,7 @@
 import axios from "axios";
-import { toast } from "sonner";
+import type { UserRole } from "@/lib/auth";
 
-const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5500";
 
 export const api = axios.create({
   baseURL: baseUrl,
@@ -9,10 +9,66 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-let isRefreshing = false;
-let failedQueue: any[] = [];
+/** Avoid refresh loops: these calls must not trigger token refresh / queue. */
+function isAuthFlowRequest(url: string | undefined): boolean {
+  if (!url) return false;
+  return (
+    url.includes("/auth/login") ||
+    url.includes("/auth/refresh") ||
+    url.includes("/auth/logout")
+  );
+}
 
-const processQueue = (error: any, token: string | null = null) => {
+function parseStoredRole(): UserRole | "" {
+  if (typeof window === "undefined") return "";
+  const userStr = localStorage.getItem("user");
+  if (!userStr) return "";
+  try {
+    const user = JSON.parse(userStr) as { role?: UserRole };
+    return user.role ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** When `user` is missing or corrupt, infer portal from the current route. */
+function inferFranchiseeFromPath(): boolean {
+  if (typeof window === "undefined") return false;
+  const p = window.location.pathname;
+  return p.startsWith("/franchisee");
+}
+
+function isFranchiseeSession(role: UserRole | ""): boolean {
+  if (role === "franchisee" || role === "franchise") return true;
+  if (role === "admin") return false;
+  return inferFranchiseeFromPath();
+}
+
+function loginPathForSession(role: UserRole | ""): string {
+  return isFranchiseeSession(role) ? "/login" : "/admin-login";
+}
+
+/** JSON default breaks multipart: server must see multipart + boundary so multer can parse files. */
+api.interceptors.request.use((config) => {
+  if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+    const h = config.headers;
+    if (h && typeof (h as { delete?: (k: string) => void }).delete === "function") {
+      (h as { delete: (k: string) => void }).delete("Content-Type");
+    } else if (h && typeof h === "object") {
+      delete (h as Record<string, unknown>)["Content-Type"];
+      delete (h as Record<string, unknown>)["content-type"];
+    }
+  }
+  return config;
+});
+
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (v?: unknown) => void;
+  reject: (e?: unknown) => void;
+}> = [];
+
+const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
@@ -20,98 +76,82 @@ const processQueue = (error: any, token: string | null = null) => {
       prom.resolve(token);
     }
   });
-
   failedQueue = [];
 };
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const rt = response.config.responseType;
+    if (rt === "blob" || rt === "arraybuffer") {
+      return response;
+    }
+    const d = response.data;
+    if (
+      d &&
+      typeof d === "object" &&
+      !(d instanceof ArrayBuffer) &&
+      "success" in d &&
+      (d as { success: boolean }).success === true &&
+      "data" in d
+    ) {
+      response.data = { result: (d as { data: unknown }).data };
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
-    const isLoginEndpoint = originalRequest.url?.includes('/auth/login');
-    if (isLoginEndpoint) {
+    if (isAuthFlowRequest(originalRequest?.url)) {
       return Promise.reject(error);
     }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        return new Promise(function (resolve, reject) {
+        return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
-          .then(() => {
-            return api(originalRequest);
-          })
-          .catch((err) => {
-            return Promise.reject(err);
-          });
+          .then(() => api(originalRequest))
+          .catch((err) => Promise.reject(err));
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
+      const role = parseStoredRole();
+
       try {
-        const userStr = localStorage.getItem("user");
-        let role = "";
-        if (userStr) {
-          try {
-            const user = JSON.parse(userStr);
-            role = user.role;
-          } catch (e) {
-            console.error("Error parsing user from local storage", e);
-          }
-        }
+        const refreshUrl = isFranchiseeSession(role)
+          ? "/franchisee/auth/refresh"
+          : "/admin/auth/refresh";
 
-        const refreshUrl =
-          role === "franchisee"
-            ? "/franchisee/auth/refresh"
-            : "/admin/auth/refresh";
+        await api.post(refreshUrl, {});
 
-        await api.post(refreshUrl);
-        
-        processQueue(null);
+        processQueue(null, null);
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        
-        const userStr = localStorage.getItem("user");
-        let role = "";
-        if (userStr) {
-           try {
-            const user = JSON.parse(userStr);
-            role = user.role;
-          } catch (e) {
-             console.error("Error parsing user from local storage", e);
-          }
-        }
 
-        const logoutUrl =
-          role === "franchisee"
-            ? "/franchisee/auth/logout"
-            : "/admin/auth/logout";
-            
+        const logoutUrl = isFranchiseeSession(role)
+          ? "/franchisee/auth/logout"
+          : "/admin/auth/logout";
+
         try {
-            await api.post(logoutUrl);
+          await api.post(logoutUrl);
         } catch (logoutErr) {
-            console.error("Logout failed", logoutErr);
+          console.error("Logout failed", logoutErr);
         }
 
-        localStorage.removeItem("user");
-        
-        if (role === "franchisee") {
-             window.location.href = "/franchisee/login";
-        } else {
-             window.location.href = "/login";
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("user");
+          window.location.href = loginPathForSession(role);
         }
-        
+
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
     }
 
-    // Don't show generic toast here - let components handle errors
-    // Only reject the promise so components can catch and display inline errors
     return Promise.reject(error);
-  }
+  },
 );

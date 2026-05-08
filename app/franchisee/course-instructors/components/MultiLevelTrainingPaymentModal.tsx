@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ import {
   verifyMultiLevelCITrainingPayment,
 } from "@/services/payment.service";
 import { useToast } from "@/hooks/use-toast";
+import { abandonOrderPayment } from "@/services/order.service";
 
 interface MultiLevelTrainingPaymentModalProps {
   isOpen: boolean;
@@ -41,14 +42,10 @@ export function MultiLevelTrainingPaymentModal({
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [isSettled, setIsSettled] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadData();
-    }
-  }, [isOpen, instructorId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -60,14 +57,24 @@ export function MultiLevelTrainingPaymentModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [instructorId]);
 
-  // Unpaid levels - single payment for all of them
-  const unpaidTrainings = trainingProgress?.trainings.filter(
-    (t) => !t.paid && !t.isCompleted
-  ) ?? [];
+  useEffect(() => {
+    if (isOpen) {
+      loadData();
+    }
+  }, [isOpen, loadData]);
 
-  const totalAmount = unpaidTrainings.reduce((sum, t) => sum + t.amount, 0);
+  const trainingsList = trainingProgress?.trainings ?? [];
+
+  const unpaidTrainings = trainingsList.filter(
+    (t) => !t.paid && !t.isCompleted,
+  );
+
+  const totalAmount = unpaidTrainings.reduce(
+    (sum, t) => sum + (t.amount ?? 0),
+    0,
+  );
 
   const handlePayment = async () => {
     if (unpaidTrainings.length === 0) return;
@@ -78,8 +85,10 @@ export function MultiLevelTrainingPaymentModal({
       const levelIds = unpaidTrainings.map((t) => t.trainingLevelId);
       const paymentOrder = await initiateMultiLevelCITrainingPayment(
         instructorId,
-        levelIds
+        { trainingLevelIds: levelIds },
       );
+      setActiveOrderId(paymentOrder.orderId);
+      setIsSettled(false);
 
       if (!window.Razorpay) {
         const script = document.createElement("script");
@@ -96,8 +105,14 @@ export function MultiLevelTrainingPaymentModal({
         name: "IPA Training Payment",
         description: `Training for ${instructorName}`,
         order_id: paymentOrder.orderId,
+        prefill: {
+          name: instructorName,
+          email: "",
+          contact: "",
+        },
         handler: async function (response: any) {
           try {
+            setIsSettled(true);
             await verifyMultiLevelCITrainingPayment({
               paymentId: response.razorpay_payment_id,
               orderId: response.razorpay_order_id,
@@ -120,7 +135,14 @@ export function MultiLevelTrainingPaymentModal({
           }
         },
         modal: {
-          ondismiss: function () {
+          ondismiss: async function () {
+            if (!isSettled) {
+              await abandonOrderPayment({
+                razorpayOrderId: paymentOrder.orderId,
+                note: "dismissed",
+              }).catch(() => {});
+              setIsSettled(true);
+            }
             setProcessing(false);
           },
         },
@@ -129,10 +151,19 @@ export function MultiLevelTrainingPaymentModal({
         },
       };
 
-      const rzp = new window.Razorpay(options);
+      const Rzp = (window as unknown as { Razorpay: new (o: object) => { open: () => void } })
+        .Razorpay;
+      const rzp = new Rzp(options);
       onClose(); // Close dialog before opening Razorpay so its overlay doesn't trap focus
       rzp.open();
     } catch (err: any) {
+      if (activeOrderId && !isSettled) {
+        await abandonOrderPayment({
+          razorpayOrderId: activeOrderId,
+          note: "payment_failed",
+        }).catch(() => {});
+        setIsSettled(true);
+      }
       toast({
         title: "Payment Failed",
         description: err.message || "Failed to initiate payment",
@@ -141,6 +172,24 @@ export function MultiLevelTrainingPaymentModal({
       setProcessing(false);
     }
   };
+
+  useEffect(() => {
+    const handleWindowClose = () => {
+      if (!activeOrderId || isSettled) return;
+      void abandonOrderPayment({
+        razorpayOrderId: activeOrderId,
+        note: "page_unload",
+      }).catch(() => {});
+      setIsSettled(true);
+    };
+    window.addEventListener("beforeunload", handleWindowClose);
+    window.addEventListener("pagehide", handleWindowClose);
+    return () => {
+      window.removeEventListener("beforeunload", handleWindowClose);
+      window.removeEventListener("pagehide", handleWindowClose);
+      handleWindowClose();
+    };
+  }, [activeOrderId, isSettled]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -166,7 +215,7 @@ export function MultiLevelTrainingPaymentModal({
             <Alert>
               <CheckCircle2 className="h-4 w-4" />
               <AlertDescription>
-                {trainingProgress && trainingProgress.trainings.length > 0
+                {trainingProgress && trainingsList.length > 0
                   ? "All training levels have been paid."
                   : "No training levels registered."}
               </AlertDescription>
@@ -205,11 +254,3 @@ export function MultiLevelTrainingPaymentModal({
     </Dialog>
   );
 }
-
-// Extend Window interface for Razorpay
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
-

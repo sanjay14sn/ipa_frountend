@@ -1,343 +1,556 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, type ElementType, type ReactNode } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Building2,
-  Users,
-  GraduationCap,
-  ShoppingCart,
+  ArrowRight,
   Award,
-  FileText,
-  Package,
-  CreditCard,
-  Truck,
+  BadgeCheck,
   BookOpen,
+  Building2,
   ChevronRight,
-  Clock,
-  UserCheck,
+  ClipboardList,
+  ClipboardSignature,
+  CreditCard,
   Layers,
+  Loader2,
+  Package,
+  ShoppingCart,
+  Truck,
+  UserCheck,
+  Users,
 } from "lucide-react";
-import { RecentApplications } from "./components/recentApplications";
-import {
-  getAdminDashboardStats,
-  type DashboardStats,
-} from "@/services/dashboard.service";
-import { getAllOrdersAdmin, type OrderData } from "@/services/order.service";
+import { Badge } from "@/components/ui/badge";
+import { useAdminDashboardStats } from "@/hooks/api/dashboard.hooks";
+import { usePendingFranchiseApplications } from "@/hooks/api/franchisee.hooks";
+import { useAdminOrderRows } from "@/hooks/api/order.hooks";
+import { type DashboardStats } from "@/services/dashboard.service";
+import { type FranchiseData } from "@/services/franchisee.service";
+import { type OrderData } from "@/services/order.service";
+import { useUser } from "@/context/user-context";
+import { cn } from "@/lib/utils";
 
-interface StatCardProps {
+type SummaryItem = {
   label: string;
-  value: string;
-  sub?: string;
-  icon: React.ElementType;
+  value: number;
+  description: string;
+};
+
+type QuickAccessItem = {
+  href: string;
+  icon: ElementType;
+  label: string;
+  description: string;
+  count?: number;
+};
+
+type PanelConfig = {
+  label: string;
+  title: string;
+  href: string;
+  viewLabel?: string;
+  children: ReactNode;
+};
+
+const EMPTY_STATS: DashboardStats = {
+  franchises: { total: 0, pending: 0, active: 0 },
+  students: { total: 0, pending: 0, active: 0 },
+  courseInstructors: { total: 0, pending: 0, active: 0 },
+  orders: { total: 0, pending: 0, active: 0 },
+  certificates: { total: 0, pending: 0, active: 0 },
+};
+
+function formatLastUpdated(updatedAt?: number) {
+  if (!updatedAt) return "just now";
+
+  const diffMs = Date.now() - updatedAt;
+  if (!Number.isFinite(diffMs) || diffMs < 60_000) return "just now";
+
+  const diffMinutes = Math.floor(diffMs / 60_000);
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+
+  return `${Math.floor(diffHours / 24)}d ago`;
 }
 
-function StatCard({ label, value, sub, icon: Icon }: StatCardProps) {
+function formatOrderId(order: OrderData) {
+  return order.referenceId || `ORD-${String(order.id).padStart(4, "0")}`;
+}
+
+function formatApplicationSubtitle(application: FranchiseData) {
+  const owner = application.franchisee?.name;
+  const location = [application.city, application.state].filter(Boolean).join(", ");
+  return [owner, location].filter(Boolean).join(" - ") || "Franchise application";
+}
+
+function formatOrderSubtitle(order: OrderData) {
+  const franchise = order.franchise?.name;
+  const status = order.adminStatus ?? order.status;
+  return [franchise, status].filter(Boolean).join(" - ") || "Order activity";
+}
+
+function SummaryCell({ item }: { item: SummaryItem }) {
   return (
-    <div className="bg-white border border-gray-400 rounded-lg p-5 flex items-start gap-4">
-      <div className="p-2.5 bg-gray-50 rounded-md shrink-0">
-        <Icon className="w-5 h-5 text-gray-500" />
+    <div className="space-y-2 px-4 py-4 sm:px-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm text-muted-foreground">{item.label}</div>
+        <span className="h-2 w-2 rounded-full bg-primary" />
       </div>
-      <div>
-        <p className="text-2xl font-semibold text-gray-900">{value}</p>
-        <p className="text-sm text-gray-500">{label}</p>
-        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      <div className="text-4xl font-light leading-none text-card-foreground">
+        {item.value}
+      </div>
+      <div className="max-w-44 text-xs leading-snug text-muted-foreground">
+        {item.description}
       </div>
     </div>
   );
 }
 
-interface ModuleCardProps {
-  href: string;
-  icon: React.ElementType;
-  label: string;
-  description: string;
+function ModulePill({ label }: { label: string }) {
+  return (
+    <Badge
+      variant="outline"
+      className="rounded-full border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-primary hover:bg-primary/10"
+    >
+      {label}
+    </Badge>
+  );
 }
 
-function ModuleCard({ href, icon: Icon, label, description }: ModuleCardProps) {
+function QuickAccessCard({
+  item,
+  compact = false,
+}: {
+  item: QuickAccessItem;
+  compact?: boolean;
+}) {
+  const Icon = item.icon;
+
   return (
     <Link
-      href={href}
-      className="bg-white border border-gray-400 rounded-lg p-5 flex items-center gap-4 hover:bg-gray-50 transition-colors group"
+      href={item.href}
+      className={cn(
+        "group flex items-center gap-3 rounded-xl border bg-background p-3 shadow-sm transition-colors hover:border-primary/30 hover:bg-accent",
+        compact && "min-h-[4.75rem]",
+      )}
     >
-      <div className="p-2.5 bg-gray-50 rounded-md shrink-0 group-hover:bg-gray-100 transition-colors">
-        <Icon className="w-5 h-5 text-gray-500" />
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <Icon className="h-4 w-4" />
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900">{label}</p>
-        <p className="text-xs text-gray-400 truncate">{description}</p>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-base font-medium text-card-foreground">{item.label}</div>
+        <div className="truncate text-xs text-muted-foreground">
+          {item.description}
+        </div>
       </div>
-      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 shrink-0 transition-colors" />
+      {typeof item.count === "number" && (
+        <span className="flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full border bg-muted/30 px-2 text-xs text-card-foreground">
+          {item.count}
+        </span>
+      )}
+      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
     </Link>
   );
 }
 
-const EMPTY_STATS: DashboardStats = {
-  franchises: { total: 0, pending: 0 },
-  students: { total: 0, active: 0 },
-  courseInstructors: { total: 0, pending: 0 },
-  orders: { total: 0, pending: 0 },
-  certificates: { total: 0, pending: 0 },
-};
+function EmptyPanel({ message }: { message: string }) {
+  return (
+    <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+      {message}
+    </div>
+  );
+}
+
+function ApplicationCard({ application }: { application: FranchiseData }) {
+  return (
+    <Link
+      href={`/admin/franchise?tab=applications`}
+      className="block rounded-xl border bg-background p-3 shadow-sm transition-colors hover:border-primary/30 hover:bg-accent"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate text-base font-medium text-card-foreground">
+            {application.name}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {formatApplicationSubtitle(application)}
+          </div>
+        </div>
+        <Badge
+          variant="outline"
+          className="shrink-0 border-primary/20 bg-primary/10 text-primary hover:bg-primary/10"
+        >
+          {application.status}
+        </Badge>
+      </div>
+    </Link>
+  );
+}
+
+function OrderCard({ order }: { order: OrderData }) {
+  return (
+    <Link
+      href={`/admin/operations?tab=orders`}
+      className="block rounded-xl border bg-background p-3 shadow-sm transition-colors hover:border-primary/30 hover:bg-accent"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate text-base font-medium text-card-foreground">
+            {formatOrderId(order)}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {formatOrderSubtitle(order)}
+          </div>
+        </div>
+        <Badge
+          variant="outline"
+          className="shrink-0 border-primary/20 bg-primary/10 text-primary hover:bg-primary/10"
+        >
+          {order.totalItems ?? 0} items
+        </Badge>
+      </div>
+    </Link>
+  );
+}
+
+function DashboardPanel({ label, title, href, viewLabel = "View all", children }: PanelConfig) {
+  return (
+    <section className="flex h-full flex-col gap-4 px-4 py-4 sm:px-5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <ModulePill label={label} />
+          <h3 className="text-xl text-card-foreground">{title}</h3>
+        </div>
+        <Link
+          href={href}
+          className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
+        >
+          {viewLabel}
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+      <div className="border-t" />
+      {children}
+    </section>
+  );
+}
+
+function LoadingDashboard() {
+  return (
+    <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+      <div className="flex items-center gap-3 border-b px-5 py-5 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading admin dashboard...
+      </div>
+    </div>
+  );
+}
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
-  const [recentOrders, setRecentOrders] = useState<OrderData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useUser();
+  const isSuperAdmin = user?.role === "admin" && user.adminRole === "super";
+  const statsQuery = useAdminDashboardStats();
+  const applicationsQuery = usePendingFranchiseApplications({
+    page: 1,
+    limit: 5,
+  });
+  const ordersQuery = useAdminOrderRows({ page: 1, limit: 5 });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const stats: DashboardStats = useMemo(
+    () => ({
+      franchises: {
+        ...EMPTY_STATS.franchises,
+        ...statsQuery.data?.franchises,
+      },
+      students: { ...EMPTY_STATS.students, ...statsQuery.data?.students },
+      courseInstructors: {
+        ...EMPTY_STATS.courseInstructors,
+        ...statsQuery.data?.courseInstructors,
+      },
+      orders: { ...EMPTY_STATS.orders, ...statsQuery.data?.orders },
+      certificates: {
+        ...EMPTY_STATS.certificates,
+        ...statsQuery.data?.certificates,
+      },
+    }),
+    [statsQuery.data],
+  );
 
-  const fetchData = async () => {
-    try {
-      const [statsData, ordersData] = await Promise.all([
-        getAdminDashboardStats(),
-        getAllOrdersAdmin({ limit: 5 }),
-      ]);
-      setStats({
-        franchises: { ...EMPTY_STATS.franchises, ...statsData?.franchises },
-        students: { ...EMPTY_STATS.students, ...statsData?.students },
-        courseInstructors: {
-          ...EMPTY_STATS.courseInstructors,
-          ...statsData?.courseInstructors,
-        },
-        orders: { ...EMPTY_STATS.orders, ...statsData?.orders },
-        certificates: { ...EMPTY_STATS.certificates, ...statsData?.certificates },
-      });
-      const flat = Object.values(ordersData.data ?? {}).flat();
-      setRecentOrders(flat.slice(0, 5));
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      setStats(EMPTY_STATS);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const recentApplications = useMemo(
+    () => (applicationsQuery.data ?? []).slice(0, 3),
+    [applicationsQuery.data],
+  );
 
-  const statCards: StatCardProps[] = [
+  const recentOrders = useMemo(
+    () => (ordersQuery.data?.rows ?? []).slice(0, 3),
+    [ordersQuery.data],
+  );
+
+  const summary: SummaryItem[] = [
     {
       label: "Total Franchises",
-      value: stats.franchises.total.toString(),
-      sub:
-        stats.franchises.pending > 0
-          ? `${stats.franchises.pending} pending`
-          : undefined,
-      icon: Building2,
+      value: stats.franchises.total,
+      description: "Active networks",
     },
     {
       label: "Total Students",
-      value: stats.students.total.toString(),
-      sub:
-        stats.students.active > 0
-          ? `${stats.students.active} active`
-          : undefined,
-      icon: Users,
+      value: stats.students.total,
+      description: isSuperAdmin
+        ? "Enrolled across all franchises"
+        : "Enrolled in your assigned franchises",
     },
     {
       label: "Course Instructors",
-      value: stats.courseInstructors.total.toString(),
-      sub:
-        stats.courseInstructors.pending > 0
-          ? `${stats.courseInstructors.pending} pending`
-          : undefined,
-      icon: GraduationCap,
+      value: stats.courseInstructors.total,
+      description: isSuperAdmin
+        ? "Active across all regions"
+        : "Within your assigned franchises",
     },
     {
       label: "Total Orders",
-      value: stats.orders.total.toString(),
-      sub:
-        stats.orders.pending > 0
-          ? `${stats.orders.pending} pending`
-          : undefined,
-      icon: ShoppingCart,
+      value: stats.orders.total,
+      description: isSuperAdmin ? "All time" : "For your assigned franchises",
     },
     {
       label: "Certificates",
-      value: stats.certificates.total.toString(),
-      sub:
-        stats.certificates.pending > 0
-          ? `${stats.certificates.pending} pending`
-          : undefined,
-      icon: Award,
+      value: stats.certificates.total,
+      description: isSuperAdmin ? "Issued to date" : "Issued in your region",
     },
   ];
 
-  const modules: ModuleCardProps[] = [
+  const franchiseQuickAccess: QuickAccessItem[] = [
     {
-      href: "/admin/franchises",
+      href: "/admin/franchise?tab=franchises",
       icon: Building2,
       label: "Franchises",
-      description: "View and manage all franchises",
+      description: "View and manage all",
+      count: stats.franchises.total,
     },
     {
-      href: "/admin/pending-approvals",
-      icon: Clock,
+      href: "/admin/franchise?tab=applications",
+      icon: Users,
       label: "Pending Approvals",
-      description: "Review franchise applications",
+      description: "Franchise applications",
+      count: stats.franchises.pending,
     },
     {
-      href: "/admin/course-instructor-approvals",
-      icon: UserCheck,
-      label: "CI Approvals",
-      description: "Course instructor applications",
-    },
-    {
-      href: "/admin/ci-training",
-      icon: BookOpen,
-      label: "CI Training",
-      description: "Manage training sessions",
-    },
-    {
-      href: "/admin/training-levels",
-      icon: Layers,
-      label: "Training Levels",
-      description: "Configure training level settings",
-    },
-    {
-      href: "/admin/orders",
-      icon: ShoppingCart,
-      label: "Orders",
-      description: "View and manage all orders",
-    },
-    {
-      href: "/admin/inventory",
-      icon: Package,
-      label: "Inventory",
-      description: "Manage inventory items",
-    },
-    {
-      href: "/admin/certificate-requests",
-      icon: Award,
-      label: "Certificates",
-      description: "Certificate request management",
-    },
-    {
-      href: "/admin/id-requests",
-      icon: FileText,
-      label: "ID Requests",
-      description: "Student ID card requests",
-    },
-    {
-      href: "/admin/payments",
-      icon: CreditCard,
-      label: "Payments",
-      description: "Payment records and billing",
-    },
-    {
-      href: "/admin/shipping",
-      icon: Truck,
-      label: "Shipping",
-      description: "Shipping and delivery management",
+      href: "/admin/franchise?tab=agreements",
+      icon: ClipboardSignature,
+      label: "Agreements",
+      description: "Signatures and payments",
     },
   ];
 
-  if (loading) {
-    return (
-      <div className="p-6 space-y-6 bg-white min-h-screen">
-        <div className="animate-pulse space-y-6">
-          <div className="space-y-1">
-            <div className="h-6 bg-gray-100 rounded w-44" />
-            <div className="h-4 bg-gray-100 rounded w-64" />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-20 bg-gray-100 rounded-lg" />
-            ))}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-100 rounded-lg" />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+  const trainingQuickAccess: QuickAccessItem[] = [
+    {
+      href: "/admin/course-instructors?tab=applications",
+      icon: UserCheck,
+      label: "CI Approvals",
+      description: "Instructor applications",
+      count: stats.courseInstructors.pending,
+    },
+    {
+      href: "/admin/course-instructors?tab=training",
+      icon: BookOpen,
+      label: "CI Training",
+      description: "Manage sessions",
+    },
+    {
+      href: "/admin/course-instructors?tab=levels",
+      icon: Layers,
+      label: "Training Levels",
+      description: "Configure level settings",
+    },
+  ];
+
+  if (isSuperAdmin) {
+    trainingQuickAccess.push({
+      href: "/admin/franchise?tab=programs",
+      icon: ClipboardList,
+      label: "Program Requests",
+      description: "Approve new programs",
+    });
+  }
+
+  const ordersQuickAccess: QuickAccessItem[] = [
+    {
+      href: "/admin/operations?tab=orders",
+      icon: ShoppingCart,
+      label: "Orders",
+      description: "View and manage all",
+      count: stats.orders.total,
+    },
+    {
+      href: "/admin/operations?tab=payments",
+      icon: CreditCard,
+      label: "Payments",
+      description: "Records and billing",
+    },
+    {
+      href: "/admin/operations?tab=shipping",
+      icon: Truck,
+      label: "Shipping",
+      description: "Delivery management",
+    },
+  ];
+
+  const operationsQuickAccess: QuickAccessItem[] = [
+    {
+      href: "/admin/students?tab=certificates",
+      icon: Award,
+      label: "Certificates",
+      description: "Certificate requests",
+      count: stats.certificates.pending,
+    },
+    {
+      href: "/admin/students?tab=ids",
+      icon: BadgeCheck,
+      label: "ID Requests",
+      description: "Student ID card requests",
+      count: 0,
+    },
+    {
+      href: "/admin/operations?tab=inventory",
+      icon: Package,
+      label: "Inventory",
+      description: "Suppliers and procurement",
+    },
+  ];
+
+  if (statsQuery.isLoading && !statsQuery.data) {
+    return <LoadingDashboard />;
   }
 
   return (
-    <div className="p-6 space-y-6 bg-white min-h-full">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-900">Admin Dashboard</h1>
-        <p className="text-sm text-gray-500">
-          Overview of all franchises and their activities
-        </p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        {statCards.map((s) => (
-          <StatCard key={s.label} {...s} />
-        ))}
-      </div>
-
-      {/* Quick Access modules */}
-      <div>
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">
-          Quick Access
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-          {modules.map((m) => (
-            <ModuleCard key={m.href} {...m} />
-          ))}
+    <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+      <div className="flex flex-col gap-3 border-b px-4 py-5 sm:px-5 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h1 className="text-2xl text-card-foreground">Admin Dashboard</h1>
+          <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
+            {isSuperAdmin
+              ? "Overview of all franchises and platform activity."
+              : "Overview of your assigned franchises and regional activity."}
+          </p>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Last updated: {formatLastUpdated(statsQuery.dataUpdatedAt)}
         </div>
       </div>
 
-      {/* Recent data */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <RecentApplications />
+      <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5">
+        {summary.map((item) => (
+          <SummaryCell key={item.label} item={item} />
+        ))}
+      </div>
 
-        <Card className="bg-white border border-gray-400 shadow-none">
-          <CardHeader className="flex-row items-center justify-between pb-3">
-            <CardTitle className="text-sm font-medium text-gray-700">
-              Recent Orders
-            </CardTitle>
-            <Link
-              href="/admin/orders"
-              className="text-xs text-gray-400 hover:text-gray-600"
-            >
-              View all
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {recentOrders.length === 0 ? (
-              <p className="text-sm text-gray-400">No recent orders</p>
+      <div className="grid xl:grid-cols-3">
+        <div className="border-b xl:border-r">
+          <DashboardPanel
+            label="Franchises"
+            title="Quick access"
+            href="/admin/franchise?tab=franchises"
+          >
+            <div className="space-y-3">
+              {franchiseQuickAccess.map((item) => (
+                <QuickAccessCard key={item.label} item={item} compact />
+              ))}
+            </div>
+          </DashboardPanel>
+        </div>
+
+        <div className="border-b xl:border-r">
+          <DashboardPanel
+            label="Training"
+            title="Quick access"
+            href="/admin/course-instructors"
+          >
+            <div className="space-y-3">
+              {trainingQuickAccess.map((item) => (
+                <QuickAccessCard key={item.label} item={item} compact />
+              ))}
+            </div>
+          </DashboardPanel>
+        </div>
+
+        <div className="border-b">
+          <DashboardPanel
+            label="Orders & Payments"
+            title="Quick access"
+            href="/admin/operations?tab=orders"
+          >
+            <div className="space-y-3">
+              {ordersQuickAccess.map((item) => (
+                <QuickAccessCard key={item.label} item={item} compact />
+              ))}
+            </div>
+          </DashboardPanel>
+        </div>
+
+        <div className="border-b xl:border-b-0 xl:border-r">
+          <DashboardPanel
+            label="Franchises"
+            title="Recent applications"
+            href="/admin/franchise?tab=applications"
+            viewLabel="See all"
+          >
+            {applicationsQuery.isLoading && !applicationsQuery.data ? (
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading applications...
+              </div>
+            ) : recentApplications.length === 0 ? (
+              <EmptyPanel message="No pending applications." />
             ) : (
               <div className="space-y-3">
-                {recentOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="flex items-center justify-between"
-                  >
-                    <div>
-                      <p className="text-sm text-gray-900">
-                        {order.franchise?.name ?? `Order #${order.id}`}
-                      </p>
-                      <p className="text-xs text-gray-400">{order.orderType}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-900">
-                        ₹{Number(order.totalAmount).toLocaleString()}
-                      </p>
-                      <p
-                        className={`text-xs ${
-                          order.status === "Delivered"
-                            ? "text-green-600"
-                            : order.status === "Pending"
-                            ? "text-orange-500"
-                            : "text-blue-500"
-                        }`}
-                      >
-                        {order.status}
-                      </p>
-                    </div>
-                  </div>
+                {recentApplications.map((application) => (
+                  <ApplicationCard
+                    key={application.id}
+                    application={application}
+                  />
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </DashboardPanel>
+        </div>
+
+        <div className="border-b xl:border-b-0 xl:border-r">
+          <DashboardPanel
+            label="Orders"
+            title="Recent orders"
+            href="/admin/operations?tab=orders"
+          >
+            {ordersQuery.isLoading && !ordersQuery.data ? (
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading orders...
+              </div>
+            ) : recentOrders.length === 0 ? (
+              <EmptyPanel message="No recent orders." />
+            ) : (
+              <div className="space-y-3">
+                {recentOrders.map((order) => (
+                  <OrderCard key={order.id} order={order} />
+                ))}
+              </div>
+            )}
+          </DashboardPanel>
+        </div>
+
+        <div>
+          <DashboardPanel
+            label="Operations"
+            title="Quick access"
+            href="/admin/operations?tab=monitoring"
+          >
+            <div className="space-y-3">
+              {operationsQuickAccess.map((item) => (
+                <QuickAccessCard key={item.label} item={item} compact />
+              ))}
+            </div>
+          </DashboardPanel>
+        </div>
       </div>
     </div>
   );

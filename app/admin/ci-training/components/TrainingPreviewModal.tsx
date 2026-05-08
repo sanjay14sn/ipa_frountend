@@ -19,7 +19,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { CITrainingData } from "@/services/course-instructor.service";
-import { completeTrainingWithRevalidation } from "@/hooks/use-course-instructors";
+import { completeTrainingWithRevalidation } from "@/hooks/api/course-instructor.hooks";
 
 interface TrainingPreviewModalProps {
   open: boolean;
@@ -149,7 +149,7 @@ export default function TrainingPreviewModal({
                 <div className="flex justify-between items-center">
                   <span className="opacity-80">Amount:</span>
                   <span className="font-semibold">
-                    {formatCurrency(instructor.amount)}
+                    {formatCurrency(instructor.amount ?? 0)}
                   </span>
                 </div>
                 {instructor.installmentCount && (
@@ -164,7 +164,7 @@ export default function TrainingPreviewModal({
                   <div className="flex justify-between items-center">
                     <span className="opacity-80">Monthly:</span>
                     <span className="font-semibold">
-                      {formatCurrency(instructor.installmentAmount)}
+                      {formatCurrency(instructor.installmentAmount ?? 0)}
                     </span>
                   </div>
                 )}

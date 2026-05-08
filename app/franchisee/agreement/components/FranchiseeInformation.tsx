@@ -6,65 +6,65 @@ export default function FranchiseeInformation({
   franchiseData,
 }: FranchiseeInformationProps) {
   return (
-    <div className="border-2 border-primary rounded-lg p-5 bg-white shadow-sm">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b-2 border-primary">
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <h3 className="mb-3 border-b border-border pb-2 text-base font-medium text-card-foreground">
         Franchisee Information
       </h3>
       <div className="space-y-3">
-        <div className="flex justify-between items-start">
-          <span className="text-sm font-medium text-gray-600">
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-sm font-medium text-muted-foreground">
             Contact Person:
           </span>
-          <span className="text-sm text-gray-900 font-medium">
+          <span className="text-sm font-medium text-card-foreground">
             {franchiseData.contactPerson}
           </span>
         </div>
-        <div className="flex justify-between items-start">
-          <span className="text-sm font-medium text-gray-600">Email:</span>
-          <span className="text-sm text-gray-900 break-all text-right">
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-sm font-medium text-muted-foreground">Email:</span>
+          <span className="break-all text-right text-sm text-card-foreground">
             {franchiseData.email}
           </span>
         </div>
-        <div className="flex justify-between items-start">
-          <span className="text-sm font-medium text-gray-600">Phone:</span>
-          <span className="text-sm text-gray-900">{franchiseData.phone}</span>
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-sm font-medium text-muted-foreground">Phone:</span>
+          <span className="text-sm text-card-foreground">{franchiseData.phone}</span>
         </div>
         {franchiseData.dob && (
-          <div className="flex justify-between items-start">
-            <span className="text-sm font-medium text-gray-600">
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-sm font-medium text-muted-foreground">
               Date of Birth:
             </span>
-            <span className="text-sm text-gray-900">
+            <span className="text-sm text-card-foreground">
               {new Date(franchiseData.dob).toLocaleDateString()}
             </span>
           </div>
         )}
         {franchiseData.bloodGroup && (
-          <div className="flex justify-between items-start">
-            <span className="text-sm font-medium text-gray-600">
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-sm font-medium text-muted-foreground">
               Blood Group:
             </span>
-            <span className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-900">
+            <span className="rounded-md bg-muted px-2 py-1 text-sm text-card-foreground">
               {franchiseData.bloodGroup}
             </span>
           </div>
         )}
         {franchiseData.educationalQualification && (
-          <div className="flex justify-between items-start">
-            <span className="text-sm font-medium text-gray-600">
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-sm font-medium text-muted-foreground">
               Education:
             </span>
-            <span className="text-sm text-gray-900 text-right">
+            <span className="text-right text-sm text-card-foreground">
               {franchiseData.educationalQualification}
             </span>
           </div>
         )}
         {franchiseData.presentOccupation && (
-          <div className="flex justify-between items-start">
-            <span className="text-sm font-medium text-gray-600">
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-sm font-medium text-muted-foreground">
               Occupation:
             </span>
-            <span className="text-sm text-gray-900 text-right">
+            <span className="text-right text-sm text-card-foreground">
               {franchiseData.presentOccupation}
             </span>
           </div>

@@ -29,8 +29,12 @@ import {
   CheckCircle,
 } from "lucide-react";
 import React from "react";
-import { StudentStream, StudentIdStatus } from "@/services/student.service";
-import { createStudentWithRevalidation } from "@/hooks/use-students";
+import {
+  StudentStream,
+  StudentIdStatus,
+  type StudentData,
+} from "@/services/student.service";
+import { useCreateStudentWithRevalidation } from "@/hooks/api/student.hooks";
 import { useUser } from "@/context/user-context";
 import { getAllPrograms, Program } from "@/services/program.service";
 import { getLevelsByStream, Level } from "@/services/level.service";
@@ -185,6 +189,7 @@ export default function AddStudentModal({
   const [loadingLevels, setLoadingLevels] = useState(false);
 
   const { user } = useUser();
+  const createStudentMutation = useCreateStudentWithRevalidation();
 
   const [formData, setFormData] = useState<StudentFormData>({
     existing: false,
@@ -488,10 +493,15 @@ export default function AddStudentModal({
         existing: formData.existing,
       };
 
-      // Call the student service with SWR revalidation
-      // Note: studentData uses levelId (number) as expected by backend DTO,
-      // even though StudentData interface uses level (string)
-      const result = await createStudentWithRevalidation(studentData as any);
+      await createStudentMutation.mutateAsync(
+        {
+          ...studentData,
+          level: "",
+        } as unknown as Omit<
+          StudentData,
+          "id" | "createdAt" | "updatedAt" | "createdBy" | "updatedBy"
+        >,
+      );
 
       setSubmitted(true);
       onSuccess();

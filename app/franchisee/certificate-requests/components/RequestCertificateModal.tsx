@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,9 +22,11 @@ import {
 import { Award, Loader2 } from "lucide-react";
 import { EligibleStudent } from "@/services/student.service";
 import { useToast } from "@/hooks/use-toast";
-import { CourseInstructorData } from "@/services/course-instructor.service";
-import { revalidateCertificateRequests } from "@/hooks/use-students";
-import { getApiBaseUrl } from "@/lib/api-utils";
+import {
+  CourseInstructorData,
+  getEligibleCourseInstructorsForCertificate,
+} from "@/services/course-instructor.service";
+import { useRequestCertificateForStudent } from "@/hooks/api/student.hooks";
 
 interface RequestCertificateModalProps {
   open: boolean;
@@ -38,15 +40,42 @@ export default function RequestCertificateModal({
   open,
   onOpenChange,
   student,
-  courseInstructors,
   onSuccess,
 }: RequestCertificateModalProps) {
-  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     marksObtained: "",
     courseInstructorId: "",
   });
+  const [eligibleInstructors, setEligibleInstructors] = useState<CourseInstructorData[]>([]);
+  const [isLoadingInstructors, setIsLoadingInstructors] = useState(false);
   const { toast } = useToast();
+  const requestCert = useRequestCertificateForStudent();
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadEligible() {
+      if (!open || !student.levelId) return;
+      setIsLoadingInstructors(true);
+      try {
+        const rows = await getEligibleCourseInstructorsForCertificate(
+          [student.levelId],
+          student.programId ?? undefined,
+        );
+        if (!cancelled) setEligibleInstructors(rows);
+      } catch (error) {
+        if (!cancelled) {
+          setEligibleInstructors([]);
+          console.error("Error loading eligible course instructors:", error);
+        }
+      } finally {
+        if (!cancelled) setIsLoadingInstructors(false);
+      }
+    }
+    void loadEligible();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, student.levelId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +92,7 @@ export default function RequestCertificateModal({
       return;
     }
 
-    const marksObtained = parseInt(formData.marksObtained);
+    const marksObtained = parseInt(formData.marksObtained, 10);
 
     if (marksObtained < 0) {
       toast({
@@ -75,34 +104,23 @@ export default function RequestCertificateModal({
       return;
     }
 
-    setIsLoading(true);
+    if (!student.programId || !student.levelId) {
+      toast({
+        title: "Error",
+        description: "Student program or level is missing. Refresh and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      const requestBody = {
+      await requestCert.mutateAsync({
+        studentId: student.id,
+        programId: student.programId,
+        levelId: student.levelId,
         marksObtained,
-        courseInstructerId: parseInt(formData.courseInstructorId),
-      };
-
-      const response = await fetch(
-        `${getApiBaseUrl()}/certificate/request/${student.id}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify(requestBody),
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error("Failed to create certificate request");
-      }
-
-      const result = await response.json();
-
-      // Revalidate both admin and franchisee certificate requests
-      await revalidateCertificateRequests();
+        courseInstructorId: parseInt(formData.courseInstructorId, 10),
+      });
 
       toast({
         title: "Success",
@@ -122,10 +140,10 @@ export default function RequestCertificateModal({
         description: "Failed to create certificate request. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
+
+  const isLoading = requestCert.isPending;
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
@@ -134,7 +152,7 @@ export default function RequestCertificateModal({
     }));
   };
 
-  const selectedInstructor = courseInstructors.find(
+  const selectedInstructor = eligibleInstructors.find(
     (ci) => ci.id.toString() === formData.courseInstructorId
   );
 
@@ -166,7 +184,15 @@ export default function RequestCertificateModal({
                 <SelectValue placeholder="Select course instructor" />
               </SelectTrigger>
               <SelectContent>
-              {courseInstructors.map((instructor) => (
+              {isLoadingInstructors ? (
+                <SelectItem value="loading" disabled>
+                  Loading eligible instructors...
+                </SelectItem>
+              ) : eligibleInstructors.length === 0 ? (
+                <SelectItem value="none" disabled>
+                  No eligible instructors found for this level
+                </SelectItem>
+              ) : eligibleInstructors.map((instructor) => (
                   <SelectItem
                     key={instructor.id}
                     value={instructor.id.toString()}
@@ -213,13 +239,13 @@ export default function RequestCertificateModal({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isLoading}
+              disabled={isLoading || isLoadingInstructors}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isLoadingInstructors || eligibleInstructors.length === 0}
               className="bg-primary hover:bg-primary/90"
             >
               {isLoading ? (

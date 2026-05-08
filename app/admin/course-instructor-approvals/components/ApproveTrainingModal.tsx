@@ -95,7 +95,10 @@ export default function ApproveTrainingModal({
 
     try {
       const trainingData: ApproveTrainingRequest = {
-        dateOfTraining: formData.dateOfTraining,
+        dateOfTraining:
+          formData.dateOfTraining instanceof Date
+            ? formData.dateOfTraining.toISOString().slice(0, 10)
+            : String(formData.dateOfTraining),
         amount: parseFloat(formData.amount),
         ...(formData.useEMI && {
           installmentCount: parseInt(formData.installmentCount),
@@ -103,7 +106,7 @@ export default function ApproveTrainingModal({
         }),
       };
 
-      await approveTraining(instructorId, trainingData);
+      await approveTraining(Number(instructorId), trainingData);
 
       toast({
         title: "Training Approved",

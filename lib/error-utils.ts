@@ -29,9 +29,9 @@ export function extractErrorMessage(
       if (typeof errorData === 'object') {
         // Handle ErrorException format: { code, message }
         if ('message' in errorData) {
-          const msg = errorData.message;
+          const msg = (errorData as { message: unknown }).message;
           if (typeof msg === 'string') return msg;
-          if (Array.isArray(msg) && msg.length > 0) return msg[0];
+          if (Array.isArray(msg) && msg.length > 0) return String(msg[0]);
         }
         
         // Handle nested error objects

@@ -2,29 +2,24 @@
 
 import type * as React from "react";
 import {
-  Calculator,
-  LayoutDashboard,
-  Building2,
-  ShoppingCart,
-  Users,
-  GraduationCap,
-  Trophy,
-  FileText,
-  LogOut,
-  Store,
-  Clock,
   AlertCircle,
   BookOpen,
-  Award,
-  CreditCard,
-  Settings,
-  Package,
+  Building2,
+  Calculator,
+  Calendar,
+  ClipboardList,
+  FileText,
+  GraduationCap,
+  LayoutDashboard,
+  ShieldCheck,
+  ShoppingCart,
+  Store,
+  Users,
 } from "lucide-react";
 
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -36,8 +31,8 @@ import {
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 import { useUser } from "@/context/user-context";
-import { franchiseeLogout, logout } from "@/services/auth.service";
-import { useRouter, usePathname } from "next/navigation";
+import { useCIAuth } from "@/context/ci-auth-context";
+import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Select,
@@ -46,6 +41,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { getEffectiveFranchiseStatus } from "@/lib/auth";
 
 const adminNavigation = {
   navMain: [
@@ -57,75 +54,30 @@ const adminNavigation = {
           url: "/admin/dashboard",
           icon: LayoutDashboard,
         },
-        {
-          title: "Profile",
-          url: "/admin/profile",
-          icon: Settings,
-        },
-        {
-          title: "Inventory",
-          url: "/admin/inventory",
-          icon: Package,
-        },
       ],
     },
     {
-      title: "Franchise Management",
+      title: "Management",
       items: [
         {
-          title: "Manage Franchises",
-          url: "/admin/franchises",
+          title: "Franchise",
+          url: "/admin/franchise",
           icon: Building2,
         },
         {
-          title: "Franchisee Approvals",
-          url: "/admin/pending-approvals",
-          icon: Clock,
-        },
-        {
-          title: "Program Requests",
-          url: "/admin/program-requests",
-          icon: FileText,
-        },
-        {
-          title: "CI Approvals",
-          url: "/admin/course-instructor-approvals",
-          icon: GraduationCap,
-        },
-        {
-          title: "ID Requests",
-          url: "/admin/id-requests",
+          title: "Students",
+          url: "/admin/students",
           icon: Users,
         },
         {
-          title: "Certificate Requests",
-          url: "/admin/certificate-requests",
-          icon: Award,
+          title: "Course Instructors",
+          url: "/admin/course-instructors",
+          icon: GraduationCap,
         },
         {
-          title: "CI Training",
-          url: "/admin/ci-training",
-          icon: BookOpen,
-        },
-        {
-          title: "Training Levels",
-          url: "/admin/training-levels",
-          icon: BookOpen,
-        },
-        {
-          title: "Orders",
-          url: "/admin/orders",
+          title: "Operations",
+          url: "/admin/operations",
           icon: ShoppingCart,
-        },
-        {
-          title: "Shipping",
-          url: "/admin/shipping",
-          icon: Package,
-        },
-        {
-          title: "Payments",
-          url: "/admin/payments",
-          icon: CreditCard,
         },
       ],
     },
@@ -145,8 +97,13 @@ const franchiseNavigation = {
       ],
     },
     {
-      title: "My Franchise",
+      title: "My business",
       items: [
+        {
+          title: "My Franchise",
+          url: "/franchisee/franchise",
+          icon: Store,
+        },
         {
           title: "Students",
           url: "/franchisee/students",
@@ -162,27 +119,11 @@ const franchiseNavigation = {
           url: "/franchisee/orders",
           icon: ShoppingCart,
         },
-        {
-          title: "Contests",
-          url: "/franchisee/contests",
-          icon: Trophy,
-        },
-        {
-          title: "Certificate Requests",
-          url: "/franchisee/certificate-requests",
-          icon: Award,
-        },
-        {
-          title: "Program Agreements",
-          url: "/franchisee/program-agreements",
-          icon: FileText,
-        },
       ],
     },
   ],
 };
 
-// Navigation for franchisees who haven't completed onboarding
 const onboardingNavigation = {
   navMain: [
     {
@@ -198,31 +139,165 @@ const onboardingNavigation = {
   ],
 };
 
+const ciNavigation = {
+  navMain: [
+    {
+      title: "Overview",
+      items: [
+        {
+          title: "Dashboard",
+          url: "/ci/dashboard",
+          icon: LayoutDashboard,
+        },
+      ],
+    },
+    {
+      title: "Agreement",
+      items: [
+        {
+          title: "My Agreement",
+          url: "/ci/agreement",
+          icon: FileText,
+        },
+      ],
+    },
+    {
+      title: "Training",
+      items: [
+        {
+          title: "Packages",
+          url: "/ci/training/packages",
+          icon: ClipboardList,
+        },
+        {
+          title: "Progress",
+          url: "/ci/training/progress",
+          icon: GraduationCap,
+        },
+        {
+          title: "Upcoming",
+          url: "/ci/training/upcoming",
+          icon: Calendar,
+        },
+      ],
+    },
+  ],
+};
+
+const ciOnboardingNavigation = {
+  navMain: [
+    {
+      title: "Setup",
+      items: [
+        {
+          title: "My Agreement",
+          url: "/ci/agreement",
+          icon: FileText,
+        },
+      ],
+    },
+  ],
+};
+
+function isNavItemActive(pathname: string, url: string): boolean {
+  const urlPath = url.split("?")[0];
+  if (
+    urlPath === "/admin/dashboard" ||
+    urlPath === "/admin/programs" ||
+    urlPath === "/franchisee/dashboard"
+  ) {
+    return pathname === urlPath;
+  }
+  if (urlPath === "/admin/franchise") {
+    return pathname.startsWith("/admin/franchise");
+  }
+  if (urlPath === "/franchisee/franchise") {
+    return pathname.startsWith("/franchisee/franchise");
+  }
+  if (urlPath === "/admin/students") {
+    return pathname.startsWith("/admin/students");
+  }
+  if (urlPath === "/franchisee/students") {
+    return pathname.startsWith("/franchisee/students");
+  }
+  if (urlPath === "/admin/course-instructors") {
+    return pathname.startsWith("/admin/course-instructors");
+  }
+  if (urlPath === "/franchisee/course-instructors") {
+    return pathname.startsWith("/franchisee/course-instructors");
+  }
+  if (urlPath === "/admin/operations") {
+    return pathname.startsWith("/admin/operations");
+  }
+  if (urlPath === "/admin/admins") {
+    return pathname.startsWith("/admin/admins");
+  }
+  if (urlPath === "/franchisee/orders") {
+    return pathname.startsWith("/franchisee/orders");
+  }
+  return pathname === urlPath || pathname.startsWith(`${urlPath}/`);
+}
+
 export function DynamicSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
   const { user, switchFranchise } = useUser();
+  const { user: ciUser, agreementPhase } = useCIAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const franchiseStatus = getEffectiveFranchiseStatus(user);
+  const isActiveFranchisee = franchiseStatus === "Active";
+  const isApprovedFranchisee = franchiseStatus === "Approved";
 
-  // Determine navigation based on user role and onboarding status
   let navigation = adminNavigation;
   let sidebarTitle = "Abacus Admin";
   let sidebarSubtitle = "Admin Dashboard";
 
-  if (user?.role === "franchisee") {
-    if (user.franchiseStatus === "Active") {
+  const isCIUser = !!ciUser && !user;
+  const ciAgreementLocked = isCIUser && agreementPhase === "PENDING_CI_SIGNATURE";
+
+  if (isCIUser) {
+    sidebarTitle = "CI Portal";
+    sidebarSubtitle = ciUser.instructorCode;
+    navigation = ciAgreementLocked ? ciOnboardingNavigation : ciNavigation;
+  } else if (user?.role === "admin" && user.adminRole === "super") {
+    navigation = {
+      ...adminNavigation,
+      navMain: adminNavigation.navMain.map((group) =>
+        group.title === "Overview"
+          ? {
+              ...group,
+              items: [
+                ...group.items,
+                {
+                  title: "Programs",
+                  url: "/admin/programs",
+                  icon: BookOpen,
+                },
+                {
+                  title: "Admins",
+                  url: "/admin/admins",
+                  icon: ShieldCheck,
+                },
+              ],
+            }
+          : group,
+      ),
+    };
+  } else if (user?.role === "franchisee") {
+    if (isActiveFranchisee) {
       navigation = franchiseNavigation;
       sidebarTitle = "Franchise Portal";
       sidebarSubtitle = user?.franchiseName || "Franchise Dashboard";
     } else {
       navigation = onboardingNavigation;
       sidebarTitle = "Franchise Setup";
-      sidebarSubtitle = "Complete your agreement";
+      sidebarSubtitle =
+        isApprovedFranchisee
+          ? "Sign and pay to activate"
+          : "Awaiting admin approval";
     }
   }
-
-  const isActive = (url: string) => pathname === url;
 
   const handleFranchiseSelect = async (franchiseId: string) => {
     const franchise = user?.franchises?.find((f) => f.id === franchiseId);
@@ -246,23 +321,29 @@ export function DynamicSidebar({
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="gap-1 p-1.5">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link
                 href={
-                  user?.role === "admin"
-                    ? "/admin/dashboard"
-                    : user?.franchiseStatus === "Active"
-                      ? "/franchisee/dashboard"
-                      : "/franchisee/agreement"
+                  isCIUser
+                    ? ciAgreementLocked
+                      ? "/ci/agreement"
+                      : "/ci/dashboard"
+                    : user?.role === "admin"
+                      ? "/admin/dashboard"
+                      : isActiveFranchisee
+                        ? "/franchisee/dashboard"
+                        : "/franchisee/agreement"
                 }
               >
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-brand-yellow-400 text-brand-green-500 shadow-md">
-                  {user?.role === "admin" ? (
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary/12 text-primary shadow-sm ring-1 ring-primary/10">
+                  {isCIUser ? (
+                    <GraduationCap className="size-4" />
+                  ) : user?.role === "admin" ? (
                     <Calculator className="size-4" />
-                  ) : user?.franchiseStatus === "Active" ? (
+                  ) : isActiveFranchisee ? (
                     <Store className="size-4" />
                   ) : (
                     <FileText className="size-4" />
@@ -282,9 +363,8 @@ export function DynamicSidebar({
         </SidebarMenu>
       </SidebarHeader>
 
-      {/* Franchise dropdown - separate below header */}
       {showFranchiseSwitcher && (
-        <div className="px-3 py-2 border-t border-sidebar-border">
+        <div className="border-t border-sidebar-border px-2 py-1.5">
           <Select
             value={user?.franchiseId ?? ""}
             onValueChange={handleFranchiseSelect}
@@ -307,18 +387,17 @@ export function DynamicSidebar({
         </div>
       )}
 
-      {/* Onboarding Alert for incomplete franchisees */}
-      {user?.role === "franchisee" && user?.franchiseStatus === "Pending" && (
-        <div className="px-3 py-2">
-          <div className="bg-brand-yellow-50 border border-brand-yellow-200 rounded-lg p-3">
+      {user?.role === "franchisee" && !isActiveFranchisee && (
+        <div className="border-t border-sidebar-border px-2 py-1.5">
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5">
             <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-brand-yellow-600 mt-0.5 flex-shrink-0" />
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <div className="text-xs">
-                <p className="font-medium text-brand-yellow-800">
-                  Setup Required
-                </p>
-                <p className="text-brand-yellow-700 mt-1">
-                  Complete your franchise agreement to access all features.
+                <p className="font-medium text-primary">Setup Required</p>
+                <p className="mt-1 text-foreground/80">
+                  {isApprovedFranchisee
+                    ? "Sign your agreement and complete payment to activate your franchise."
+                    : "Your application is waiting for admin approval. Portal access will unlock after approval."}
                 </p>
               </div>
             </div>
@@ -326,43 +405,64 @@ export function DynamicSidebar({
         </div>
       )}
 
-      <SidebarContent>
-        {navigation.navMain.map((item) => (
-          <SidebarGroup key={item.title}>
+      {isCIUser && ciAgreementLocked && (
+        <div className="border-t border-sidebar-border px-2 py-1.5">
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <div className="text-xs">
+                <p className="font-medium text-primary">Signature Required</p>
+                <p className="mt-1 text-foreground/80">
+                  Please sign your course instructor agreement to access the portal.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <SidebarContent className="gap-0">
+        {navigation.navMain.map((group, index) => (
+          <SidebarGroup
+            key={group.title}
+            className={cn("px-2 py-1", index === 0 ? "pt-1.5" : "pt-0")}
+          >
             <SidebarGroupLabel
-              className={
-                user?.role === "franchisee" &&
-                user?.franchiseStatus === "Pending"
-                  ? "text-brand-yellow-400 font-medium"
-                  : "text-sidebar-foreground/80 font-medium"
-              }
+              className={cn(
+                "h-7 px-2 text-[11px] font-semibold uppercase tracking-wider text-primary/65",
+                ((user?.role === "franchisee" && !isActiveFranchisee) ||
+                  (isCIUser && ciAgreementLocked)) &&
+                  "text-primary/80",
+              )}
             >
-              {item.title}
+              {group.title}
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
-                {item.items.map((item) => {
-                  const active = isActive(item.url);
+              <SidebarMenu className="gap-0.5">
+                {group.items.map((navItem) => {
+                  const active = isNavItemActive(pathname, navItem.url);
                   return (
-                    <SidebarMenuItem key={item.title}>
+                    <SidebarMenuItem key={navItem.title}>
                       <SidebarMenuButton
                         asChild
                         isActive={active}
-                        className={`transition-colors ${
+                        className={cn(
+                          "transition-colors",
                           active
-                            ? "!bg-primary !text-white hover:!bg-brand-green-600 data-[active=true]:!bg-primary data-[active=true]:!text-white"
-                            : "text-sidebar-foreground hover:bg-secondary/50 hover:text-brand-green-500"
-                        }`}
+                            ? "!bg-primary !text-primary-foreground hover:!bg-primary/90 data-[active=true]:!bg-primary data-[active=true]:!text-primary-foreground"
+                            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-primary",
+                        )}
                       >
-                        <Link href={item.url}>
-                          <item.icon
-                            className={
+                        <Link href={navItem.url}>
+                          <navItem.icon
+                            className={cn(
+                              "shrink-0",
                               active
-                                ? "!text-secondary"
-                                : "text-brand-green-500"
-                            }
+                                ? "!text-primary-foreground"
+                                : "text-primary",
+                            )}
                           />
-                          <span>{item.title}</span>
+                          <span>{navItem.title}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -374,27 +474,6 @@ export function DynamicSidebar({
         ))}
       </SidebarContent>
 
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => {
-                if (user?.role === "admin") {
-                  logout();
-                  router.push("/admin-login");
-                } else {
-                  franchiseeLogout();
-                  router.push("/login");
-                }
-              }}
-              className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-brand-green-500 transition-colors"
-            >
-              <LogOut className="text-brand-green-500" />
-              <span>Logout</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

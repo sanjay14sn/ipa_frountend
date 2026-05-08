@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, BookOpen, Award } from "lucide-react";
-import { AdminTable } from "@/components/shared";
+import { DataTable } from "@/components/shared";
 import type {
-  AdminTableColumn,
-  AdminTableFilter,
-  AdminTableSortOption,
-} from "@/components/shared/AdminTable";
+  DataTableColumn,
+  DataTableFilter,
+  DataTableSortOption,
+} from "@/components/shared";
 import { EligibleStudent } from "@/services/student.service";
 
 interface EligibleStudentsTableProps {
@@ -169,7 +169,7 @@ export default function EligibleStudentsTable({
   const allSelected = filteredData.length > 0 && filteredData.every((s) => selectedStudents.has(s.id));
   const someSelected = filteredData.some((s) => selectedStudents.has(s.id));
 
-  const columns: AdminTableColumn<EligibleStudent>[] = [
+  const columns: DataTableColumn<EligibleStudent>[] = [
     {
       key: "student",
       header: "Student",
@@ -206,6 +206,24 @@ export default function EligibleStudentsTable({
       ),
     },
     {
+      key: "eligibility",
+      header: "Eligibility",
+      className: "text-center",
+      render: (student) => (
+        <Badge
+          className={
+            student.eligibilityReason === "no_certificate"
+              ? "bg-blue-50 text-blue-700 border border-blue-200"
+              : "bg-amber-50 text-amber-700 border border-amber-200"
+          }
+        >
+          {student.eligibilityReason === "no_certificate"
+            ? "First certificate"
+            : "Duration exceeded"}
+        </Badge>
+      ),
+    },
+    {
       key: "status",
       header: "Status",
       className: "text-center",
@@ -232,7 +250,7 @@ export default function EligibleStudentsTable({
     },
   ];
 
-  const filters: AdminTableFilter[] = [
+  const filters: DataTableFilter[] = [
     {
       key: "status",
       label: "Status",
@@ -263,7 +281,7 @@ export default function EligibleStudentsTable({
     },
   ];
 
-  const sortOptions: AdminTableSortOption[] = [
+  const sortOptions: DataTableSortOption[] = [
     { value: "name", label: "Name" },
     { value: "rollNo", label: "Roll Number" },
     { value: "level", label: "Level" },
@@ -300,7 +318,7 @@ export default function EligibleStudentsTable({
           </Button>
         )}
       </div>
-      <AdminTable
+      <DataTable
         data={paginatedData}
         loading={false}
         columns={columns}

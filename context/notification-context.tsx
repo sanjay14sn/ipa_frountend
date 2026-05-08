@@ -1,17 +1,25 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useCallback,
+  useMemo,
+} from "react";
 import { usePathname } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Notification, UserType } from "../lib/notification.types";
-import { useNotificationSocket } from "../hooks/useNotificationSocket";
+import { useNotificationSse } from "../hooks/useNotificationSse";
 import {
   getNotifications,
   getUnreadCount,
+  mapApiNotificationRow,
   markAsRead,
   markAllAsRead,
 } from "../services/notification.service";
 import { toast } from "sonner";
 import { useUser } from "./user-context";
+import { queryKeys } from "@/hooks/api/query-keys";
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -24,125 +32,162 @@ interface NotificationContextType {
   refreshUnreadCount: () => Promise<void>;
 }
 
-const NotificationContext = createContext<NotificationContextType | null>(null);
+const NotificationContext = createContext<NotificationContextType | null>(
+  null,
+);
 
-export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+function isNotificationUserType(
+  role: string | undefined,
+): role is UserType {
+  return role === "admin" || role === "franchisee";
+}
 
-  // Get user from UserContext
+export function NotificationProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const queryClient = useQueryClient();
   const { user } = useUser();
   const pathname = usePathname();
   const isLoginPage = pathname === "/login" || pathname === "/admin-login";
 
-  const userId = user?.id ? parseInt(user.id) : null;
-  const userType = user?.role as UserType | null;
+  const userId = user?.id ? parseInt(user.id, 10) : null;
+  const userType = isNotificationUserType(user?.role) ? user.role : null;
 
-  // Don't fetch/connect on login pages
   const effectiveUserId = isLoginPage ? null : userId;
   const effectiveUserType = isLoginPage ? null : userType;
 
-  useEffect(() => {
-    console.log("NotificationContext - user from context:", user);
-    console.log("NotificationContext - userId:", userId, "userType:", userType);
-  }, [user, userId, userType]);
+  const notificationsEnabled = Boolean(
+    effectiveUserId && effectiveUserType,
+  );
 
-  // Handle incoming notifications from WebSocket
-  const handleNewNotification = useCallback((notification: Notification) => {
-    setNotifications((prev) => [notification, ...prev]);
-    setUnreadCount((prev) => prev + 1);
+  const notificationsListKey = useMemo(() => {
+    if (!effectiveUserType) return null;
+    return effectiveUserType === "admin"
+      ? queryKeys.notifications.admin({ unreadOnly: false })
+      : queryKeys.notifications.franchisee({ unreadOnly: false });
+  }, [effectiveUserType]);
 
-    // Show toast notification
-    toast.info(notification.message, {
-      duration: 5000,
-    });
-  }, []);
+  const unreadKey = useMemo(() => {
+    if (!effectiveUserType) return null;
+    return effectiveUserType === "admin"
+      ? queryKeys.notifications.unreadAdmin
+      : queryKeys.notifications.unreadFranchisee;
+  }, [effectiveUserType]);
 
-  // Connect to WebSocket (skip on login pages)
-  const { isConnected } = useNotificationSocket({
+  const notificationsQuery = useQuery({
+    queryKey: notificationsListKey ?? ["notifications", "disabled"],
+    queryFn: () => getNotifications(effectiveUserType!, false),
+    enabled: notificationsEnabled && notificationsListKey != null,
+    staleTime: 60 * 1000,
+  });
+
+  const unreadQuery = useQuery({
+    queryKey: unreadKey ?? ["notifications", "unread", "disabled"],
+    queryFn: () => getUnreadCount(effectiveUserType!),
+    enabled: notificationsEnabled && unreadKey != null,
+    staleTime: 60 * 1000,
+  });
+
+  const handleNewNotification = useCallback(
+    (payload: unknown) => {
+      if (!effectiveUserType || !notificationsListKey || !unreadKey) return;
+
+      const row =
+        payload && typeof payload === "object"
+          ? (payload as Record<string, unknown>)
+          : {};
+      const notification = mapApiNotificationRow(row);
+
+      queryClient.setQueryData<Notification[]>(
+        notificationsListKey,
+        (old) => [notification, ...(old ?? [])],
+      );
+      queryClient.setQueryData<number>(unreadKey, (c) => (c ?? 0) + 1);
+
+      toast.info(notification.message, {
+        duration: 5000,
+      });
+    },
+    [
+      effectiveUserType,
+      notificationsListKey,
+      unreadKey,
+      queryClient,
+    ],
+  );
+
+  const { isConnected } = useNotificationSse({
     userId: effectiveUserId,
     userType: effectiveUserType,
     onNotification: handleNewNotification,
   });
 
-  // Fetch notifications from API
   const fetchNotifications = useCallback(async () => {
-    if (!userType) return;
+    await notificationsQuery.refetch();
+  }, [notificationsQuery]);
 
-    setIsLoading(true);
-    try {
-      const data = await getNotifications(userType);
-      setNotifications(data);
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-      toast.error("Failed to fetch notifications");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userType]);
-
-  // Fetch unread count
   const refreshUnreadCount = useCallback(async () => {
-    if (!userType) return;
+    await unreadQuery.refetch();
+  }, [unreadQuery]);
 
-    try {
-      const count = await getUnreadCount(userType);
-      setUnreadCount(count);
-    } catch (error) {
-      console.error("Error fetching unread count:", error);
-    }
-  }, [userType]);
+  const markNotificationAsRead = useCallback(
+    async (notificationId: number) => {
+      if (!effectiveUserType || !notificationsListKey || !unreadKey) return;
 
-  // Mark notification as read
-  const markNotificationAsRead = useCallback(async (notificationId: number) => {
-    if (!userType) return;
+      try {
+        await markAsRead(effectiveUserType, notificationId);
+        queryClient.setQueryData<Notification[]>(
+          notificationsListKey,
+          (prev) =>
+            (prev ?? []).map((n) =>
+              n.id === notificationId ? { ...n, isRead: true } : n,
+            ),
+        );
+        queryClient.setQueryData<number>(unreadKey, (c) =>
+          Math.max(0, (c ?? 0) - 1),
+        );
+      } catch (error) {
+        console.error("Error marking notification as read:", error);
+        toast.error("Failed to mark notification as read");
+      }
+    },
+    [
+      effectiveUserType,
+      notificationsListKey,
+      unreadKey,
+      queryClient,
+    ],
+  );
 
-    try {
-      await markAsRead(userType, notificationId);
-      setNotifications((prev) =>
-        prev.map((notif) =>
-          notif.id === notificationId ? { ...notif, isRead: true } : notif
-        )
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
-      toast.error("Failed to mark notification as read");
-    }
-  }, [userType]);
-
-  // Mark all notifications as read
   const markAllNotificationsAsRead = useCallback(async () => {
-    if (!userType) return;
+    if (!effectiveUserType || !notificationsListKey || !unreadKey) return;
 
     try {
-      await markAllAsRead(userType);
-      setNotifications((prev) =>
-        prev.map((notif) => ({ ...notif, isRead: true }))
+      await markAllAsRead(effectiveUserType);
+      queryClient.setQueryData<Notification[]>(
+        notificationsListKey,
+        (prev) => (prev ?? []).map((n) => ({ ...n, isRead: true })),
       );
-      setUnreadCount(0);
+      queryClient.setQueryData<number>(unreadKey, 0);
       toast.success("All notifications marked as read");
     } catch (error) {
       console.error("Error marking all as read:", error);
       toast.error("Failed to mark all notifications as read");
     }
-  }, [userType]);
-
-  // Initial fetch on mount (skip on login pages)
-  useEffect(() => {
-    if (effectiveUserId && effectiveUserType) {
-      fetchNotifications();
-      refreshUnreadCount();
-    }
-  }, [effectiveUserId, effectiveUserType, fetchNotifications, refreshUnreadCount]);
+  }, [effectiveUserType, notificationsListKey, unreadKey, queryClient]);
 
   return (
     <NotificationContext.Provider
       value={{
-        notifications,
-        unreadCount,
-        isLoading,
+        notifications: notificationsEnabled
+          ? Array.isArray(notificationsQuery.data)
+            ? notificationsQuery.data
+            : []
+          : [],
+        unreadCount: notificationsEnabled ? (unreadQuery.data ?? 0) : 0,
+        isLoading: notificationsEnabled ? notificationsQuery.isLoading : false,
         isConnected,
         fetchNotifications,
         markNotificationAsRead,
@@ -158,7 +203,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 export function useNotifications() {
   const context = useContext(NotificationContext);
   if (!context) {
-    throw new Error("useNotifications must be used within a NotificationProvider");
+    throw new Error(
+      "useNotifications must be used within a NotificationProvider",
+    );
   }
   return context;
 }

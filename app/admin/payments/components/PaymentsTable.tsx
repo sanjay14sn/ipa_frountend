@@ -1,213 +1,123 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { AdminTable } from "@/components/shared";
-import type {
-  AdminTableColumn,
-  AdminTableFilter,
-  AdminTableSortOption,
-} from "@/components/shared/AdminTable";
-import {
-  GroupedPaymentData,
-  getPaginatedAdminPayments,
-} from "@/services/payment.service";
+import { DataTable } from "@/components/shared";
+import type { DataTableColumn } from "@/components/shared";
+import type { FranchisePaymentSummary } from "@/services/payment.service";
+import { useAdminFranchisePaymentSummaries } from "@/hooks/api/payment.hooks";
 import FranchisePaymentsDetails from "./FranchisePaymentsDetails";
 
-interface FranchisePaymentGroup {
-  franchiseId: string;
-  franchiseName: string;
-  payments: any[];
+interface PaymentsTableProps {
+  franchiseId?: string;
 }
 
-export default function PaymentsTable() {
-  const [expandedChildren, setExpandedChildren] = useState<Set<string>>(
-    new Set()
-  );
-  const [franchiseGroups, setFranchiseGroups] = useState<
-    FranchisePaymentGroup[]
-  >([]);
-  const [loading, setLoading] = useState(true);
-
-  // Filters & Pagination
+export default function PaymentsTable({ franchiseId }: PaymentsTableProps = {}) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("createdAt");
-  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC");
   const limit = 10;
 
-  // Fetch data
-  useEffect(() => {
-    const fetchPayments = async () => {
-      try {
-        setLoading(true);
-        const result = await getPaginatedAdminPayments({
-          page: currentPage,
-          limit,
-          search: searchTerm,
-          status: statusFilter === "all" ? undefined : statusFilter,
-          sortBy,
-          sortOrder,
-        });
+  const queryParams = useMemo(
+    () => ({
+      page: currentPage,
+      limit,
+      search: searchTerm || undefined,
+      ...(franchiseId?.trim() ? { franchiseId: franchiseId.trim() } : {}),
+    }),
+    [currentPage, searchTerm, franchiseId],
+  );
 
-        // Convert grouped data to array - use franchiseId for row keys (avoids hyphen/space issues)
-        const groups: FranchisePaymentGroup[] = Object.entries(result.data).map(
-          ([franchiseName, payments]) => {
-            const franchiseId = payments[0]?.franchisee?.franchise?.id ?? `fn-${franchiseName.replace(/\s+/g, "_")}`;
-            return {
-              franchiseId: String(franchiseId),
-              franchiseName,
-              payments,
-            };
-          }
-        );
+  const summariesQuery = useAdminFranchisePaymentSummaries(queryParams);
+  const summaries = summariesQuery.data?.data ?? [];
+  const total = summariesQuery.data?.meta.total ?? 0;
+  const totalPages = summariesQuery.data?.meta.totalPages ?? 1;
+  const loading = summariesQuery.isLoading && !summariesQuery.data;
 
-        setFranchiseGroups(groups);
-        setTotal(result.meta.total);
-        setTotalPages(result.meta.totalPages);
-      } catch (error) {
-        console.error("Error fetching payments:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPayments();
-  }, [currentPage, searchTerm, statusFilter, sortBy, sortOrder]);
-
-  const toggleRow = (id: string) => {
-    if (id.includes("-") && !franchiseGroups.some((g) => g.franchiseId === id)) {
-      const newExpandedChildren = new Set(expandedChildren);
-      if (newExpandedChildren.has(id)) {
-        newExpandedChildren.delete(id);
-      } else {
-        newExpandedChildren.add(id);
-      }
-      setExpandedChildren(newExpandedChildren);
-    }
-  };
-
-  const getTotalPaymentsCount = () => {
-    return franchiseGroups.reduce(
-      (acc, group) => acc + group.payments.length,
-      0
-    );
-  };
-
-  // Table configuration
-  const columns: AdminTableColumn<FranchisePaymentGroup>[] = [
+  const columns: DataTableColumn<FranchisePaymentSummary>[] = [
     {
       key: "franchise",
       header: "Franchise",
       className: "w-[300px]",
     },
     {
-      key: "payments",
+      key: "totalPayments",
       header: "Payments",
       className: "text-center",
-      render: (group) => (
+      render: (s) => (
         <Badge variant="secondary">
-          {group.payments.length} payment
-          {group.payments.length !== 1 ? "s" : ""}
+          {s.totalPayments} payment{s.totalPayments !== 1 ? "s" : ""}
+        </Badge>
+      ),
+    },
+    {
+      key: "totalCompleted",
+      header: "Completed",
+      className: "text-center",
+      render: (s) => (
+        <Badge variant="outline" className="text-green-700 border-green-300">
+          {s.totalCompleted} completed
+        </Badge>
+      ),
+    },
+    {
+      key: "totalPending",
+      header: "Pending",
+      className: "text-center",
+      render: (s) => (
+        <Badge variant="outline" className="text-yellow-700 border-yellow-300">
+          {s.totalPending} pending
         </Badge>
       ),
     },
     {
       key: "totalAmount",
-      header: "Total Amount",
+      header: "Collected",
       className: "text-center",
-      render: (group) => {
-        // Calculate only completed amount, excluding cancelled/failed payments
-        const completedAmount = group.payments
-          .filter((p) => p.status === "completed")
-          .reduce((acc, p) => acc + p.amount, 0);
-
-        return (
-          <span className="font-medium">
-            ₹{completedAmount.toLocaleString("en-IN")}
-          </span>
-        );
-      },
-    },
-    {
-      key: "status",
-      header: "Status",
-      className: "text-center",
-      render: (group) => (
-        <Badge variant="outline">
-          {group.payments.filter((p) => p.status === "completed").length}{" "}
-          completed
-        </Badge>
+      render: (s) => (
+        <span className="font-medium">
+          ₹{s.totalAmount.toLocaleString("en-IN")}
+        </span>
       ),
     },
   ];
 
-  const filters: AdminTableFilter[] = [
-    {
-      key: "status",
-      label: "Filter by status",
-      options: [
-        { value: "all", label: "All Status" },
-        { value: "pending", label: "Pending" },
-        { value: "completed", label: "Completed" },
-        { value: "failed", label: "Failed" },
-      ],
-      defaultValue: "all",
-    },
-  ];
-
-  const sortOptions: AdminTableSortOption[] = [
-    { value: "createdAt", label: "Date" },
-    { value: "amount", label: "Amount" },
-  ];
-
   return (
-    <AdminTable
-      data={franchiseGroups}
+    <DataTable
+      data={summaries}
       loading={loading}
       columns={columns}
-      getRowId={(group) => group.franchiseId}
-      renderMainCell={(group) => (
+      getRowId={(s) => s.franchiseId ?? s.franchiseName}
+      renderMainCell={(s) => (
         <div className="flex flex-col">
-          <div className="font-medium text-gray-900">{group.franchiseName}</div>
+          <div className="font-medium text-gray-900">{s.franchiseName}</div>
           <div className="text-sm text-gray-500">
-            {group.payments[0]?.franchisee?.mail || "N/A"}
+            {s.franchiseeEmail ?? "N/A"}
           </div>
         </div>
       )}
-      renderExpandedContent={(group) => (
+      renderExpandedContent={(s) => (
         <FranchisePaymentsDetails
-          franchiseId={group.franchiseId}
-          franchiseName={group.franchiseName}
-          payments={group.payments}
-          lastRow={false}
-          expandedRows={expandedChildren}
-          onToggleRow={toggleRow}
+          franchiseId={s.franchiseId ?? ""}
+          franchiseName={s.franchiseName}
+          totalCompleted={s.totalCompleted}
+          totalPending={s.totalPending}
+          totalAmount={s.totalAmount}
         />
       )}
-      searchPlaceholder="Search by order ID..."
-      onSearchChange={setSearchTerm}
-      filters={filters}
-      onFilterChange={(key, value) => {
-        if (key === "status") setStatusFilter(value as string);
-      }}
-      sortOptions={sortOptions}
-      defaultSortBy="createdAt"
-      defaultSortOrder="DESC"
-      onSortChange={(newSortBy, newSortOrder) => {
-        setSortBy(newSortBy);
-        setSortOrder(newSortOrder);
+      searchPlaceholder="Search by franchise or franchisee..."
+      onSearchChange={(value) => {
+        setSearchTerm(value);
+        setCurrentPage(1);
       }}
       pagination={{ total, totalPages }}
       currentPage={currentPage}
       onPageChange={setCurrentPage}
       itemsPerPage={limit}
-      emptyMessage="No payments found matching your criteria"
-      resultsText={(count, total) =>
-        `Showing ${getTotalPaymentsCount()} of ${total} payments`
+      emptyMessage="No franchise payment data found"
+      resultsText={(_, total) =>
+        franchiseId?.trim()
+          ? `Showing payments summary for this franchise`
+          : `${total} franchise${total !== 1 ? "s" : ""} with payments`
       }
     />
   );

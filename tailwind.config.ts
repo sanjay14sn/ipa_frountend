@@ -3,6 +3,7 @@ import type { Config } from "tailwindcss";
 // all in fixtures is set to tailwind v3 as interims solutions
 
 const config: Config = {
+  /* Light-only UI: do not set `dark` on <html>; `dark:` variants never apply. */
   darkMode: ["class"],
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -45,18 +46,17 @@ const config: Config = {
         ],
       },
       colors: {
-        // Custom brand colors
         brand: {
           green: {
-            50: "#f0f9f3",
-            100: "#dcf0e3",
-            200: "#bbe1cb",
-            300: "#8bcaa7",
-            400: "#55ad7d",
-            500: "#064e3b", // Updated to new green
-            600: "#064e3b",
-            700: "#064e3b",
-            800: "#064e3b",
+            50: "#ecfdf5",
+            100: "#d1fae5",
+            200: "#a7f3d0",
+            300: "#6ee7b7",
+            400: "#34d399",
+            500: "#10b981",
+            600: "#059669",
+            700: "#047857",
+            800: "#065f46",
             900: "#064e3b",
           },
           yellow: {
@@ -64,7 +64,7 @@ const config: Config = {
             100: "#fafafa",
             200: "#fafafa",
             300: "#fafafa",
-            400: "#fafafa", // Updated to white
+            400: "#fafafa",
             500: "#fafafa",
             600: "#fafafa",
             700: "#fafafa",
@@ -84,54 +84,58 @@ const config: Config = {
             900: "#fafafa",
           },
         },
+        surface: {
+          DEFAULT: "var(--surface)",
+          green: "var(--surface-green)",
+        },
         background: "#fafafa",
         foreground: "#064e3b",
         card: {
-          DEFAULT: "#fafafa",
-          foreground: "#064e3b",
+          DEFAULT: "#ffffff",
+          foreground: "#111827",
         },
         popover: {
-          DEFAULT: "#fafafa",
-          foreground: "#064e3b",
+          DEFAULT: "#ffffff",
+          foreground: "#111827",
         },
         primary: {
           DEFAULT: "#064e3b",
           foreground: "#fafafa",
         },
         secondary: {
-          DEFAULT: "#a3a3a3",
+          DEFAULT: "#f3f4f6",
           foreground: "#064e3b",
         },
         muted: {
-          DEFAULT: "#a3a3a3",
-          foreground: "#064e3b",
+          DEFAULT: "#f3f4f6",
+          foreground: "#6b7280",
         },
         accent: {
-          DEFAULT: "#a3a3a3",
+          DEFAULT: "#ecfdf5",
           foreground: "#064e3b",
         },
         destructive: {
-          DEFAULT: "#064e3b",
+          DEFAULT: "#dc2626",
           foreground: "#fafafa",
         },
-        border: "#a3a3a3",
-        input: "#a3a3a3",
+        border: "#e5e7eb",
+        input: "#e5e7eb",
         ring: "#064e3b",
         chart: {
           "1": "#064e3b",
-          "2": "#a3a3a3",
-          "3": "#064e3b",
-          "4": "#a3a3a3",
-          "5": "#064e3b",
+          "2": "#6b7280",
+          "3": "#047857",
+          "4": "#9ca3af",
+          "5": "#065f46",
         },
         sidebar: {
           DEFAULT: "#fafafa",
           foreground: "#064e3b",
-          primary: "#a3a3a3",
+          primary: "#ecfdf5",
           "primary-foreground": "#064e3b",
-          accent: "#a3a3a3",
+          accent: "#f0fdf4",
           "accent-foreground": "#064e3b",
-          border: "#a3a3a3",
+          border: "#e5e7eb",
           ring: "#064e3b",
         },
       },
@@ -194,7 +198,7 @@ const config: Config = {
             transition: "background-color 0.2s ease",
           },
           "&::-webkit-scrollbar-thumb:hover": {
-            background: "#064e3b",
+            background: "#047857",
           },
         },
       };

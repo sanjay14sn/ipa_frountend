@@ -10,76 +10,45 @@
 
 @layer base {
   :root {
-    /* New color palette: Green (#064e3b), Neutral (#a3a3a3), White (#fafafa) */
-    --background: #fafafa; /* White background */
-    --foreground: #064e3b; /* Green text */
-    --card: #fafafa; /* White cards */
-    --card-foreground: #064e3b;
-    --popover: #fafafa;
-    --popover-foreground: #064e3b;
-    --primary: #064e3b; /* Green primary */
-    --primary-foreground: #fafafa; /* White text on green */
-    --secondary: #a3a3a3; /* Neutral secondary */
-    --secondary-foreground: #064e3b; /* Green text on neutral */
-    --muted: #a3a3a3; /* Neutral muted */
-    --muted-foreground: #064e3b; /* Green for muted text */
-    --accent: #a3a3a3; /* Neutral accent */
-    --accent-foreground: #064e3b; /* Green text on neutral */
-    --destructive: #064e3b; /* Green destructive */
-    --destructive-foreground: #fafafa; /* White text on green */
-    --border: #a3a3a3; /* Neutral borders */
-    --input: #a3a3a3; /* Neutral inputs */
-    --ring: #064e3b; /* Green ring */
-    --chart-1: #064e3b; /* Green chart */
-    --chart-2: #a3a3a3; /* Neutral chart */
-    --chart-3: #064e3b; /* Green chart */
-    --chart-4: #a3a3a3; /* Neutral chart */
-    --chart-5: #064e3b; /* Green chart */
+    /* Light mode only — primary green #064e3b, modern neutrals */
+    --background: #fafafa;
+    --foreground: #064e3b;
+    --card: #ffffff;
+    --card-foreground: #111827;
+    --popover: #ffffff;
+    --popover-foreground: #111827;
+    --primary: #064e3b;
+    --primary-foreground: #fafafa;
+    --secondary: #f3f4f6;
+    --secondary-foreground: #064e3b;
+    --muted: #f3f4f6;
+    --muted-foreground: #6b7280;
+    --accent: #ecfdf5;
+    --accent-foreground: #064e3b;
+    --destructive: #dc2626;
+    --destructive-foreground: #fafafa;
+    --border: #e5e7eb;
+    --input: #e5e7eb;
+    --ring: #064e3b;
+    --chart-1: #064e3b;
+    --chart-2: #6b7280;
+    --chart-3: #047857;
+    --chart-4: #9ca3af;
+    --chart-5: #065f46;
     --radius: 0.75rem;
-    /* Sidebar: using new color palette */
+    --surface: #f9fafb;
+    --surface-green: #f0fdf4;
+    --text-muted: #6b7280;
+    --text-secondary: #374151;
+    /* Sidebar */
     --sidebar-background: #fafafa;
     --sidebar-foreground: #064e3b;
-    --sidebar-primary: #a3a3a3;
+    --sidebar-primary: #ecfdf5;
     --sidebar-primary-foreground: #064e3b;
-    --sidebar-accent: #a3a3a3;
+    --sidebar-accent: #f0fdf4;
     --sidebar-accent-foreground: #064e3b;
-    --sidebar-border: #a3a3a3;
+    --sidebar-border: #e5e7eb;
     --sidebar-ring: #064e3b;
-  }
-  .dark {
-    --background: #064e3b; /* Green background in dark mode */
-    --foreground: #fafafa; /* White text */
-    --card: #064e3b; /* Green cards */
-    --card-foreground: #fafafa; /* White text */
-    --popover: #064e3b;
-    --popover-foreground: #fafafa;
-    --primary: #a3a3a3; /* Neutral primary in dark mode */
-    --primary-foreground: #064e3b; /* Green text on neutral */
-    --secondary: #064e3b; /* Green secondary */
-    --secondary-foreground: #fafafa; /* White text */
-    --muted: #064e3b; /* Green muted */
-    --muted-foreground: #a3a3a3; /* Neutral text */
-    --accent: #a3a3a3; /* Neutral accent */
-    --accent-foreground: #064e3b; /* Green text on neutral */
-    --destructive: #a3a3a3; /* Neutral destructive in dark mode */
-    --destructive-foreground: #064e3b; /* Green text on neutral */
-    --border: #a3a3a3; /* Neutral borders */
-    --input: #a3a3a3; /* Neutral inputs */
-    --ring: #a3a3a3; /* Neutral ring */
-    --chart-1: #a3a3a3; /* Neutral chart */
-    --chart-2: #064e3b; /* Green chart */
-    --chart-3: #a3a3a3; /* Neutral chart */
-    --chart-4: #064e3b; /* Green chart */
-    --chart-5: #a3a3a3; /* Neutral chart */
-    /* Sidebar dark: using new color palette */
-    --sidebar-background: #064e3b;
-    --sidebar-foreground: #fafafa;
-    --sidebar-primary: #a3a3a3;
-    --sidebar-primary-foreground: #064e3b;
-    --sidebar-accent: #a3a3a3;
-    --sidebar-accent-foreground: #064e3b;
-    --sidebar-border: #a3a3a3;
-    --sidebar-ring: #a3a3a3;
   }
 }
 
@@ -89,23 +58,25 @@
   }
 
   html {
-    /* Improve font rendering */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    font-size: 15px; /* Slightly larger base font size */
+    font-size: 15px;
   }
 
   body {
     @apply bg-background text-foreground font-sans;
-    /* Better line height for readability */
     line-height: 1.6;
-    /* Improve text layout */
     text-size-adjust: 100%;
     -webkit-text-size-adjust: 100%;
   }
 
-  /* Enhanced typography for headings */
+  .razorpay-container,
+  .razorpay-container iframe {
+    z-index: 2147483647 !important;
+    pointer-events: auto !important;
+  }
+
   h1,
   h2,
   h3,
@@ -117,7 +88,6 @@
     letter-spacing: -0.025em;
   }
 
-  /* Better input and button fonts */
   input,
   textarea,
   select,
@@ -125,21 +95,17 @@
     font-family: inherit;
   }
 
-  /* Improve code readability */
   code,
   pre {
     font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Monaco,
       Consolas, "Liberation Mono", "Courier New", monospace;
   }
 
-  /* Custom scrollbars using new color palette */
   * {
-    /* Webkit scrollbars (Chrome, Safari, Edge) */
     scrollbar-width: thin;
     scrollbar-color: #064e3b #fafafa;
   }
 
-  /* Webkit scrollbar styling for Chromium browsers */
   *::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -157,31 +123,10 @@
   }
 
   *::-webkit-scrollbar-thumb:hover {
-    background: #064e3b;
+    background: #047857;
   }
 
   *::-webkit-scrollbar-corner {
     background: #fafafa;
-  }
-
-  /* Dark mode scrollbars */
-  .dark *::-webkit-scrollbar-track {
-    background: #064e3b;
-  }
-
-  .dark * {
-    scrollbar-color: #a3a3a3 #064e3b;
-  }
-
-  .dark *::-webkit-scrollbar-thumb {
-    background: #a3a3a3;
-  }
-
-  .dark *::-webkit-scrollbar-thumb:hover {
-    background: #a3a3a3;
-  }
-
-  .dark *::-webkit-scrollbar-corner {
-    background: #064e3b;
   }
 }

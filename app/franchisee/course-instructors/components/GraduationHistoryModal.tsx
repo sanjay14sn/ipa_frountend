@@ -93,13 +93,20 @@ export function GraduationHistoryModal({
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-lg font-semibold">
-                        {graduation.trainingLevel.name}
+                        {graduation.trainingLevel?.name ??
+                          graduation.levelName ??
+                          "—"}
                       </h3>
-                      <Badge variant="default">
-                        ₹{graduation.trainingLevel.amount.toLocaleString()}
-                      </Badge>
+                      {(graduation.trainingLevel?.amount ?? 0) > 0 && (
+                        <Badge variant="default">
+                          ₹
+                          {(
+                            graduation.trainingLevel?.amount ?? 0
+                          ).toLocaleString()}
+                        </Badge>
+                      )}
                     </div>
-                    {graduation.trainingLevel.description && (
+                    {graduation.trainingLevel?.description && (
                       <p className="text-sm text-gray-600">
                         {graduation.trainingLevel.description}
                       </p>
@@ -114,8 +121,12 @@ export function GraduationHistoryModal({
                       Graduated on:{" "}
                       <span className="font-medium">
                         {format(
-                          new Date(graduation.graduationDate),
-                          "MMM dd, yyyy"
+                          new Date(
+                            graduation.graduationDate ??
+                              graduation.graduatedAt ??
+                              0,
+                          ),
+                          "MMM dd, yyyy",
                         )}
                       </span>
                     </span>

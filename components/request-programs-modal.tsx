@@ -46,7 +46,9 @@ export function RequestProgramsModal({
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [pendingCheck, setPendingCheck] = useState<"loading" | "pending" | "ok">("loading");
+  const [pendingCheck, setPendingCheck] = useState<
+    "loading" | "pending" | "ok"
+  >("loading");
 
   const activeFranchises =
     user?.franchises?.filter((f) => f.status === "Active") ?? [];
@@ -55,13 +57,10 @@ export function RequestProgramsModal({
     if (!open) return;
 
     setPendingCheck("loading");
-    Promise.all([
-      getAllPrograms(),
-      hasPendingRequest(),
-    ])
+    Promise.all([getAllPrograms(), hasPendingRequest()])
       .then(([programData, isPending]) => {
         setPrograms(Array.isArray(programData) ? programData : []);
-        setPendingCheck(isPending.hasPending ? "pending" : "ok");
+        setPendingCheck(isPending ? "pending" : "ok");
       })
       .catch(() => {
         setPrograms([]);
@@ -111,20 +110,22 @@ export function RequestProgramsModal({
   if (submitted) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md w-full mx-4">
+        <DialogContent className="mx-4 w-full max-w-md rounded-2xl border-border">
           <DialogHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <CheckCircle className="h-12 w-12 text-green-600" />
+            <div className="mb-4 flex justify-center">
+              <div className="rounded-full bg-surface-green p-3">
+                <CheckCircle className="h-10 w-10 text-primary" />
+              </div>
             </div>
-            <DialogTitle className="text-2xl font-bold text-gray-900">
+            <DialogTitle className="text-2xl font-semibold text-card-foreground">
               Request Submitted!
             </DialogTitle>
-            <DialogDescription className="text-center">
+            <DialogDescription className="text-center text-muted-foreground">
               Your program request(s) have been submitted. Admin will review and
               approve each program individually.
             </DialogDescription>
           </DialogHeader>
-          <Button onClick={handleClose} className="w-full">
+          <Button onClick={handleClose} className="w-full rounded-lg">
             Close
           </Button>
         </DialogContent>
@@ -135,9 +136,9 @@ export function RequestProgramsModal({
   if (pendingCheck === "loading") {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md w-full mx-4">
+        <DialogContent className="mx-4 w-full max-w-md rounded-2xl border-border">
           <div className="flex items-center justify-center py-10">
-            <div className="animate-spin h-8 w-8 rounded-full border-2 border-primary border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         </DialogContent>
       </Dialog>
@@ -147,21 +148,27 @@ export function RequestProgramsModal({
   if (pendingCheck === "pending") {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md w-full mx-4">
+        <DialogContent className="mx-4 w-full max-w-md rounded-2xl border-border">
           <DialogHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <Clock className="h-12 w-12 text-yellow-500" />
+            <div className="mb-4 flex justify-center">
+              <div className="rounded-full bg-amber-50 p-3">
+                <Clock className="h-10 w-10 text-amber-600" />
+              </div>
             </div>
-            <DialogTitle className="text-xl font-bold text-gray-900">
+            <DialogTitle className="text-xl font-semibold text-card-foreground">
               Request Already Pending
             </DialogTitle>
-            <DialogDescription className="text-center">
+            <DialogDescription className="text-center text-muted-foreground">
               You cannot submit a new request while any franchise is not Active,
               a program request is awaiting admin review, or a program agreement
               and payment is still pending. Resolve those first.
             </DialogDescription>
           </DialogHeader>
-          <Button onClick={handleClose} variant="outline" className="w-full">
+          <Button
+            onClick={handleClose}
+            variant="outline"
+            className="w-full rounded-lg border-border"
+          >
             Close
           </Button>
         </DialogContent>
@@ -171,15 +178,17 @@ export function RequestProgramsModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Request Programs</DialogTitle>
-          <DialogDescription>
-            Request new programs for an existing franchise. Admin will review and
-            approve each program separately.
+      <DialogContent className="max-w-lg overflow-hidden rounded-2xl border-border p-0">
+        <DialogHeader className="border-b border-border bg-surface-green/40 px-6 pb-4 pt-6">
+          <DialogTitle className="text-lg font-semibold text-card-foreground">
+            Request Programs
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            Request new programs for an existing franchise. Admin will review
+            and approve each program separately.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
           <div className="space-y-2">
             <Label htmlFor="franchise">Franchise *</Label>
             <Select
@@ -188,7 +197,7 @@ export function RequestProgramsModal({
                 setFormData((prev) => ({ ...prev, franchiseId: v }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className="rounded-lg border-border">
                 <SelectValue placeholder="Select franchise" />
               </SelectTrigger>
               <SelectContent>
@@ -202,7 +211,7 @@ export function RequestProgramsModal({
           </div>
           <div className="space-y-2">
             <Label>Programs * (Select at least one)</Label>
-            <div className="border rounded-md p-3 space-y-2 max-h-32 overflow-y-auto">
+            <div className="max-h-32 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
               {programs.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No programs</p>
               ) : (
@@ -225,10 +234,15 @@ export function RequestProgramsModal({
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-lg border-border"
+              onClick={handleClose}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" className="rounded-lg" disabled={isLoading}>
               {isLoading ? "Submitting..." : "Submit Request"}
             </Button>
           </div>

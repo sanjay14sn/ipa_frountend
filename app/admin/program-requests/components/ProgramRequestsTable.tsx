@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle } from "lucide-react";
-import { AdminTable } from "@/components/shared";
+import { DataTable } from "@/components/shared";
 import type {
-  AdminTableColumn,
-  AdminTableFilter,
-  AdminTableSortOption,
-} from "@/components/shared/AdminTable";
+  DataTableColumn,
+  DataTableFilter,
+  DataTableSortOption,
+} from "@/components/shared";
 import {
   ProgramRequestRow,
   getPaginatedProgramRequests,
@@ -115,7 +115,7 @@ export default function ProgramRequestsTable({
     }
   };
 
-  const columns: AdminTableColumn<ProgramRequestRow>[] = [
+  const columns: DataTableColumn<ProgramRequestRow>[] = [
     {
       key: "request",
       header: "Request",
@@ -131,7 +131,10 @@ export default function ProgramRequestsTable({
       key: "requestDate",
       header: "Request Date",
       className: "text-center",
-      render: (r) => new Date(r.createdAt).toLocaleDateString(),
+      render: (r) =>
+        r.createdAt
+          ? new Date(r.createdAt).toLocaleDateString()
+          : "—",
     },
     {
       key: "status",
@@ -175,7 +178,7 @@ export default function ProgramRequestsTable({
     },
   ];
 
-  const filters: AdminTableFilter[] = [
+  const filters: DataTableFilter[] = [
     {
       key: "status",
       label: "Status",
@@ -188,12 +191,12 @@ export default function ProgramRequestsTable({
     },
   ];
 
-  const sortOptions: AdminTableSortOption[] = [
+  const sortOptions: DataTableSortOption[] = [
     { value: "createdAt", label: "Date" },
   ];
 
   return (
-    <AdminTable
+    <DataTable
       data={requests}
       loading={loading}
       columns={columns}

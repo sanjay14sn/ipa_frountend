@@ -2,12 +2,12 @@
 
 import type React from "react";
 import { useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { DynamicSidebar } from "@/components/dynamic-sidebar";
 import {
-  SidebarProvider,
   SidebarInset,
+  SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -17,8 +17,9 @@ import {
   BreadcrumbLink,
   BreadcrumbList,
 } from "@/components/ui/breadcrumb";
+import { PortalHeaderActions } from "@/components/layout/portal-header-actions";
 import { useUser } from "@/context/user-context";
-import { NotificationBell } from "@/components/shared/notification-bell";
+import { getEffectiveFranchiseStatus } from "@/lib/auth";
 
 export default function FranchiseeLayout({
   children,
@@ -26,9 +27,28 @@ export default function FranchiseeLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
   const { user } = useUser();
+  const pathname = usePathname();
+  const franchiseStatus = getEffectiveFranchiseStatus(user);
+  const isAgreementOnboarding =
+    pathname === "/franchisee/agreement" ||
+    pathname?.startsWith("/franchisee/agreement/");
+  const isPreActiveFranchisee =
+    user?.role === "franchisee" && franchiseStatus !== "Active";
 
+  useEffect(() => {
+    if (isPreActiveFranchisee && !isAgreementOnboarding) {
+      router.replace("/franchisee/agreement");
+    }
+  }, [isAgreementOnboarding, isPreActiveFranchisee, router]);
+
+  if (isPreActiveFranchisee && !isAgreementOnboarding) {
+    return <div className="min-h-screen bg-surface" />;
+  }
+
+  if (isAgreementOnboarding) {
+    return <div className="min-h-screen bg-surface">{children}</div>;
+  }
 
   return (
     <SidebarProvider>
@@ -49,11 +69,9 @@ export default function FranchiseeLayout({
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <div className="ml-auto">
-            <NotificationBell />
-          </div>
+          <PortalHeaderActions />
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 bg-background">
+        <div className="flex flex-1 flex-col gap-4 bg-background p-4">
           {children}
         </div>
       </SidebarInset>

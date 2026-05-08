@@ -4,12 +4,11 @@ import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2 } from "lucide-react";
-import { AdminTable } from "@/components/shared";
+import { DataTable } from "@/components/shared";
 import type {
-  AdminTableColumn,
-  AdminTableFilter,
-  AdminTableSortOption,
-} from "@/components/shared/AdminTable";
+  DataTableColumn,
+  DataTableSortOption,
+} from "@/components/shared";
 import { TrainingCourseInstructorData } from "@/services/course-instructor.service";
 import TrainingCourseInstructorDetails from "./TrainingCourseInstructorDetails";
 
@@ -30,9 +29,6 @@ export default function TrainingCourseInstructorsTable({
   onCourseInstructorDelete,
   onCourseInstructorEdit,
 }: TrainingCourseInstructorsTableProps) {
-  const [expandedChildren, setExpandedChildren] = useState<Set<string>>(
-    new Set()
-  );
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "amount">(
     "name"
@@ -79,7 +75,7 @@ export default function TrainingCourseInstructorsTable({
           comparison = a.name.localeCompare(b.name);
           break;
         case "amount":
-          comparison = a.amount - b.amount;
+          comparison = (a.amount ?? 0) - (b.amount ?? 0);
           break;
         default:
           comparison = 0;
@@ -104,18 +100,6 @@ export default function TrainingCourseInstructorsTable({
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
-  const toggleRow = (id: string) => {
-    if (id.includes("-")) {
-      const newExpandedChildren = new Set(expandedChildren);
-      if (newExpandedChildren.has(id)) {
-        newExpandedChildren.delete(id);
-      } else {
-        newExpandedChildren.add(id);
-      }
-      setExpandedChildren(newExpandedChildren);
-    }
-  };
-
   // Helper function to format currency
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat("en-IN", {
@@ -126,7 +110,7 @@ export default function TrainingCourseInstructorsTable({
   };
 
   // Table configuration
-  const columns: AdminTableColumn<TrainingCourseInstructorData>[] = [
+  const columns: DataTableColumn<TrainingCourseInstructorData>[] = [
     {
       key: "courseInstructor",
       header: "Course Instructor",
@@ -141,12 +125,12 @@ export default function TrainingCourseInstructorsTable({
           {courseInstructor.trainingLevelName && (
             <Badge
               variant="outline"
-              className="bg-blue-50 text-blue-700 border-blue-200"
+              className="bg-primary/10 text-primary border-primary/20"
             >
               {courseInstructor.trainingLevelName}
             </Badge>
           )}
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-muted-foreground">
             {courseInstructor.additionalDetails || "No details"}
           </div>
         </div>
@@ -159,7 +143,8 @@ export default function TrainingCourseInstructorsTable({
       render: (courseInstructor) => (
         <div className="text-sm space-y-1">
           <div>
-            <strong>Total:</strong> {formatCurrency(courseInstructor.amount)}
+            <strong>Total:</strong>{" "}
+            {formatCurrency(courseInstructor.amount ?? 0)}
           </div>
           {courseInstructor.paidAmount && (
             <div className="text-green-600">
@@ -175,7 +160,7 @@ export default function TrainingCourseInstructorsTable({
       header: "Status",
       className: "text-center",
       render: (courseInstructor) => (
-        <Badge className="bg-orange-100 text-orange-700 border-orange-200 border">
+        <Badge className="bg-amber-50 text-amber-700 border-amber-200 border">
           {courseInstructor.status}
         </Badge>
       ),
@@ -207,23 +192,23 @@ export default function TrainingCourseInstructorsTable({
     },
   ];
 
-  const sortOptions: AdminTableSortOption[] = [
+  const sortOptions: DataTableSortOption[] = [
     { value: "name", label: "Name" },
     { value: "amount", label: "Amount" },
   ];
 
   return (
-    <AdminTable
+    <DataTable
       data={paginatedData}
       loading={false}
       columns={columns}
       getRowId={(courseInstructor) => courseInstructor.id.toString()}
       renderMainCell={(courseInstructor) => (
         <div className="flex flex-col">
-          <div className="font-medium text-gray-900">
+          <div className="font-medium text-card-foreground">
             {courseInstructor.name}
           </div>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-muted-foreground">
             {courseInstructor.instructorId}
           </div>
           <div className="text-xs text-primary font-medium">
@@ -234,9 +219,6 @@ export default function TrainingCourseInstructorsTable({
       renderExpandedContent={(courseInstructor) => (
         <TrainingCourseInstructorDetails
           courseInstructor={courseInstructor}
-          lastRow={false}
-          expandedRows={expandedChildren}
-          onToggleRow={toggleRow}
           onCourseInstructorUpdate={onCourseInstructorUpdate}
         />
       )}

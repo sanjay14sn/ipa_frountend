@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,7 +19,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { RequestedIdDetail } from "@/services/student.service";
-import { issueIdCardWithRevalidation } from "@/hooks/use-students";
+import { issueIdCardWithRevalidation } from "@/hooks/api/student.hooks";
 
 interface IdCardPreviewModalProps {
   open: boolean;
@@ -38,10 +38,24 @@ export default function IdCardPreviewModal({
   const [isIssuing, setIsIssuing] = useState(false);
   const [issued, setIssued] = useState(false);
 
+  // Reset internal state each time the modal opens for a (possibly different) student
+  useEffect(() => {
+    if (open) {
+      setIsFlipped(false);
+      setIssued(false);
+      setIsIssuing(false);
+    }
+  }, [open]);
+
   const handleIssueId = async () => {
+    if (!student.id) {
+      alert("Student ID is missing. Please refresh and try again.");
+      return;
+    }
+
     try {
       setIsIssuing(true);
-      await issueIdCardWithRevalidation(student.rollNo);
+      await issueIdCardWithRevalidation(student.id);
       setIssued(true);
       onSuccess();
     } catch (error) {
@@ -61,7 +75,7 @@ export default function IdCardPreviewModal({
 
   if (issued) {
     return (
-      <Dialog open={false} onOpenChange={handleClose}>
+      <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-md w-full mx-4">
           <DialogHeader className="text-center">
             <div className="flex justify-center mb-4">

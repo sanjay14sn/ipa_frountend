@@ -15,9 +15,9 @@ export function FranchiseCTA({
   onStartApplication: () => void;
 }) {
   return (
-    <Card className="order-1 border-border bg-card md:order-2 w-[300px]">
+    <Card className="order-1 w-[300px] rounded-2xl border-border bg-card shadow-sm md:order-2">
       <CardHeader>
-        <CardTitle className="text-primary pb-2 underline">
+        <CardTitle className="pb-2 font-semibold text-[#065f46] underline decoration-primary/30 underline-offset-4">
           Become a Franchisee
         </CardTitle>
         <CardDescription>
@@ -25,7 +25,7 @@ export function FranchiseCTA({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Button className="" onClick={onStartApplication}>
+        <Button className="rounded-lg" onClick={onStartApplication}>
           Start Application
         </Button>
       </CardContent>

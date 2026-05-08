@@ -4,13 +4,13 @@ import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, FileText, Award } from "lucide-react";
-import { AdminTable } from "@/components/shared";
+import { DataTable } from "@/components/shared";
 import type {
-  AdminTableColumn,
-  AdminTableFilter,
-  AdminTableSortOption,
-} from "@/components/shared/AdminTable";
-import { FranchiseeCertificate, getCertificatePdfUrl } from "@/services/student.service";
+  DataTableColumn,
+  DataTableFilter,
+  DataTableSortOption,
+} from "@/components/shared";
+import { FranchiseeCertificate } from "@/services/student.service";
 import StudentCertificatesModal from "./StudentCertificatesModal";
 
 interface FranchiseeCertificatesTableProps {
@@ -64,8 +64,10 @@ export default function FranchiseeCertificatesTable({
           comparison = a.studentName.localeCompare(b.studentName);
           break;
         case "marks":
-          const aPercentage = (a.marksObtained / a.totalMarks) * 100;
-          const bPercentage = (b.marksObtained / b.totalMarks) * 100;
+          const aDenominator = a.totalMarks || a.levelTotalMarks || 1;
+          const bDenominator = b.totalMarks || b.levelTotalMarks || 1;
+          const aPercentage = (a.marksObtained / aDenominator) * 100;
+          const bPercentage = (b.marksObtained / bDenominator) * 100;
           comparison = aPercentage - bPercentage;
           break;
         default:
@@ -90,7 +92,7 @@ export default function FranchiseeCertificatesTable({
     switch (status) {
       case "Pending":
         return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "Approved":
+      case "Issued":
         return "bg-green-100 text-green-800 border-green-200";
       case "Rejected":
         return "bg-red-100 text-red-800 border-red-200";
@@ -128,7 +130,7 @@ export default function FranchiseeCertificatesTable({
 
 
   // Table configuration
-  const columns: AdminTableColumn<FranchiseeCertificate>[] = [
+  const columns: DataTableColumn<FranchiseeCertificate>[] = [
     {
       key: "student",
       header: "Student",
@@ -152,10 +154,15 @@ export default function FranchiseeCertificatesTable({
       render: (certificate) => (
         <div className="text-sm">
           <div className="font-medium">
-            {certificate.marksObtained}/{certificate.totalMarks}
+            {certificate.marksObtained}/{certificate.totalMarks || certificate.levelTotalMarks || 0}
           </div>
           <div className="text-gray-500">
-            {((certificate.marksObtained / certificate.totalMarks) * 100).toFixed(1)}%
+            {(certificate.totalMarks || certificate.levelTotalMarks || 0) > 0
+              ? `${((certificate.marksObtained / (certificate.totalMarks || certificate.levelTotalMarks)) * 100).toFixed(1)}%`
+              : "N/A"}
+          </div>
+          <div className="text-xs text-gray-500">
+            {"Pass >= "}{certificate.levelPassMark || 0}
           </div>
         </div>
       ),
@@ -210,21 +217,21 @@ export default function FranchiseeCertificatesTable({
     },
   ];
 
-  const filters: AdminTableFilter[] = [
+  const filters: DataTableFilter[] = [
     {
       key: "status",
       label: "Status",
       options: [
         { value: "all", label: "All Status" },
         { value: "Pending", label: "Pending" },
-        { value: "Approved", label: "Approved" },
+        { value: "Issued", label: "Issued" },
         { value: "Rejected", label: "Rejected" },
       ],
       defaultValue: "all",
     },
   ];
 
-  const sortOptions: AdminTableSortOption[] = [
+  const sortOptions: DataTableSortOption[] = [
     { value: "requestDate", label: "Request Date" },
     { value: "studentName", label: "Student Name" },
     { value: "marks", label: "Marks" },
@@ -232,7 +239,7 @@ export default function FranchiseeCertificatesTable({
 
   return (
     <>
-    <AdminTable
+    <DataTable
       data={paginatedData}
       loading={false}
       columns={columns}
@@ -296,4 +303,3 @@ export default function FranchiseeCertificatesTable({
   </>
   );
 }
-

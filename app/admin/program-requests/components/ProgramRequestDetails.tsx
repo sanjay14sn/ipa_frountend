@@ -54,7 +54,7 @@ export default function ProgramRequestDetails({
               <div>
                 <span className="text-gray-500">Request Date</span>
                 <p className="text-gray-900 mt-1">
-                  {formatDate(request.createdAt)}
+                  {formatDate(request.createdAt ?? "")}
                 </p>
               </div>
               <div>

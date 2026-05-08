@@ -1,11 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Edit2, List } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Trash2, Edit2, GitBranch } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -17,6 +24,13 @@ import {
   type CreateStreamDto,
   type UpdateStreamDto,
 } from "@/services/stream.service";
+import {
+  getTransitionsByProgram,
+  createStreamTransition,
+  updateStreamTransition,
+  deleteStreamTransition,
+  type StreamTransition,
+} from "@/services/stream-transition.service";
 import {
   Dialog,
   DialogContent,
@@ -35,61 +49,114 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AdminTable } from "@/components/shared";
-import type { AdminTableColumn } from "@/components/shared/AdminTable";
+import { invalidateStreamsByProgram } from "@/hooks/api/stream.hooks";
+import { invalidateStreamTransitionsByProgram } from "@/hooks/api/stream-transition.hooks";
 
 interface StreamManagementProps {
   programId: number;
   programName: string;
+  /** Narrow sidebar layout when nested under program ladder */
+  compact?: boolean;
+  initialStreams?: Stream[];
+  initialTransitions?: StreamTransition[];
+  skipInitialLoad?: boolean;
+  /** Bump parent state so level ladder refetches streams/transitions */
+  onCatalogChange?: () => void;
 }
 
 export function StreamManagement({
   programId,
   programName,
+  compact,
+  initialStreams,
+  initialTransitions,
+  skipInitialLoad,
+  onCatalogChange,
 }: StreamManagementProps) {
-  const [streams, setStreams] = useState<Stream[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [streams, setStreams] = useState<Stream[]>(initialStreams ?? []);
+  const [transitions, setTransitions] = useState<StreamTransition[]>(
+    initialTransitions ?? [],
+  );
+  const [isLoading, setIsLoading] = useState(
+    skipInitialLoad ? false : !(initialStreams && initialTransitions),
+  );
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingStream, setEditingStream] = useState<Stream | null>(null);
   const [deletingStream, setDeletingStream] = useState<Stream | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
-
-  const itemsPerPage = 10;
 
   const [formData, setFormData] = useState({
     name: "",
     isActive: true,
+    minAge: "" as string,
+    maxAge: "" as string,
+    displayOrder: "0",
   });
-
   const [editFormData, setEditFormData] = useState<UpdateStreamDto>({});
 
-  useEffect(() => {
-    loadStreams();
-  }, [programId]);
+  const [isTransitionDialogOpen, setIsTransitionDialogOpen] = useState(false);
+  const [editingTransition, setEditingTransition] =
+    useState<StreamTransition | null>(null);
+  const [transitionForm, setTransitionForm] = useState({
+    fromStreamId: "",
+    toStreamId: "",
+    toLevelDisplayOrder: "1",
+  });
+  const [deletingTransition, setDeletingTransition] =
+    useState<StreamTransition | null>(null);
 
-  const loadStreams = async () => {
+  const loadAll = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const data = await getStreamsByProgram(programId);
-      setStreams(data);
-    } catch (error) {
+      const [s, t] = await Promise.all([
+        getStreamsByProgram(programId),
+        getTransitionsByProgram(programId),
+      ]);
+      setStreams(s);
+      setTransitions(t);
+    } catch {
       toast({
         title: "Error",
-        description: "Failed to load streams",
+        description: "Failed to load streams or transitions",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
+  }, [programId, toast]);
+
+  useEffect(() => {
+    if (skipInitialLoad) return;
+    void loadAll();
+  }, [loadAll, skipInitialLoad]);
+
+  useEffect(() => {
+    if (!skipInitialLoad) return;
+    setStreams(initialStreams ?? []);
+    setTransitions(initialTransitions ?? []);
+    setIsLoading(false);
+  }, [initialStreams, initialTransitions, skipInitialLoad]);
+
+  const notifyParent = () => {
+    onCatalogChange?.();
   };
 
   const resetForm = () => {
     setFormData({
       name: "",
       isActive: true,
+      minAge: "",
+      maxAge: "",
+      displayOrder: "0",
     });
+  };
+
+  const parseOptInt = (v: string): number | null => {
+    if (v.trim() === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
   };
 
   const handleAddStream = async () => {
@@ -101,20 +168,23 @@ export function StreamManagement({
       });
       return;
     }
-
+    const payload: CreateStreamDto = {
+      name: formData.name.trim(),
+      programId,
+      isActive: formData.isActive,
+      minAge: parseOptInt(formData.minAge),
+      maxAge: parseOptInt(formData.maxAge),
+      displayOrder: Number(formData.displayOrder) || 0,
+    };
     try {
-      await createStream({
-        ...formData,
-        programId,
-      } as CreateStreamDto);
-      toast({
-        title: "Success",
-        description: "Stream created successfully",
-      });
+      await createStream(payload);
+      await invalidateStreamsByProgram(programId);
+      toast({ title: "Success", description: "Stream created" });
       resetForm();
       setIsAddDialogOpen(false);
-      loadStreams();
-    } catch (error) {
+      await loadAll();
+      notifyParent();
+    } catch {
       toast({
         title: "Error",
         description: "Failed to create stream",
@@ -125,18 +195,16 @@ export function StreamManagement({
 
   const handleEditStream = async () => {
     if (!editingStream) return;
-
     try {
       await updateStream(editingStream.id, editFormData);
-      toast({
-        title: "Success",
-        description: "Stream updated successfully",
-      });
+      await invalidateStreamsByProgram(programId);
+      toast({ title: "Success", description: "Stream updated" });
       setIsEditDialogOpen(false);
       setEditingStream(null);
       setEditFormData({});
-      loadStreams();
-    } catch (error) {
+      await loadAll();
+      notifyParent();
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update stream",
@@ -147,258 +215,536 @@ export function StreamManagement({
 
   const handleDeleteStream = async () => {
     if (!deletingStream) return;
-
     try {
       await deleteStream(deletingStream.id);
-      toast({
-        title: "Success",
-        description: "Stream deleted successfully",
-      });
+      await invalidateStreamsByProgram(programId);
+      toast({ title: "Success", description: "Stream deleted" });
       setIsDeleteDialogOpen(false);
       setDeletingStream(null);
-      loadStreams();
-    } catch (error) {
+      await loadAll();
+      notifyParent();
+    } catch {
       toast({
         title: "Error",
-        description: "Failed to delete stream. Make sure no levels are associated with it.",
+        description:
+          "Failed to delete stream. Remove levels first, or check permissions.",
         variant: "destructive",
       });
     }
   };
 
-  const totalPages = Math.ceil(streams.length / itemsPerPage);
-  const paginatedStreams = streams.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const openAddTransition = () => {
+    setEditingTransition(null);
+    setTransitionForm({
+      fromStreamId: streams[0]?.id?.toString() ?? "",
+      toStreamId: streams[1]?.id?.toString() ?? streams[0]?.id?.toString() ?? "",
+      toLevelDisplayOrder: "1",
+    });
+    setIsTransitionDialogOpen(true);
+  };
 
-  const columns: AdminTableColumn<Stream>[] = [
-    {
-      key: "name",
-      label: "Stream Name",
-      sortable: true,
-      render: (stream: Stream) => (
-        <div className="font-medium text-gray-900">{stream.name}</div>
-      ),
-    },
-    {
-      key: "isActive",
-      label: "Status",
-      sortable: true,
-      render: (stream: Stream) => (
-        <Badge variant={stream.isActive ? "default" : "secondary"}>
-          {stream.isActive ? "Active" : "Inactive"}
-        </Badge>
-      ),
-    },
-    {
-      key: "actions",
-      label: "Actions",
-      render: (stream: Stream) => (
-        <div className="flex gap-2 justify-end">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setEditingStream(stream);
-              setEditFormData({
-                name: stream.name,
-                isActive: stream.isActive,
-              });
-              setIsEditDialogOpen(true);
-            }}
-          >
-            <Edit2 className="w-4 h-4 mr-1" />
-            Edit
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => {
-              setDeletingStream(stream);
-              setIsDeleteDialogOpen(true);
-            }}
-          >
-            <Trash2 className="w-4 h-4 mr-1" />
-            Delete
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  const openEditTransition = (t: StreamTransition) => {
+    setEditingTransition(t);
+    setTransitionForm({
+      fromStreamId: String(t.fromStreamId),
+      toStreamId: String(t.toStreamId),
+      toLevelDisplayOrder: String(t.toLevelDisplayOrder),
+    });
+    setIsTransitionDialogOpen(true);
+  };
+
+  const saveTransition = async () => {
+    const fromId = Number(transitionForm.fromStreamId);
+    const toId = Number(transitionForm.toStreamId);
+    const ord = Number(transitionForm.toLevelDisplayOrder);
+    if (!fromId || !toId || !Number.isFinite(ord) || ord < 1) {
+      toast({
+        title: "Error",
+        description: "Select streams and a valid target level order",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      if (editingTransition) {
+        await updateStreamTransition(editingTransition.id, {
+          fromStreamId: fromId,
+          toStreamId: toId,
+          toLevelDisplayOrder: ord,
+          programId,
+        });
+        await invalidateStreamTransitionsByProgram(programId);
+        toast({ title: "Success", description: "Transition updated" });
+      } else {
+        await createStreamTransition({
+          programId,
+          fromStreamId: fromId,
+          toStreamId: toId,
+          toLevelDisplayOrder: ord,
+        });
+        await invalidateStreamTransitionsByProgram(programId);
+        toast({ title: "Success", description: "Transition added" });
+      }
+      setIsTransitionDialogOpen(false);
+      setEditingTransition(null);
+      await loadAll();
+      notifyParent();
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to save transition (check target level exists)",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteTransition = async () => {
+    if (!deletingTransition) return;
+    try {
+      await deleteStreamTransition(deletingTransition.id);
+      await invalidateStreamTransitionsByProgram(programId);
+      toast({ title: "Success", description: "Transition removed" });
+      setDeletingTransition(null);
+      await loadAll();
+      notifyParent();
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to delete transition",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const streamName = (id: number) =>
+    streams.find((s) => s.id === id)?.name ?? `#${id}`;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Streams for {programName}
-          </h3>
-          <Badge variant="secondary">{streams.length}</Badge>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-1">
+            <h3
+              className={
+                compact
+                  ? "text-base font-semibold text-gray-900"
+                  : "text-lg font-semibold text-gray-900"
+              }
+            >
+              Streams & transitions
+            </h3>
+            <p className="text-xs text-gray-600">
+              Manage stream ages and completion transitions for {programName}.
+            </p>
+          </div>
         </div>
-        <Button
-          size="sm"
-          onClick={() => {
-            resetForm();
-            setIsAddDialogOpen(true);
-          }}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Stream
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              resetForm();
+              setIsAddDialogOpen(true);
+            }}
+            disabled={isLoading}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Stream
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={openAddTransition}
+            disabled={isLoading || streams.length < 1}
+          >
+            <GitBranch className="w-4 h-4 mr-1" />
+            Transition
+          </Button>
+        </div>
       </div>
 
-      <AdminTable
-        data={paginatedStreams}
-        loading={isLoading}
-        columns={columns}
-        getRowId={(stream) => stream.id.toString()}
-        renderMainCell={(stream) => (
-          <div className="flex flex-col">
-            <div className="font-medium text-gray-900">{stream.name}</div>
-            <div className="text-sm text-gray-500">
-              {stream.isActive ? "Active stream" : "Inactive stream"}
+      <div className="max-h-[420px] space-y-3 overflow-y-auto rounded-lg border bg-slate-50/70 p-4">
+        {isLoading ? (
+          <p className="text-sm text-gray-500">Loading…</p>
+        ) : streams.length === 0 ? (
+          <p className="text-sm text-gray-500">No streams yet.</p>
+        ) : (
+          streams.map((stream) => (
+            <div
+              key={stream.id}
+              className="border-b border-gray-100 pb-3 last:border-0 last:pb-0"
+            >
+              <div className="flex justify-between items-start gap-2">
+                <div>
+                  <div className="font-medium text-gray-900">{stream.name}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    Order: {stream.displayOrder ?? 0}
+                    {stream.minAge != null || stream.maxAge != null
+                      ? ` · Age ${stream.minAge ?? "—"}–${stream.maxAge ?? "—"}`
+                      : " · Age: any"}
+                  </div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 rounded-md p-0 hover:bg-white"
+                    onClick={() => {
+                      setEditingStream(stream);
+                      setEditFormData({
+                        name: stream.name,
+                        isActive: stream.isActive ?? true,
+                        minAge: stream.minAge ?? null,
+                        maxAge: stream.maxAge ?? null,
+                        displayOrder: stream.displayOrder ?? 0,
+                        programId,
+                      });
+                      setIsEditDialogOpen(true);
+                    }}
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 rounded-md p-0 text-destructive hover:bg-white"
+                    onClick={() => {
+                      setDeletingStream(stream);
+                      setIsDeleteDialogOpen(true);
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
+          ))
         )}
-        pagination={{ total: streams.length, totalPages }}
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        emptyMessage={`No streams found for ${programName}. Add a stream to get started.`}
-        resultsText={(count, total) => `Showing ${count} of ${total} streams`}
-      />
+      </div>
 
-      {/* Add Stream Dialog */}
+      {transitions.length > 0 && (
+        <div className="rounded-lg border bg-slate-50 p-4">
+          <div className="mb-2 text-xs font-semibold text-gray-700">
+            Completion transitions
+          </div>
+          <ul className="space-y-2">
+            {transitions.map((t) => (
+              <li
+                key={t.id}
+                className="text-xs text-gray-700 flex justify-between gap-2 items-center"
+              >
+                <span>
+                  <Badge variant="outline" className="mr-1 font-normal">
+                    {streamName(t.fromStreamId)}
+                  </Badge>
+                  →
+                  <Badge variant="outline" className="mx-1 font-normal">
+                    {streamName(t.toStreamId)}
+                  </Badge>
+                  @ order {t.toLevelDisplayOrder}
+                </span>
+                <span className="flex gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={() => openEditTransition(t)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-destructive"
+                    onClick={() => setDeletingTransition(t)}
+                  >
+                    Del
+                  </Button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add New Stream</DialogTitle>
-            <DialogDescription>
-              Create a new stream (e.g., Elementary, Regular) for {programName}
-            </DialogDescription>
+            <DialogTitle>Add stream</DialogTitle>
+            <DialogDescription>For {programName}</DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="space-y-2">
-              <Label htmlFor="name">Stream Name *</Label>
+              <Label>Name *</Label>
               <Input
-                id="name"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                placeholder="e.g., Elementary, Regular, Advanced"
+                placeholder="e.g. Elementary"
               />
             </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isActive"
-                checked={formData.isActive}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, isActive: checked })
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <Label>Min age</Label>
+                <Input
+                  value={formData.minAge}
+                  onChange={(e) =>
+                    setFormData({ ...formData, minAge: e.target.value })
+                  }
+                  placeholder="optional"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Max age</Label>
+                <Input
+                  value={formData.maxAge}
+                  onChange={(e) =>
+                    setFormData({ ...formData, maxAge: e.target.value })
+                  }
+                  placeholder="optional"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Display order</Label>
+              <Input
+                type="number"
+                min={0}
+                value={formData.displayOrder}
+                onChange={(e) =>
+                  setFormData({ ...formData, displayOrder: e.target.value })
                 }
               />
-              <Label htmlFor="isActive">Active</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={formData.isActive}
+                onCheckedChange={(c) =>
+                  setFormData({ ...formData, isActive: c })
+                }
+              />
+              <Label>Active</Label>
             </div>
           </div>
-
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsAddDialogOpen(false);
-                resetForm();
-              }}
-            >
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddStream}>Create Stream</Button>
+            <Button onClick={handleAddStream}>Create</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Stream Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Stream</DialogTitle>
-            <DialogDescription>
-              Update the stream details for {editingStream?.name}
-            </DialogDescription>
+            <DialogTitle>Edit stream</DialogTitle>
           </DialogHeader>
-
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Stream Name *</Label>
+              <Label>Name</Label>
               <Input
-                id="edit-name"
-                value={editFormData.name || ""}
+                value={editFormData.name ?? ""}
                 onChange={(e) =>
                   setEditFormData({ ...editFormData, name: e.target.value })
                 }
-                placeholder="Stream name"
               />
             </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="edit-isActive"
-                checked={editFormData.isActive ?? true}
-                onCheckedChange={(checked) =>
-                  setEditFormData({ ...editFormData, isActive: checked })
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <Label>Min age</Label>
+                <Input
+                  value={
+                    editFormData.minAge === null ||
+                    editFormData.minAge === undefined
+                      ? ""
+                      : String(editFormData.minAge)
+                  }
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setEditFormData({
+                      ...editFormData,
+                      minAge: v === "" ? null : Number(v),
+                    });
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Max age</Label>
+                <Input
+                  value={
+                    editFormData.maxAge === null ||
+                    editFormData.maxAge === undefined
+                      ? ""
+                      : String(editFormData.maxAge)
+                  }
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setEditFormData({
+                      ...editFormData,
+                      maxAge: v === "" ? null : Number(v),
+                    });
+                  }}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Display order</Label>
+              <Input
+                type="number"
+                value={
+                  editFormData.displayOrder === undefined
+                    ? ""
+                    : String(editFormData.displayOrder)
+                }
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    displayOrder: Number(e.target.value) || 0,
+                  })
                 }
               />
-              <Label htmlFor="edit-isActive">Active</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={editFormData.isActive ?? true}
+                onCheckedChange={(c) =>
+                  setEditFormData({ ...editFormData, isActive: c })
+                }
+              />
+              <Label>Active</Label>
             </div>
           </div>
-
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => {
-                setIsEditDialogOpen(false);
-                setEditingStream(null);
-                setEditFormData({});
-              }}
+              onClick={() => setIsEditDialogOpen(false)}
             >
               Cancel
             </Button>
-            <Button onClick={handleEditStream}>Update Stream</Button>
+            <Button onClick={handleEditStream}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>Delete stream?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the stream &quot;{deletingStream?.name}&quot;.
-              All levels under this stream will also be affected. This action
-              cannot be undone.
+              Remove &quot;{deletingStream?.name}&quot; (no levels must remain).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                setIsDeleteDialogOpen(false);
-                setDeletingStream(null);
-              }}
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteStream}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog
+        open={isTransitionDialogOpen}
+        onOpenChange={setIsTransitionDialogOpen}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTransition ? "Edit transition" : "Add transition"}
+            </DialogTitle>
+            <DialogDescription>
+              After a student finishes all levels in the source stream, they
+              continue in the target stream at the given level order.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label>From stream</Label>
+              <Select
+                value={transitionForm.fromStreamId}
+                onValueChange={(v) =>
+                  setTransitionForm({ ...transitionForm, fromStreamId: v })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Source" />
+                </SelectTrigger>
+                <SelectContent>
+                  {streams.map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>To stream</Label>
+              <Select
+                value={transitionForm.toStreamId}
+                onValueChange={(v) =>
+                  setTransitionForm({ ...transitionForm, toStreamId: v })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Target" />
+                </SelectTrigger>
+                <SelectContent>
+                  {streams.map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Target display order (in target stream)</Label>
+              <Input
+                type="number"
+                min={1}
+                value={transitionForm.toLevelDisplayOrder}
+                onChange={(e) =>
+                  setTransitionForm({
+                    ...transitionForm,
+                    toLevelDisplayOrder: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsTransitionDialogOpen(false)}
             >
               Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteStream}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
+            </Button>
+            <Button onClick={saveTransition}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={!!deletingTransition}
+        onOpenChange={(o) => !o && setDeletingTransition(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove transition?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This only removes the mapping; levels are unchanged.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTransition}>
+              Remove
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -406,4 +752,3 @@ export function StreamManagement({
     </div>
   );
 }
-

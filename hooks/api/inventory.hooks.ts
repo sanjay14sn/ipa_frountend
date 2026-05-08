@@ -1,0 +1,161 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import {
+  getAllInventory,
+  getKitCatalogItems,
+  getProgramKitItems,
+  getInventoryItemsForLevel,
+  getInventoryItemsForTrainingLevel,
+  getInventoryMonitoring,
+  getPaginatedInventory,
+  type Inventory,
+  type ProgramKitItemSummary,
+} from "@/services/inventory.service";
+import { queryKeys } from "./query-keys";
+import { getQueryClientBridge } from "./query-client-bridge";
+
+export type InventoryPaginatedFilters = {
+  page: number;
+  limit: number;
+  search?: string;
+  programId?: number;
+  levelId?: number;
+  status?: string;
+  sortBy?: string;
+  sortOrder?: string;
+};
+
+function listParamsFromFilters(
+  filters: InventoryPaginatedFilters,
+): Record<string, unknown> {
+  const params: Record<string, unknown> = {
+    page: filters.page,
+    limit: filters.limit,
+    sortBy: filters.sortBy ?? "name",
+    sortOrder: filters.sortOrder ?? "ASC",
+  };
+  if (filters.search !== undefined && filters.search !== "") {
+    params.search = filters.search;
+  }
+  if (filters.programId !== undefined) params.programId = filters.programId;
+  if (filters.levelId !== undefined) params.levelId = filters.levelId;
+  if (filters.status !== undefined && filters.status !== "") {
+    params.status = filters.status;
+  }
+  return params;
+}
+
+export function useInventoryPaginatedQuery(filters: InventoryPaginatedFilters) {
+  const queryKey = queryKeys.inventory.adminList(listParamsFromFilters(filters));
+
+  const q = useQuery({
+    queryKey,
+    queryFn: () =>
+      getPaginatedInventory({
+        page: filters.page,
+        limit: filters.limit,
+        search: filters.search || undefined,
+        programId: filters.programId,
+        levelId: filters.levelId,
+        status: filters.status,
+        sortBy: filters.sortBy ?? "name",
+        sortOrder: filters.sortOrder ?? "ASC",
+      }),
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  return {
+    ...q,
+    rows: q.data?.rows ?? [],
+    total: q.data?.total ?? 0,
+    totalPages: q.data?.totalPages ?? 1,
+  };
+}
+
+export function useInventoryMonitoring() {
+  return useQuery({
+    queryKey: queryKeys.inventory.monitoring,
+    queryFn: getInventoryMonitoring,
+  });
+}
+
+export function useAllInventory(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.inventory.all,
+    queryFn: getAllInventory,
+    enabled,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 30 * 60 * 1000,
+  });
+}
+
+export function useKitCatalog(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.inventory.kitCatalog,
+    queryFn: getKitCatalogItems,
+    enabled,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 30 * 60 * 1000,
+  });
+}
+
+export function useProgramKitItems(programId: number | undefined, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.inventory.programKitItems(programId ?? 0),
+    queryFn: () => getProgramKitItems(programId!),
+    enabled: enabled && programId != null && programId > 0,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 30 * 60 * 1000,
+  });
+}
+
+export function useInventoryItemsForLevel(
+  levelId: number | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: queryKeys.inventory.levelItems(levelId ?? 0),
+    queryFn: () => getInventoryItemsForLevel(levelId!),
+    enabled: enabled && levelId != null && levelId > 0,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 30 * 60 * 1000,
+  });
+}
+
+export function useInventoryItemsForTrainingLevel(
+  trainingLevelId: number | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: queryKeys.inventory.trainingLevelItems(trainingLevelId ?? 0),
+    queryFn: () => getInventoryItemsForTrainingLevel(trainingLevelId!),
+    enabled: enabled && trainingLevelId != null && trainingLevelId > 0,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 30 * 60 * 1000,
+  });
+}
+
+export async function invalidateInventoryAdminLists() {
+  try {
+    const qc = getQueryClientBridge();
+    await qc.invalidateQueries({ queryKey: ["inventory", "list"] });
+    await qc.invalidateQueries({ queryKey: queryKeys.inventory.monitoring });
+  } catch {
+    /* ignore */
+  }
+}
+
+export async function invalidateProgramKitItems(programId: number) {
+  try {
+    await getQueryClientBridge().invalidateQueries({
+      queryKey: queryKeys.inventory.programKitItems(programId),
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+export type { Inventory };
+export type { ProgramKitItemSummary };

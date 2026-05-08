@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calculator, ArrowRight, CheckCircle } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calculator, ArrowRight, CheckCircle, Check, ChevronsUpDown } from "lucide-react";
 import React from "react";
 import { applyFranchisee } from "@/services/franchisee.service";
 import { getErrorMessage } from "@/lib/error-utils";
@@ -30,26 +35,15 @@ import {
   Franchisee,
   Franchise,
 } from "@/services/franchisee.service";
-import { getAllPrograms, Program } from "@/services/program.service";
+import { useProgramsOnDemand } from "@/hooks/api/program.hooks";
 import { StateCitySelect } from "@/components/StateCitySelect";
+import { cn } from "@/lib/utils";
 
 const FORM_STEPS = [
-  {
-    id: 1,
-    title: "Personal Information",
-  },
-  {
-    id: 2,
-    title: "Address Information",
-  },
-  {
-    id: 3,
-    title: "Contact & Professional",
-  },
-  {
-    id: 4,
-    title: "Franchise Details",
-  },
+  { id: 1, title: "Personal Information" },
+  { id: 2, title: "Location & Communication" },
+  { id: 3, title: "Contact & Professional" },
+  { id: 4, title: "Franchise Details" },
 ];
 
 const Stepper = ({
@@ -64,34 +58,44 @@ const Stepper = ({
       <div className="flex items-center justify-between">
         {steps.map((step, index) => (
           <React.Fragment key={step.id}>
-            <div className="flex flex-col items-center flex-1">
+            <div className="flex flex-1 flex-col items-center">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-all duration-200 ${
-                  currentStep === step.id
-                    ? "bg-blue-600 text-white border-blue-600 shadow-md"
-                    : currentStep > step.id
-                      ? "bg-green-600 text-white border-green-600"
-                      : "bg-white text-gray-400 border-gray-300"
-                }`}
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-semibold transition-all duration-200",
+                  currentStep === step.id &&
+                    "border-primary bg-primary text-primary-foreground shadow-md",
+                  currentStep > step.id &&
+                    "border-primary bg-primary text-primary-foreground",
+                  currentStep < step.id &&
+                    "border-border bg-card text-muted-foreground",
+                )}
               >
-                {currentStep > step.id ? "✓" : step.id}
+                {currentStep > step.id ? (
+                  <Check className="h-4 w-4" strokeWidth={3} />
+                ) : (
+                  step.id
+                )}
               </div>
-              <div className="mt-2 text-center max-w-[80px]">
+              <div className="mt-2 max-w-[80px] text-center">
                 <p
-                  className={`text-xs font-medium leading-tight ${
-                    currentStep >= step.id ? "text-gray-900" : "text-gray-400"
-                  }`}
+                  className={cn(
+                    "text-xs font-medium leading-tight",
+                    currentStep >= step.id
+                      ? "text-card-foreground"
+                      : "text-muted-foreground",
+                  )}
                 >
                   {step.title}
                 </p>
               </div>
             </div>
             {index < steps.length - 1 && (
-              <div className="flex items-center justify-center flex-1 max-w-[60px] px-2">
+              <div className="flex max-w-[60px] flex-1 items-center justify-center px-2">
                 <div
-                  className={`h-0.5 w-full transition-all duration-200 ${
-                    currentStep > step.id ? "bg-green-600" : "bg-gray-300"
-                  }`}
+                  className={cn(
+                    "h-0.5 w-full transition-all duration-200",
+                    currentStep > step.id ? "bg-primary" : "bg-border",
+                  )}
                 />
               </div>
             )}
@@ -139,26 +143,13 @@ export function FranchiseApplicationModal({
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [isLoadingPrograms, setIsLoadingPrograms] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      const fetchPrograms = async () => {
-        setIsLoadingPrograms(true);
-        try {
-          const programsData = await getAllPrograms();
-          setPrograms(programsData);
-        } catch (error) {
-          console.error("Error fetching programs:", error);
-          setPrograms([]);
-        } finally {
-          setIsLoadingPrograms(false);
-        }
-      };
-      fetchPrograms();
-    }
-  }, [open]);
+  const {
+    programs,
+    isFetching: programsFetching,
+    isError: programsError,
+    ensureProgramsRequested,
+    hasRequested: programsFetchRequested,
+  } = useProgramsOnDemand();
 
   const validateCurrentStep = () => {
     const newErrors: Record<string, string> = {};
@@ -174,9 +165,6 @@ export function FranchiseApplicationModal({
         break;
 
       case 2:
-        if (!formData.franchise.address.trim()) {
-          newErrors.address = "Centre address is required";
-        }
         if (!formData.franchise.state?.trim()) {
           newErrors.city = "State is required";
         } else if (!formData.franchise.city.trim()) {
@@ -206,9 +194,12 @@ export function FranchiseApplicationModal({
         }
         if (
           !formData.franchise.programIds ||
-          formData.franchise.programIds.length === 0
+          formData.franchise.programIds.length !== 1
         ) {
-          newErrors.programIds = "At least one program must be selected";
+          newErrors.programIds = "Select exactly one program";
+        }
+        if (!formData.franchise.address.trim()) {
+          newErrors.address = "Centre address is required";
         }
         break;
     }
@@ -273,6 +264,7 @@ export function FranchiseApplicationModal({
 
     const keysToClear = [field];
     if (field === "franchise.pincode") keysToClear.push("pincode");
+    if (field === "franchise.address") keysToClear.push("address");
     if (keysToClear.some((k) => errors[k])) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -282,12 +274,13 @@ export function FranchiseApplicationModal({
     }
   };
 
-  const handleProgramToggle = (programId: number) => {
+  const handleProgramSelect = (programId: number) => {
     setFormData((prev) => {
       const currentIds = prev.franchise.programIds || [];
-      const newIds = currentIds.includes(programId)
-        ? currentIds.filter((id) => id !== programId)
-        : [...currentIds, programId];
+      const newIds =
+        currentIds.length === 1 && currentIds[0] === programId
+          ? []
+          : [programId];
 
       return {
         ...prev,
@@ -339,11 +332,11 @@ export function FranchiseApplicationModal({
     onOpenChange(false);
   };
 
-  const handleModalOpenChange = (open: boolean) => {
-    if (!open) {
+  const handleModalOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
       handleClose();
     } else {
-      onOpenChange(open);
+      onOpenChange(nextOpen);
     }
   };
 
@@ -352,7 +345,7 @@ export function FranchiseApplicationModal({
       case 1:
         return (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="name">Name *</Label>
                 <Input
@@ -360,10 +353,13 @@ export function FranchiseApplicationModal({
                   type="text"
                   value={formData.franchisee.name}
                   onChange={(e) => handleInputChange("name", e.target.value)}
-                  className={errors.name ? "border-red-500" : ""}
+                  className={cn(
+                    "rounded-lg border-border",
+                    errors.name && "border-destructive",
+                  )}
                 />
                 {errors.name && (
-                  <p className="text-red-500 text-sm">{errors.name}</p>
+                  <p className="text-sm text-destructive">{errors.name}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -374,13 +370,16 @@ export function FranchiseApplicationModal({
                   value={
                     formData.franchisee.dob instanceof Date
                       ? formData.franchisee.dob.toISOString().split("T")[0]
-                      : formData.franchisee.dob
+                      : (formData.franchisee.dob as unknown as string)
                   }
                   onChange={(e) => handleInputChange("dob", e.target.value)}
-                  className={errors.dob ? "border-red-500" : ""}
+                  className={cn(
+                    "rounded-lg border-border",
+                    errors.dob && "border-destructive",
+                  )}
                 />
                 {errors.dob && (
-                  <p className="text-red-500 text-sm">{errors.dob}</p>
+                  <p className="text-sm text-destructive">{errors.dob}</p>
                 )}
               </div>
             </div>
@@ -393,7 +392,7 @@ export function FranchiseApplicationModal({
                   handleInputChange("bloodGroup", value)
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="rounded-lg border-border">
                   <SelectValue placeholder="Select blood group" />
                 </SelectTrigger>
                 <SelectContent>
@@ -415,22 +414,6 @@ export function FranchiseApplicationModal({
         return (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="address">Centre Address *</Label>
-              <Textarea
-                id="address"
-                value={formData.franchise.address}
-                onChange={(e) =>
-                  handleInputChange("franchise.address", e.target.value)
-                }
-                className={errors.address ? "border-red-500" : ""}
-                rows={3}
-              />
-              {errors.address && (
-                <p className="text-red-500 text-sm">{errors.address}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="communicationAddress">
                 Communication Address
               </Label>
@@ -441,6 +424,7 @@ export function FranchiseApplicationModal({
                   handleInputChange("communicationAddress", e.target.value)
                 }
                 rows={3}
+                className="rounded-lg border-border"
               />
             </div>
 
@@ -459,7 +443,7 @@ export function FranchiseApplicationModal({
                 error={errors.city}
               />
 
-              <div className="space-y-2 w-[50%]">
+              <div className="w-[50%] space-y-2">
                 <Label htmlFor="pinCode">Pincode *</Label>
                 <Input
                   id="pinCode"
@@ -467,10 +451,13 @@ export function FranchiseApplicationModal({
                   onChange={(e) =>
                     handleInputChange("franchise.pincode", e.target.value)
                   }
-                  className={errors.pincode ? "border-red-500" : ""}
+                  className={cn(
+                    "rounded-lg border-border",
+                    errors.pincode && "border-destructive",
+                  )}
                 />
                 {errors.pincode && (
-                  <p className="text-red-500 text-sm">{errors.pincode}</p>
+                  <p className="text-sm text-destructive">{errors.pincode}</p>
                 )}
               </div>
             </div>
@@ -480,7 +467,7 @@ export function FranchiseApplicationModal({
       case 3:
         return (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number *</Label>
                 <Input
@@ -488,10 +475,13 @@ export function FranchiseApplicationModal({
                   type="tel"
                   value={formData.franchisee.phone}
                   onChange={(e) => handleInputChange("phone", e.target.value)}
-                  className={errors.phone ? "border-red-500" : ""}
+                  className={cn(
+                    "rounded-lg border-border",
+                    errors.phone && "border-destructive",
+                  )}
                 />
                 {errors.phone && (
-                  <p className="text-red-500 text-sm">{errors.phone}</p>
+                  <p className="text-sm text-destructive">{errors.phone}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -501,10 +491,13 @@ export function FranchiseApplicationModal({
                   type="email"
                   value={formData.franchisee.mail}
                   onChange={(e) => handleInputChange("mail", e.target.value)}
-                  className={errors.mail ? "border-red-500" : ""}
+                  className={cn(
+                    "rounded-lg border-border",
+                    errors.mail && "border-destructive",
+                  )}
                 />
                 {errors.mail && (
-                  <p className="text-red-500 text-sm">{errors.mail}</p>
+                  <p className="text-sm text-destructive">{errors.mail}</p>
                 )}
               </div>
             </div>
@@ -516,6 +509,7 @@ export function FranchiseApplicationModal({
                 type="text"
                 value={formData.franchisee.education}
                 onChange={(e) => handleInputChange("education", e.target.value)}
+                className="rounded-lg border-border"
               />
             </div>
 
@@ -528,6 +522,7 @@ export function FranchiseApplicationModal({
                 onChange={(e) =>
                   handleInputChange("occupation", e.target.value)
                 }
+                className="rounded-lg border-border"
               />
             </div>
 
@@ -538,6 +533,7 @@ export function FranchiseApplicationModal({
                 type="text"
                 value={formData.franchisee.reference}
                 onChange={(e) => handleInputChange("reference", e.target.value)}
+                className="rounded-lg border-border"
               />
             </div>
           </div>
@@ -555,11 +551,14 @@ export function FranchiseApplicationModal({
                 onChange={(e) =>
                   handleInputChange("franchise.name", e.target.value)
                 }
-                className={errors.franchiseName ? "border-red-500" : ""}
+                className={cn(
+                  "rounded-lg border-border",
+                  errors.franchiseName && "border-destructive",
+                )}
                 placeholder="Enter your desired franchise center name"
               />
               {errors.franchiseName && (
-                <p className="text-red-500 text-sm">{errors.franchiseName}</p>
+                <p className="text-sm text-destructive">{errors.franchiseName}</p>
               )}
             </div>
 
@@ -572,7 +571,10 @@ export function FranchiseApplicationModal({
                 }
               >
                 <SelectTrigger
-                  className={errors.franchiseType ? "border-red-500" : ""}
+                  className={cn(
+                    "rounded-lg border-border",
+                    errors.franchiseType && "border-destructive",
+                  )}
                 >
                   <SelectValue placeholder="Select franchise type" />
                 </SelectTrigger>
@@ -583,46 +585,125 @@ export function FranchiseApplicationModal({
                 </SelectContent>
               </Select>
               {errors.franchiseType && (
-                <p className="text-red-500 text-sm">{errors.franchiseType}</p>
+                <p className="text-sm text-destructive">{errors.franchiseType}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label>Programs * (Select one or more)</Label>
-              <div
-                className={`border rounded-md p-4 space-y-3 ${
-                  errors.programIds ? "border-red-500" : "border-gray-200"
-                }`}
+              <Label>Program * (Select one)</Label>
+              <Popover
+                onOpenChange={(open) => {
+                  if (open) ensureProgramsRequested();
+                }}
               >
-                {isLoadingPrograms ? (
-                  <p className="text-sm text-gray-500">Loading programs...</p>
-                ) : programs.length === 0 ? (
-                  <p className="text-sm text-gray-500">No programs available</p>
-                ) : (
-                  programs.map((program) => (
-                    <div
-                      key={program.id}
-                      className="flex items-center space-x-2"
-                    >
-                      <Checkbox
-                        id={`program-${program.id}`}
-                        checked={formData.franchise.programIds.includes(
-                          program.id,
-                        )}
-                        onCheckedChange={() => handleProgramToggle(program.id)}
-                      />
-                      <label
-                        htmlFor={`program-${program.id}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        {program.name}
-                      </label>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "h-auto min-h-10 w-full justify-between rounded-lg border-border px-3 py-2 text-left font-normal",
+                      errors.programIds && "border-destructive",
+                    )}
+                  >
+                    <span className="line-clamp-2 pr-2">
+                      {(() => {
+                        const ids = formData.franchise.programIds ?? [];
+                        if (ids.length === 0) {
+                          return (
+                            <span className="text-muted-foreground">
+                              Click to choose a program...
+                            </span>
+                          );
+                        }
+                        if (
+                          programsFetchRequested &&
+                          programsFetching &&
+                          programs.length === 0
+                        ) {
+                          return "Loading programs...";
+                        }
+                        const names = ids
+                          .map(
+                            (id) => programs.find((p) => p.id === id)?.name,
+                          )
+                          .filter(Boolean) as string[];
+                        if (names.length === ids.length) {
+                          return names[0];
+                        }
+                        return ids.length === 1
+                          ? `Program #${ids[0]}`
+                          : "Select exactly one program";
+                      })()}
+                    </span>
+                    <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="z-[100] w-[var(--radix-popover-trigger-width)] max-h-80 overflow-y-auto p-3"
+                  align="start"
+                >
+                  {programsError ? (
+                    <p className="text-sm text-destructive">
+                      Could not load programs. Try again.
+                    </p>
+                  ) : programsFetchRequested &&
+                    programsFetching &&
+                    programs.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Loading programs...
+                    </p>
+                  ) : programs.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No programs available
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {programs.map((program) => (
+                        <div
+                          key={program.id}
+                          className="flex items-center space-x-2"
+                        >
+                          <Checkbox
+                            id={`program-${program.id}`}
+                            checked={
+                              formData.franchise.programIds[0] === program.id
+                            }
+                            onCheckedChange={() => handleProgramSelect(program.id)}
+                          />
+                          <label
+                            htmlFor={`program-${program.id}`}
+                            className="cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            {program.name}
+                          </label>
+                        </div>
+                      ))}
                     </div>
-                  ))
-                )}
-              </div>
+                  )}
+                </PopoverContent>
+              </Popover>
               {errors.programIds && (
-                <p className="text-red-500 text-sm">{errors.programIds}</p>
+                <p className="text-sm text-destructive">{errors.programIds}</p>
+              )}
+            </div>
+
+            <div className="space-y-2 border-t border-border pt-4">
+              <Label htmlFor="address">Centre Address *</Label>
+              <Textarea
+                id="address"
+                value={formData.franchise.address}
+                onChange={(e) =>
+                  handleInputChange("franchise.address", e.target.value)
+                }
+                className={cn(
+                  "rounded-lg border-border",
+                  errors.address && "border-destructive",
+                )}
+                rows={3}
+                placeholder="Full address of the proposed centre"
+              />
+              {errors.address && (
+                <p className="text-sm text-destructive">{errors.address}</p>
               )}
             </div>
           </div>
@@ -635,26 +716,25 @@ export function FranchiseApplicationModal({
 
   if (submitted) {
     return (
-      <Dialog open={false} onOpenChange={handleModalOpenChange}>
-        <DialogContent className="max-w-md w-full mx-4">
+      <Dialog open={open} onOpenChange={handleModalOpenChange}>
+        <DialogContent className="mx-4 w-full max-w-md rounded-2xl border-border">
           <DialogHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <CheckCircle className="h-12 w-12 text-green-600" />
+            <div className="mb-4 flex justify-center">
+              <div className="rounded-full bg-surface-green p-3">
+                <CheckCircle className="h-10 w-10 text-primary" />
+              </div>
             </div>
-            <DialogTitle className="text-2xl font-bold text-gray-900">
+            <DialogTitle className="text-2xl font-semibold text-card-foreground">
               Application Submitted!
             </DialogTitle>
-            <DialogDescription className="text-center">
+            <DialogDescription className="text-center text-muted-foreground">
               Your franchise application has been submitted successfully. Our
-              admin team will review your application and contact you with the
-              next steps.
+              admin team will review it first. Login credentials and agreement
+              access will be sent only after approval.
             </DialogDescription>
           </DialogHeader>
-          <div className="pt-4">
-            <Button
-              className="w-full bg-blue-600 hover:bg-blue-700"
-              onClick={handleClose}
-            >
+          <div className="pt-2">
+            <Button className="w-full" onClick={handleClose}>
               Close
             </Button>
           </div>
@@ -665,29 +745,31 @@ export function FranchiseApplicationModal({
 
   return (
     <Dialog open={open} onOpenChange={handleModalOpenChange}>
-      <DialogContent className="max-w-4xl w-full mx-4 max-h-[95vh] overflow-hidden flex flex-col">
-        <DialogHeader className="text-center border-b border-gray-200 pb-4 flex-shrink-0">
-          <div className="flex justify-center mb-4">
-            <Calculator className="h-8 w-8 text-gray-700" />
+      <DialogContent className="mx-4 flex max-h-[95vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border-border p-0">
+        <DialogHeader className="flex-shrink-0 border-b border-border bg-surface-green/40 px-6 pb-4 pt-6 text-center">
+          <div className="mb-3 flex justify-center">
+            <div className="rounded-xl bg-accent p-2.5 text-primary">
+              <Calculator className="h-7 w-7" />
+            </div>
           </div>
-          <DialogTitle className="text-xl font-bold text-gray-900">
+          <DialogTitle className="text-xl font-semibold text-card-foreground">
             Franchise Application Form
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-muted-foreground">
             Complete your franchise application step by step
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div className="space-y-6 p-6">
+            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
               <Stepper currentStep={currentStep} steps={FORM_STEPS} />
             </div>
 
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">
+                  <h3 className="mb-4 border-b border-border pb-2 text-lg font-semibold text-[#065f46]">
                     {FORM_STEPS[currentStep - 1].title}
                   </h3>
                   <div className="space-y-4">{renderStepContent()}</div>
@@ -699,6 +781,7 @@ export function FranchiseApplicationModal({
                         <Button
                           type="button"
                           variant="outline"
+                          className="rounded-lg border-border"
                           onClick={handlePrevious}
                         >
                           Previous
@@ -711,10 +794,10 @@ export function FranchiseApplicationModal({
                     <Button
                       type="button"
                       onClick={handleNext}
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="rounded-lg"
                     >
                       Next
-                      <ArrowRight className="h-4 w-4 ml-2" />
+                      <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
@@ -724,6 +807,7 @@ export function FranchiseApplicationModal({
                         <Button
                           type="button"
                           variant="outline"
+                          className="rounded-lg border-border"
                           onClick={handlePrevious}
                         >
                           Previous
@@ -734,7 +818,7 @@ export function FranchiseApplicationModal({
 
                       <Button
                         type="submit"
-                        className="bg-blue-600 hover:bg-blue-700"
+                        className="rounded-lg"
                         disabled={isLoading}
                       >
                         {isLoading ? "Submitting..." : "Submit Application"}

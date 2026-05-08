@@ -4,12 +4,12 @@ import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye } from "lucide-react";
-import { AdminTable } from "@/components/shared";
+import { DataTable } from "@/components/shared";
 import type {
-  AdminTableColumn,
-  AdminTableFilter,
-  AdminTableSortOption,
-} from "@/components/shared/AdminTable";
+  DataTableColumn,
+  DataTableFilter,
+  DataTableSortOption,
+} from "@/components/shared";
 import {
   OrderData,
   OrderStatus,
@@ -19,11 +19,13 @@ import OrderDetails from "./OrderDetails";
 interface OrdersTableProps {
   orders?: OrderData[];
   onViewOrderDetails?: (orderId: number) => void;
+  loading?: boolean;
 }
 
 export default function OrdersTable({
   orders,
   onViewOrderDetails,
+  loading = false,
 }: OrdersTableProps) {
   const [expandedChildren, setExpandedChildren] = useState<Set<string>>(
     new Set()
@@ -94,8 +96,8 @@ export default function OrdersTable({
     }
   };
 
-  const getStatusColor = (status: OrderStatus) => {
-    switch (status) {
+  const getStatusColor = (status: OrderStatus | string) => {
+    switch (status as OrderStatus) {
       case OrderStatus.DELIVERED:
         return "bg-green-100 text-green-800 border-green-200";
       case OrderStatus.SHIPPED:
@@ -112,7 +114,7 @@ export default function OrdersTable({
   };
 
   // Table configuration
-  const columns: AdminTableColumn<OrderData>[] = [
+  const columns: DataTableColumn<OrderData>[] = [
     {
       key: "order",
       header: "Order ID",
@@ -173,7 +175,7 @@ export default function OrdersTable({
     },
   ];
 
-  const filters: AdminTableFilter[] = [
+  const filters: DataTableFilter[] = [
     {
       key: "status",
       label: "Status",
@@ -189,35 +191,18 @@ export default function OrdersTable({
     },
   ];
 
-  const sortOptions: AdminTableSortOption[] = [
+  const sortOptions: DataTableSortOption[] = [
     { value: "orderDate", label: "Order Date" },
   ];
 
   return (
-    <AdminTable
+    <DataTable
       data={paginatedData}
-      loading={false}
+      loading={loading}
       columns={columns}
       getRowId={(order) => order.id.toString()}
       renderMainCell={(order) => (
-        <div className="flex flex-col">
-          <div className="font-medium text-gray-900">
-            Order #{order.id}
-          </div>
-          <div className="text-sm text-gray-500">
-            {new Date(order.createdAt).toLocaleString()}
-          </div>
-          <div className="text-xs text-gray-600 mt-1">
-            <Badge variant="outline" className="text-xs">
-              {order.orderType}
-            </Badge>
-          </div>
-          {order.notes && (
-            <div className="text-xs text-gray-400 truncate max-w-[200px]">
-              {order.notes}
-            </div>
-          )}
-        </div>
+        <span className="font-medium text-card-foreground">Order #{order.id}</span>
       )}
       renderExpandedContent={(order) => (
         <OrderDetails

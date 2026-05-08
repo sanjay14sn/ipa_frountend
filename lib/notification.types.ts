@@ -54,11 +54,23 @@ export interface Notification {
   updatedAt: Date;
 }
 
+export interface PaginatedNotifications {
+  rows: Notification[] | Record<string, unknown>[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export interface NotificationResponse {
   statusCode: number;
   timestamp: string;
   method: string;
   path: string;
   message: string;
-  result: Notification[] | Notification | { count: number };
+  result:
+    | Notification[]
+    | PaginatedNotifications
+    | Notification
+    | { count: number }
+    | number;
 }

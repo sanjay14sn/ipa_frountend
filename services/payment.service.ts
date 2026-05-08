@@ -1,119 +1,68 @@
-
-
-export interface Response {
-  statusCode: number;
-  timeStamp: string;
-  method: string;
-  path: string;
-  message: string;
-}
+import { api } from "@/lib/axios";
+import {
+  compactRequestParams,
+  normalizePaginatedResult,
+  unwrapData,
+} from "@/lib/unwrap-api";
 
 export enum PaymentStatus {
-  PENDING = "pending",
-  COMPLETED = "completed",
-  FAILED = "failed",
-}
-
-export interface Franchisee {
-  id: number;
-  name: string;
-  mail: string;
-  phone: string;
-  franchise: Franchise;
-}
-
-export interface Franchise {
-  id: number;
-  name: string;
-}
-
-export interface Plan {
-  id: number;
-  name: string;
-}
-
-export interface Subscription {
-  id: number;
-  plan: Plan;
+  PENDING = "Pending",
+  COMPLETED = "Completed",
+  FAILED = "Failed",
+  REFUNDED = "Refunded",
 }
 
 export interface PaymentData {
   id: number;
-  franchiseeId: number;
-  subscriptionId: number | null;
-  razorpayOrderId: string;
-  status: PaymentStatus;
   amount: number;
-  currency: string;
-  type: string;
-  createdAt: string;
-  updatedAt: string;
-  franchisee: Franchisee;
-  subscription: Subscription | null;
+  status: PaymentStatus | string;
+  franchiseName?: string;
+  franchiseId?: string | null;
+  createdAt?: string;
+  agreementId?: number | null;
+  receivableItemId?: number | null;
+  acquirerData?: Record<string, unknown> | null;
+  franchisee?: {
+    id?: number;
+    name?: string;
+    mail?: string;
+    phone?: string;
+  };
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string | null;
+  type?: string;
+  currency?: string;
+  subscription?: { id?: number; status?: string; plan?: string };
+  method?: string | null;
+  bank?: string | null;
+  wallet?: string | null;
+  vpa?: string | null;
+  email?: string | null;
+  contact?: string | null;
+  fee?: number | null;
+  tax?: number | null;
 }
 
-export interface PaginationMeta {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
+export interface FranchisePaymentGroup {
+  franchiseId: string;
+  franchiseName: string;
+  payments: PaymentData[];
 }
 
-export interface GroupedPaymentData {
-  [franchiseName: string]: PaymentData[];
+export interface FranchisePaymentSummary {
+  franchiseId: string | null;
+  franchiseName: string;
+  franchiseeId: number | null;
+  franchiseeName: string | null;
+  franchiseeEmail: string | null;
+  totalPayments: number;
+  totalCompleted: number;
+  totalPending: number;
+  totalAmount: number;
 }
 
-export interface PaginatedPaymentsResponse {
-  data: GroupedPaymentData;
-  meta: PaginationMeta;
-}
-
-export interface PaymentPaginationParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  status?: string;
-  sortBy?: string;
-  sortOrder?: string;
-}
-
-import { api } from "@/lib/axios";
-
-export async function getPaginatedAdminPayments(
-  params: PaymentPaginationParams
-): Promise<PaginatedPaymentsResponse> {
-  const queryParams = new URLSearchParams();
-
-  if (params.page) queryParams.append("page", params.page.toString());
-  if (params.limit) queryParams.append("limit", params.limit.toString());
-  if (params.search) queryParams.append("search", params.search);
-  if (params.status) queryParams.append("status", params.status);
-  if (params.sortBy) queryParams.append("sortBy", params.sortBy);
-  if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
-
-  const response = await api.get<{ result: PaginatedPaymentsResponse }>(
-    `/payment/all-admin?${queryParams.toString()}`
-  );
-  return response.data.result;
-}
-
-export async function getPaymentDetails(orderId: string): Promise<PaymentData> {
-  const response = await api.get<PaymentData>(`/payment/${orderId}`);
-  return response.data;
-}
-
-export interface CITrainingPaymentOrderResponse {
-  orderId: string;
-  amount: number;
-  currency: string;
-  ciId: number;
-  ciName: string;
-  paymentType: string;
-  key: string;
-  message?: string;
-}
+/** @alias Legacy grouped payments table */
+export type GroupedPaymentData = Record<string, PaymentData[]>;
 
 export interface VerifyPaymentDto {
   paymentId: string;
@@ -121,64 +70,200 @@ export interface VerifyPaymentDto {
   signature: string;
 }
 
-export interface PaymentVerificationResponse {
-  message: string;
-  status?: string;
+export async function getPaginatedAdminPayments(
+  params: Record<string, unknown>,
+): Promise<{
+  data: GroupedPaymentData;
+  meta: { total: number; totalPages: number };
+}> {
+  const response = await api.get("/admin/billing/payment", {
+    params: compactRequestParams(
+      params as Record<string, string | number | boolean | undefined | null>,
+    ),
+  });
+  const result = unwrapData<unknown>(response);
+  const normalized = normalizePaginatedResult<Record<string, unknown>>(result);
+  const rows = normalized.rows.map((row) => {
+    const franchise = (row.franchise ?? null) as
+      | { id?: string; name?: string }
+      | null;
+    const franchisee = (row.franchisee ?? null) as
+      | { id?: number; name?: string; email?: string; mail?: string; phone?: string }
+      | null;
+    return {
+      id: Number(row.id),
+      amount: Number(row.amount ?? 0),
+      status: String(row.status ?? PaymentStatus.PENDING),
+      franchiseName: franchise?.name ?? "Unassigned Franchise",
+      franchiseId: franchise?.id ?? (row.franchiseId as string | null | undefined) ?? null,
+      createdAt: (row.createdAt as string | undefined) ?? undefined,
+      agreementId: (row.agreementId as number | null | undefined) ?? null,
+      receivableItemId:
+        (row.receivableItemId as number | null | undefined) ?? null,
+      acquirerData:
+        (row.acquirerData as Record<string, unknown> | null | undefined) ?? null,
+      franchisee: franchisee
+        ? {
+            id: franchisee.id,
+            name: franchisee.name,
+            mail: franchisee.mail ?? franchisee.email,
+            phone: franchisee.phone,
+          }
+        : undefined,
+      razorpayOrderId:
+        (row.razorpayOrderId as string | undefined) ?? undefined,
+      razorpayPaymentId:
+        (row.razorpayPaymentId as string | null | undefined) ?? null,
+      type: (row.type as string | undefined) ?? undefined,
+      currency: (row.currency as string | undefined) ?? "INR",
+      subscription: undefined,
+      method: (row.method as string | null | undefined) ?? null,
+      bank: (row.bank as string | null | undefined) ?? null,
+      wallet: (row.wallet as string | null | undefined) ?? null,
+      vpa: (row.vpa as string | null | undefined) ?? null,
+      email: (row.email as string | null | undefined) ?? null,
+      contact: (row.contact as string | null | undefined) ?? null,
+      fee: row.fee != null ? Number(row.fee) : null,
+      tax: row.tax != null ? Number(row.tax) : null,
+    } satisfies PaymentData;
+  });
+  const { total, limit } = normalized;
+
+  const grouped = rows.reduce<GroupedPaymentData>((acc, row) => {
+    const franchiseName = row.franchiseName?.trim() || "Unassigned Franchise";
+    if (!acc[franchiseName]) acc[franchiseName] = [];
+    acc[franchiseName].push(row);
+    return acc;
+  }, {});
+
+  const totalPages = Math.max(1, Math.ceil(total / Math.max(1, limit || 20)));
+  return { data: grouped, meta: { total, totalPages } };
 }
 
-export async function initiateCITrainingPayment(
-  ciId: number
-): Promise<CITrainingPaymentOrderResponse> {
-  const response = await api.post<{ result: CITrainingPaymentOrderResponse }>(
-    `/payment/ci-training/initiate/${ciId}`
-  );
-  return response.data.result;
+export async function getAdminFranchisePaymentSummaries(
+  params: Record<string, unknown>,
+): Promise<{
+  data: FranchisePaymentSummary[];
+  meta: { total: number; totalPages: number };
+}> {
+  const response = await api.get("/admin/billing/payment/summary", {
+    params: compactRequestParams(
+      params as Record<string, string | number | boolean | undefined | null>,
+    ),
+  });
+  const result = unwrapData<unknown>(response);
+  const normalized = normalizePaginatedResult<Record<string, unknown>>(result);
+  const rows = normalized.rows.map((row) => ({
+    franchiseId: (row.franchiseId as string | null | undefined) ?? null,
+    franchiseName: String(row.franchiseName ?? "Unassigned Franchise"),
+    franchiseeId: row.franchiseeId != null ? Number(row.franchiseeId) : null,
+    franchiseeName: (row.franchiseeName as string | null | undefined) ?? null,
+    franchiseeEmail: (row.franchiseeEmail as string | null | undefined) ?? null,
+    totalPayments: Number(row.totalPayments ?? 0),
+    totalCompleted: Number(row.totalCompleted ?? 0),
+    totalPending: Number(row.totalPending ?? 0),
+    totalAmount: Number(row.totalAmount ?? 0),
+  } satisfies FranchisePaymentSummary));
+  const { total, limit } = normalized;
+  const totalPages = Math.max(1, Math.ceil(total / Math.max(1, limit || 20)));
+  return { data: rows, meta: { total, totalPages } };
 }
 
-export async function verifyCITrainingPayment(
-  paymentData: VerifyPaymentDto
-): Promise<PaymentVerificationResponse> {
-  const response = await api.post<{ result: PaymentVerificationResponse }>(
-    "/payment/ci-training/verify",
-    paymentData
-  );
-  return response.data.result;
+export async function getAdminFranchisePayments(
+  franchiseId: string,
+  params: Record<string, unknown>,
+): Promise<{
+  data: PaymentData[];
+  meta: { total: number; totalPages: number };
+}> {
+  const response = await api.get("/admin/billing/payment", {
+    params: compactRequestParams({
+      ...(params as Record<string, string | number | boolean | undefined | null>),
+      franchiseId,
+    }),
+  });
+  const result = unwrapData<unknown>(response);
+  const normalized = normalizePaginatedResult<Record<string, unknown>>(result);
+  const rows = normalized.rows.map((row) => {
+    const franchise = (row.franchise ?? null) as
+      | { id?: string; name?: string }
+      | null;
+    const franchisee = (row.franchisee ?? null) as
+      | { id?: number; name?: string; email?: string; mail?: string; phone?: string }
+      | null;
+    return {
+      id: Number(row.id),
+      amount: Number(row.amount ?? 0),
+      status: String(row.status ?? PaymentStatus.PENDING),
+      franchiseName: franchise?.name ?? "Unassigned Franchise",
+      franchiseId: franchise?.id ?? (row.franchiseId as string | null | undefined) ?? null,
+      createdAt: (row.createdAt as string | undefined) ?? undefined,
+      agreementId: (row.agreementId as number | null | undefined) ?? null,
+      receivableItemId: (row.receivableItemId as number | null | undefined) ?? null,
+      acquirerData: (row.acquirerData as Record<string, unknown> | null | undefined) ?? null,
+      franchisee: franchisee
+        ? {
+            id: franchisee.id,
+            name: franchisee.name,
+            mail: franchisee.mail ?? franchisee.email,
+            phone: franchisee.phone,
+          }
+        : undefined,
+      razorpayOrderId: (row.razorpayOrderId as string | undefined) ?? undefined,
+      razorpayPaymentId: (row.razorpayPaymentId as string | null | undefined) ?? null,
+      type: (row.type as string | undefined) ?? undefined,
+      currency: (row.currency as string | undefined) ?? "INR",
+      subscription: undefined,
+      method: (row.method as string | null | undefined) ?? null,
+      bank: (row.bank as string | null | undefined) ?? null,
+      wallet: (row.wallet as string | null | undefined) ?? null,
+      vpa: (row.vpa as string | null | undefined) ?? null,
+      email: (row.email as string | null | undefined) ?? null,
+      contact: (row.contact as string | null | undefined) ?? null,
+      fee: row.fee != null ? Number(row.fee) : null,
+      tax: row.tax != null ? Number(row.tax) : null,
+    } satisfies PaymentData;
+  });
+  const { total, limit } = normalized;
+  const totalPages = Math.max(1, Math.ceil(total / Math.max(1, limit || 10)));
+  return { data: rows, meta: { total, totalPages } };
 }
 
-// Multi-level training payment interfaces
-export interface MultiLevelCITrainingPaymentRequest {
-  trainingLevelIds: number[];
+export async function getPaymentDetails(_orderId: number): Promise<PaymentData> {
+  throw new Error("Not available in ipa-new");
 }
 
-export interface MultiLevelCITrainingPaymentOrderResponse {
-  orderId: string;
+/** Razorpay checkout bootstrap (legacy franchisee CI flows) */
+export interface CITrainingPaymentOrderResponse {
+  key: string;
   amount: number;
   currency: string;
-  ciId: number;
-  ciName: string;
-  trainingLevels: string;
-  paymentType: string;
-  key: string;
+  orderId: string;
   message?: string;
 }
 
-export async function initiateMultiLevelCITrainingPayment(
-  ciId: number,
-  trainingLevelIds: number[]
-): Promise<MultiLevelCITrainingPaymentOrderResponse> {
-  const response = await api.post<{ result: MultiLevelCITrainingPaymentOrderResponse }>(
-    `/payment/ci-training/multi-level/initiate/${ciId}`,
-    { trainingLevelIds }
-  );
-  return response.data.result;
+export async function initiateCITrainingPayment(
+  _ciId: number,
+): Promise<CITrainingPaymentOrderResponse> {
+  throw new Error("Use billing/payment/initiate with type CI_TRAINING_FEE");
 }
 
-export async function verifyMultiLevelCITrainingPayment(
-  paymentData: VerifyPaymentDto
-): Promise<PaymentVerificationResponse> {
-  const response = await api.post<{ result: PaymentVerificationResponse }>(
-    "/payment/ci-training/multi-level/verify",
-    paymentData
-  );
-  return response.data.result;
+export async function verifyCITrainingPayment(data: VerifyPaymentDto) {
+  const response = await api.post("/billing/payment/verify", {
+    razorpayOrderId: data.orderId,
+    razorpayPaymentId: data.paymentId,
+    signature: data.signature,
+  });
+  return unwrapData(response);
+}
+
+export async function initiateMultiLevelCITrainingPayment(
+  _ciId: number,
+  _body: { trainingLevelIds: number[] },
+): Promise<CITrainingPaymentOrderResponse> {
+  throw new Error("Not implemented for ipa-new");
+}
+
+export async function verifyMultiLevelCITrainingPayment(data: VerifyPaymentDto) {
+  return verifyCITrainingPayment(data);
 }

@@ -29,7 +29,7 @@ import {
   Edit2,
 } from "lucide-react";
 import { StudentData, StudentStream, StudentIdStatus } from "@/services/student.service";
-import { updateStudentWithRevalidation } from "@/hooks/use-students";
+import { updateStudentWithRevalidation } from "@/hooks/api/student.hooks";
 import { getAllPrograms, Program } from "@/services/program.service";
 import { getLevelsByStream, getLevelsByProgram, Level } from "@/services/level.service";
 import { getStreamsByProgram, Stream } from "@/services/stream.service";

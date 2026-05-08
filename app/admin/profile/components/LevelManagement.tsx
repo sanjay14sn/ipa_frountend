@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { ChevronRight, Plus, Trash2, Edit2, Package } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -13,13 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Edit2, Package } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { AdminTable } from "@/components/shared";
-import type { AdminTableColumn } from "@/components/shared/AdminTable";
 import {
-  getLevelsByProgram,
+  getLevelsByStream,
   createLevel,
   updateLevel,
   deleteLevel,
@@ -28,9 +26,15 @@ import {
   type UpdateLevelDto,
 } from "@/services/level.service";
 import {
+  getTransitionsByProgram,
+  type StreamTransition,
+} from "@/services/stream-transition.service";
+import {
   getStreamsByProgram,
   type Stream,
 } from "@/services/stream.service";
+import { getQueryClientBridge } from "@/hooks/api/query-client-bridge";
+import { queryKeys } from "@/hooks/api/query-keys";
 import {
   Dialog,
   DialogContent,
@@ -49,35 +53,79 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { InventoryManagement } from "./InventoryManagement";
+import { LevelMaterialsPicker } from "./LevelMaterialsPicker";
+
+function sortLevelsByDisplayOrder(list: Level[]) {
+  return [...list].sort((a, b) => {
+    if (a.displayOrder !== b.displayOrder) {
+      return a.displayOrder - b.displayOrder;
+    }
+    return a.id - b.id;
+  });
+}
+
+const STREAM_TABLE_CLASS = "w-full table-fixed text-sm";
+const TH_NUM = "w-14 px-2 py-3 text-left font-medium text-gray-700";
+const TH_LEVEL =
+  "w-[28%] min-w-0 px-2 py-3 text-left font-medium text-gray-700";
+const TH_DETAILS = "w-[20%] px-2 py-3 text-left font-medium text-gray-700";
+const TH_MATERIALS =
+  "min-w-0 w-[30%] px-2 py-3 text-left font-medium text-gray-700";
+const TH_ACTIONS =
+  "w-[200px] px-2 py-3 text-right font-medium text-gray-700 box-border";
+const TD_NUM = "w-14 px-2 py-3 text-gray-600 font-medium align-top";
+const TD_LEVEL = "min-w-0 px-2 py-3 align-top";
+const TD_DETAILS = "w-[20%] px-2 py-3 text-xs text-gray-500 align-top";
+const TD_MATERIALS = "min-w-0 px-2 py-3 align-top";
+const TD_ACTIONS = "w-[200px] px-2 py-3 text-right align-top box-border";
 
 interface LevelManagementProps {
   programId: number;
   programName: string;
+  initialStreams?: Stream[];
+  initialTransitions?: StreamTransition[];
+  skipCatalogLoad?: boolean;
+  catalogVersion?: number;
 }
 
 export function LevelManagement({
   programId,
   programName,
+  initialStreams,
+  initialTransitions,
+  skipCatalogLoad = false,
+  catalogVersion = 0,
 }: LevelManagementProps) {
   const router = useRouter();
-  const [levels, setLevels] = useState<Level[]>([]);
-  const [streams, setStreams] = useState<Stream[]>([]);
-  const [selectedStreamId, setSelectedStreamId] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [streams, setStreams] = useState<Stream[]>(initialStreams ?? []);
+  const [transitions, setTransitions] = useState<StreamTransition[]>(
+    initialTransitions ?? [],
+  );
+  const [isLoading, setIsLoading] = useState(
+    skipCatalogLoad ? false : !(initialStreams && initialTransitions),
+  );
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingLevel, setEditingLevel] = useState<Level | null>(null);
   const [deletingLevel, setDeletingLevel] = useState<Level | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [streamLevels, setStreamLevels] = useState<Record<number, Level[]>>({});
+  const [loadingStreamLevels, setLoadingStreamLevels] = useState<
+    Record<number, boolean>
+  >({});
+  const [loadedStreamLevels, setLoadedStreamLevels] = useState<
+    Record<number, boolean>
+  >({});
+  const [collapsedStreams, setCollapsedStreams] = useState<
+    Record<number, boolean>
+  >({});
   const { toast } = useToast();
+  const toastRef = useRef(toast);
 
-  const itemsPerPage = 10;
-
-  const [formData, setFormData] = useState<Omit<CreateLevelDto, "streamId">>({
+  const [formData, setFormData] = useState<Omit<CreateLevelDto, "programId">>({
     name: "",
     code: "",
+    streamId: 0,
     totalMarks: 100,
     passMark: 40,
     displayOrder: 1,
@@ -88,53 +136,143 @@ export function LevelManagement({
   const [editFormData, setEditFormData] = useState<UpdateLevelDto>({});
 
   useEffect(() => {
-    loadStreams();
-    loadLevels();
-  }, [programId]);
+    toastRef.current = toast;
+  }, [toast]);
 
-  const loadStreams = async () => {
+  const loadCatalog = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const data = await getStreamsByProgram(programId);
-      setStreams(data);
-      // Auto-select first active stream
-      if (data.length > 0) {
-        const activeStream = data.find(s => s.isActive) || data[0];
-        setSelectedStreamId(activeStream.id);
-      }
-    } catch (error) {
-      toast({
+      const [nextStreams, nextTransitions] = await Promise.all([
+        getStreamsByProgram(programId),
+        getTransitionsByProgram(programId).catch(
+          () => [] as StreamTransition[],
+        ),
+      ]);
+      setStreams(nextStreams);
+      setTransitions(nextTransitions);
+    } catch {
+      toastRef.current({
         title: "Error",
-        description: "Failed to load streams",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const loadLevels = async () => {
-    try {
-      const data = await getLevelsByProgram(programId);
-      setLevels(data);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load levels",
+        description: "Failed to load catalog",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
+  }, [programId]);
+
+  useEffect(() => {
+    if (skipCatalogLoad) return;
+    void loadCatalog();
+  }, [catalogVersion, loadCatalog, skipCatalogLoad]);
+
+  useEffect(() => {
+    if (!skipCatalogLoad) return;
+    setStreams(initialStreams ?? []);
+    setTransitions(initialTransitions ?? []);
+    setIsLoading(false);
+  }, [initialStreams, initialTransitions, skipCatalogLoad]);
+
+  useEffect(() => {
+    setCollapsedStreams((prev) =>
+      Object.fromEntries(
+        streams.map((stream) => [stream.id, prev[stream.id] ?? true]),
+      ),
+    );
+
+    const validIds = new Set(streams.map((stream) => stream.id));
+    setStreamLevels((prev) =>
+      Object.fromEntries(
+        Object.entries(prev).filter(([streamId]) =>
+          validIds.has(Number(streamId)),
+        ),
+      ),
+    );
+    setLoadedStreamLevels((prev) =>
+      Object.fromEntries(
+        Object.entries(prev).filter(([streamId]) =>
+          validIds.has(Number(streamId)),
+        ),
+      ),
+    );
+    setLoadingStreamLevels((prev) =>
+      Object.fromEntries(
+        Object.entries(prev).filter(([streamId]) =>
+          validIds.has(Number(streamId)),
+        ),
+      ),
+    );
+  }, [streams]);
+
+  const loadLevelsForStream = useCallback(
+    async (streamId: number, force = false): Promise<Level[]> => {
+      if (!force && loadedStreamLevels[streamId]) {
+        return streamLevels[streamId] ?? [];
+      }
+
+      setLoadingStreamLevels((prev) => ({ ...prev, [streamId]: true }));
+      try {
+        const nextLevels = sortLevelsByDisplayOrder(
+          await getQueryClientBridge().fetchQuery({
+            queryKey: queryKeys.levels.byStream(streamId),
+            queryFn: () => getLevelsByStream(streamId),
+            staleTime: Number.POSITIVE_INFINITY,
+          }),
+        );
+        setStreamLevels((prev) => ({ ...prev, [streamId]: nextLevels }));
+        setLoadedStreamLevels((prev) => ({ ...prev, [streamId]: true }));
+        setStreams((prev) =>
+          prev.map((stream) =>
+            stream.id === streamId
+              ? { ...stream, levelCount: nextLevels.length }
+              : stream,
+          ),
+        );
+        return nextLevels;
+      } catch {
+        toastRef.current({
+          title: "Error",
+          description: "Failed to load levels for this stream",
+          variant: "destructive",
+        });
+        return streamLevels[streamId] ?? [];
+      } finally {
+        setLoadingStreamLevels((prev) => ({ ...prev, [streamId]: false }));
+      }
+    },
+    [loadedStreamLevels, streamLevels],
+  );
+
+  const toggleStreamCollapse = (streamId: number) => {
+    const isCollapsed = collapsedStreams[streamId] ?? true;
+    if (isCollapsed) {
+      void loadLevelsForStream(streamId);
+    }
+    setCollapsedStreams((prev) => ({
+      ...prev,
+      [streamId]: !prev[streamId],
+    }));
   };
 
-  const resetForm = () => {
+  const nextDisplayOrderForStream = (levelsForStream: Level[]) => {
+    if (levelsForStream.length === 0) return 1;
+    return Math.max(...levelsForStream.map((level) => level.displayOrder)) + 1;
+  };
+
+  const openAddForStream = async (streamId: number) => {
+    const levelsForStream =
+      streamId > 0 ? await loadLevelsForStream(streamId) : [];
     setFormData({
       name: "",
       code: "",
+      streamId,
       totalMarks: 100,
       passMark: 40,
-      displayOrder: levels.length + 1,
+      displayOrder: nextDisplayOrderForStream(levelsForStream),
       durationInMonths: 3,
       isActive: true,
     });
+    setIsAddDialogOpen(true);
   };
 
   const handleAddLevel = async () => {
@@ -146,29 +284,27 @@ export function LevelManagement({
       });
       return;
     }
-
-    if (!selectedStreamId) {
+    if (!formData.streamId || formData.streamId === 0) {
       toast({
         title: "Error",
-        description: "Please select a stream",
+        description: "Select a stream (create one in Streams & transitions first)",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      await createLevel({
+      const created = await createLevel({
         ...formData,
-        streamId: selectedStreamId,
+        programId,
       });
-      toast({
-        title: "Success",
-        description: "Level created successfully",
+      await getQueryClientBridge().invalidateQueries({
+        queryKey: queryKeys.levels.byStream(created.streamId),
       });
-      resetForm();
+      await loadLevelsForStream(created.streamId, true);
+      toast({ title: "Success", description: "Level created" });
       setIsAddDialogOpen(false);
-      loadLevels();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to create level",
@@ -181,16 +317,29 @@ export function LevelManagement({
     if (!editingLevel) return;
 
     try {
-      await updateLevel(editingLevel.id, editFormData);
-      toast({
-        title: "Success",
-        description: "Level updated successfully",
-      });
+      const previousStreamId = editingLevel.streamId;
+      const updated = await updateLevel(editingLevel.id, editFormData);
+      await Promise.all([
+        getQueryClientBridge().invalidateQueries({
+          queryKey: queryKeys.levels.byStream(previousStreamId),
+        }),
+        updated.streamId !== previousStreamId
+          ? getQueryClientBridge().invalidateQueries({
+              queryKey: queryKeys.levels.byStream(updated.streamId),
+            })
+          : Promise.resolve(),
+      ]);
+      await Promise.all([
+        loadLevelsForStream(previousStreamId, true),
+        updated.streamId !== previousStreamId
+          ? loadLevelsForStream(updated.streamId, true)
+          : Promise.resolve([] as Level[]),
+      ]);
+      toast({ title: "Success", description: "Level updated" });
       setIsEditDialogOpen(false);
       setEditingLevel(null);
       setEditFormData({});
-      loadLevels();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update level",
@@ -204,345 +353,342 @@ export function LevelManagement({
 
     try {
       await deleteLevel(deletingLevel.id);
-      toast({
-        title: "Success",
-        description: "Level deleted successfully",
+      await getQueryClientBridge().invalidateQueries({
+        queryKey: queryKeys.levels.byStream(deletingLevel.streamId),
       });
+      await loadLevelsForStream(deletingLevel.streamId, true);
+      toast({ title: "Success", description: "Level deleted" });
       setIsDeleteDialogOpen(false);
       setDeletingLevel(null);
-      loadLevels();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
-        description: "Failed to delete level",
+        description: "Failed to delete level (students may be enrolled)",
         variant: "destructive",
       });
     }
   };
 
-  const totalPages = Math.ceil(levels.length / itemsPerPage);
-  const paginatedLevels = levels.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+  const totalLevels = streams.reduce(
+    (sum, stream) =>
+      sum + (stream.levelCount ?? streamLevels[stream.id]?.length ?? 0),
+    0,
   );
 
-  const columns: AdminTableColumn<Level>[] = [
-    {
-      key: "level",
-      header: "Level",
-      className: "w-[250px]",
-    },
-    {
-      key: "code",
-      header: "Code",
-      className: "text-center",
-      render: (level) => <Badge variant="outline">{level.code}</Badge>,
-    },
-    {
-      key: "marks",
-      header: "Pass/Total Marks",
-      className: "text-center",
-      render: (level) => (
-        <span>
-          {level.passMark}/{level.totalMarks}
-        </span>
-      ),
-    },
-    {
-      key: "order",
-      header: "Order",
-      className: "text-center",
-      render: (level) => <span>#{level.displayOrder}</span>,
-    },
-    {
-      key: "duration",
-      header: "Duration",
-      className: "text-center",
-      render: (level) => (
-        <span>{level.durationInMonths} {level.durationInMonths === 1 ? 'month' : 'months'}</span>
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      className: "text-center",
-      render: (level) => (
-        <Badge
-          className={
-            level.isActive
-              ? "bg-green-100 text-green-800 border-green-200"
-              : "bg-gray-100 text-gray-600 border-gray-200"
-          }
-        >
-          {level.isActive ? "Active" : "Inactive"}
-        </Badge>
-      ),
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      className: "text-center",
-      render: (level) => (
-        <div className="flex items-center justify-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/admin/inventory?programId=${programId}&levelId=${level.id}`);
-            }}
-            title="View Inventory"
-          >
-            <Package className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditingLevel(level);
-              setEditFormData({
-                name: level.name,
-                code: level.code,
-                totalMarks: level.totalMarks,
-                passMark: level.passMark,
-                displayOrder: level.displayOrder,
-                durationInMonths: level.durationInMonths,
-                isActive: level.isActive,
-              });
-              setIsEditDialogOpen(true);
-            }}
-          >
-            <Edit2 className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeletingLevel(level);
-              setIsDeleteDialogOpen(true);
-            }}
-          >
-            <Trash2 className="w-4 h-4 text-destructive" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
-
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <h3 className="text-lg font-semibold text-gray-900">
-            Levels for {programName}
+            Level ladder - {programName}
           </h3>
-          <Badge variant="secondary">{levels.length}</Badge>
+          <Badge variant="secondary">{totalLevels} levels</Badge>
         </div>
-        <Button
-          size="sm"
-          onClick={() => {
-            resetForm();
-            setIsAddDialogOpen(true);
-          }}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Level
-        </Button>
       </div>
+      <p className="text-xs text-gray-600">
+        Expand a stream to load and manage its levels, materials, and completion
+        flow.
+      </p>
+      {streams.length === 0 && !isLoading ? (
+        <p className="text-xs text-amber-700">
+          Add at least one stream before creating levels.
+        </p>
+      ) : null}
 
-      <AdminTable
-        data={paginatedLevels}
-        loading={isLoading}
-        columns={columns}
-        getRowId={(level) => level.id.toString()}
-        renderMainCell={(level) => (
-          <div className="flex flex-col">
-            <div className="font-medium text-gray-900">{level.name}</div>
-            <div className="text-sm text-gray-500">
-              {level.code} • {level.isActive ? "Active" : "Inactive"}
-            </div>
-          </div>
-        )}
-        renderExpandedContent={(level) => (
-          <div className="bg-gray-50 p-6 border-t">
-            <InventoryManagement
-              programId={programId}
-              levelId={level.id}
-              levelName={level.name}
-            />
-          </div>
-        )}
-        pagination={{ total: levels.length, totalPages }}
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        emptyMessage={`No levels found for ${programName}. Add a level to get started.`}
-        resultsText={(count, total) => `Showing ${count} of ${total} levels`}
-      />
+      {isLoading ? (
+        <div className="py-6 text-sm text-gray-500">Loading ladder...</div>
+      ) : streams.length === 0 ? (
+        <div className="rounded-lg border border-dashed px-3 py-6 text-sm text-gray-500">
+          No streams yet. Add a stream first to start building levels.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {streams.map((stream) => {
+            const levelsForStream = sortLevelsByDisplayOrder(
+              streamLevels[stream.id] ?? [],
+            );
+            const hasOutgoingTransition = transitions.some(
+              (transition) => transition.fromStreamId === stream.id,
+            );
+            const maxInStream =
+              levelsForStream.length === 0
+                ? 0
+                : Math.max(...levelsForStream.map((level) => level.displayOrder));
+            const levelCount = stream.levelCount ?? levelsForStream.length;
 
-      {/* Add Level Dialog */}
+            return (
+              <div
+                key={stream.id}
+                className="overflow-x-auto rounded-lg border bg-white"
+              >
+                <div className="flex items-center justify-between gap-3 border-b bg-gray-50 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleStreamCollapse(stream.id)}
+                    aria-expanded={!collapsedStreams[stream.id]}
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  >
+                    <ChevronRight
+                      className={`h-4 w-4 shrink-0 text-gray-500 transition-transform ${
+                        collapsedStreams[stream.id] ? "" : "rotate-90"
+                      }`}
+                    />
+                    <span className="font-medium text-gray-900">
+                      {stream.name}
+                    </span>
+                    <Badge variant="secondary">{levelCount} levels</Badge>
+                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8"
+                      onClick={() => void openAddForStream(stream.id)}
+                      disabled={isLoading}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add level
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => toggleStreamCollapse(stream.id)}
+                      aria-expanded={!collapsedStreams[stream.id]}
+                      className="text-xs text-gray-500"
+                    >
+                      {collapsedStreams[stream.id] ? "Show levels" : "Hide levels"}
+                    </button>
+                  </div>
+                </div>
+                {collapsedStreams[stream.id] ? null : loadingStreamLevels[stream.id] ? (
+                  <p className="p-3 text-sm text-gray-500">Loading levels...</p>
+                ) : levelsForStream.length === 0 ? (
+                  <p className="p-3 text-sm text-gray-500">
+                    No levels in this stream yet.
+                  </p>
+                ) : (
+                  <table className={STREAM_TABLE_CLASS}>
+                    <colgroup>
+                      <col className="w-14" />
+                      <col className="w-[28%]" />
+                      <col className="w-[20%]" />
+                      <col className="w-[30%]" />
+                      <col className="w-[200px]" />
+                    </colgroup>
+                    <thead>
+                      <tr className="border-b bg-gray-50">
+                        <th className={TH_NUM}>#</th>
+                        <th className={TH_LEVEL}>Level</th>
+                        <th className={TH_DETAILS}>Details</th>
+                        <th className={TH_MATERIALS}>Materials</th>
+                        <th className={TH_ACTIONS}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {levelsForStream.map((level) => {
+                        const showStar =
+                          hasOutgoingTransition &&
+                          maxInStream > 0 &&
+                          level.displayOrder === maxInStream;
+
+                        return (
+                          <tr
+                            key={level.id}
+                            className="border-b border-gray-100 align-top"
+                          >
+                            <td className={TD_NUM}>{level.displayOrder}</td>
+                            <td className={TD_LEVEL}>
+                              <div className="flex flex-wrap items-center gap-1 break-words font-medium text-gray-900">
+                                {level.name}
+                                {showStar ? (
+                                  <span
+                                    title="Stream has a completion transition configured"
+                                    className="text-amber-600"
+                                  >
+                                    *
+                                  </span>
+                                ) : null}
+                                {!level.isActive ? (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px]"
+                                  >
+                                    Off
+                                  </Badge>
+                                ) : null}
+                              </div>
+                              <div className="break-all text-xs text-gray-500">
+                                {level.code}
+                              </div>
+                            </td>
+                            <td className={TD_DETAILS}>
+                              {level.durationInMonths ?? 3} mo · pass{" "}
+                              {level.passMark}/{level.totalMarks}
+                            </td>
+                            <td className={TD_MATERIALS}>
+                              <LevelMaterialsPicker
+                                levelId={level.id}
+                                disabled={isLoading}
+                              />
+                            </td>
+                            <td className={TD_ACTIONS}>
+                              <div className="flex flex-wrap justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 rounded-md p-0"
+                                  title="Open inventory catalog"
+                                  onClick={() =>
+                                    router.push(
+                                      `/admin/operations?tab=inventory&programId=${programId}&levelId=${level.id}`,
+                                    )
+                                  }
+                                >
+                                  <Package className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 rounded-md p-0"
+                                  onClick={() => {
+                                    setEditingLevel(level);
+                                    setEditFormData({
+                                      name: level.name,
+                                      code: level.code,
+                                      streamId: level.streamId,
+                                      programId,
+                                      totalMarks: level.totalMarks,
+                                      passMark: level.passMark,
+                                      displayOrder: level.displayOrder,
+                                      durationInMonths: level.durationInMonths,
+                                      isActive: level.isActive,
+                                    });
+                                    setIsEditDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 rounded-md p-0 text-destructive"
+                                  onClick={() => {
+                                    setDeletingLevel(level);
+                                    setIsDeleteDialogOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add New Level</DialogTitle>
+            <DialogTitle>Add level</DialogTitle>
             <DialogDescription>
-              Create a new level for {programName}
+              Create a new step in {programName}. Stream and display order are
+              set automatically for this row.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="stream">Stream *</Label>
-              <Select
-                value={selectedStreamId?.toString() || ""}
-                onValueChange={(value) => setSelectedStreamId(Number(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a stream" />
-                </SelectTrigger>
-                <SelectContent>
-                  {streams.map((stream) => (
-                    <SelectItem key={stream.id} value={stream.id.toString()}>
-                      {stream.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {streams.length === 0 && (
-                <p className="text-sm text-amber-600">
-                  ⚠️ No streams available. Please create a stream first.
-                </p>
-              )}
+              <Label>Stream</Label>
+              <Input
+                value={
+                  streams.find((stream) => stream.id === formData.streamId)
+                    ?.name ?? ""
+                }
+                readOnly
+                disabled
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Level Name</Label>
+                <Label>Level</Label>
                 <Input
-                  id="name"
-                  placeholder="e.g., Level 1"
                   value={formData.name}
+                  placeholder="e.g., Level 1"
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
+                  onKeyDown={(e) => e.key === "Enter" && void handleAddLevel()}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="code">Code</Label>
+                <Label>Code</Label>
                 <Input
-                  id="code"
-                  placeholder="e.g., RL1"
                   value={formData.code}
+                  placeholder="e.g., L1"
                   onChange={(e) =>
                     setFormData({ ...formData, code: e.target.value })
                   }
+                  onKeyDown={(e) => e.key === "Enter" && void handleAddLevel()}
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="totalMarks">Total Marks</Label>
-                <Input
-                  id="totalMarks"
-                  type="number"
-                  value={formData.totalMarks === 0 || formData.totalMarks === undefined || formData.totalMarks === null ? "" : formData.totalMarks}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFormData({
-                      ...formData,
-                      totalMarks: val === "" ? 0 : Number(val),
-                    });
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="passMark">Pass Mark</Label>
-                <Input
-                  id="passMark"
-                  type="number"
-                  value={formData.passMark === 0 || formData.passMark === undefined || formData.passMark === null ? "" : formData.passMark}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFormData({
-                      ...formData,
-                      passMark: val === "" ? 0 : Number(val),
-                    });
-                  }}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="displayOrder">Display Order</Label>
-                <Input
-                  id="displayOrder"
-                  type="number"
-                  value={formData.displayOrder === 0 || formData.displayOrder === undefined || formData.displayOrder === null ? "" : formData.displayOrder}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFormData({
-                      ...formData,
-                      displayOrder: val === "" ? 0 : Number(val),
-                    });
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="durationInMonths">Duration (Months)</Label>
-                <Input
-                  id="durationInMonths"
-                  type="number"
-                  min="1"
-                  value={formData.durationInMonths === 0 || formData.durationInMonths === undefined || formData.durationInMonths === null ? "" : formData.durationInMonths}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFormData({
-                      ...formData,
-                      durationInMonths: val === "" ? 1 : Number(val),
-                    });
-                  }}
-                />
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isActive"
-                checked={formData.isActive}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, isActive: checked })
-                }
-              />
-              <Label htmlFor="isActive">Active</Label>
+            <div className="rounded-md border border-dashed bg-gray-50 px-3 py-2 text-xs text-gray-600">
+              This will be added as position #{formData.displayOrder} in the
+              selected stream.
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={handleAddLevel}
-              className="bg-primary hover:bg-brand-green-600"
-            >
-              Create Level
-            </Button>
+            <Button onClick={() => void handleAddLevel()}>Create</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Level Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Level</DialogTitle>
-            <DialogDescription>Update level details</DialogDescription>
+            <DialogTitle>Edit level</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Stream</Label>
+              <Select
+                value={
+                  editFormData.streamId != null && editFormData.streamId > 0
+                    ? String(editFormData.streamId)
+                    : undefined
+                }
+                onValueChange={(value) =>
+                  setEditFormData({
+                    ...editFormData,
+                    streamId: Number(value),
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select stream" />
+                </SelectTrigger>
+                <SelectContent>
+                  {streams.map((stream) => (
+                    <SelectItem key={stream.id} value={String(stream.id)}>
+                      {stream.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="editName">Level Name</Label>
+                <Label>Name</Label>
                 <Input
-                  id="editName"
                   value={editFormData.name || ""}
                   onChange={(e) =>
                     setEditFormData({ ...editFormData, name: e.target.value })
@@ -550,9 +696,8 @@ export function LevelManagement({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="editCode">Code</Label>
+                <Label>Code</Label>
                 <Input
-                  id="editCode"
                   value={editFormData.code || ""}
                   onChange={(e) =>
                     setEditFormData({ ...editFormData, code: e.target.value })
@@ -562,31 +707,39 @@ export function LevelManagement({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="editTotalMarks">Total Marks</Label>
+                <Label>Total marks</Label>
                 <Input
-                  id="editTotalMarks"
                   type="number"
-                  value={editFormData.totalMarks === 0 || editFormData.totalMarks === undefined || editFormData.totalMarks === null ? "" : editFormData.totalMarks}
+                  value={
+                    editFormData.totalMarks === 0 ||
+                    editFormData.totalMarks === undefined
+                      ? ""
+                      : editFormData.totalMarks
+                  }
                   onChange={(e) => {
-                    const val = e.target.value;
+                    const value = e.target.value;
                     setEditFormData({
                       ...editFormData,
-                      totalMarks: val === "" ? 0 : Number(val),
+                      totalMarks: value === "" ? 0 : Number(value),
                     });
                   }}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="editPassMark">Pass Mark</Label>
+                <Label>Pass mark</Label>
                 <Input
-                  id="editPassMark"
                   type="number"
-                  value={editFormData.passMark === 0 || editFormData.passMark === undefined || editFormData.passMark === null ? "" : editFormData.passMark}
+                  value={
+                    editFormData.passMark === 0 ||
+                    editFormData.passMark === undefined
+                      ? ""
+                      : editFormData.passMark
+                  }
                   onChange={(e) => {
-                    const val = e.target.value;
+                    const value = e.target.value;
                     setEditFormData({
                       ...editFormData,
-                      passMark: val === "" ? 0 : Number(val),
+                      passMark: value === "" ? 0 : Number(value),
                     });
                   }}
                 />
@@ -594,32 +747,40 @@ export function LevelManagement({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="editDisplayOrder">Display Order</Label>
+                <Label>Display order</Label>
                 <Input
-                  id="editDisplayOrder"
                   type="number"
-                  value={editFormData.displayOrder === 0 || editFormData.displayOrder === undefined || editFormData.displayOrder === null ? "" : editFormData.displayOrder}
+                  value={
+                    editFormData.displayOrder === 0 ||
+                    editFormData.displayOrder === undefined
+                      ? ""
+                      : editFormData.displayOrder
+                  }
                   onChange={(e) => {
-                    const val = e.target.value;
+                    const value = e.target.value;
                     setEditFormData({
                       ...editFormData,
-                      displayOrder: val === "" ? 0 : Number(val),
+                      displayOrder: value === "" ? 0 : Number(value),
                     });
                   }}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="editDurationInMonths">Duration (Months)</Label>
+                <Label>Duration (months)</Label>
                 <Input
-                  id="editDurationInMonths"
                   type="number"
-                  min="1"
-                  value={editFormData.durationInMonths === 0 || editFormData.durationInMonths === undefined || editFormData.durationInMonths === null ? "" : editFormData.durationInMonths}
+                  min={1}
+                  value={
+                    editFormData.durationInMonths === 0 ||
+                    editFormData.durationInMonths === undefined
+                      ? ""
+                      : editFormData.durationInMonths
+                  }
                   onChange={(e) => {
-                    const val = e.target.value;
+                    const value = e.target.value;
                     setEditFormData({
                       ...editFormData,
-                      durationInMonths: val === "" ? 3 : Number(val),
+                      durationInMonths: value === "" ? 3 : Number(value),
                     });
                   }}
                 />
@@ -627,13 +788,12 @@ export function LevelManagement({
             </div>
             <div className="flex items-center space-x-2">
               <Switch
-                id="editIsActive"
                 checked={editFormData.isActive ?? false}
                 onCheckedChange={(checked) =>
                   setEditFormData({ ...editFormData, isActive: checked })
                 }
               />
-              <Label htmlFor="editIsActive">Active</Label>
+              <Label>Active</Label>
             </div>
           </div>
           <DialogFooter>
@@ -643,36 +803,25 @@ export function LevelManagement({
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleEditLevel}
-              className="bg-primary hover:bg-brand-green-600"
-            >
-              Save Changes
-            </Button>
+            <Button onClick={() => void handleEditLevel()}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Level Dialog */}
       <AlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>Delete level?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the level &quot;{deletingLevel?.name}&quot;.
-              This action cannot be undone and will also delete all associated
-              inventory.
+              Remove &quot;{deletingLevel?.name}&quot; and its inventory links.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteLevel}
-              className="bg-destructive hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={() => void handleDeleteLevel()}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

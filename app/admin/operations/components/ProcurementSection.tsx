@@ -1,0 +1,2103 @@
+"use client";
+
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableFilter,
+} from "@/components/shared";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  invalidateProcurementQueries,
+  usePurchaseOrders,
+  usePurchaseReceipts,
+  useReplenishmentDrafts,
+  useSupplierTerms,
+  useSuppliers,
+} from "@/hooks/api/procurement.hooks";
+import { useToast } from "@/hooks/use-toast";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
+import { getAllInventory } from "@/services/inventory.service";
+import {
+  createPurchaseOrder,
+  createSupplier,
+  getPurchaseOrderById,
+  postPurchaseReceipt,
+  upsertSupplierItemTerm,
+  type CreatePurchaseOrderDto,
+  type PostPurchaseReceiptDto,
+  type PurchaseOrderSummary,
+  type Supplier,
+  type SupplierItemTerm,
+} from "@/services/procurement.service";
+
+type ProcurementSubTab =
+  | "suppliers-sourcing"
+  | "purchase-orders"
+  | "receipts"
+  | "replenishment";
+
+type SupplierFormState = {
+  name: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  city: string;
+  gstin: string;
+  isActive: boolean;
+};
+
+type SupplierTermFormState = {
+  supplierId: number | "";
+  inventoryItemId: number | "";
+  supplierSku: string;
+  currentUnitCost: number;
+  leadTimeDays: number;
+  moq: number;
+  casePack: number;
+  isPreferred: boolean;
+};
+
+type PurchaseOrderFormState = {
+  supplierId: number | "";
+  inventoryItemId: number | "";
+  orderedQty: number;
+  unitCost: number;
+  referenceNo: string;
+  expectedDeliveryAt: string;
+  notes: string;
+};
+
+type ReceiptRow = {
+  id: string;
+  receiptId: number;
+  purchaseOrderId: number;
+  supplierId: number;
+  supplierName: string;
+  createdAt?: string | null;
+  lineCount: number;
+  totalReceived: number;
+  totalRejected: number;
+  linePreview: string;
+};
+
+const INITIAL_SUPPLIER_FORM: SupplierFormState = {
+  name: "",
+  contactPerson: "",
+  email: "",
+  phone: "",
+  city: "",
+  gstin: "",
+  isActive: true,
+};
+
+const ITEMS_PER_PAGE = 10;
+const ALL_SUPPLIERS_LIMIT = 10_000;
+
+function createTermForm(prefilledInventoryItemId?: number): SupplierTermFormState {
+  return {
+    supplierId: "",
+    inventoryItemId: prefilledInventoryItemId ?? "",
+    supplierSku: "",
+    currentUnitCost: 0,
+    leadTimeDays: 0,
+    moq: 0,
+    casePack: 0,
+    isPreferred: true,
+  };
+}
+
+function createPurchaseOrderForm(
+  prefilledInventoryItemId?: number,
+): PurchaseOrderFormState {
+  return {
+    supplierId: "",
+    inventoryItemId: prefilledInventoryItemId ?? "",
+    orderedQty: 1,
+    unitCost: 0,
+    referenceNo: "",
+    expectedDeliveryAt: "",
+    notes: "",
+  };
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return "Not set";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(parsed);
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "Not posted";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parsed);
+}
+
+function formatStatusLabel(value: string) {
+  return value.replaceAll("_", " ");
+}
+
+function statusBadge(status: string) {
+  return <Badge variant="secondary">{formatStatusLabel(status)}</Badge>;
+}
+
+function booleanBadge(active: boolean, trueLabel: string, falseLabel: string) {
+  return active ? (
+    <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+      {trueLabel}
+    </Badge>
+  ) : (
+    <Badge variant="outline">{falseLabel}</Badge>
+  );
+}
+
+function toOptionalSearch(value: string) {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function toOptionalNumberFilter(value: string) {
+  return value === "all" ? undefined : Number(value);
+}
+
+function toOptionalPreferredFilter(value: string) {
+  if (value === "preferred") return true;
+  if (value === "not-preferred") return false;
+  return undefined;
+}
+
+function suggestPurchaseOrderQuantity(
+  requestedQty: number,
+  term?: Pick<SupplierItemTerm, "moq" | "casePack"> | null,
+) {
+  let quantity = Math.max(1, Math.ceil(requestedQty || 1));
+  if (!term) return quantity;
+
+  if (term.moq > 0) {
+    quantity = Math.max(quantity, term.moq);
+  }
+
+  if (term.casePack > 0) {
+    quantity = Math.ceil(quantity / term.casePack) * term.casePack;
+  }
+
+  return quantity;
+}
+
+function buildExpectedDeliveryDate(leadTimeDays: number) {
+  if (leadTimeDays <= 0) return "";
+  const date = new Date();
+  date.setDate(date.getDate() + leadTimeDays);
+  return date.toISOString().slice(0, 10);
+}
+
+function filterOptionsFromSuppliers(suppliers: Supplier[]) {
+  return [
+    { value: "all", label: "All suppliers" },
+    ...suppliers
+      .slice()
+      .sort((left, right) => left.name.localeCompare(right.name))
+      .map((supplier) => ({
+        value: String(supplier.id),
+        label: supplier.name,
+      })),
+  ];
+}
+
+const PURCHASE_ORDER_STATUS_OPTIONS: DataTableFilter["options"] = [
+  { value: "all", label: "All statuses" },
+  ...[
+    "DRAFT",
+    "CONFIRMED",
+    "PARTIALLY_RECEIVED",
+    "RECEIVED",
+    "CANCELLED",
+  ].map((status) => ({
+    value: status,
+    label: formatStatusLabel(status),
+  })),
+];
+
+function ProcurementRecordsCard({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <Card>
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-xl">{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+}
+
+export function ProcurementSection() {
+  const { toast } = useToast();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const inventoryFilterParam = searchParams.get("inventoryItemId");
+  const parsedInventoryFilterId = inventoryFilterParam
+    ? Number(inventoryFilterParam)
+    : undefined;
+  const inventoryFilterId = Number.isFinite(parsedInventoryFilterId)
+    ? parsedInventoryFilterId
+    : undefined;
+  const procurementAction = searchParams.get("procurementAction");
+  const sourcingShortcutHandled = useRef(false);
+
+  const inventoryQuery = useQuery({
+    queryKey: ["inventory", "all", "procurement"],
+    queryFn: getAllInventory,
+  });
+
+  const [activeTab, setActiveTab] = useState<ProcurementSubTab>(
+    "suppliers-sourcing",
+  );
+
+  const [supplierForm, setSupplierForm] = useState<SupplierFormState>(
+    INITIAL_SUPPLIER_FORM,
+  );
+  const [termForm, setTermForm] = useState<SupplierTermFormState>(() =>
+    createTermForm(inventoryFilterId),
+  );
+  const [poForm, setPoForm] = useState<PurchaseOrderFormState>(() =>
+    createPurchaseOrderForm(),
+  );
+
+  const [isSupplierOpen, setIsSupplierOpen] = useState(false);
+  const [isSourcingOpen, setIsSourcingOpen] = useState(false);
+  const [isPurchaseOrderOpen, setIsPurchaseOrderOpen] = useState(false);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const [receiptOrderId, setReceiptOrderId] = useState<number | null>(null);
+  const [receiptBody, setReceiptBody] = useState<PostPurchaseReceiptDto>({
+    lines: [],
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const [supplierSearch, setSupplierSearch] = useState("");
+  const [supplierStatusFilter, setSupplierStatusFilter] = useState("all");
+
+  const [sourcingSearch, setSourcingSearch] = useState("");
+  const [sourcingSupplierFilter, setSourcingSupplierFilter] = useState("all");
+  const [sourcingPreferredFilter, setSourcingPreferredFilter] = useState("all");
+
+  const [purchaseOrderSearch, setPurchaseOrderSearch] = useState("");
+  const [purchaseOrderStatusFilter, setPurchaseOrderStatusFilter] =
+    useState("all");
+  const [purchaseOrderSupplierFilter, setPurchaseOrderSupplierFilter] =
+    useState("all");
+  const [purchaseOrderDateFrom, setPurchaseOrderDateFrom] = useState("");
+  const [purchaseOrderDateTo, setPurchaseOrderDateTo] = useState("");
+
+  const [receiptSearch, setReceiptSearch] = useState("");
+  const [receiptSupplierFilter, setReceiptSupplierFilter] = useState("all");
+
+  const [replenishmentSearch, setReplenishmentSearch] = useState("");
+  const [replenishmentSupplierFilter, setReplenishmentSupplierFilter] =
+    useState("all");
+  const [replenishmentStatusFilter, setReplenishmentStatusFilter] =
+    useState("all");
+
+  const [supplierPage, setSupplierPage] = useState(1);
+  const [termPage, setTermPage] = useState(1);
+  const [purchaseOrderPage, setPurchaseOrderPage] = useState(1);
+  const [receiptPage, setReceiptPage] = useState(1);
+  const [replenishmentPage, setReplenishmentPage] = useState(1);
+
+  const allSuppliersParams = useMemo(
+    () => ({ page: 1, limit: ALL_SUPPLIERS_LIMIT }),
+    [],
+  );
+  const allSupplierTermsParams = useMemo(
+    () => ({ page: 1, limit: ALL_SUPPLIERS_LIMIT }),
+    [],
+  );
+  const supplierParams = useMemo(
+    () => ({
+      page: supplierPage,
+      limit: ITEMS_PER_PAGE,
+      search: toOptionalSearch(supplierSearch),
+      status: supplierStatusFilter === "all" ? undefined : supplierStatusFilter,
+    }),
+    [supplierPage, supplierSearch, supplierStatusFilter],
+  );
+  const supplierTermParams = useMemo(
+    () => ({
+      page: termPage,
+      limit: ITEMS_PER_PAGE,
+      search: toOptionalSearch(sourcingSearch),
+      supplierId: toOptionalNumberFilter(sourcingSupplierFilter),
+      inventoryItemId: inventoryFilterId,
+      preferred: toOptionalPreferredFilter(sourcingPreferredFilter),
+    }),
+    [
+      inventoryFilterId,
+      sourcingPreferredFilter,
+      sourcingSearch,
+      sourcingSupplierFilter,
+      termPage,
+    ],
+  );
+  const purchaseOrderParams = useMemo(
+    () => ({
+      page: purchaseOrderPage,
+      limit: ITEMS_PER_PAGE,
+      search: toOptionalSearch(purchaseOrderSearch),
+      status:
+        purchaseOrderStatusFilter === "all"
+          ? undefined
+          : purchaseOrderStatusFilter,
+      supplierId: toOptionalNumberFilter(purchaseOrderSupplierFilter),
+      fromDate: purchaseOrderDateFrom || undefined,
+      toDate: purchaseOrderDateTo || undefined,
+    }),
+    [
+      purchaseOrderDateFrom,
+      purchaseOrderDateTo,
+      purchaseOrderPage,
+      purchaseOrderSearch,
+      purchaseOrderStatusFilter,
+      purchaseOrderSupplierFilter,
+    ],
+  );
+  const receiptParams = useMemo(
+    () => ({
+      page: receiptPage,
+      limit: ITEMS_PER_PAGE,
+      search: toOptionalSearch(receiptSearch),
+      supplierId: toOptionalNumberFilter(receiptSupplierFilter),
+    }),
+    [receiptPage, receiptSearch, receiptSupplierFilter],
+  );
+  const replenishmentParams = useMemo(
+    () => ({
+      page: replenishmentPage,
+      limit: ITEMS_PER_PAGE,
+      search: toOptionalSearch(replenishmentSearch),
+      status:
+        replenishmentStatusFilter === "all"
+          ? undefined
+          : replenishmentStatusFilter,
+      supplierId: toOptionalNumberFilter(replenishmentSupplierFilter),
+    }),
+    [
+      replenishmentPage,
+      replenishmentSearch,
+      replenishmentStatusFilter,
+      replenishmentSupplierFilter,
+    ],
+  );
+
+  const suppliersQuery = useSuppliers(supplierParams);
+  const allSuppliersQuery = useSuppliers(allSuppliersParams);
+  const allSupplierTermsQuery = useSupplierTerms(allSupplierTermsParams);
+  const termsQuery = useSupplierTerms(supplierTermParams);
+  const purchaseOrdersQuery = usePurchaseOrders(purchaseOrderParams);
+  const receiptsQuery = usePurchaseReceipts(receiptParams);
+  const draftsQuery = useReplenishmentDrafts(replenishmentParams);
+
+  const suppliers = suppliersQuery.data;
+  const allSuppliers = allSuppliersQuery.data;
+  const allSupplierTerms = allSupplierTermsQuery.data;
+  const supplierTerms = termsQuery.data;
+  const purchaseOrders = purchaseOrdersQuery.data;
+  const receipts = receiptsQuery.data;
+  const replenishmentDrafts = draftsQuery.data;
+  const inventoryItems = useMemo(
+    () => inventoryQuery.data ?? [],
+    [inventoryQuery.data],
+  );
+
+  const inventoryPrefillItem = useMemo(
+    () =>
+      inventoryFilterId
+        ? inventoryItems.find((item) => item.id === inventoryFilterId)
+        : undefined,
+    [inventoryFilterId, inventoryItems],
+  );
+
+  const supplierOptions = useMemo(
+    () => filterOptionsFromSuppliers(allSuppliers),
+    [allSuppliers],
+  );
+  const activeSupplierIds = useMemo(
+    () =>
+      new Set(
+        allSuppliers.filter((supplier) => supplier.isActive).map((supplier) => supplier.id),
+      ),
+    [allSuppliers],
+  );
+  const purchaseOrderTermsForItem = useMemo(() => {
+    if (poForm.inventoryItemId === "") return [] as SupplierItemTerm[];
+
+    return allSupplierTerms
+      .filter((term) => term.inventoryItemId === poForm.inventoryItemId)
+      .slice()
+      .sort((left, right) => {
+        if (left.isPreferred !== right.isPreferred) {
+          return Number(right.isPreferred) - Number(left.isPreferred);
+        }
+
+        const leftIsActive = activeSupplierIds.has(left.supplierId);
+        const rightIsActive = activeSupplierIds.has(right.supplierId);
+        if (leftIsActive !== rightIsActive) {
+          return Number(rightIsActive) - Number(leftIsActive);
+        }
+
+        const leftName = left.supplier?.name ?? "";
+        const rightName = right.supplier?.name ?? "";
+        return leftName.localeCompare(rightName);
+      });
+  }, [activeSupplierIds, allSupplierTerms, poForm.inventoryItemId]);
+  const preferredPurchaseOrderTerm = useMemo(
+    () => purchaseOrderTermsForItem[0] ?? null,
+    [purchaseOrderTermsForItem],
+  );
+  const selectedPurchaseOrderTerm = useMemo(() => {
+    if (poForm.supplierId === "") return null;
+    return (
+      purchaseOrderTermsForItem.find((term) => term.supplierId === poForm.supplierId) ??
+      null
+    );
+  }, [poForm.supplierId, purchaseOrderTermsForItem]);
+  const purchaseOrderSupplierChoices = useMemo(() => {
+    const termBySupplierId = new Map(
+      purchaseOrderTermsForItem.map((term) => [term.supplierId, term] as const),
+    );
+
+    return allSuppliers
+      .slice()
+      .sort((left, right) => {
+        const leftTerm = termBySupplierId.get(left.id);
+        const rightTerm = termBySupplierId.get(right.id);
+        if (Boolean(leftTerm) !== Boolean(rightTerm)) {
+          return Number(Boolean(rightTerm)) - Number(Boolean(leftTerm));
+        }
+        if (leftTerm?.isPreferred !== rightTerm?.isPreferred) {
+          return Number(Boolean(rightTerm?.isPreferred)) - Number(Boolean(leftTerm?.isPreferred));
+        }
+        if (left.isActive !== right.isActive) {
+          return Number(right.isActive) - Number(left.isActive);
+        }
+        return left.name.localeCompare(right.name);
+      })
+      .map((supplier) => ({
+        supplier,
+        term: termBySupplierId.get(supplier.id) ?? null,
+      }));
+  }, [allSuppliers, purchaseOrderTermsForItem]);
+  const selectedPurchaseOrderItem = useMemo(
+    () =>
+      poForm.inventoryItemId === ""
+        ? null
+        : inventoryItems.find((item) => item.id === poForm.inventoryItemId) ?? null,
+    [inventoryItems, poForm.inventoryItemId],
+  );
+
+  const receiptRows = useMemo<ReceiptRow[]>(
+    () =>
+      receipts.map((receipt) => {
+        const preview = receipt.lines
+          .map(
+            (line) => line.inventoryItem?.name ?? `Item #${line.inventoryItemId}`,
+          )
+          .slice(0, 3)
+          .join(", ");
+
+        return {
+          id: String(receipt.id),
+          receiptId: receipt.id,
+          purchaseOrderId: receipt.purchaseOrderId,
+          supplierId: receipt.supplierId,
+          supplierName: receipt.supplier?.name ?? "Unknown supplier",
+          createdAt: receipt.createdAt,
+          lineCount: receipt.lines.length,
+          totalReceived: receipt.lines.reduce(
+            (total, line) => total + line.receivedQty,
+            0,
+          ),
+          totalRejected: receipt.lines.reduce(
+            (total, line) => total + line.rejectedQty,
+            0,
+          ),
+          linePreview: preview,
+        };
+      }),
+    [receipts],
+  );
+
+  useEffect(() => {
+    setTermPage(1);
+    if (!inventoryFilterId) return;
+    setTermForm((prev) => ({ ...prev, inventoryItemId: inventoryFilterId }));
+  }, [inventoryFilterId]);
+
+  useEffect(() => {
+    if (procurementAction !== "add-sourcing" || sourcingShortcutHandled.current) {
+      return;
+    }
+
+    sourcingShortcutHandled.current = true;
+    setActiveTab("suppliers-sourcing");
+    setTermForm(createTermForm(inventoryFilterId));
+    setIsSourcingOpen(true);
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("procurementAction");
+    const queryString = nextParams.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname);
+  }, [
+    inventoryFilterId,
+    pathname,
+    procurementAction,
+    router,
+    searchParams,
+  ]);
+
+  function applySourcingTermToPurchaseOrderForm(
+    current: PurchaseOrderFormState,
+    term: SupplierItemTerm,
+    options?: { overrideSupplier?: boolean },
+  ): PurchaseOrderFormState {
+    return {
+      ...current,
+      supplierId:
+        options?.overrideSupplier || current.supplierId === ""
+          ? term.supplierId
+          : current.supplierId,
+      orderedQty: suggestPurchaseOrderQuantity(current.orderedQty, term),
+      unitCost: term.currentUnitCost,
+      expectedDeliveryAt:
+        current.expectedDeliveryAt || buildExpectedDeliveryDate(term.leadTimeDays),
+    };
+  }
+
+  function findPurchaseOrderTerm(
+    inventoryItemId: number,
+    supplierId: number,
+  ) {
+    return (
+      allSupplierTerms.find(
+        (term) =>
+          term.inventoryItemId === inventoryItemId && term.supplierId === supplierId,
+      ) ?? null
+    );
+  }
+
+  function handlePurchaseOrderInventoryChange(value: string) {
+    if (value === "none") {
+      setPoForm((prev) => ({
+        ...prev,
+        inventoryItemId: "",
+        unitCost: 0,
+        orderedQty: 1,
+      }));
+      return;
+    }
+
+    const nextInventoryItemId = Number(value);
+    setPoForm((prev) => {
+      const nextBase: PurchaseOrderFormState = {
+        ...prev,
+        inventoryItemId: nextInventoryItemId,
+        unitCost: 0,
+        orderedQty: 1,
+      };
+
+      if (prev.supplierId !== "") {
+        const selectedTerm = findPurchaseOrderTerm(nextInventoryItemId, prev.supplierId);
+        if (selectedTerm) {
+          return applySourcingTermToPurchaseOrderForm(nextBase, selectedTerm);
+        }
+
+        return nextBase;
+      }
+
+      const preferredTerm =
+        allSupplierTerms.find(
+          (term) =>
+            term.inventoryItemId === nextInventoryItemId &&
+            activeSupplierIds.has(term.supplierId) &&
+            term.isPreferred,
+        ) ??
+        allSupplierTerms.find(
+          (term) =>
+            term.inventoryItemId === nextInventoryItemId &&
+            activeSupplierIds.has(term.supplierId),
+        ) ??
+        allSupplierTerms.find((term) => term.inventoryItemId === nextInventoryItemId) ??
+        null;
+
+      return preferredTerm
+        ? applySourcingTermToPurchaseOrderForm(nextBase, preferredTerm, {
+            overrideSupplier: true,
+          })
+        : nextBase;
+    });
+  }
+
+  function handlePurchaseOrderSupplierChange(value: string) {
+    if (value === "none") {
+      setPoForm((prev) => ({
+        ...prev,
+        supplierId: "",
+      }));
+      return;
+    }
+
+    const nextSupplierId = Number(value);
+    setPoForm((prev) => {
+      const nextBase: PurchaseOrderFormState = {
+        ...prev,
+        supplierId: nextSupplierId,
+      };
+
+      if (prev.inventoryItemId === "") {
+        return nextBase;
+      }
+
+      const selectedTerm = findPurchaseOrderTerm(prev.inventoryItemId, nextSupplierId);
+      return selectedTerm
+        ? applySourcingTermToPurchaseOrderForm(nextBase, selectedTerm)
+        : nextBase;
+    });
+  }
+
+  function openSupplierModal() {
+    setSupplierForm(INITIAL_SUPPLIER_FORM);
+    setIsSupplierOpen(true);
+  }
+
+  function openSourcingModal(prefilledInventoryItemId?: number) {
+    setTermForm(createTermForm(prefilledInventoryItemId ?? inventoryFilterId));
+    setActiveTab("suppliers-sourcing");
+    setIsSourcingOpen(true);
+  }
+
+  function openPurchaseOrderModal(prefilledInventoryItemId?: number) {
+    const baseForm = createPurchaseOrderForm(prefilledInventoryItemId);
+    const preferredTerm =
+      prefilledInventoryItemId == null
+        ? null
+        : allSupplierTerms.find(
+            (term) =>
+              term.inventoryItemId === prefilledInventoryItemId &&
+              activeSupplierIds.has(term.supplierId) &&
+              term.isPreferred,
+          ) ??
+          allSupplierTerms.find(
+            (term) =>
+              term.inventoryItemId === prefilledInventoryItemId &&
+              activeSupplierIds.has(term.supplierId),
+          ) ??
+          allSupplierTerms.find(
+            (term) => term.inventoryItemId === prefilledInventoryItemId,
+          ) ??
+          null;
+
+    setPoForm(
+      preferredTerm
+        ? applySourcingTermToPurchaseOrderForm(baseForm, preferredTerm, {
+            overrideSupplier: true,
+          })
+        : baseForm,
+    );
+    setActiveTab("purchase-orders");
+    setIsPurchaseOrderOpen(true);
+  }
+
+  async function handleCreateSupplier() {
+    if (!supplierForm.name.trim()) {
+      toast({
+        title: "Validation",
+        description: "Supplier name is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await createSupplier({
+        name: supplierForm.name.trim(),
+        contactPerson: supplierForm.contactPerson || undefined,
+        email: supplierForm.email || undefined,
+        phone: supplierForm.phone || undefined,
+        city: supplierForm.city || undefined,
+        gstin: supplierForm.gstin || undefined,
+        isActive: supplierForm.isActive,
+      });
+      toast({ title: "Supplier created" });
+      setIsSupplierOpen(false);
+      setSupplierForm(INITIAL_SUPPLIER_FORM);
+      setSupplierPage(1);
+      await invalidateProcurementQueries();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: getUserFriendlyMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleSaveTerm() {
+    if (termForm.supplierId === "" || termForm.inventoryItemId === "") {
+      toast({
+        title: "Validation",
+        description: "Choose both supplier and inventory item.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await upsertSupplierItemTerm({
+        supplierId: Number(termForm.supplierId),
+        inventoryItemId: Number(termForm.inventoryItemId),
+        supplierSku: termForm.supplierSku || undefined,
+        currentUnitCost: Number(termForm.currentUnitCost || 0),
+        leadTimeDays: Number(termForm.leadTimeDays || 0),
+        moq: Number(termForm.moq || 0),
+        casePack: Number(termForm.casePack || 0),
+        isPreferred: termForm.isPreferred,
+      });
+      toast({ title: "Sourcing saved" });
+      setIsSourcingOpen(false);
+      setTermForm(createTermForm(inventoryFilterId));
+      setTermPage(1);
+      await invalidateProcurementQueries();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: getUserFriendlyMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleCreatePurchaseOrder() {
+    if (poForm.supplierId === "" || poForm.inventoryItemId === "") {
+      toast({
+        title: "Validation",
+        description: "Choose supplier and inventory item first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const payload: CreatePurchaseOrderDto = {
+      supplierId: Number(poForm.supplierId),
+      referenceNo: poForm.referenceNo || undefined,
+      expectedDeliveryAt: poForm.expectedDeliveryAt || undefined,
+      notes: poForm.notes || undefined,
+      lines: [
+        {
+          inventoryItemId: Number(poForm.inventoryItemId),
+          orderedQty: Math.max(1, Number(poForm.orderedQty || 1)),
+          unitCost: Number(poForm.unitCost || 0),
+        },
+      ],
+    };
+
+    try {
+      setSubmitting(true);
+      await createPurchaseOrder(payload);
+      toast({ title: "Purchase order created" });
+      setIsPurchaseOrderOpen(false);
+      setPoForm(createPurchaseOrderForm());
+      setPurchaseOrderPage(1);
+      await invalidateProcurementQueries();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: getUserFriendlyMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function openReceiptDialog(orderId: number) {
+    try {
+      const order = await getPurchaseOrderById(orderId);
+      setReceiptOrderId(orderId);
+      setReceiptBody({
+        lines: order.lines.map((line) => ({
+          inventoryItemId: line.inventoryItemId,
+          receivedQty: Math.max(0, line.orderedQty - line.receivedQty),
+          rejectedQty: 0,
+          unitCost: Number(line.unitCost ?? 0),
+        })),
+      });
+      setIsReceiptOpen(true);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: getUserFriendlyMessage(error),
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function handlePostReceipt() {
+    if (!receiptOrderId) return;
+
+    try {
+      setSubmitting(true);
+      await postPurchaseReceipt(receiptOrderId, receiptBody);
+      toast({ title: "Receipt posted" });
+      setIsReceiptOpen(false);
+      setReceiptOrderId(null);
+      setPurchaseOrderPage(1);
+      setReceiptPage(1);
+      await invalidateProcurementQueries();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: getUserFriendlyMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function updateReceiptLine(
+    index: number,
+    key: keyof PostPurchaseReceiptDto["lines"][number],
+    value: number,
+  ) {
+    setReceiptBody((prev) => ({
+      lines: prev.lines.map((line, lineIndex) =>
+        lineIndex === index ? { ...line, [key]: value } : line,
+      ),
+    }));
+  }
+
+  const supplierColumns: DataTableColumn<Supplier>[] = [
+    { key: "supplier", header: "Supplier" },
+    {
+      key: "contact",
+      header: "Contact",
+      render: (supplier) => (
+        <div className="space-y-1">
+          <div>{supplier.contactPerson || "No contact set"}</div>
+          <div className="text-xs text-muted-foreground">
+            {supplier.email || supplier.phone || "No contact details"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "city",
+      header: "City",
+      render: (supplier) => supplier.city || "—",
+    },
+    {
+      key: "gstin",
+      header: "GSTIN",
+      render: (supplier) => supplier.gstin || "—",
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (supplier) =>
+        booleanBadge(supplier.isActive, "Active", "Inactive"),
+    },
+  ];
+
+  const termColumns: DataTableColumn<SupplierItemTerm>[] = [
+    { key: "item", header: "Item" },
+    {
+      key: "supplier",
+      header: "Supplier",
+      render: (term) => term.supplier?.name ?? `Supplier #${term.supplierId}`,
+    },
+    {
+      key: "supplierSku",
+      header: "SKU",
+      render: (term) => term.supplierSku || term.supplier?.code || "—",
+    },
+    {
+      key: "cost",
+      header: "Unit cost",
+      render: (term) => formatCurrency(term.currentUnitCost),
+    },
+    {
+      key: "lead",
+      header: "Lead",
+      render: (term) => `${term.leadTimeDays} day${term.leadTimeDays === 1 ? "" : "s"}`,
+    },
+    {
+      key: "moq",
+      header: "MOQ / Pack",
+      render: (term) => `${term.moq} / ${term.casePack}`,
+    },
+    {
+      key: "preferred",
+      header: "Preferred",
+      render: (term) => booleanBadge(term.isPreferred, "Yes", "No"),
+    },
+  ];
+
+  const purchaseOrderColumns: DataTableColumn<PurchaseOrderSummary>[] = [
+    { key: "order", header: "Purchase order" },
+    {
+      key: "supplier",
+      header: "Supplier",
+      render: (order) => order.supplier?.name ?? "Unknown supplier",
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (order) => statusBadge(order.status),
+    },
+    {
+      key: "expected",
+      header: "Expected",
+      render: (order) => formatDate(order.expectedDeliveryAt),
+    },
+    {
+      key: "lines",
+      header: "Lines",
+      render: (order) => (
+        <span>
+          {order.lines.length} line{order.lines.length === 1 ? "" : "s"}
+        </span>
+      ),
+    },
+    {
+      key: "total",
+      header: "Total",
+      render: (order) => formatCurrency(order.totalCost),
+    },
+    {
+      key: "actions",
+      header: "Action",
+      render: (order) =>
+        order.status !== "RECEIVED" && order.status !== "CANCELLED" ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void openReceiptDialog(order.id)}
+          >
+            Post receipt
+          </Button>
+        ) : (
+          <span className="text-sm text-muted-foreground">Closed</span>
+        ),
+    },
+  ];
+
+  const receiptColumns: DataTableColumn<ReceiptRow>[] = [
+    { key: "receipt", header: "Receipt" },
+    {
+      key: "purchaseOrder",
+      header: "Purchase order",
+      render: (receipt) => `PO #${receipt.purchaseOrderId}`,
+    },
+    {
+      key: "supplier",
+      header: "Supplier",
+      render: (receipt) => receipt.supplierName,
+    },
+    {
+      key: "postedAt",
+      header: "Posted",
+      render: (receipt) => formatDateTime(receipt.createdAt),
+    },
+    {
+      key: "quantities",
+      header: "Quantities",
+      render: (receipt) => (
+        <div className="space-y-1">
+          <div>Received {receipt.totalReceived}</div>
+          <div className="text-xs text-muted-foreground">
+            Rejected {receipt.totalRejected}
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  const replenishmentColumns: DataTableColumn<PurchaseOrderSummary>[] = [
+    { key: "draft", header: "Draft" },
+    {
+      key: "supplier",
+      header: "Supplier",
+      render: (draft) => draft.supplier?.name ?? "Unknown supplier",
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (draft) => statusBadge(draft.status),
+    },
+    {
+      key: "lines",
+      header: "Lines",
+      render: (draft) => (
+        <span>
+          {draft.lines.length} line{draft.lines.length === 1 ? "" : "s"}
+        </span>
+      ),
+    },
+    {
+      key: "expected",
+      header: "Expected",
+      render: (draft) => formatDate(draft.expectedDeliveryAt),
+    },
+    {
+      key: "total",
+      header: "Total",
+      render: (draft) => formatCurrency(draft.totalCost),
+    },
+  ];
+
+  const supplierFilters: DataTableFilter[] = [
+    {
+      key: "status",
+      label: "Status",
+      options: [
+        { value: "all", label: "All statuses" },
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+      ],
+      defaultValue: "all",
+    },
+  ];
+
+  const sourcingFilters: DataTableFilter[] = [
+    {
+      key: "supplier",
+      label: "Supplier",
+      options: supplierOptions,
+      defaultValue: "all",
+    },
+    {
+      key: "preferred",
+      label: "Preferred",
+      options: [
+        { value: "all", label: "All terms" },
+        { value: "preferred", label: "Preferred only" },
+        { value: "not-preferred", label: "Not preferred" },
+      ],
+      defaultValue: "all",
+    },
+  ];
+
+  const purchaseOrderFilters: DataTableFilter[] = [
+    {
+      key: "status",
+      label: "Status",
+      options: PURCHASE_ORDER_STATUS_OPTIONS,
+      defaultValue: "all",
+    },
+    {
+      key: "supplier",
+      label: "Supplier",
+      options: supplierOptions,
+      defaultValue: "all",
+    },
+  ];
+
+  const receiptFilters: DataTableFilter[] = [
+    {
+      key: "supplier",
+      label: "Supplier",
+      options: supplierOptions,
+      defaultValue: "all",
+    },
+  ];
+
+  const replenishmentFilters: DataTableFilter[] = [
+    {
+      key: "status",
+      label: "Status",
+      options: PURCHASE_ORDER_STATUS_OPTIONS,
+      defaultValue: "all",
+    },
+    {
+      key: "supplier",
+      label: "Supplier",
+      options: supplierOptions,
+      defaultValue: "all",
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as ProcurementSubTab)}
+        className="space-y-6"
+      >
+        <TabsList className="h-auto w-full justify-start rounded-none border-b bg-transparent p-0">
+          <TabsTrigger
+            value="suppliers-sourcing"
+            className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+          >
+            Suppliers &amp; sourcing
+          </TabsTrigger>
+          <TabsTrigger
+            value="purchase-orders"
+            className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+          >
+            Purchase orders
+          </TabsTrigger>
+          <TabsTrigger
+            value="receipts"
+            className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+          >
+            Receipts
+          </TabsTrigger>
+          <TabsTrigger
+            value="replenishment"
+            className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+          >
+            Replenishment
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="suppliers-sourcing" className="space-y-6">
+          {inventoryPrefillItem ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <div className="font-medium">Inventory shortcut detected</div>
+                  <p className="text-sm text-muted-foreground">
+                    New sourcing records will open with{" "}
+                    <span className="font-medium text-foreground">
+                      {inventoryPrefillItem.name} ({inventoryPrefillItem.sku})
+                    </span>{" "}
+                    already selected.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => openSourcingModal(inventoryPrefillItem.id)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add sourcing
+                </Button>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          <ProcurementRecordsCard
+            title="Supplier directory"
+            description="View supplier records first, then add a new supplier only when needed."
+          >
+            <DataTable<Supplier>
+              data={suppliers}
+              loading={suppliersQuery.isFetching}
+              columns={supplierColumns}
+              getRowId={(supplier) => String(supplier.id)}
+              renderMainCell={(supplier) => (
+                <div className="flex flex-col">
+                  <span className="font-medium">{supplier.name}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {supplier.code || "Code pending"}
+                  </span>
+                </div>
+              )}
+              searchPlaceholder="Search suppliers..."
+              onSearchChange={(value) => {
+                setSupplierPage(1);
+                setSupplierSearch(value);
+              }}
+              filters={supplierFilters}
+              onFilterChange={(key, value) => {
+                if (key === "status") {
+                  setSupplierPage(1);
+                  setSupplierStatusFilter(String(value));
+                }
+              }}
+              pagination={{
+                total: suppliersQuery.total,
+                totalPages: suppliersQuery.totalPages,
+              }}
+              currentPage={supplierPage}
+              onPageChange={setSupplierPage}
+              itemsPerPage={ITEMS_PER_PAGE}
+              resultsText={(count, total) =>
+                `Showing ${count} of ${total} supplier${total === 1 ? "" : "s"}`
+              }
+              emptyMessage="No suppliers match the current filters."
+              toolbarActions={
+                <Button onClick={openSupplierModal}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add supplier
+                </Button>
+              }
+            />
+          </ProcurementRecordsCard>
+
+          <ProcurementRecordsCard
+            title="Item sourcing"
+            description="Review sourcing terms across suppliers and open the creation form only when you need a new term."
+          >
+            <DataTable<SupplierItemTerm>
+              data={supplierTerms}
+              loading={termsQuery.isFetching}
+              columns={termColumns}
+              getRowId={(term) => String(term.id)}
+              renderMainCell={(term) => (
+                <div className="flex flex-col">
+                  <span className="font-medium">
+                    {term.inventoryItem?.name ?? `Item #${term.inventoryItemId}`}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {term.inventoryItem?.sku ?? "No SKU"}
+                  </span>
+                </div>
+              )}
+              searchPlaceholder="Search sourcing terms..."
+              onSearchChange={(value) => {
+                setTermPage(1);
+                setSourcingSearch(value);
+              }}
+              filters={sourcingFilters}
+              onFilterChange={(key, value) => {
+                if (key === "supplier") {
+                  setTermPage(1);
+                  setSourcingSupplierFilter(String(value));
+                }
+                if (key === "preferred") {
+                  setTermPage(1);
+                  setSourcingPreferredFilter(String(value));
+                }
+              }}
+              pagination={{
+                total: termsQuery.total,
+                totalPages: termsQuery.totalPages,
+              }}
+              currentPage={termPage}
+              onPageChange={setTermPage}
+              itemsPerPage={ITEMS_PER_PAGE}
+              resultsText={(count, total) =>
+                `Showing ${count} of ${total} sourcing term${total === 1 ? "" : "s"}`
+              }
+              emptyMessage="No sourcing terms match the current filters."
+              toolbarActions={
+                <Button onClick={() => openSourcingModal()}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add sourcing
+                </Button>
+              }
+            />
+          </ProcurementRecordsCard>
+        </TabsContent>
+
+        <TabsContent value="purchase-orders" className="space-y-6">
+          <ProcurementRecordsCard
+            title="Purchase orders"
+            description="Track purchase orders as records, with creation moved into a focused modal."
+          >
+            <DataTable<PurchaseOrderSummary>
+              data={purchaseOrders}
+              loading={purchaseOrdersQuery.isFetching}
+              columns={purchaseOrderColumns}
+              getRowId={(order) => String(order.id)}
+              renderMainCell={(order) => (
+                <div className="flex flex-col">
+                  <span className="font-medium">PO #{order.id}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {order.referenceNo || "No reference"}
+                  </span>
+                </div>
+              )}
+              searchPlaceholder="Search purchase orders..."
+              onSearchChange={(value) => {
+                setPurchaseOrderPage(1);
+                setPurchaseOrderSearch(value);
+              }}
+              filters={purchaseOrderFilters}
+              onFilterChange={(key, value) => {
+                if (key === "status") {
+                  setPurchaseOrderPage(1);
+                  setPurchaseOrderStatusFilter(String(value));
+                }
+                if (key === "supplier") {
+                  setPurchaseOrderPage(1);
+                  setPurchaseOrderSupplierFilter(String(value));
+                }
+              }}
+              pagination={{
+                total: purchaseOrdersQuery.total,
+                totalPages: purchaseOrdersQuery.totalPages,
+              }}
+              currentPage={purchaseOrderPage}
+              onPageChange={setPurchaseOrderPage}
+              itemsPerPage={ITEMS_PER_PAGE}
+              resultsText={(count, total) =>
+                `Showing ${count} of ${total} purchase order${total === 1 ? "" : "s"}`
+              }
+              emptyMessage="No purchase orders match the current filters."
+              toolbarActions={
+                <>
+                  <DateToolbarField
+                    label="From"
+                    value={purchaseOrderDateFrom}
+                    onChange={(value) => {
+                      setPurchaseOrderPage(1);
+                      setPurchaseOrderDateFrom(value);
+                    }}
+                  />
+                  <DateToolbarField
+                    label="To"
+                    value={purchaseOrderDateTo}
+                    onChange={(value) => {
+                      setPurchaseOrderPage(1);
+                      setPurchaseOrderDateTo(value);
+                    }}
+                  />
+                  <Button onClick={() => openPurchaseOrderModal()}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create PO
+                  </Button>
+                </>
+              }
+            />
+          </ProcurementRecordsCard>
+        </TabsContent>
+
+        <TabsContent value="receipts" className="space-y-6">
+          <ProcurementRecordsCard
+            title="Receipts"
+            description="Receipt history now lives in its own records view so teams can review inbound activity without reopening forms."
+          >
+            <DataTable<ReceiptRow>
+              data={receiptRows}
+              loading={receiptsQuery.isFetching}
+              columns={receiptColumns}
+              getRowId={(receipt) => receipt.id}
+              renderMainCell={(receipt) => (
+                <div className="flex flex-col">
+                  <span className="font-medium">Receipt #{receipt.receiptId}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {receipt.lineCount} line{receipt.lineCount === 1 ? "" : "s"}
+                    {receipt.linePreview ? ` · ${receipt.linePreview}` : ""}
+                  </span>
+                </div>
+              )}
+              searchPlaceholder="Search receipts..."
+              onSearchChange={(value) => {
+                setReceiptPage(1);
+                setReceiptSearch(value);
+              }}
+              filters={receiptFilters}
+              onFilterChange={(key, value) => {
+                if (key === "supplier") {
+                  setReceiptPage(1);
+                  setReceiptSupplierFilter(String(value));
+                }
+              }}
+              pagination={{
+                total: receiptsQuery.total,
+                totalPages: receiptsQuery.totalPages,
+              }}
+              currentPage={receiptPage}
+              onPageChange={setReceiptPage}
+              itemsPerPage={ITEMS_PER_PAGE}
+              resultsText={(count, total) =>
+                `Showing ${count} of ${total} receipt${total === 1 ? "" : "s"}`
+              }
+              emptyMessage="No receipts have been posted yet."
+            />
+          </ProcurementRecordsCard>
+        </TabsContent>
+
+        <TabsContent value="replenishment" className="space-y-6">
+          <ProcurementRecordsCard
+            title="Replenishment drafts"
+            description="Review replenishment suggestions as a queue of records before turning them into purchase orders."
+          >
+            <DataTable<PurchaseOrderSummary>
+              data={replenishmentDrafts}
+              loading={draftsQuery.isFetching}
+              columns={replenishmentColumns}
+              getRowId={(draft) => String(draft.id)}
+              renderMainCell={(draft) => (
+                <div className="flex flex-col">
+                  <span className="font-medium">Draft #{draft.id}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {draft.referenceNo || "No reference"}
+                  </span>
+                </div>
+              )}
+              searchPlaceholder="Search replenishment drafts..."
+              onSearchChange={(value) => {
+                setReplenishmentPage(1);
+                setReplenishmentSearch(value);
+              }}
+              filters={replenishmentFilters}
+              onFilterChange={(key, value) => {
+                if (key === "status") {
+                  setReplenishmentPage(1);
+                  setReplenishmentStatusFilter(String(value));
+                }
+                if (key === "supplier") {
+                  setReplenishmentPage(1);
+                  setReplenishmentSupplierFilter(String(value));
+                }
+              }}
+              pagination={{
+                total: draftsQuery.total,
+                totalPages: draftsQuery.totalPages,
+              }}
+              currentPage={replenishmentPage}
+              onPageChange={setReplenishmentPage}
+              itemsPerPage={ITEMS_PER_PAGE}
+              resultsText={(count, total) =>
+                `Showing ${count} of ${total} replenishment draft${total === 1 ? "" : "s"}`
+              }
+              emptyMessage="No replenishment drafts are queued right now."
+            />
+          </ProcurementRecordsCard>
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={isSupplierOpen} onOpenChange={setIsSupplierOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add supplier</DialogTitle>
+            <DialogDescription>
+              Supplier creation is tucked behind a modal so the records view stays focused.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2 md:col-span-2">
+              <Label>Supplier name</Label>
+              <Input
+                value={supplierForm.name}
+                onChange={(event) =>
+                  setSupplierForm((prev) => ({ ...prev, name: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Contact person</Label>
+              <Input
+                value={supplierForm.contactPerson}
+                onChange={(event) =>
+                  setSupplierForm((prev) => ({
+                    ...prev,
+                    contactPerson: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                value={supplierForm.email}
+                onChange={(event) =>
+                  setSupplierForm((prev) => ({ ...prev, email: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Phone</Label>
+              <Input
+                value={supplierForm.phone}
+                onChange={(event) =>
+                  setSupplierForm((prev) => ({ ...prev, phone: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>City</Label>
+              <Input
+                value={supplierForm.city}
+                onChange={(event) =>
+                  setSupplierForm((prev) => ({ ...prev, city: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>GSTIN</Label>
+              <Input
+                value={supplierForm.gstin}
+                onChange={(event) =>
+                  setSupplierForm((prev) => ({ ...prev, gstin: event.target.value }))
+                }
+              />
+            </div>
+            <div className="flex items-center gap-3 md:col-span-2">
+              <Switch
+                checked={supplierForm.isActive}
+                onCheckedChange={(checked) =>
+                  setSupplierForm((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
+              <Label>Active supplier</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSupplierOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => void handleCreateSupplier()} disabled={submitting}>
+              Create supplier
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isSourcingOpen} onOpenChange={setIsSourcingOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Add sourcing</DialogTitle>
+            <DialogDescription>
+              Inventory shortcuts prefill the item here so Inventory → Procurement feels seamless.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Inventory item</Label>
+              <Select
+                value={termForm.inventoryItemId === "" ? "none" : String(termForm.inventoryItemId)}
+                onValueChange={(value) =>
+                  setTermForm((prev) => ({
+                    ...prev,
+                    inventoryItemId: value === "none" ? "" : Number(value),
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose item" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Choose item</SelectItem>
+                  {inventoryItems.map((item) => (
+                    <SelectItem key={item.id} value={String(item.id)}>
+                      {item.name} ({item.sku})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Supplier</Label>
+              <Select
+                value={termForm.supplierId === "" ? "none" : String(termForm.supplierId)}
+                onValueChange={(value) =>
+                  setTermForm((prev) => ({
+                    ...prev,
+                    supplierId: value === "none" ? "" : Number(value),
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose supplier" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Choose supplier</SelectItem>
+                  {allSuppliers.map((supplier) => (
+                    <SelectItem key={supplier.id} value={String(supplier.id)}>
+                      {supplier.name} ({supplier.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Supplier SKU</Label>
+              <Input
+                value={termForm.supplierSku}
+                onChange={(event) =>
+                  setTermForm((prev) => ({
+                    ...prev,
+                    supplierSku: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Unit cost</Label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={termForm.currentUnitCost}
+                onChange={(event) =>
+                  setTermForm((prev) => ({
+                    ...prev,
+                    currentUnitCost: Number(event.target.value) || 0,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Lead time (days)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={termForm.leadTimeDays}
+                onChange={(event) =>
+                  setTermForm((prev) => ({
+                    ...prev,
+                    leadTimeDays: Number(event.target.value) || 0,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>MOQ</Label>
+              <Input
+                type="number"
+                min={0}
+                value={termForm.moq}
+                onChange={(event) =>
+                  setTermForm((prev) => ({
+                    ...prev,
+                    moq: Number(event.target.value) || 0,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Case pack</Label>
+              <Input
+                type="number"
+                min={0}
+                value={termForm.casePack}
+                onChange={(event) =>
+                  setTermForm((prev) => ({
+                    ...prev,
+                    casePack: Number(event.target.value) || 0,
+                  }))
+                }
+              />
+            </div>
+            <div className="flex items-center gap-3 md:col-span-2">
+              <Switch
+                checked={termForm.isPreferred}
+                onCheckedChange={(checked) =>
+                  setTermForm((prev) => ({ ...prev, isPreferred: checked }))
+                }
+              />
+              <Label>Preferred supplier</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSourcingOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => void handleSaveTerm()} disabled={submitting}>
+              Save sourcing
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPurchaseOrderOpen} onOpenChange={setIsPurchaseOrderOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Create purchase order</DialogTitle>
+            <DialogDescription>
+              Existing sourcing terms are used here to prefill supplier, price, lead time,
+              and MOQ-aware quantities whenever possible.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Supplier</Label>
+              <Select
+                value={poForm.supplierId === "" ? "none" : String(poForm.supplierId)}
+                onValueChange={handlePurchaseOrderSupplierChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose supplier" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Choose supplier</SelectItem>
+                  {purchaseOrderSupplierChoices.map(({ supplier, term }) => (
+                    <SelectItem key={supplier.id} value={String(supplier.id)}>
+                      {supplier.name}
+                      {term?.isPreferred
+                        ? " (preferred sourcing)"
+                        : term
+                          ? " (sourcing on file)"
+                          : supplier.isActive
+                            ? ""
+                            : " (inactive)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Inventory item</Label>
+              <Select
+                value={poForm.inventoryItemId === "" ? "none" : String(poForm.inventoryItemId)}
+                onValueChange={handlePurchaseOrderInventoryChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose item" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Choose item</SelectItem>
+                  {inventoryItems.map((item) => (
+                    <SelectItem key={item.id} value={String(item.id)}>
+                      {item.name} ({item.sku})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedPurchaseOrderItem ? (
+              <div className="rounded-lg border bg-muted/30 p-4 md:col-span-2">
+                {selectedPurchaseOrderTerm ? (
+                  <div className="space-y-3">
+                    <div>
+                      <div className="font-medium">
+                        Using sourcing term from{" "}
+                        {selectedPurchaseOrderTerm.supplier?.name ??
+                          `Supplier #${selectedPurchaseOrderTerm.supplierId}`}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Cost, lead time, and quantity guidance were filled from the saved
+                        sourcing setup for {selectedPurchaseOrderItem.name}. You can still
+                        override any field before saving.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                      <div>
+                        <div className="text-muted-foreground">Unit cost</div>
+                        <div className="font-medium">
+                          {formatCurrency(selectedPurchaseOrderTerm.currentUnitCost)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Lead time</div>
+                        <div className="font-medium">
+                          {selectedPurchaseOrderTerm.leadTimeDays} day
+                          {selectedPurchaseOrderTerm.leadTimeDays === 1 ? "" : "s"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">MOQ / Case pack</div>
+                        <div className="font-medium">
+                          {selectedPurchaseOrderTerm.moq} / {selectedPurchaseOrderTerm.casePack}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Supplier SKU</div>
+                        <div className="font-medium">
+                          {selectedPurchaseOrderTerm.supplierSku || "Not set"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : preferredPurchaseOrderTerm ? (
+                  <div className="space-y-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="font-medium">Preferred sourcing is available</div>
+                        <p className="text-sm text-muted-foreground">
+                          {preferredPurchaseOrderTerm.supplier?.name ??
+                            `Supplier #${preferredPurchaseOrderTerm.supplierId}`}{" "}
+                          has sourcing details saved for {selectedPurchaseOrderItem.name}.
+                          Apply that term to prefill cost, MOQ, and lead time.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() =>
+                          setPoForm((prev) =>
+                            applySourcingTermToPurchaseOrderForm(prev, preferredPurchaseOrderTerm, {
+                              overrideSupplier: true,
+                            }),
+                          )
+                        }
+                      >
+                        Use preferred sourcing
+                      </Button>
+                    </div>
+                    <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                      <div>
+                        <div className="text-muted-foreground">Supplier</div>
+                        <div className="font-medium">
+                          {preferredPurchaseOrderTerm.supplier?.name ??
+                            `Supplier #${preferredPurchaseOrderTerm.supplierId}`}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Unit cost</div>
+                        <div className="font-medium">
+                          {formatCurrency(preferredPurchaseOrderTerm.currentUnitCost)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Lead time</div>
+                        <div className="font-medium">
+                          {preferredPurchaseOrderTerm.leadTimeDays} day
+                          {preferredPurchaseOrderTerm.leadTimeDays === 1 ? "" : "s"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">MOQ / Case pack</div>
+                        <div className="font-medium">
+                          {preferredPurchaseOrderTerm.moq} / {preferredPurchaseOrderTerm.casePack}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <div className="font-medium">No sourcing term on file</div>
+                    <p className="text-sm text-muted-foreground">
+                      This item does not have saved supplier pricing yet. Add sourcing first
+                      if you want automatic supplier and cost defaults.
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              <Label>Quantity</Label>
+              <Input
+                type="number"
+                min={1}
+                value={poForm.orderedQty}
+                onChange={(event) =>
+                  setPoForm((prev) => ({
+                    ...prev,
+                    orderedQty: Number(event.target.value) || 1,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Unit cost</Label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={poForm.unitCost}
+                onChange={(event) =>
+                  setPoForm((prev) => ({
+                    ...prev,
+                    unitCost: Number(event.target.value) || 0,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Reference</Label>
+              <Input
+                value={poForm.referenceNo}
+                onChange={(event) =>
+                  setPoForm((prev) => ({
+                    ...prev,
+                    referenceNo: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Expected delivery</Label>
+              <Input
+                type="date"
+                value={poForm.expectedDeliveryAt}
+                onChange={(event) =>
+                  setPoForm((prev) => ({
+                    ...prev,
+                    expectedDeliveryAt: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Notes</Label>
+              <Textarea
+                rows={3}
+                value={poForm.notes}
+                onChange={(event) =>
+                  setPoForm((prev) => ({ ...prev, notes: event.target.value }))
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPurchaseOrderOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => void handleCreatePurchaseOrder()} disabled={submitting}>
+              Create purchase order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen}>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Post purchase receipt</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {receiptBody.lines.map((line, index) => {
+              const item = inventoryItems.find(
+                (inventoryItem) => inventoryItem.id === line.inventoryItemId,
+              );
+
+              return (
+                <div
+                  key={`${line.inventoryItemId}-${index}`}
+                  className="grid gap-3 rounded-lg border p-3 md:grid-cols-4"
+                >
+                  <div>
+                    <div className="font-medium">
+                      {item?.name ?? `Item #${line.inventoryItemId}`}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {item?.sku ?? "No SKU"}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Received</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={line.receivedQty}
+                      onChange={(event) =>
+                        updateReceiptLine(
+                          index,
+                          "receivedQty",
+                          Number(event.target.value) || 0,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Rejected</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={line.rejectedQty}
+                      onChange={(event) =>
+                        updateReceiptLine(
+                          index,
+                          "rejectedQty",
+                          Number(event.target.value) || 0,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Unit cost</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={line.unitCost}
+                      onChange={(event) =>
+                        updateReceiptLine(
+                          index,
+                          "unitCost",
+                          Number(event.target.value) || 0,
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReceiptOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => void handlePostReceipt()} disabled={submitting}>
+              Save receipt
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function DateToolbarField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Input
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full min-w-[150px] sm:w-[150px]"
+      />
+    </div>
+  );
+}

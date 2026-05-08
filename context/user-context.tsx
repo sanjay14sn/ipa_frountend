@@ -1,8 +1,20 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type User } from "../lib/auth";
-import { switchFranchise as apiSwitchFranchise, getFranchiseeProfile } from "../services/auth.service";
+import {
+  switchFranchise as apiSwitchFranchise,
+  getFranchiseeProfile,
+} from "../services/auth.service";
+import { getEffectiveFranchiseStatus } from "../lib/auth";
+import { queryKeys } from "@/hooks/api/query-keys";
 
 interface UserContextType {
   user: User | null;
@@ -12,34 +24,72 @@ interface UserContextType {
 
 export const UserContext = createContext<UserContextType | null>(null);
 
-export const UserProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-
-  const setUserWithStorage = (user: User) => {
-    setUser(user);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("user", JSON.stringify(user));
-    }
+function normalizeFranchiseeProfile(
+  profileData: Record<string, unknown>,
+): NonNullable<User["profile"]> {
+  const base = profileData as NonNullable<User["profile"]>;
+  const p = profileData as {
+    franchise?: {
+      city?: string;
+      state?: string;
+      pincode?: string;
+      address?: string;
+    };
+    city?: string;
+    state?: string;
+    pincode?: string;
+    address?: string;
   };
+  return {
+    ...base,
+    city: p.franchise?.city ?? p.city ?? base.city,
+    state: p.franchise?.state ?? p.state ?? base.state,
+    pincode: p.franchise?.pincode ?? p.pincode ?? base.pincode,
+    address: p.franchise?.address ?? p.address ?? base.address,
+  };
+}
+
+export const UserProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUserState] = useState<User | null>(null);
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser || storedUser === "{}") return;
+
+      try {
+        setUserState(JSON.parse(storedUser) as User);
+      } catch {
+        localStorage.removeItem("user");
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  const setUserWithStorage = useCallback((next: User) => {
+    setUserState(next);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("user", JSON.stringify(next));
+    }
+  }, []);
 
   const switchFranchise = async (franchiseId: string) => {
     if (!user) return;
     const data = await apiSwitchFranchise(franchiseId);
-    let profileData = null;
+    let profileData: Record<string, unknown> | null = null;
     try {
       const profileResponse = await getFranchiseeProfile();
-      profileData = profileResponse.result ?? profileResponse;
+      const raw =
+        (profileResponse as { result?: Record<string, unknown> }).result ??
+        (profileResponse as unknown as Record<string, unknown>);
+      profileData = raw && typeof raw === "object" ? raw : null;
     } catch {
       // Profile fetch may fail for Pending franchises
     }
     const profile = profileData
-      ? {
-          ...profileData,
-          city: (profileData as any).franchise?.city ?? (profileData as any).city,
-          state: (profileData as any).franchise?.state ?? (profileData as any).state,
-          pincode: (profileData as any).franchise?.pincode ?? (profileData as any).pincode,
-          address: (profileData as any).franchise?.address ?? (profileData as any).address,
-        }
+      ? normalizeFranchiseeProfile(profileData)
       : user.profile;
     const updated: User = {
       ...user,
@@ -50,18 +100,90 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       profile,
     };
     setUserWithStorage(updated);
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.auth.franchiseeProfile(franchiseId),
+    });
   };
 
+  const profileQuery = useQuery({
+    queryKey: queryKeys.auth.franchiseeProfile(user?.franchiseId),
+    queryFn: async () => {
+      const res = await getFranchiseeProfile();
+      const raw =
+        (res as { result?: Record<string, unknown> }).result ??
+        (res as unknown as Record<string, unknown>);
+      if (!raw || typeof raw !== "object") {
+        throw new Error("Invalid profile response");
+      }
+      return raw as Record<string, unknown>;
+    },
+    enabled:
+      typeof window !== "undefined" &&
+      !!user &&
+      user.role === "franchisee" &&
+      !!user.franchiseId,
+    staleTime: 60_000,
+  });
+
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser && storedUser !== "{}") {
-      const user = JSON.parse(storedUser);
-      setUser(user);
-    }
-  }, []);
+    if (!profileQuery.isSuccess || !profileQuery.data) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setUserState((prev) => {
+        if (!prev || prev.role !== "franchisee" || !prev.franchiseId) {
+          return prev;
+        }
+        const profile = normalizeFranchiseeProfile(profileQuery.data!);
+        const franchiseStatus =
+          profile.franchise?.status ??
+          getEffectiveFranchiseStatus(prev, prev.franchiseId);
+        const franchiseName = profile.franchise?.name ?? prev.franchiseName;
+        const franchises = prev.franchises?.map((franchise) =>
+          franchise.id === (profile.franchise?.id ?? prev.franchiseId)
+            ? {
+                ...franchise,
+                name: franchiseName ?? franchise.name,
+                status: franchiseStatus ?? franchise.status,
+              }
+            : franchise,
+        );
+        const sameId = prev.profile?.id === profile.id;
+        const sameFranchiseUpdated =
+          prev.profile?.franchise?.updatedAt === profile.franchise?.updatedAt;
+        const sameStatus = prev.franchiseStatus === franchiseStatus;
+        const sameName = prev.franchiseName === franchiseName;
+        if (
+          sameId &&
+          sameFranchiseUpdated &&
+          sameStatus &&
+          sameName &&
+          prev.profile != null
+        ) {
+          return prev;
+        }
+        const next: User = {
+          ...prev,
+          franchiseStatus,
+          franchiseName,
+          franchises,
+          profile,
+        };
+        localStorage.setItem("user", JSON.stringify(next));
+        return next;
+      });
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    profileQuery.isSuccess,
+    profileQuery.data,
+    profileQuery.dataUpdatedAt,
+  ]);
 
   return (
-    <UserContext.Provider value={{ user, setUser: setUserWithStorage, switchFranchise }}>
+    <UserContext.Provider
+      value={{ user, setUser: setUserWithStorage, switchFranchise }}
+    >
       {children}
     </UserContext.Provider>
   );

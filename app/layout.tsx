@@ -1,17 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "sonner";
-import { Fira_Sans } from "next/font/google";
 import { UserProvider } from "@/context/user-context";
 import { NotificationProvider } from "@/context/notification-context";
 import QueryProvider from "@/components/providers/query-provider";
-
-const firaSans = Fira_Sans({
-  subsets: ["latin"],
-  variable: "--font-fira-sans",
-  display: "swap",
-  weight: ["400", "700"],
-});
 
 export const metadata: Metadata = {
   title: "Abacus Portal",
@@ -25,16 +17,36 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${firaSans.variable}`}>
+    <html
+      lang="en"
+      style={
+        {
+          "--font-fira-sans":
+            "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+        } as React.CSSProperties
+      }
+    >
       <body>
-        <UserProvider>
-          <NotificationProvider>
-            <QueryProvider>
+        <QueryProvider>
+          <UserProvider>
+            <NotificationProvider>
               {children}
-              <Toaster />
-            </QueryProvider>
-          </NotificationProvider>
-        </UserProvider>
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  classNames: {
+                    toast:
+                      "rounded-xl border border-border bg-card text-card-foreground shadow-xl",
+                    title: "text-sm font-medium text-card-foreground",
+                    description: "text-sm text-muted-foreground",
+                    actionButton: "rounded-lg bg-primary text-primary-foreground",
+                    cancelButton: "rounded-lg bg-secondary text-secondary-foreground",
+                  },
+                }}
+              />
+            </NotificationProvider>
+          </UserProvider>
+        </QueryProvider>
       </body>
     </html>
   );

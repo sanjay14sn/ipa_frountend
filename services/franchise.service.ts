@@ -1,226 +1,150 @@
-
-
 import { api } from "@/lib/axios";
+import { unwrapData } from "@/lib/unwrap-api";
+import type { PaymentOrderResponse } from "./franchisee.service";
 
-// Note: CSV template is generated on the client now
-
-export async function bulkUploadFranchises(file: File) {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await api.post("/franchise/bulk-upload", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-  return response.data;
+/** Apply for a new franchise (franchisee JWT). */
+export interface ApplyForFranchisePayload {
+  name: string;
+  type: string;
+  city: string;
+  state: string;
+  address?: string;
+  pincode?: string;
+  /** Single program id when the API expects one */
+  programId?: number;
+  /** Multi-select UI — submit with {@link programId} set to the first id if needed */
+  programIds?: number[];
 }
 
+export type RequestFranchiseDto = ApplyForFranchisePayload;
+
 export interface FranchiseListItem {
-  id: number;
+  id: string;
   name: string;
+  type: string;
+  status: string;
+  city?: string;
+  state?: string;
 }
 
 export async function getFranchiseList(): Promise<FranchiseListItem[]> {
-  const response = await api.get("/franchise/list");
-  const data = response.data as any;
-  if (Array.isArray(data)) return data as FranchiseListItem[];
-  if (Array.isArray(data?.result)) return data.result as FranchiseListItem[];
-  if (Array.isArray(data?.franchises))
-    return data.franchises as FranchiseListItem[];
-  return [];
+  const response = await api.get("/franchise");
+  const rows = unwrapData<unknown[]>(response);
+  return (Array.isArray(rows) ? rows : []).map((r) => {
+    const x = r as Record<string, unknown>;
+    const plain =
+      x?.get &&
+      typeof (x as { get: (opts?: { plain?: boolean }) => unknown }).get ===
+        "function"
+        ? (x as { get: (opts?: { plain?: boolean }) => FranchiseListItem }).get({
+            plain: true,
+          })
+        : (x as unknown as FranchiseListItem);
+    return {
+      id: String(plain.id),
+      name: String(plain.name ?? ""),
+      type: String(plain.type ?? ""),
+      status: String(plain.status ?? ""),
+      city: plain.city as string | undefined,
+      state: plain.state as string | undefined,
+    };
+  });
 }
 
-export interface RequestFranchiseDto {
-  name: string;
-  type: string;
-  address: string;
-  city: string;
-  state?: string;
-  pincode?: string;
-  programIds: number[];
+export async function hasPendingRequest(): Promise<boolean> {
+  const list = await getFranchiseList();
+  return list.some((f) => f.status === "Pending");
 }
 
-export async function requestNewFranchise(dto: RequestFranchiseDto) {
-  const response = await api.post("/franchise/request", dto);
-  return response.data;
+export async function requestNewFranchise(body: ApplyForFranchisePayload) {
+  const response = await api.post("/franchise/apply", body);
+  return unwrapData(response);
 }
 
-export interface RequestProgramDto {
-  franchiseId: string;
-  programIds: number[];
-}
-
-export async function requestProgram(dto: RequestProgramDto) {
-  const response = await api.post("/franchise/program-request", dto);
-  return response.data;
-}
-
-export async function getProgramRequests(status?: string) {
-  const params = status ? { status } : {};
-  const response = await api.get("/franchise/program-requests", { params });
-  return response.data;
-}
-
+/** Legacy program-request flow — not in ipa-new. */
 export interface ProgramRequestRow {
   id: number;
   franchiseId: string;
   programId: number;
   status: string;
-  requestedBy: number;
-  createdAt: string;
-  franchise?: { id: string; name: string };
   program?: { id: number; name: string };
-  franchisee?: { id: number; name: string; mail: string; phone: string };
+  franchise?: { id: string; name: string; city?: string };
+  franchisee?: { id: number; name: string; mail?: string; phone?: string };
+  requestedBy?: string;
+  createdAt?: string;
 }
 
-export interface PaginatedProgramRequestsResponse {
-  data: ProgramRequestRow[];
-  meta: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-  };
+export interface ApproveProgramRequestPayload {
+  franchiseFee?: number;
+  kitCost?: number;
+  [key: string]: unknown;
 }
 
-export interface ProgramRequestsPaginationParams {
+export async function getProgramRequests(_params?: {
+  status?: string;
+}): Promise<ProgramRequestRow[]> {
+  return [];
+}
+
+export async function getPaginatedProgramRequests(_params?: {
   page?: number;
   limit?: number;
   search?: string;
   status?: string;
   sortBy?: string;
   sortOrder?: string;
-}
-
-export async function getPaginatedProgramRequests(
-  params: ProgramRequestsPaginationParams
-): Promise<PaginatedProgramRequestsResponse> {
-  const queryParams = new URLSearchParams();
-  if (params.page) queryParams.append("page", params.page.toString());
-  if (params.limit) queryParams.append("limit", params.limit.toString());
-  if (params.search) queryParams.append("search", params.search);
-  if (params.status) queryParams.append("status", params.status ?? "Pending");
-  if (params.sortBy) queryParams.append("sortBy", params.sortBy);
-  if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
-
-  const response = await api.get<{
-    result: PaginatedProgramRequestsResponse;
-  }>(`/franchise/program-requests/paginated?${queryParams.toString()}`);
-  return response.data.result ?? response.data;
-}
-
-export interface ApproveProgramRequestPayload {
-  payroll: {
-    programId: number;
-    franchiseFee: number;
-    kitCost: number;
-    materialCost: number;
-    monthlyFee: number;
-    ciShare: number;
-    franchiseShare: number;
-    royalty: number;
-    installment: number;
-    totalAmount: number;
-    gstFranchiseFee?: boolean;
-    gstRoyalty?: boolean;
-    gstMaterialCost?: boolean;
-    freeload: boolean;
-  };
-  dateOfPayment: string;
-  dateOfJoining: string;
-  kitItems?: { inventoryId: number; quantity: number }[];
+}): Promise<{
+  data: ProgramRequestRow[];
+  meta: { total: number; totalPages: number };
+}> {
+  return { data: [], meta: { total: 0, totalPages: 0 } };
 }
 
 export async function approveProgramRequest(
-  id: number,
-  payload: ApproveProgramRequestPayload
+  _id: number,
+  _payload: ApproveProgramRequestPayload,
 ) {
-  const response = await api.patch(
-    `/franchise/program-requests/${id}/approve`,
-    payload
-  );
-  return response.data;
+  throw new Error("Program requests are not supported in ipa-new");
 }
 
-export async function rejectProgramRequest(id: number) {
-  const response = await api.patch(`/franchise/program-requests/${id}/reject`);
-  return response.data;
+export async function rejectProgramRequest(_id: number) {
+  throw new Error("Program requests are not supported in ipa-new");
 }
 
+export async function bulkUploadFranchises(_file: File) {
+  throw new Error("Bulk upload is not supported in ipa-new");
+}
+
+/** Per-program fee agreement row (legacy UI) */
 export interface ProgramAgreement {
   id: number;
-  franchiseId: string;
   programId: number;
-  franchiseProgramId: number;
-  franchiseFee: number;
-  kitCost: number;
-  materialCost: number;
-  monthlyFee: number;
-  ciShare: number;
-  franchiseShare: number;
-  royalty: number;
-  installment: number;
-  totalAmount: number;
-  gstFranchiseFee: boolean;
-  gstRoyalty: boolean;
-  gstMaterialCost: boolean;
-  freeload: boolean;
-  dateOfJoining: string;
-  dateOfPayment: string;
-  status: string;
-  createdAt: string;
+  franchiseId: string;
+  createdAt?: string;
   franchise?: { id: string; name: string };
-  franchiseProgram?: {
-    id: number;
-    program?: { id: number; name: string };
-  };
-}
-
-export async function hasPendingRequest(): Promise<{ hasPending: boolean; reason?: string }> {
-  const response = await api.get("/franchise/program-requests/has-pending");
-  const data = response.data as any;
-  const payload = data?.result ?? data;
-  return { hasPending: payload?.hasPending ?? false, reason: payload?.reason };
+  franchiseProgram?: { program?: { id: number; name: string } };
 }
 
 export async function getProgramAgreements(): Promise<ProgramAgreement[]> {
-  const response = await api.get<{ result: ProgramAgreement[] }>(
-    "/franchise/program-agreements/pending"
-  );
-  const data = response.data as any;
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.result)) return data.result;
   return [];
 }
 
-export interface ProgramFeePaymentOrder {
-  orderId: string;
-  amount: number;
-  currency: string;
-  franchiseId: string;
-  franchiseName: string;
-  paymentType: string;
-  key: string;
-  isZeroAmount?: boolean;
-}
-
 export async function initiateProgramFeePayment(
-  payrollId: number
-): Promise<ProgramFeePaymentOrder> {
-  const response = await api.post<{ result: ProgramFeePaymentOrder }>(
-    "/payment/program-fee/initiate",
-    { payrollId }
-  );
-  const data = response.data as any;
-  return data?.result ?? data;
+  _agreementId: number,
+): Promise<PaymentOrderResponse> {
+  throw new Error("Not supported in ipa-new");
 }
 
-export async function verifyProgramFeePayment(payload: {
-  paymentId: string;
-  orderId: string;
-  signature: string;
-}) {
-  const response = await api.post("/payment/program-fee/verify", payload);
-  return response.data;
+export async function verifyProgramFeePayment(_payload: unknown) {
+  throw new Error("Not supported in ipa-new");
+}
+
+export interface RequestProgramDto {
+  franchiseId: string;
+  programIds: number[];
+  notes?: string;
+}
+
+export async function requestProgram(_dto: RequestProgramDto): Promise<unknown> {
+  throw new Error("Program requests are not supported in ipa-new");
 }

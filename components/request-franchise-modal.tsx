@@ -20,14 +20,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle, Clock } from "lucide-react";
-import { requestNewFranchise, hasPendingRequest, RequestFranchiseDto } from "@/services/franchise.service";
+import { Building2, CheckCircle, Clock } from "lucide-react";
+import {
+  requestNewFranchise,
+  hasPendingRequest,
+  RequestFranchiseDto,
+} from "@/services/franchise.service";
 import { getAllPrograms, Program } from "@/services/program.service";
 import { StateCitySelect } from "@/components/StateCitySelect";
 import { getErrorMessage } from "@/lib/error-utils";
 import { toast } from "sonner";
 import { useUser } from "@/context/user-context";
-
 interface RequestFranchiseModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -51,7 +54,9 @@ export function RequestFranchiseModal({
   const [submitted, setSubmitted] = useState(false);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [isLoadingPrograms, setIsLoadingPrograms] = useState(false);
-  const [pendingCheck, setPendingCheck] = useState<"loading" | "pending" | "ok">("loading");
+  const [pendingCheck, setPendingCheck] = useState<
+    "loading" | "pending" | "ok"
+  >("loading");
 
   useEffect(() => {
     if (!open) return;
@@ -60,7 +65,7 @@ export function RequestFranchiseModal({
     Promise.all([getAllPrograms(), hasPendingRequest()])
       .then(([programData, pending]) => {
         setPrograms(Array.isArray(programData) ? programData : []);
-        setPendingCheck(pending.hasPending ? "pending" : "ok");
+        setPendingCheck(pending ? "pending" : "ok");
       })
       .catch(() => {
         setPrograms([]);
@@ -70,12 +75,15 @@ export function RequestFranchiseModal({
   }, [open]);
 
   const handleProgramToggle = (programId: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      programIds: prev.programIds.includes(programId)
-        ? prev.programIds.filter((id) => id !== programId)
-        : [...prev.programIds, programId],
-    }));
+    setFormData((prev) => {
+      const ids = prev.programIds ?? [];
+      return {
+        ...prev,
+        programIds: ids.includes(programId)
+          ? ids.filter((id) => id !== programId)
+          : [...ids, programId],
+      };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,14 +100,31 @@ export function RequestFranchiseModal({
       toast.error("City is required");
       return;
     }
-    if (formData.programIds.length === 0) {
+    const programIds = formData.programIds ?? [];
+    if (programIds.length === 0) {
       toast.error("Select at least one program");
       return;
     }
     setIsLoading(true);
     try {
-      const res = await requestNewFranchise(formData);
-      const franchise = res?.franchise ?? res?.result?.franchise ?? res;
+      const res = await requestNewFranchise({
+        ...formData,
+        programIds,
+        programId: programIds[0],
+      });
+      const payload = res as unknown as {
+        franchise?: { id: string | number; name: string };
+        result?: { franchise?: { id: string | number; name: string } };
+      };
+      const franchise =
+        payload.franchise ??
+        payload.result?.franchise ??
+        (typeof res === "object" &&
+        res !== null &&
+        "id" in res &&
+        "name" in res
+          ? (res as { id: string | number; name: string })
+          : undefined);
       toast.success("Franchise request submitted successfully");
       setSubmitted(true);
       if (user?.franchises && franchise) {
@@ -107,7 +132,11 @@ export function RequestFranchiseModal({
           ...user,
           franchises: [
             ...user.franchises,
-            { id: franchise.id, name: franchise.name, status: "Pending" },
+            {
+              id: String(franchise.id),
+              name: franchise.name,
+              status: "Pending",
+            },
           ],
         });
       }
@@ -137,20 +166,22 @@ export function RequestFranchiseModal({
   if (submitted) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md w-full mx-4">
+        <DialogContent className="mx-4 w-full max-w-md rounded-2xl border-border">
           <DialogHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <CheckCircle className="h-12 w-12 text-green-600" />
+            <div className="mb-4 flex justify-center">
+              <div className="rounded-full bg-surface-green p-3">
+                <CheckCircle className="h-10 w-10 text-primary" />
+              </div>
             </div>
-            <DialogTitle className="text-2xl font-bold text-gray-900">
+            <DialogTitle className="text-2xl font-semibold text-card-foreground">
               Request Submitted!
             </DialogTitle>
-            <DialogDescription className="text-center">
+            <DialogDescription className="text-center text-muted-foreground">
               Your new franchise request has been submitted. Our admin team will
               review it and notify you once approved.
             </DialogDescription>
           </DialogHeader>
-          <Button onClick={handleClose} className="w-full">
+          <Button className="w-full rounded-lg" onClick={handleClose}>
             Close
           </Button>
         </DialogContent>
@@ -161,9 +192,9 @@ export function RequestFranchiseModal({
   if (pendingCheck === "loading") {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md w-full mx-4">
+        <DialogContent className="mx-4 w-full max-w-md rounded-2xl border-border">
           <div className="flex items-center justify-center py-10">
-            <div className="animate-spin h-8 w-8 rounded-full border-2 border-primary border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         </DialogContent>
       </Dialog>
@@ -173,21 +204,27 @@ export function RequestFranchiseModal({
   if (pendingCheck === "pending") {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md w-full mx-4">
+        <DialogContent className="mx-4 w-full max-w-md rounded-2xl border-border">
           <DialogHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <Clock className="h-12 w-12 text-yellow-500" />
+            <div className="mb-4 flex justify-center">
+              <div className="rounded-full bg-amber-50 p-3">
+                <Clock className="h-10 w-10 text-amber-600" />
+              </div>
             </div>
-            <DialogTitle className="text-xl font-bold text-gray-900">
+            <DialogTitle className="text-xl font-semibold text-card-foreground">
               Request Already Pending
             </DialogTitle>
-            <DialogDescription className="text-center">
+            <DialogDescription className="text-center text-muted-foreground">
               You cannot submit a new request while any franchise is not Active,
               a program request is awaiting admin review, or a program agreement
               and payment is still pending. Resolve those first.
             </DialogDescription>
           </DialogHeader>
-          <Button onClick={handleClose} variant="outline" className="w-full">
+          <Button
+            onClick={handleClose}
+            variant="outline"
+            className="w-full rounded-lg border-border"
+          >
             Close
           </Button>
         </DialogContent>
@@ -197,15 +234,22 @@ export function RequestFranchiseModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Request New Franchise</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-lg overflow-hidden rounded-2xl border-border p-0">
+        <DialogHeader className="border-b border-border bg-surface-green/40 px-6 pb-4 pt-6">
+          <div className="mb-2 flex justify-center">
+            <div className="rounded-xl bg-accent p-2 text-primary">
+              <Building2 className="h-6 w-6" />
+            </div>
+          </div>
+          <DialogTitle className="text-center text-lg font-semibold text-card-foreground">
+            Request New Franchise
+          </DialogTitle>
+          <DialogDescription className="text-center text-muted-foreground">
             Submit a request for an additional franchise. Admin will review and
             approve.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
           <div className="space-y-2">
             <Label htmlFor="franchiseName">Franchise Name *</Label>
             <Input
@@ -215,6 +259,7 @@ export function RequestFranchiseModal({
                 setFormData((prev) => ({ ...prev, name: e.target.value }))
               }
               placeholder="Enter franchise center name"
+              className="rounded-lg border-border"
               required
             />
           </div>
@@ -226,7 +271,7 @@ export function RequestFranchiseModal({
                 setFormData((prev) => ({ ...prev, type: v }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className="rounded-lg border-border">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
@@ -235,18 +280,6 @@ export function RequestFranchiseModal({
                 <SelectItem value="School">School Franchise</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="address">Address *</Label>
-            <Textarea
-              id="address"
-              value={formData.address}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, address: e.target.value }))
-              }
-              rows={2}
-              required
-            />
           </div>
           <div className="flex gap-2">
             <StateCitySelect
@@ -263,7 +296,7 @@ export function RequestFranchiseModal({
               label="City"
               required
             />
-            <div className="space-y-2 w-32">
+            <div className="w-32 space-y-2">
               <Label htmlFor="pincode">Pincode</Label>
               <Input
                 id="pincode"
@@ -271,30 +304,28 @@ export function RequestFranchiseModal({
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, pincode: e.target.value }))
                 }
+                className="rounded-lg border-border"
               />
             </div>
           </div>
           <div className="space-y-2">
             <Label>Programs * (Select at least one)</Label>
-            <div className="border rounded-md p-3 space-y-2 max-h-32 overflow-y-auto">
+            <div className="max-h-32 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
               {isLoadingPrograms ? (
                 <p className="text-sm text-muted-foreground">Loading...</p>
               ) : programs.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No programs</p>
               ) : (
                 programs.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center space-x-2"
-                  >
+                  <div key={p.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`p-${p.id}`}
-                      checked={formData.programIds.includes(p.id)}
+                      checked={(formData.programIds ?? []).includes(p.id)}
                       onCheckedChange={() => handleProgramToggle(p.id)}
                     />
                     <label
                       htmlFor={`p-${p.id}`}
-                      className="text-sm cursor-pointer"
+                      className="cursor-pointer text-sm"
                     >
                       {p.name}
                     </label>
@@ -303,11 +334,30 @@ export function RequestFranchiseModal({
               )}
             </div>
           </div>
+          <div className="space-y-2 border-t border-border pt-4">
+            <Label htmlFor="address">Centre Address *</Label>
+            <Textarea
+              id="address"
+              value={formData.address}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, address: e.target.value }))
+              }
+              rows={3}
+              className="rounded-lg border-border"
+              placeholder="Full address of the proposed centre"
+              required
+            />
+          </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-lg border-border"
+              onClick={handleClose}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" className="rounded-lg" disabled={isLoading}>
               {isLoading ? "Submitting..." : "Submit Request"}
             </Button>
           </div>

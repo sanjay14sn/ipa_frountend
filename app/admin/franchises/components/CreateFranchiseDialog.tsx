@@ -20,13 +20,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FranchiseType, FranchiseStatus, BloodGroup } from "@/services/franchise.enums";
+import {
+  FranchiseType,
+  FranchiseStatus,
+  BloodGroup,
+} from "@/services/franchise.enums";
 import { StateCitySelect } from "@/components/StateCitySelect";
 import { Program } from "@/services/program.service";
 import { Eye, EyeOff, ArrowRight, CheckCircle, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/error-utils";
-import { createFranchiseeByAdmin, createPayrollDetails, type ProgramPayrollRequest } from "@/services/franchisee.service";
+import {
+  createFranchiseeByAdmin,
+  createPayrollDetails,
+  type ProgramPayrollRequest,
+} from "@/services/franchisee.service";
 import { Checkbox } from "@/components/ui/checkbox";
 import React from "react";
 
@@ -57,8 +65,8 @@ const Stepper = ({
                   currentStep === step.id
                     ? "bg-green-600 text-white border-green-600 shadow-md"
                     : currentStep > step.id
-                    ? "bg-green-600 text-white border-green-600"
-                    : "bg-white text-gray-400 border-gray-300"
+                      ? "bg-green-600 text-white border-green-600"
+                      : "bg-white text-gray-400 border-gray-300"
                 }`}
               >
                 {currentStep > step.id ? "✓" : step.id}
@@ -125,7 +133,7 @@ export function CreateFranchiseDialog({
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -146,7 +154,9 @@ export function CreateFranchiseDialog({
     selectedPrograms: [] as number[],
   });
 
-  const [programPayrolls, setProgramPayrolls] = useState<Record<number, ProgramPayroll>>({});
+  const [programPayrolls, setProgramPayrolls] = useState<
+    Record<number, ProgramPayroll>
+  >({});
 
   const validateCurrentStep = () => {
     const newErrors: Record<string, string> = {};
@@ -207,11 +217,13 @@ export function CreateFranchiseDialog({
 
   const handleProgramToggle = (programId: number) => {
     const isSelected = formData.selectedPrograms.includes(programId);
-    
+
     if (isSelected) {
       setFormData({
         ...formData,
-        selectedPrograms: formData.selectedPrograms.filter((id) => id !== programId),
+        selectedPrograms: formData.selectedPrograms.filter(
+          (id) => id !== programId,
+        ),
       });
       const newPayrolls = { ...programPayrolls };
       delete newPayrolls[programId];
@@ -247,7 +259,11 @@ export function CreateFranchiseDialog({
     }
   };
 
-  const updateProgramPayroll = (programId: number, field: keyof ProgramPayroll, value: any) => {
+  const updateProgramPayroll = (
+    programId: number,
+    field: keyof ProgramPayroll,
+    value: any,
+  ) => {
     setProgramPayrolls({
       ...programPayrolls,
       [programId]: {
@@ -289,9 +305,25 @@ export function CreateFranchiseDialog({
       });
 
       const franchiseId = response.result.franchise.id;
-      const payrollRequests: ProgramPayrollRequest[] = formData.selectedPrograms.map(
-        (programId) => programPayrolls[programId]
-      );
+      const payrollRequests: ProgramPayrollRequest[] =
+        formData.selectedPrograms.map((programId) => {
+          const p = programPayrolls[programId];
+          return {
+            programId: p.programId,
+            franchiseFee: Number(p.franchiseFee) || 0,
+            kitCost: Number(p.kitCost) || 0,
+            materialCost: Number(p.materialCost) || 0,
+            monthlyFee: Number(p.monthlyFee) || 0,
+            ciShare: Number(p.ciShare) || 0,
+            franchiseShare: Number(p.franchiseShare) || 0,
+            royalty: Number(p.royalty) || 0,
+            gstFranchiseFee: !!p.gstFranchiseFee,
+            gstRoyalty: !!p.gstRoyalty,
+            gstMaterialCost: !!p.gstMaterialCost,
+            installment: Boolean(Number(p.installment) > 0),
+            tenure: 12,
+          };
+        });
 
       await createPayrollDetails(franchiseId, {
         programPayrolls: payrollRequests,
@@ -363,7 +395,9 @@ export function CreateFranchiseDialog({
                   }}
                   className={errors.name ? "border-red-500" : ""}
                 />
-                {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+                {errors.name && (
+                  <p className="text-red-500 text-sm">{errors.name}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -378,7 +412,9 @@ export function CreateFranchiseDialog({
                   }}
                   className={errors.email ? "border-red-500" : ""}
                 />
-                {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+                {errors.email && (
+                  <p className="text-red-500 text-sm">{errors.email}</p>
+                )}
               </div>
             </div>
 
@@ -394,7 +430,9 @@ export function CreateFranchiseDialog({
                   }}
                   className={errors.phone ? "border-red-500" : ""}
                 />
-                {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
+                {errors.phone && (
+                  <p className="text-red-500 text-sm">{errors.phone}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -403,7 +441,9 @@ export function CreateFranchiseDialog({
                   id="dob"
                   type="date"
                   value={formData.dob}
-                  onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, dob: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -414,7 +454,10 @@ export function CreateFranchiseDialog({
                 <Select
                   value={formData.bloodGroup}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, bloodGroup: value as BloodGroup })
+                    setFormData({
+                      ...formData,
+                      bloodGroup: value as BloodGroup,
+                    })
                   }
                 >
                   <SelectTrigger>
@@ -435,7 +478,9 @@ export function CreateFranchiseDialog({
                 <Input
                   id="education"
                   value={formData.education}
-                  onChange={(e) => setFormData({ ...formData, education: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, education: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -459,12 +504,17 @@ export function CreateFranchiseDialog({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="communicationAddress">Communication Address</Label>
+                <Label htmlFor="communicationAddress">
+                  Communication Address
+                </Label>
                 <Input
                   id="communicationAddress"
                   value={formData.communicationAddress}
                   onChange={(e) =>
-                    setFormData({ ...formData, communicationAddress: e.target.value })
+                    setFormData({
+                      ...formData,
+                      communicationAddress: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -474,7 +524,9 @@ export function CreateFranchiseDialog({
                 <Input
                   id="occupation"
                   value={formData.occupation}
-                  onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, occupation: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -484,7 +536,9 @@ export function CreateFranchiseDialog({
               <Input
                 id="reference"
                 value={formData.reference}
-                onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, reference: e.target.value })
+                }
               />
             </div>
           </div>
@@ -501,7 +555,8 @@ export function CreateFranchiseDialog({
                   value={formData.franchiseName}
                   onChange={(e) => {
                     setFormData({ ...formData, franchiseName: e.target.value });
-                    if (errors.franchiseName) setErrors({ ...errors, franchiseName: "" });
+                    if (errors.franchiseName)
+                      setErrors({ ...errors, franchiseName: "" });
                   }}
                   className={errors.franchiseName ? "border-red-500" : ""}
                 />
@@ -515,7 +570,10 @@ export function CreateFranchiseDialog({
                 <Select
                   value={formData.franchiseType}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, franchiseType: value as FranchiseType })
+                    setFormData({
+                      ...formData,
+                      franchiseType: value as FranchiseType,
+                    })
                   }
                 >
                   <SelectTrigger>
@@ -538,13 +596,19 @@ export function CreateFranchiseDialog({
                 id="franchiseAddress"
                 value={formData.franchiseAddress}
                 onChange={(e) => {
-                  setFormData({ ...formData, franchiseAddress: e.target.value });
-                  if (errors.franchiseAddress) setErrors({ ...errors, franchiseAddress: "" });
+                  setFormData({
+                    ...formData,
+                    franchiseAddress: e.target.value,
+                  });
+                  if (errors.franchiseAddress)
+                    setErrors({ ...errors, franchiseAddress: "" });
                 }}
                 className={errors.franchiseAddress ? "border-red-500" : ""}
               />
               {errors.franchiseAddress && (
-                <p className="text-red-500 text-sm">{errors.franchiseAddress}</p>
+                <p className="text-red-500 text-sm">
+                  {errors.franchiseAddress}
+                </p>
               )}
             </div>
 
@@ -572,7 +636,9 @@ export function CreateFranchiseDialog({
                 ))}
               </div>
               {errors.selectedPrograms && (
-                <p className="text-red-500 text-sm">{errors.selectedPrograms}</p>
+                <p className="text-red-500 text-sm">
+                  {errors.selectedPrograms}
+                </p>
               )}
             </div>
           </div>
@@ -591,8 +657,13 @@ export function CreateFranchiseDialog({
                 const payroll = programPayrolls[programId];
 
                 return (
-                  <div key={programId} className="border rounded-lg p-4 space-y-3 bg-gray-50">
-                    <h4 className="font-medium text-sm text-gray-800">{program?.name}</h4>
+                  <div
+                    key={programId}
+                    className="border rounded-lg p-4 space-y-3 bg-gray-50"
+                  >
+                    <h4 className="font-medium text-sm text-gray-800">
+                      {program?.name}
+                    </h4>
 
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1">
@@ -603,19 +674,38 @@ export function CreateFranchiseDialog({
                               type="checkbox"
                               checked={payroll?.gstFranchiseFee || false}
                               onChange={(e) =>
-                                updateProgramPayroll(programId, "gstFranchiseFee", e.target.checked)
+                                updateProgramPayroll(
+                                  programId,
+                                  "gstFranchiseFee",
+                                  e.target.checked,
+                                )
                               }
                             />
-                            <span className="text-xs text-gray-500" title="Check if amount includes GST; uncheck to add GST on checkout">GST Inc.</span>
+                            <span
+                              className="text-xs text-gray-500"
+                              title="Check if amount includes GST; uncheck to add GST on checkout"
+                            >
+                              GST Inc.
+                            </span>
                           </label>
                         </div>
                         <Input
                           type="number"
                           min="0"
-                          value={payroll?.franchiseFee === 0 || payroll?.franchiseFee === undefined || payroll?.franchiseFee === null ? "" : payroll?.franchiseFee}
+                          value={
+                            payroll?.franchiseFee === 0 ||
+                            payroll?.franchiseFee === undefined ||
+                            payroll?.franchiseFee === null
+                              ? ""
+                              : payroll?.franchiseFee
+                          }
                           onChange={(e) => {
                             const val = e.target.value;
-                            updateProgramPayroll(programId, "franchiseFee", val === "" ? 0 : Number(val));
+                            updateProgramPayroll(
+                              programId,
+                              "franchiseFee",
+                              val === "" ? 0 : Number(val),
+                            );
                           }}
                         />
                       </div>
@@ -625,10 +715,20 @@ export function CreateFranchiseDialog({
                         <Input
                           type="number"
                           min="0"
-                          value={payroll?.kitCost === 0 || payroll?.kitCost === undefined || payroll?.kitCost === null ? "" : payroll?.kitCost}
+                          value={
+                            payroll?.kitCost === 0 ||
+                            payroll?.kitCost === undefined ||
+                            payroll?.kitCost === null
+                              ? ""
+                              : payroll?.kitCost
+                          }
                           onChange={(e) => {
                             const val = e.target.value;
-                            updateProgramPayroll(programId, "kitCost", val === "" ? 0 : Number(val));
+                            updateProgramPayroll(
+                              programId,
+                              "kitCost",
+                              val === "" ? 0 : Number(val),
+                            );
                           }}
                         />
                       </div>
@@ -641,19 +741,38 @@ export function CreateFranchiseDialog({
                               type="checkbox"
                               checked={payroll?.gstMaterialCost || false}
                               onChange={(e) =>
-                                updateProgramPayroll(programId, "gstMaterialCost", e.target.checked)
+                                updateProgramPayroll(
+                                  programId,
+                                  "gstMaterialCost",
+                                  e.target.checked,
+                                )
                               }
                             />
-                            <span className="text-xs text-gray-500" title="Check if amount includes GST; uncheck to add GST on checkout">GST Inc.</span>
+                            <span
+                              className="text-xs text-gray-500"
+                              title="Check if amount includes GST; uncheck to add GST on checkout"
+                            >
+                              GST Inc.
+                            </span>
                           </label>
                         </div>
                         <Input
                           type="number"
                           min="0"
-                          value={payroll?.materialCost === 0 || payroll?.materialCost === undefined || payroll?.materialCost === null ? "" : payroll?.materialCost}
+                          value={
+                            payroll?.materialCost === 0 ||
+                            payroll?.materialCost === undefined ||
+                            payroll?.materialCost === null
+                              ? ""
+                              : payroll?.materialCost
+                          }
                           onChange={(e) => {
                             const val = e.target.value;
-                            updateProgramPayroll(programId, "materialCost", val === "" ? 0 : Number(val));
+                            updateProgramPayroll(
+                              programId,
+                              "materialCost",
+                              val === "" ? 0 : Number(val),
+                            );
                           }}
                         />
                       </div>
@@ -665,10 +784,20 @@ export function CreateFranchiseDialog({
                         <Input
                           type="number"
                           min="0"
-                          value={payroll?.monthlyFee === 0 || payroll?.monthlyFee === undefined || payroll?.monthlyFee === null ? "" : payroll?.monthlyFee}
+                          value={
+                            payroll?.monthlyFee === 0 ||
+                            payroll?.monthlyFee === undefined ||
+                            payroll?.monthlyFee === null
+                              ? ""
+                              : payroll?.monthlyFee
+                          }
                           onChange={(e) => {
                             const val = e.target.value;
-                            updateProgramPayroll(programId, "monthlyFee", val === "" ? 0 : Number(val));
+                            updateProgramPayroll(
+                              programId,
+                              "monthlyFee",
+                              val === "" ? 0 : Number(val),
+                            );
                           }}
                         />
                       </div>
@@ -679,10 +808,20 @@ export function CreateFranchiseDialog({
                           type="number"
                           min="0"
                           max="100"
-                          value={payroll?.ciShare === 0 || payroll?.ciShare === undefined || payroll?.ciShare === null ? "" : payroll?.ciShare}
+                          value={
+                            payroll?.ciShare === 0 ||
+                            payroll?.ciShare === undefined ||
+                            payroll?.ciShare === null
+                              ? ""
+                              : payroll?.ciShare
+                          }
                           onChange={(e) => {
                             const val = e.target.value;
-                            updateProgramPayroll(programId, "ciShare", val === "" ? 0 : Number(val));
+                            updateProgramPayroll(
+                              programId,
+                              "ciShare",
+                              val === "" ? 0 : Number(val),
+                            );
                           }}
                         />
                       </div>
@@ -693,10 +832,20 @@ export function CreateFranchiseDialog({
                           type="number"
                           min="0"
                           max="100"
-                          value={payroll?.franchiseShare === 0 || payroll?.franchiseShare === undefined || payroll?.franchiseShare === null ? "" : payroll?.franchiseShare}
+                          value={
+                            payroll?.franchiseShare === 0 ||
+                            payroll?.franchiseShare === undefined ||
+                            payroll?.franchiseShare === null
+                              ? ""
+                              : payroll?.franchiseShare
+                          }
                           onChange={(e) => {
                             const val = e.target.value;
-                            updateProgramPayroll(programId, "franchiseShare", val === "" ? 0 : Number(val));
+                            updateProgramPayroll(
+                              programId,
+                              "franchiseShare",
+                              val === "" ? 0 : Number(val),
+                            );
                           }}
                         />
                       </div>
@@ -711,20 +860,39 @@ export function CreateFranchiseDialog({
                               type="checkbox"
                               checked={payroll?.gstRoyalty || false}
                               onChange={(e) =>
-                                updateProgramPayroll(programId, "gstRoyalty", e.target.checked)
+                                updateProgramPayroll(
+                                  programId,
+                                  "gstRoyalty",
+                                  e.target.checked,
+                                )
                               }
                             />
-                            <span className="text-xs text-gray-500" title="Check if amount includes GST; uncheck to add GST on checkout">GST Inc.</span>
+                            <span
+                              className="text-xs text-gray-500"
+                              title="Check if amount includes GST; uncheck to add GST on checkout"
+                            >
+                              GST Inc.
+                            </span>
                           </label>
                         </div>
                         <Input
                           type="number"
                           min="0"
                           max="100"
-                          value={payroll?.royalty === 0 || payroll?.royalty === undefined || payroll?.royalty === null ? "" : payroll?.royalty}
+                          value={
+                            payroll?.royalty === 0 ||
+                            payroll?.royalty === undefined ||
+                            payroll?.royalty === null
+                              ? ""
+                              : payroll?.royalty
+                          }
                           onChange={(e) => {
                             const val = e.target.value;
-                            updateProgramPayroll(programId, "royalty", val === "" ? 0 : Number(val));
+                            updateProgramPayroll(
+                              programId,
+                              "royalty",
+                              val === "" ? 0 : Number(val),
+                            );
                           }}
                         />
                       </div>
@@ -734,10 +902,20 @@ export function CreateFranchiseDialog({
                         <Input
                           type="number"
                           min="0"
-                          value={payroll?.installment === 0 || payroll?.installment === undefined || payroll?.installment === null ? "" : payroll?.installment}
+                          value={
+                            payroll?.installment === 0 ||
+                            payroll?.installment === undefined ||
+                            payroll?.installment === null
+                              ? ""
+                              : payroll?.installment
+                          }
                           onChange={(e) => {
                             const val = e.target.value;
-                            updateProgramPayroll(programId, "installment", val === "" ? 0 : Number(val));
+                            updateProgramPayroll(
+                              programId,
+                              "installment",
+                              val === "" ? 0 : Number(val),
+                            );
                           }}
                         />
                       </div>
@@ -747,10 +925,20 @@ export function CreateFranchiseDialog({
                         <Input
                           type="number"
                           min="0"
-                          value={payroll?.totalAmount === 0 || payroll?.totalAmount === undefined || payroll?.totalAmount === null ? "" : payroll?.totalAmount}
+                          value={
+                            payroll?.totalAmount === 0 ||
+                            payroll?.totalAmount === undefined ||
+                            payroll?.totalAmount === null
+                              ? ""
+                              : payroll?.totalAmount
+                          }
                           onChange={(e) => {
                             const val = e.target.value;
-                            updateProgramPayroll(programId, "totalAmount", val === "" ? 0 : Number(val));
+                            updateProgramPayroll(
+                              programId,
+                              "totalAmount",
+                              val === "" ? 0 : Number(val),
+                            );
                           }}
                         />
                       </div>
@@ -765,7 +953,10 @@ export function CreateFranchiseDialog({
                             updateProgramPayroll(programId, "freeload", checked)
                           }
                         />
-                        <Label htmlFor={`freeload-${programId}`} className="text-xs">
+                        <Label
+                          htmlFor={`freeload-${programId}`}
+                          className="text-xs"
+                        >
                           Freeload
                         </Label>
                       </div>
@@ -791,7 +982,8 @@ export function CreateFranchiseDialog({
                     value={formData.password}
                     onChange={(e) => {
                       setFormData({ ...formData, password: e.target.value });
-                      if (errors.password) setErrors({ ...errors, password: "" });
+                      if (errors.password)
+                        setErrors({ ...errors, password: "" });
                     }}
                     className={errors.password ? "border-red-500" : ""}
                   />
@@ -803,7 +995,9 @@ export function CreateFranchiseDialog({
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
+                {errors.password && (
+                  <p className="text-red-500 text-sm">{errors.password}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -815,8 +1009,12 @@ export function CreateFranchiseDialog({
                     placeholder="Re-enter password"
                     value={formData.confirmPassword}
                     onChange={(e) => {
-                      setFormData({ ...formData, confirmPassword: e.target.value });
-                      if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: "" });
+                      setFormData({
+                        ...formData,
+                        confirmPassword: e.target.value,
+                      });
+                      if (errors.confirmPassword)
+                        setErrors({ ...errors, confirmPassword: "" });
                     }}
                     className={errors.confirmPassword ? "border-red-500" : ""}
                   />
@@ -825,11 +1023,17 @@ export function CreateFranchiseDialog({
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                   >
-                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showConfirmPassword ? (
+                      <EyeOff size={16} />
+                    ) : (
+                      <Eye size={16} />
+                    )}
                   </button>
                 </div>
                 {errors.confirmPassword && (
-                  <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
+                  <p className="text-red-500 text-sm">
+                    {errors.confirmPassword}
+                  </p>
                 )}
               </div>
             </div>
@@ -853,7 +1057,8 @@ export function CreateFranchiseDialog({
               Franchise Created!
             </DialogTitle>
             <DialogDescription className="text-center">
-              The franchise has been successfully setup with all details and payroll configuration.
+              The franchise has been successfully setup with all details and
+              payroll configuration.
             </DialogDescription>
           </DialogHeader>
         </DialogContent>
@@ -898,7 +1103,11 @@ export function CreateFranchiseDialog({
                   <div className="flex gap-4 pt-6">
                     <div className="flex gap-2">
                       {currentStep > 1 && (
-                        <Button type="button" variant="outline" onClick={handlePrevious}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handlePrevious}
+                        >
                           Previous
                         </Button>
                       )}
@@ -918,7 +1127,11 @@ export function CreateFranchiseDialog({
                 ) : (
                   <div className="flex gap-4 pt-6">
                     <div className="flex gap-2">
-                      <Button type="button" variant="outline" onClick={handlePrevious}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handlePrevious}
+                      >
                         Previous
                       </Button>
                     </div>

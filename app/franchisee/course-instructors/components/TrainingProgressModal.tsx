@@ -11,14 +11,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import {
-  Loader2,
-  AlertCircle,
-  Target,
-} from "lucide-react";
+import { Loader2, AlertCircle, Package } from "lucide-react";
 import {
   getCITrainingProgress,
+  getCITrainingPackages,
   CITrainingProgress,
+  CITrainingPackage,
 } from "@/services/course-instructor.service";
 
 interface TrainingProgressModalProps {
@@ -35,146 +33,164 @@ export function TrainingProgressModal({
   instructorName,
 }: TrainingProgressModalProps) {
   const [progress, setProgress] = useState<CITrainingProgress | null>(null);
+  const [packages, setPackages] = useState<CITrainingPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      loadProgress();
+      setLoading(true);
+      setError(null);
+      Promise.all([
+        getCITrainingProgress(instructorId),
+        getCITrainingPackages(instructorId),
+      ])
+        .then(([prog, pkgs]) => {
+          setProgress(prog);
+          setPackages(pkgs.sort((a, b) => a.packageOrder - b.packageOrder));
+        })
+        .catch((err: any) => setError(err.message || "Failed to load training progress"))
+        .finally(() => setLoading(false));
     }
   }, [isOpen, instructorId]);
 
-  const loadProgress = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getCITrainingProgress(instructorId);
-      setProgress(data);
-    } catch (err: any) {
-      setError(err.message || "Failed to load training progress");
-    } finally {
-      setLoading(false);
+  const trainings = progress?.trainings ?? [];
+
+  // Group trainings by package. Trainings not in any package go to an "unassigned" bucket.
+  const packageGroups: Array<{ pkg: CITrainingPackage | null; levels: typeof trainings }> = [];
+
+  if (packages.length > 0) {
+    for (const pkg of packages) {
+      const levels = trainings.filter((t) =>
+        pkg.trainingLevelIds.includes(t.trainingLevelId),
+      );
+      if (levels.length > 0) {
+        packageGroups.push({ pkg, levels });
+      }
     }
-  };
+    const assignedIds = new Set(packages.flatMap((p) => p.trainingLevelIds));
+    const unassigned = trainings.filter((t) => !assignedIds.has(t.trainingLevelId));
+    if (unassigned.length > 0) {
+      packageGroups.push({ pkg: null, levels: unassigned });
+    }
+  } else {
+    // No package data — render all levels ungrouped
+    if (trainings.length > 0) {
+      packageGroups.push({ pkg: null, levels: trainings });
+    }
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="w-full max-w-3xl max-h-[85vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary" />
-            Training Progress - {instructorName}
+            <Package className="h-5 w-5 text-primary" />
+            Training Progress — {instructorName}
           </DialogTitle>
-          <DialogDescription>
-            Track sequential training completion and progress
-          </DialogDescription>
+          <DialogDescription>Sequential training levels and completion status</DialogDescription>
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         ) : error ? (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-        ) : !progress || progress.totalTrainings === 0 ? (
-          <div className="text-center py-12">
-            <Target className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">
-              No training levels enrolled yet for this instructor.
-            </p>
+        ) : !progress || (progress.totalTrainings ?? 0) === 0 ? (
+          <div className="py-10 text-center text-sm text-muted-foreground">
+            No training levels enrolled yet.
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Overall Progress */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">
-                  {progress.completedTrainings} of {progress.totalTrainings} completed
-                </span>
-                <span className="font-medium text-gray-900">
-                  {Math.round(progress.progress)}%
-                </span>
+          <div className="space-y-4">
+            {/* Overall progress bar */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{progress.completedTrainings ?? 0} of {progress.totalTrainings ?? 0} completed</span>
+                <span>{Math.round(progress.progress ?? 0)}%</span>
               </div>
-              <Progress value={progress.progress} className="h-2" />
+              <Progress value={progress.progress ?? 0} className="h-1.5" />
             </div>
 
-            {/* Active Training */}
-            {progress.activeTraining && (
-              <div className="p-3 border border-primary/20 bg-primary/5 rounded-lg">
-                <p className="text-sm text-gray-700">
-                  <span className="font-medium">Active:</span>{" "}
-                  {progress.activeTraining.trainingLevelName}
-                </p>
-              </div>
-            )}
-
-            {/* Training List */}
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-gray-700">Training Levels</h3>
-              {progress.trainings.map((training) => (
+            {/* Package groups */}
+            <div className="space-y-4">
+              {packageGroups.map(({ pkg, levels }, idx) => (
                 <div
-                  key={training.id}
-                  className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white"
+                  key={pkg?.id ?? `unassigned-${idx}`}
+                  className="rounded-lg border border-border bg-muted/30 overflow-hidden"
                 >
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="text-sm font-medium text-gray-500 w-6">
-                      {training.displayOrder}
+                  {/* Package header */}
+                  <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-card">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      <Package className="h-3.5 w-3.5" />
+                      {pkg?.name ?? "Training Package"}
                     </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900 text-sm">
-                        {training.trainingLevelName}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        ₹{training.amount.toLocaleString()}
-                        {training.isCompleted && training.marks != null && (
-                          <span className="ml-2 font-medium text-gray-700">
-                            • Marks: {training.marks}%
-                          </span>
-                        )}
-                      </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground">
+                        {levels.length} level{levels.length !== 1 ? "s" : ""}
+                      </span>
+                      {pkg && (
+                        <span className="text-xs font-semibold text-card-foreground">
+                          ₹{pkg.fee.toLocaleString()}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {training.paid ? (
-                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
-                        Paid
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200 text-xs">
-                        Unpaid
-                      </Badge>
-                    )}
-                    {training.isCompleted && (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
-                        Completed
-                      </Badge>
-                    )}
-                    {training.isActive && (
-                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs">
-                        Active
-                      </Badge>
-                    )}
+
+                  {/* Level rows */}
+                  <div className="divide-y divide-border">
+                    {levels.map((training) => (
+                      <div
+                        key={training.id ?? training.trainingLevelId}
+                        className="flex items-center gap-3 px-4 py-2.5"
+                      >
+                        <span className="w-4 shrink-0 text-xs text-muted-foreground">
+                          {training.displayOrder}
+                        </span>
+                        <span className="flex-1 text-sm text-card-foreground truncate">
+                          {training.trainingLevelName}
+                        </span>
+                        {training.isCompleted && training.marks != null && (
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {training.marks}%
+                          </span>
+                        )}
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          ₹{Number(training.amount ?? 0).toLocaleString()}
+                        </span>
+                        <div className="flex shrink-0 items-center gap-1">
+                          {training.paid ? (
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs px-1.5 py-0">
+                              Paid
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-muted text-muted-foreground border-border text-xs px-1.5 py-0">
+                              Unpaid
+                            </Badge>
+                          )}
+                          {training.isCompleted && (
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs px-1.5 py-0">
+                              Completed
+                            </Badge>
+                          )}
+                          {training.isActive && !training.isCompleted && (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs px-1.5 py-0">
+                              Active
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
             </div>
-
-            {/* Summary */}
-            {progress.completedTrainings === progress.totalTrainings && (
-              <div className="p-3 border border-green-200 bg-green-50 rounded-lg">
-                <p className="text-sm text-green-800 font-medium">
-                  All trainings completed
-                </p>
-              </div>
-            )}
           </div>
         )}
       </DialogContent>
     </Dialog>
   );
 }
-
-

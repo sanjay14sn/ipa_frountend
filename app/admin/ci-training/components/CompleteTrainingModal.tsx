@@ -123,7 +123,9 @@ export function CompleteTrainingModal({
               min="0"
               max="100"
               step="0.01"
-              value={formData.marksObtained === "0" || formData.marksObtained === 0 ? "" : formData.marksObtained}
+              value={
+                formData.marksObtained === "0" ? "" : formData.marksObtained
+              }
               onChange={(e) =>
                 setFormData({ ...formData, marksObtained: e.target.value })
               }

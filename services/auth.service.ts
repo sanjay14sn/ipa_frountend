@@ -1,36 +1,3 @@
-
-
-interface LoginResponse {
-  statusCode: number;
-  timestamp: string;
-  method: string;
-  path: string;
-  message: string;
-  result: {
-    message: string;
-    userId: number;
-    role: string;
-  };
-}
-
-interface FranchiseeLoginResponse {
-  statusCode: number;
-  timestamp: string;
-  method: string;
-  path: string;
-  message: string;
-  result: {
-    message: string;
-    userId: number;
-    name: string;
-    franchiseId: string;
-    franchiseName?: string;
-    role: string;
-    franchiseStatus: string;
-    franchises?: Array<{ id: string; name: string; status: string }>;
-  };
-}
-
 interface FranchiseeProfileResponse {
   statusCode: number;
   timestamp: string;
@@ -117,37 +84,43 @@ interface FranchiseeProfileResponse {
 // }
 
 import { api } from "@/lib/axios";
+import { unwrapData } from "@/lib/unwrap-api";
 
 export async function login(
   name: string,
   password: string
-): Promise<LoginResponse> {
+): Promise<{ userId: number; role?: "super" | "staff"; state?: string | null }> {
   const response = await api.post("/admin/auth/login", {
     name,
     password,
   });
-
-  if (response.status === 200) {
-    localStorage.setItem("user", JSON.stringify(response.data.result));
-  }
-
-  return response.data;
+  return unwrapData<{ userId: number }>(response);
 }
 
 export async function franchiseeLogin(
   email: string,
   password: string
-): Promise<FranchiseeLoginResponse> {
+): Promise<{ franchiseeId: number; franchiseId: string; role: string }> {
   const response = await api.post("/franchisee/auth/login", {
     email,
     password,
   });
+  return unwrapData<{
+    franchiseeId: number;
+    franchiseId: string;
+    role: string;
+  }>(response);
+}
 
-  if (response.status === 200) {
-    localStorage.setItem("user", JSON.stringify(response.data.result));
-  }
-
-  return response.data;
+export async function getAdminProfile(): Promise<{
+  id: number;
+  name: string;
+  emailId?: string;
+  role: "super" | "staff";
+  state?: string | null;
+}> {
+  const response = await api.get("/admin/auth/me");
+  return unwrapData(response);
 }
 
 export async function logout(): Promise<void> {
@@ -161,7 +134,7 @@ export async function franchiseeLogout(): Promise<void> {
 }
 
 export async function getFranchiseeProfile(): Promise<FranchiseeProfileResponse> {
-  const response = await api.get("/franchisee/profile");
+  const response = await api.get("/franchisee/auth/me");
   return response.data;
 }
 
@@ -171,9 +144,23 @@ export async function switchFranchise(franchiseId: string): Promise<{
   franchiseStatus: string;
   franchises: Array<{ id: string; name: string; status: string }>;
 }> {
-  const response = await api.post("/franchisee/auth/switch", { franchiseId });
-  const data = response.data?.result ?? response.data;
-  return data;
+  await api.post("/franchisee/auth/switch", { franchiseId });
+  const listRes = await api.get("/franchise");
+  const franchisesRaw =
+    (listRes.data as { result?: Array<{ id: string; name: string; status: string }> })
+      .result ?? [];
+  const franchises = franchisesRaw.map((f) => ({
+    id: f.id,
+    name: f.name,
+    status: f.status,
+  }));
+  const current = franchises.find((f) => f.id === franchiseId);
+  return {
+    franchiseId,
+    franchiseName: current?.name ?? "",
+    franchiseStatus: current?.status ?? "",
+    franchises,
+  };
 }
 
 export function getCurrentFranchiseeProfile() {

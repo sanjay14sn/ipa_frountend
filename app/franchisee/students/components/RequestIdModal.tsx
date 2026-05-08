@@ -14,7 +14,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertCircle, CreditCard, Users, CheckCircle } from "lucide-react";
 import { StudentData, StudentIdStatus } from "@/services/student.service";
-import { requestStudentIdsWithRevalidation } from "@/hooks/use-students";
+import { requestStudentIdsWithRevalidation } from "@/hooks/api/student.hooks";
 
 interface RequestIdModalProps {
   open: boolean;

@@ -14,10 +14,14 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { franchiseeLogin, getFranchiseeProfile } from "@/services/auth.service";
+import {
+  franchiseeLogin,
+  getFranchiseeProfile,
+} from "@/services/auth.service";
+import { getFranchiseList } from "@/services/franchise.service";
 import { useUser } from "@/context/user-context";
-import { getUserFriendlyMessage } from "@/lib/error-utils";
-import type { User } from "@/lib/auth";
+import { getErrorMessage, getUserFriendlyMessage } from "@/lib/error-utils";
+import { getEffectiveFranchiseStatus, type User } from "@/lib/auth";
 
 export function LoginCard({
   onStartApplication,
@@ -39,28 +43,32 @@ export function LoginCard({
     setError("");
 
     try {
-      const response = await franchiseeLogin(username.trim(), password.trim());
-      const data = response.result;
-
-      if (response.statusCode !== 201) {
-        setError(response.message || "Login failed");
+      const loginResult = await franchiseeLogin(
+        username.trim(),
+        password.trim(),
+      );
+      if (loginResult.role !== "franchisee") {
+        setError("This portal is for franchisees only.");
         setLoading(false);
         return;
       }
 
-      if (data.role !== "franchisee" && data.role !== "franchise") {
-        setError(
-          "This portal is for franchisees only. Please use the admin portal for admin access.",
-        );
-        setLoading(false);
-        return;
-      }
+      const franchisesRaw = await getFranchiseList();
+      const franchises = franchisesRaw.map((f) => ({
+        id: f.id,
+        name: f.name,
+        type: f.type,
+        status: f.status,
+      }));
+      const current = franchises.find(
+        (f) => f.id === loginResult.franchiseId,
+      );
 
-      let profileData = null;
+      let profileData: Record<string, unknown> | null = null;
       try {
         const profileResponse = await getFranchiseeProfile();
-        if (profileResponse.statusCode === 200) {
-          profileData = profileResponse.result;
+        if (profileResponse?.result) {
+          profileData = profileResponse.result as Record<string, unknown>;
         }
       } catch (profileError) {
         console.warn("Failed to fetch profile data:", profileError);
@@ -70,38 +78,87 @@ export function LoginCard({
         ? {
             ...profileData,
             city:
-              (profileData as any).franchise?.city ?? (profileData as any).city,
+              (profileData as { franchise?: { city?: string }; city?: string })
+                .franchise?.city ?? profileData.city,
             state:
-              (profileData as any).franchise?.state ??
-              (profileData as any).state,
+              (profileData as { franchise?: { state?: string }; state?: string })
+                .franchise?.state ?? profileData.state,
             pincode:
-              (profileData as any).franchise?.pincode ??
-              (profileData as any).pincode,
+              (profileData as {
+                franchise?: { pincode?: string };
+                pincode?: string;
+              }).franchise?.pincode ?? profileData.pincode,
             address:
-              (profileData as any).franchise?.address ??
-              (profileData as any).address,
+              (profileData as {
+                franchise?: { address?: string };
+                address?: string;
+              }).franchise?.address ?? profileData.address,
+            franchise:
+              (profileData as { franchise?: unknown }).franchise ??
+              (current
+                ? {
+                    id: current.id,
+                    name: current.name,
+                    type: current.type,
+                    status: current.status,
+                  }
+                : undefined),
           }
-        : undefined;
+        : current
+          ? {
+              franchise: {
+                id: current.id,
+                name: current.name,
+                type: current.type,
+                status: current.status,
+              },
+            }
+          : undefined;
 
-      setUser({
-        id: String(data.userId),
-        name: data.name,
+      const nextUser = {
+        id: String(loginResult.franchiseeId),
+        name:
+          (typeof profileData?.name === "string" && profileData.name) ||
+          username.trim(),
         role: "franchisee",
-        franchiseStatus: data.franchiseStatus,
-        franchiseId: data.franchiseId,
-        franchiseName: data.franchiseName,
-        franchises: data.franchises,
-        profile,
-      } as User);
-      router.push("/franchisee/dashboard");
+        franchiseStatus:
+          current?.status ??
+          (profile as User["profile"] | undefined)?.franchise?.status,
+        franchiseId: loginResult.franchiseId,
+        franchiseName:
+          current?.name ??
+          (profile as User["profile"] | undefined)?.franchise?.name,
+        franchises,
+        profile: profile as User["profile"],
+      } as User;
+
+      setUser(nextUser);
+      const franchiseStatus = getEffectiveFranchiseStatus(
+        nextUser,
+        loginResult.franchiseId,
+      );
+      router.push(
+        franchiseStatus === "Active"
+          ? "/franchisee/dashboard"
+          : `/franchisee/agreement?franchiseId=${loginResult.franchiseId}`,
+      );
     } catch (err: any) {
       try {
+        const rawMessage = getErrorMessage(err, "");
+        if (
+          rawMessage.toLowerCase().includes("credentials have not been issued")
+        ) {
+          setError(
+            "Your portal access is not ready yet. Please wait for approval and the credential email.",
+          );
+          return;
+        }
         const errorMessage = getUserFriendlyMessage(
           err,
           "Invalid username or password. Please check your credentials and try again.",
         );
         setError(errorMessage);
-      } catch (errorHandlingError) {
+      } catch {
         setError(
           "Invalid username or password. Please check your credentials and try again.",
         );
@@ -112,7 +169,7 @@ export function LoginCard({
   }
 
   return (
-    <Card className="order-2 border-border bg-card md:order-1 w-[500px]">
+    <Card className="order-2 w-[500px] rounded-2xl border-border bg-card shadow-sm md:order-1">
       <CardHeader className="space-y-2">
         <CardTitle className="text-2xl text-primary">Sign in</CardTitle>
         <CardDescription>Access your franchisee dashboard</CardDescription>
@@ -135,7 +192,7 @@ export function LoginCard({
               <Label htmlFor="password">Password</Label>
               <Link
                 href="#"
-                className="ml-auto text-sm text-brand-green-600 underline underline-offset-4"
+                className="ml-auto text-sm text-primary underline underline-offset-4"
               >
                 Forgot password?
               </Link>
@@ -169,11 +226,7 @@ export function LoginCard({
             <div className="text-red-500 text-sm text-center">{error}</div>
           )}
 
-          <Button
-            type="submit"
-            className="w-full bg-brand-green-500 hover:bg-brand-green-600 text-white"
-            disabled={loading}
-          >
+          <Button type="submit" className="w-full rounded-lg" disabled={loading}>
             {loading ? "Signing in..." : "Sign in"}
           </Button>
         </form>
@@ -181,14 +234,15 @@ export function LoginCard({
         <div className="space-y-2">
           <div className="text-xs text-muted-foreground text-center mt-2">
             Admin users should use the{" "}
-            <a href="/admin-login" className="text-brand-green-600 underline">
+            <a href="/admin-login" className="text-primary underline">
               Admin Portal
             </a>
             <br></br>
             New user?{" "}
             <button
+              type="button"
               onClick={onStartApplication}
-              className="text-brand-green-600 underline"
+              className="text-primary underline"
             >
               Apply Now
             </button>

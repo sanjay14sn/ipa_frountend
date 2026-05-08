@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "franchisee";
+export type UserRole = "admin" | "franchisee" | "franchise";
 
 export interface User {
   id: string;
@@ -7,6 +7,10 @@ export interface User {
   franchiseId?: string;
   franchiseName?: string;
   franchiseStatus?: string;
+  mail?: string;
+  phone?: string;
+  adminRole?: "super" | "staff";
+  state?: string | null;
   franchises?: Array<{ id: string; name: string; status: string }>;
   profile?: {
     id: number;
@@ -36,6 +40,12 @@ export interface User {
       updatedAt: string;
       city?: string;
       address?: string;
+      franchisePrograms?: Array<{
+        program: {
+          id: number;
+          name: string;
+        };
+      }>;
       franchisePayrolls?: Array<{
         franchiseFee: number;
         dateOfPayment: string;
@@ -77,6 +87,33 @@ export interface User {
   };
 }
 
+export function getEffectiveFranchiseStatus(
+  user: User | null | undefined,
+  franchiseId?: string | null,
+): string | undefined {
+  if (!user) return undefined;
+
+  const targetFranchiseId = franchiseId ?? user.franchiseId;
+  if (
+    targetFranchiseId &&
+    user.profile?.franchise?.id === targetFranchiseId &&
+    user.profile.franchise.status
+  ) {
+    return user.profile.franchise.status;
+  }
+
+  if (user.franchiseStatus) {
+    return user.franchiseStatus;
+  }
+
+  if (user.profile?.franchise?.status) {
+    return user.profile.franchise.status;
+  }
+
+  return user.franchises?.find((franchise) => franchise.id === targetFranchiseId)
+    ?.status;
+}
+
 export const USERS = {
   admin: {
     id: "admin-1",
@@ -112,12 +149,16 @@ export function saveUserToStorage(userId: number) {
   }
 }
 
-export function getUserFromStorage(): number | null {
-  if (typeof window !== "undefined") {
-    const userId = localStorage.getItem("userId");
-    return userId ? parseInt(userId) : null;
+/** Full user object persisted by `context/user-context` */
+export function getUserFromStorage(): User | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem("user");
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as User;
+  } catch {
+    return null;
   }
-  return null;
 }
 
 export function removeUserFromStorage() {

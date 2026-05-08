@@ -4,22 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Plus,
-  Trash2,
-  Edit2,
-  BookOpen,
-  Package,
-  FileText,
-  Edit,
-  Save,
-  X,
-} from "lucide-react";
+import { Plus, Trash2, Edit2, FileText, Edit, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
-  getAllPrograms,
   createProgram,
   updateProgram,
   deleteProgram,
@@ -48,28 +36,89 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AdminTable } from "@/components/shared";
-import type { AdminTableColumn } from "@/components/shared/AdminTable";
+import { DataTable } from "@/components/shared";
+import type { DataTableColumn } from "@/components/shared";
 import { LevelManagement } from "./LevelManagement";
+import { CITrainingLevelManagement } from "./CITrainingLevelManagement";
+import { ProgramKitManagement } from "./ProgramKitManagement";
 import { StreamManagement } from "./StreamManagement";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  getProgramKits,
-  createProgramKit,
-  deleteProgramKit,
-  type ProgramKit,
-} from "@/services/starting-kit.service";
-import { createInventory } from "@/services/inventory.service";
-import {
-  getInventoryCategories,
-  type InventoryCategory,
-} from "@/services/inventory-category.service";
-import { CategorySelect } from "@/components/inventory/CategorySelect";
 import { getApiBaseUrl } from "@/lib/api-utils";
+import type { Stream } from "@/services/stream.service";
+import type { StreamTransition } from "@/services/stream-transition.service";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useStreamsByProgram } from "@/hooks/api/stream.hooks";
+import { useStreamTransitionsByProgram } from "@/hooks/api/stream-transition.hooks";
+import { usePrograms, invalidatePrograms } from "@/hooks/api/program.hooks";
+
+interface BasicProgramCatalogPanelProps {
+  programId: number;
+  programName: string;
+  catalogVersion: number;
+  onCatalogChange: () => void;
+}
+
+function BasicProgramCatalogPanel({
+  programId,
+  programName,
+  catalogVersion,
+  onCatalogChange,
+}: BasicProgramCatalogPanelProps) {
+  const streamsQuery = useStreamsByProgram(programId);
+  const transitionsQuery = useStreamTransitionsByProgram(programId);
+  const streams = (streamsQuery.data ?? []) as Stream[];
+  const transitions = (transitionsQuery.data ?? []) as StreamTransition[];
+  const isLoading = streamsQuery.isLoading || transitionsQuery.isLoading;
+
+  return (
+    <div className="space-y-4">
+      {isLoading ? (
+        <div className="rounded-lg border bg-white p-4 text-sm text-gray-500 shadow-sm">
+          Loading streams...
+        </div>
+      ) : null}
+      {!isLoading ? (
+        <>
+          <LevelManagement
+            programId={programId}
+            programName={programName}
+            initialStreams={streams}
+            initialTransitions={transitions}
+            skipCatalogLoad
+            catalogVersion={catalogVersion}
+          />
+          <div className="rounded-lg border bg-white p-4 shadow-sm">
+            <StreamManagement
+              programId={programId}
+              programName={programName}
+              compact
+              initialStreams={streams}
+              initialTransitions={transitions}
+              skipInitialLoad
+              onCatalogChange={onCatalogChange}
+            />
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function CITrainingCatalogPanel({
+  programId,
+  programName,
+}: {
+  programId: number;
+  programName: string;
+}) {
+  return (
+    <CITrainingLevelManagement
+      programId={programId}
+      programName={programName}
+    />
+  );
+}
 
 export function ProgramManagement() {
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -78,22 +127,6 @@ export function ProgramManagement() {
   const [editProgramName, setEditProgramName] = useState("");
   const [deletingProgram, setDeletingProgram] = useState<Program | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [isKitDialogOpen, setIsKitDialogOpen] = useState(false);
-  const [selectedProgramForKit, setSelectedProgramForKit] =
-    useState<Program | null>(null);
-  const [kitItems, setKitItems] = useState<ProgramKit[]>([]);
-  const [isLoadingKits, setIsLoadingKits] = useState(false);
-  const [newKitQuantity, setNewKitQuantity] = useState<number>(1);
-  const [isCreatingInventory, setIsCreatingInventory] = useState(false);
-  const [newInventoryName, setNewInventoryName] = useState("");
-  const [newInventoryDescription, setNewInventoryDescription] = useState("");
-  const [newInventoryCategory, setNewInventoryCategory] = useState<string>("");
-  const [newInventoryQuantity, setNewInventoryQuantity] = useState<number>(0);
-  const [newInventoryRestockQuantity, setNewInventoryRestockQuantity] =
-    useState<number>(0);
-  const [inventoryCategories, setInventoryCategories] = useState<
-    InventoryCategory[]
-  >([]);
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
   const [selectedProgramForTemplate, setSelectedProgramForTemplate] =
     useState<Program | null>(null);
@@ -111,15 +144,22 @@ export function ProgramManagement() {
   });
   const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [templatePreviewUrl, setTemplatePreviewUrl] = useState<string | null>(
-    null
+    null,
   );
   const [templateImageUrl, setTemplateImageUrl] = useState<string | null>(null);
+  const [templateId, setTemplateId] = useState<number | undefined>(undefined);
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [fieldCoordinates, setFieldCoordinates] = useState<Record<
     string,
     FieldCoordinate
   > | null>(null);
+  /** Bumps when streams/transitions change so level ladder refetches */
+  const [catalogTick, setCatalogTick] = useState(0);
+  const [kitCounts, setKitCounts] = useState<Record<number, number>>({});
+  const [openLevelModes, setOpenLevelModes] = useState<
+    Record<number, "basic" | "ci-training" | "kit-items">
+  >({});
   const [isEditMode, setIsEditMode] = useState(false);
   const [pdfScale, setPdfScale] = useState({
     width: 612,
@@ -132,43 +172,15 @@ export function ProgramManagement() {
 
   const itemsPerPage = 10;
 
+  const { programs, isLoading } = usePrograms();
+
   useEffect(() => {
-    loadPrograms();
-    loadInventoryCategories();
-  }, []);
-
-  const loadPrograms = async () => {
-    try {
-      const data = await getAllPrograms();
-      setPrograms(data);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load programs",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadInventoryCategories = async () => {
-    try {
-      const data = await getInventoryCategories();
-      setInventoryCategories(data);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load inventory categories",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCategoryAdded = async (newCategory: InventoryCategory) => {
-    // Reload categories to include the new one
-    await loadInventoryCategories();
-  };
+    setOpenLevelModes((prev) =>
+      Object.fromEntries(
+        programs.map((program) => [program.id, prev[program.id] ?? "basic"]),
+      ),
+    );
+  }, [programs]);
 
   const handleAddProgram = async () => {
     if (!newProgramName.trim()) {
@@ -188,7 +200,7 @@ export function ProgramManagement() {
       });
       setNewProgramName("");
       setIsAddDialogOpen(false);
-      loadPrograms();
+      void invalidatePrograms();
     } catch (error) {
       toast({
         title: "Error",
@@ -217,7 +229,7 @@ export function ProgramManagement() {
       setIsEditDialogOpen(false);
       setEditingProgram(null);
       setEditProgramName("");
-      loadPrograms();
+      void invalidatePrograms();
     } catch (error) {
       toast({
         title: "Error",
@@ -238,115 +250,11 @@ export function ProgramManagement() {
       });
       setIsDeleteDialogOpen(false);
       setDeletingProgram(null);
-      loadPrograms();
+      void invalidatePrograms();
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to delete program. It may have associated levels.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleViewStartingKit = async (program: Program) => {
-    setSelectedProgramForKit(program);
-    setIsKitDialogOpen(true);
-    setIsLoadingKits(true);
-
-    try {
-      // Load kit items for this program
-      const kits = await getProgramKits(program.id);
-      setKitItems(kits);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load starting kit items",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingKits(false);
-    }
-  };
-
-  const handleCreateAndAddKitItem = async () => {
-    if (!selectedProgramForKit) return;
-
-    if (
-      !newInventoryName.trim() ||
-      !newInventoryCategory ||
-      newKitQuantity < 1
-    ) {
-      toast({
-        title: "Error",
-        description:
-          "Please fill in all required fields (name, category, quantity)",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsCreatingInventory(true);
-
-    try {
-      const newInventory = await createInventory({
-        name: newInventoryName.trim(),
-        description: newInventoryDescription.trim() || "",
-        categoryId: Number(newInventoryCategory),
-        quantity: newInventoryQuantity || 0,
-        restockQuantity: newInventoryRestockQuantity || 0,
-        programId: selectedProgramForKit.id,
-        isActive: true,
-      });
-
-      await createProgramKit(selectedProgramForKit.id, {
-        inventoryId: newInventory.id,
-        defaultQuantity: newKitQuantity,
-      });
-
-      toast({
-        title: "Success",
-        description: "Kit item created and added successfully",
-      });
-
-      const kits = await getProgramKits(selectedProgramForKit.id);
-      setKitItems(kits);
-
-      // Reset form
-      setNewInventoryName("");
-      setNewInventoryDescription("");
-      setNewInventoryCategory("");
-      setNewInventoryQuantity(0);
-      setNewInventoryRestockQuantity(0);
-      setNewKitQuantity(1);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description:
-          error.response?.data?.message || "Failed to create kit item",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreatingInventory(false);
-    }
-  };
-
-  const handleDeleteKitItem = async (kitId: number) => {
-    try {
-      await deleteProgramKit(kitId);
-      toast({
-        title: "Success",
-        description: "Kit item removed successfully",
-      });
-
-      // Reload kit items
-      if (selectedProgramForKit) {
-        const kits = await getProgramKits(selectedProgramForKit.id);
-        setKitItems(kits);
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to remove kit item",
         variant: "destructive",
       });
     }
@@ -360,6 +268,7 @@ export function ProgramManagement() {
 
     try {
       const template = await getCertificateTemplate(program.id);
+      setTemplateId(template?.id);
       if (template) {
         setTemplateData({
           certificateTitle: template.certificateTitle,
@@ -399,7 +308,7 @@ export function ProgramManagement() {
         if (template.templatePdfPath) {
           const baseUrl = getApiBaseUrl();
           setTemplatePreviewUrl(
-            `${baseUrl}/uploads/${template.templatePdfPath}?t=${Date.now()}`
+            `${baseUrl}/uploads/${template.templatePdfPath}?t=${Date.now()}`,
           );
           setTemplateImageUrl(null); // Reset to trigger fresh load
         }
@@ -447,48 +356,29 @@ export function ProgramManagement() {
 
     setIsSavingTemplate(true);
     try {
-      // Upload file first if selected
-      if (templateFile) {
-        const uploadedTemplate = await uploadCertificateTemplate(
-          selectedProgramForTemplate.id,
-          templateFile
-        );
-
-        // Immediately reload the template to get the coordinates from backend
-        if (uploadedTemplate) {
-          const freshTemplate = await getCertificateTemplate(
-            selectedProgramForTemplate.id
-          );
-
-          if (freshTemplate?.fieldCoordinates) {
-            setFieldCoordinates(freshTemplate.fieldCoordinates);
-          }
-
-          if (freshTemplate?.templatePdfPath) {
-            const baseUrl = getApiBaseUrl();
-            const newUrl = `${baseUrl}/uploads/${
-              freshTemplate.templatePdfPath
-            }?t=${Date.now()}`;
-            setTemplatePreviewUrl(newUrl);
-            setTemplateImageUrl(null); // Reset image to trigger reload
-          }
-        }
-      }
-
-      // Update template data including fieldCoordinates
-      // Use existing templateData values or defaults
-      await updateCertificateTemplate(selectedProgramForTemplate.id, {
+      const templatePayload = {
         certificateTitle:
           templateData.certificateTitle || "Certificate of Completion",
         issuerName: templateData.issuerName || "Ideal Play Abacus",
-        signatureField1Label: templateData.signatureField1Label || undefined,
-        signatureField1Name: templateData.signatureField1Name || undefined,
-        signatureField2Label: templateData.signatureField2Label || undefined,
-        signatureField2Name: templateData.signatureField2Name || undefined,
         additionalText: templateData.additionalText || undefined,
         fieldCoordinates: fieldCoordinates || undefined,
         isActive: templateData.isActive ?? true,
-      });
+      };
+
+      if (templateFile) {
+        // Combined atomic upload + save
+        await uploadCertificateTemplate(
+          selectedProgramForTemplate.id,
+          templateFile,
+          templatePayload,
+        );
+      } else {
+        // Metadata-only update (no new file)
+        await updateCertificateTemplate(selectedProgramForTemplate.id, {
+          id: templateId,
+          ...templatePayload,
+        });
+      }
 
       toast({
         title: "Success",
@@ -499,8 +389,9 @@ export function ProgramManagement() {
 
       // Reload template to get final updated data
       const updatedTemplate = await getCertificateTemplate(
-        selectedProgramForTemplate.id
+        selectedProgramForTemplate.id,
       );
+      if (updatedTemplate?.id) setTemplateId(updatedTemplate.id);
       if (updatedTemplate?.templatePdfPath) {
         const baseUrl = getApiBaseUrl();
         const newUrl = `${baseUrl}/uploads/${
@@ -526,7 +417,7 @@ export function ProgramManagement() {
   };
 
   const handleTemplateFileChange = async (
-    e: React.ChangeEvent<HTMLInputElement>
+    e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -626,16 +517,17 @@ export function ProgramManagement() {
 
     const containerRect = container.getBoundingClientRect();
     const field = fieldCoordinates[fieldKey];
-    const width = field.rect[2] - field.rect[0];
-    const height = field.rect[3] - field.rect[1];
+    const rect = field.rect ?? [0, 0, 100, 100];
+    const width = rect[2] - rect[0];
+    const height = rect[3] - rect[1];
 
     // Get initial mouse position relative to container
     const startX = e.clientX - containerRect.left;
     const startY = e.clientY - containerRect.top;
 
     // Get initial box position in screen coordinates
-    const startBoxX = pdfToScreen(field.rect[0], false);
-    const startBoxY = pdfToScreen(field.rect[1], true);
+    const startBoxX = pdfToScreen(rect[0], false);
+    const startBoxY = pdfToScreen(rect[1], true);
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const containerRect = container.getBoundingClientRect();
@@ -653,11 +545,11 @@ export function ProgramManagement() {
       // Convert back to PDF coordinates and clamp to bounds
       const newPdfX1 = Math.max(
         0,
-        Math.min(screenToPdf(newBoxX, false), pdfScale.width - width)
+        Math.min(screenToPdf(newBoxX, false), pdfScale.width - width),
       );
       const newPdfY1 = Math.max(
         0,
-        Math.min(screenToPdf(newBoxY, true), pdfScale.height - height)
+        Math.min(screenToPdf(newBoxY, true), pdfScale.height - height),
       );
 
       setFieldCoordinates({
@@ -787,25 +679,25 @@ export function ProgramManagement() {
   const totalPages = Math.ceil(programs.length / itemsPerPage);
   const paginatedPrograms = programs.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
-  const columns: AdminTableColumn<Program>[] = [
+  const columns: DataTableColumn<Program>[] = [
     {
       key: "program",
       header: "Program",
-      className: "w-[300px]",
+      className: "w-[360px] !h-10 !px-4 !py-2",
     },
     {
       key: "id",
       header: "Program ID",
-      className: "text-center",
+      className: "text-center !h-10 !px-4 !py-2",
       render: (program) => <Badge variant="outline">ID: {program.id}</Badge>,
     },
     {
       key: "createdDate",
       header: "Created Date",
-      className: "text-center",
+      className: "text-center !h-10 !px-4 !py-2",
       render: (program) =>
         program.createdAt
           ? new Date(program.createdAt).toLocaleDateString()
@@ -814,23 +706,13 @@ export function ProgramManagement() {
     {
       key: "actions",
       header: "Actions",
-      className: "text-center",
+      className: "text-center !h-10 !px-4 !py-2",
       render: (program) => (
-        <div className="flex items-center justify-center gap-1">
+        <div className="flex items-center justify-center gap-3">
           <Button
             variant="ghost"
             size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleViewStartingKit(program);
-            }}
-            title="View Starting Kit"
-          >
-            <Package className="w-4 h-4 text-blue-600" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
+            className="h-8 w-8 rounded-md p-0 hover:bg-slate-100"
             onClick={(e) => {
               e.stopPropagation();
               handleViewCertificateTemplate(program);
@@ -842,23 +724,27 @@ export function ProgramManagement() {
           <Button
             variant="ghost"
             size="sm"
+            className="h-8 w-8 rounded-md p-0 hover:bg-slate-100"
             onClick={(e) => {
               e.stopPropagation();
               setEditingProgram(program);
               setEditProgramName(program.name);
               setIsEditDialogOpen(true);
             }}
+            title="Edit program"
           >
             <Edit2 className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
+            className="h-8 w-8 rounded-md p-0 hover:bg-slate-100"
             onClick={(e) => {
               e.stopPropagation();
               setDeletingProgram(program);
               setIsDeleteDialogOpen(true);
             }}
+            title="Delete program"
           >
             <Trash2 className="w-4 h-4 text-destructive" />
           </Button>
@@ -869,55 +755,95 @@ export function ProgramManagement() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-lg border">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Programs</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Configure programs and their hierarchical structure
-          </p>
+      <div className="rounded-2xl border bg-card px-4 py-4 shadow-sm sm:px-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-2xl text-card-foreground">Programs</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Configure program structure, streams, and kit defaults
+            </p>
+          </div>
+          <Button onClick={() => setIsAddDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Program
+          </Button>
         </div>
-        <Button
-          onClick={() => setIsAddDialogOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Program
-        </Button>
       </div>
 
-      <AdminTable
+      <DataTable
         data={paginatedPrograms}
         loading={isLoading}
         columns={columns}
         getRowId={(program) => program.id.toString()}
         renderMainCell={(program) => (
-          <div className="flex flex-col">
-            <div className="font-medium text-gray-900">{program.name}</div>
-            <div className="text-sm text-gray-500">
-              Program configuration and level management
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="font-medium text-gray-900">{program.name}</div>
+              <Badge
+                variant="outline"
+                className="border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
+              >
+                Kit items: {kitCounts[program.id] ?? 0}
+              </Badge>
             </div>
+            <div className="text-sm text-gray-500">Levels and streams</div>
           </div>
         )}
         renderExpandedContent={(program) => (
-          <div className="bg-gray-50 p-6 border-t">
-            <Tabs defaultValue="streams" className="w-full">
-              <TabsList className="grid w-full max-w-md grid-cols-2">
-                <TabsTrigger value="streams">Streams</TabsTrigger>
-                <TabsTrigger value="levels">Levels</TabsTrigger>
-              </TabsList>
-              <TabsContent value="streams" className="mt-4">
-                <StreamManagement
-                  programId={program.id}
-                  programName={program.name}
-                />
-              </TabsContent>
-              <TabsContent value="levels" className="mt-4">
-                <LevelManagement
-                  programId={program.id}
-                  programName={program.name}
-                />
-              </TabsContent>
-            </Tabs>
+          <div className="border-t bg-gray-50 px-4 py-4 sm:px-5">
+            <div className="space-y-4">
+              <div className="rounded-lg border bg-white p-4 shadow-sm">
+                <Tabs
+                  value={openLevelModes[program.id] ?? "basic"}
+                  onValueChange={(value) =>
+                    setOpenLevelModes((prev) => ({
+                      ...prev,
+                      [program.id]: value as
+                        | "basic"
+                        | "ci-training"
+                        | "kit-items",
+                    }))
+                  }
+                  className="space-y-4"
+                >
+                  <TabsList className="grid w-full max-w-[420px] grid-cols-3">
+                    <TabsTrigger value="basic">Basic</TabsTrigger>
+                    <TabsTrigger value="ci-training">CI Training</TabsTrigger>
+                    <TabsTrigger value="kit-items">Kit Items</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="basic">
+                    <BasicProgramCatalogPanel
+                      programId={program.id}
+                      programName={program.name}
+                      catalogVersion={catalogTick}
+                      onCatalogChange={() => setCatalogTick((t) => t + 1)}
+                    />
+                  </TabsContent>
+                  <TabsContent value="ci-training">
+                    <CITrainingCatalogPanel
+                      programId={program.id}
+                      programName={program.name}
+                    />
+                  </TabsContent>
+                  <TabsContent value="kit-items">
+                    <ProgramKitManagement
+                      programId={program.id}
+                      programName={program.name}
+                      onCountChange={(count) =>
+                        setKitCounts((prev) =>
+                          prev[program.id] === count
+                            ? prev
+                            : {
+                                ...prev,
+                                [program.id]: count,
+                              },
+                        )
+                      }
+                    />
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </div>
           </div>
         )}
         pagination={{ total: programs.length, totalPages }}
@@ -1008,7 +934,8 @@ export function ProgramManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the program &quot;{deletingProgram?.name}
+              This will permanently delete the program &quot;
+              {deletingProgram?.name}
               &quot;. This action cannot be undone and will also delete all
               associated levels and inventory.
             </AlertDialogDescription>
@@ -1024,211 +951,6 @@ export function ProgramManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Starting Kit Dialog */}
-      <Dialog open={isKitDialogOpen} onOpenChange={setIsKitDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5 text-blue-600" />
-              Starting Kit - {selectedProgramForKit?.name}
-            </DialogTitle>
-            <DialogDescription>
-              Manage starting kit items for this program. These items will be
-              available for selection during franchise approval.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            {/* Existing Kit Items */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Current Kit Items</h3>
-              {isLoadingKits ? (
-                <div className="text-center py-8 text-gray-500">
-                  Loading kit items...
-                </div>
-              ) : kitItems.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 border border-dashed rounded-lg">
-                  No kit items configured yet. Add items below.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {kitItems.map((kit) => (
-                    <div
-                      key={kit.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">
-                          {kit.inventory?.name || `Item #${kit.inventoryId}`}
-                        </p>
-                        {kit.inventory?.description && (
-                          <p className="text-sm text-gray-600 mt-1">
-                            {kit.inventory.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-4 mt-2">
-                          <span className="text-sm text-gray-600">
-                            Category: {kit.inventory?.category?.name || "N/A"}
-                          </span>
-                          <span className="text-sm font-medium text-gray-900">
-                            Default Quantity: {kit.defaultQuantity}
-                          </span>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteKitItem(kit.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Create New Kit Item */}
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-semibold mb-4">
-                Create New Kit Item
-              </h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="inventoryName">
-                      Item Name <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="inventoryName"
-                      placeholder="e.g., Starter Kit Box"
-                      value={newInventoryName}
-                      onChange={(e) => setNewInventoryName(e.target.value)}
-                      className="h-10"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="inventoryCategory">
-                      Category <span className="text-red-500">*</span>
-                    </Label>
-                    <CategorySelect
-                      value={newInventoryCategory}
-                      onValueChange={setNewInventoryCategory}
-                      categories={inventoryCategories}
-                      onCategoryAdded={handleCategoryAdded}
-                      placeholder="Select category"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="inventoryDescription">Description</Label>
-                  <Input
-                    id="inventoryDescription"
-                    placeholder="Brief description of the item"
-                    value={newInventoryDescription}
-                    onChange={(e) => setNewInventoryDescription(e.target.value)}
-                    className="h-10"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="inventoryQuantity">Stock Quantity</Label>
-                    <Input
-                      id="inventoryQuantity"
-                      type="number"
-                      min="0"
-                      value={newInventoryQuantity === 0 || newInventoryQuantity === undefined || newInventoryQuantity === null ? "" : newInventoryQuantity}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setNewInventoryQuantity(val === "" ? 0 : Number(val));
-                      }}
-                      className="h-10"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="inventoryRestockQuantity">
-                      Restock Quantity
-                    </Label>
-                    <Input
-                      id="inventoryRestockQuantity"
-                      type="number"
-                      min="0"
-                      value={newInventoryRestockQuantity === 0 || newInventoryRestockQuantity === undefined || newInventoryRestockQuantity === null ? "" : newInventoryRestockQuantity}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setNewInventoryRestockQuantity(val === "" ? 0 : Number(val));
-                      }}
-                      className="h-10"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="kitQuantity">
-                      Default Kit Quantity{" "}
-                      <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="kitQuantity"
-                      type="number"
-                      min="1"
-                      value={newKitQuantity === 0 || newKitQuantity === undefined || newKitQuantity === null ? "" : newKitQuantity}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setNewKitQuantity(val === "" ? 1 : Number(val));
-                      }}
-                      className="h-10"
-                    />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Button
-                    onClick={handleCreateAndAddKitItem}
-                    disabled={
-                      isCreatingInventory ||
-                      !newInventoryName.trim() ||
-                      !newInventoryCategory ||
-                      newKitQuantity < 1
-                    }
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    {isCreatingInventory ? (
-                      <>
-                        <span className="animate-spin mr-2">⏳</span>
-                        Creating...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create & Add to Kit
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsKitDialogOpen(false);
-                setSelectedProgramForKit(null);
-                setKitItems([]);
-                setNewInventoryName("");
-                setNewInventoryDescription("");
-                setNewInventoryCategory("");
-                setNewInventoryQuantity(0);
-                setNewInventoryRestockQuantity(0);
-                setNewKitQuantity(1);
-              }}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Certificate Template Dialog */}
       <Dialog
@@ -1292,7 +1014,8 @@ export function ProgramManagement() {
                     />
                     <p className="text-sm text-gray-500 mt-1">
                       Upload a PDF file to use as the certificate template.
-                      Click &quot;Edit Coordinates&quot; to adjust field positions.
+                      Click &quot;Edit Coordinates&quot; to adjust field
+                      positions.
                     </p>
                   </div>
                   {templatePreviewUrl && (
@@ -1330,10 +1053,12 @@ export function ProgramManagement() {
                           <div className="absolute inset-0 pointer-events-none">
                             {Object.entries(fieldCoordinates).map(
                               ([key, coord]) => {
-                                const x1 = pdfToScreen(coord.rect[0], false);
-                                const y1 = pdfToScreen(coord.rect[1], true);
-                                const x2 = pdfToScreen(coord.rect[2], false);
-                                const y2 = pdfToScreen(coord.rect[3], true);
+                                const r = coord.rect;
+                                if (!r || r.length < 4) return null;
+                                const x1 = pdfToScreen(r[0], false);
+                                const y1 = pdfToScreen(r[1], true);
+                                const x2 = pdfToScreen(r[2], false);
+                                const y2 = pdfToScreen(r[3], true);
                                 const width = x2 - x1;
                                 const height = y2 - y1;
 
@@ -1367,7 +1092,7 @@ export function ProgramManagement() {
                                     </div>
                                   </div>
                                 );
-                              }
+                              },
                             )}
                           </div>
                         )}
@@ -1375,7 +1100,8 @@ export function ProgramManagement() {
                       {isEditMode && (
                         <p className="text-sm text-blue-600 mt-2">
                           💡 Drag the blue boxes to reposition field
-                          coordinates. Click &quot;Save Template&quot; to save changes.
+                          coordinates. Click &quot;Save Template&quot; to save
+                          changes.
                         </p>
                       )}
                     </div>
@@ -1396,6 +1122,7 @@ export function ProgramManagement() {
                 setTemplateImageUrl(null);
                 setIsEditMode(false);
                 setFieldCoordinates(null);
+                setTemplateId(undefined);
                 setTemplateData({
                   certificateTitle: "",
                   issuerName: "",

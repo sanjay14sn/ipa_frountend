@@ -1,66 +1,55 @@
 import { api } from "@/lib/axios";
+import { unwrapData } from "@/lib/unwrap-api";
 
 export interface Stream {
   id: number;
-  programId: number;
   name: string;
-  isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: number;
-  updatedBy?: number;
-  program?: {
-    id: number;
-    name: string;
-  };
-}
-
-export interface CreateStreamDto {
-  programId: number;
-  name: string;
-  isActive: boolean;
-}
-
-export interface UpdateStreamDto {
-  programId?: number;
-  name?: string;
+  programId?: number | null;
+  levelCount?: number;
+  minAge?: number | null;
+  maxAge?: number | null;
+  displayOrder?: number;
+  description?: string | null;
   isActive?: boolean;
 }
 
-export interface StreamsResponse {
-  statusCode: number;
-  timeStamp: string;
-  path: string;
-  result: Stream[];
+export interface CreateStreamDto {
+  name: string;
+  programId: number;
+  isActive?: boolean;
+  description?: string | null;
+  minAge?: number | null;
+  maxAge?: number | null;
+  displayOrder?: number;
 }
 
-export interface StreamResponse {
-  statusCode: number;
-  timeStamp: string;
-  path: string;
-  result: Stream;
-}
+export type UpdateStreamDto = Partial<Omit<CreateStreamDto, never>>;
 
 export async function getAllStreams(): Promise<Stream[]> {
-  const response = await api.get<StreamsResponse>("/stream");
-  return Array.isArray(response.data.result) ? response.data.result : [];
+  const response = await api.get("/catalog/stream");
+  const data = unwrapData<Stream[]>(response);
+  return Array.isArray(data) ? data : [];
 }
 
 export async function getStreamsByProgram(programId: number): Promise<Stream[]> {
-  const response = await api.get<StreamsResponse>(`/stream/program/${programId}`);
-  return Array.isArray(response.data.result) ? response.data.result : [];
+  const response = await api.get(`/catalog/stream/program/${programId}`);
+  const data = unwrapData<Stream[]>(response);
+  return Array.isArray(data) ? data : [];
 }
 
-export async function createStream(stream: CreateStreamDto): Promise<Stream> {
-  const response = await api.post<StreamResponse>("/stream", stream);
-  return response.data.result;
+export async function createStream(data: CreateStreamDto): Promise<Stream> {
+  const response = await api.post("/catalog/stream", data);
+  return unwrapData<Stream>(response);
 }
 
-export async function updateStream(id: number, stream: UpdateStreamDto): Promise<void> {
-  await api.patch(`/stream/update/${id}`, stream);
+export async function updateStream(
+  id: number,
+  data: UpdateStreamDto,
+): Promise<Stream> {
+  const response = await api.patch(`/catalog/stream/${id}`, data);
+  return unwrapData<Stream>(response);
 }
 
 export async function deleteStream(id: number): Promise<void> {
-  await api.delete(`/stream/delete/${id}`);
+  await api.delete(`/catalog/stream/${id}`);
 }
-

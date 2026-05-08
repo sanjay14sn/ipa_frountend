@@ -1,9 +1,14 @@
 "use client";
 
+import { Separator } from "@/components/ui/separator";
+import {
+  DetailField,
+  DetailFieldsGrid,
+  ExpandedDetailSection,
+  ExpandedDetailSurface,
+} from "@/components/shared";
 import { RequestedIdDetail } from "@/services/student.service";
-import StudentsSection from "./StudentsSection";
-import { useRef } from "react";
-import { TreeConnector } from "@/components/shared";
+import StudentsSection from "@/app/admin/students/components/StudentsSection";
 
 interface FranchiseIdDetailsProps {
   franchiseId: string;
@@ -17,7 +22,7 @@ interface FranchiseIdDetailsProps {
 }
 
 export default function FranchiseIdDetails({
-  franchiseId,
+  franchiseId: _franchiseId,
   franchiseName,
   students,
   lastRow,
@@ -26,40 +31,33 @@ export default function FranchiseIdDetails({
   onIssueId,
   statusFilter,
 }: FranchiseIdDetailsProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const studentsDotRef = useRef<HTMLDivElement>(null);
-
   return (
-    <div
-      className={`bg-gray-50 border-t border-black/20 ${
-        lastRow ? "rounded-b-lg" : "border-b border-black/20"
-      }`}
+    <ExpandedDetailSurface
+      className={lastRow ? "rounded-b-lg border-t border-border/60" : "border-t border-border/60"}
     >
-      <div className="relative">
-        <TreeConnector
-          type="vertical"
-          targetRef={studentsDotRef}
-          containerRef={containerRef}
+      <ExpandedDetailSection title="ID request summary">
+        <DetailFieldsGrid columns={3}>
+          <DetailField label="Franchise" value={franchiseName} />
+          <DetailField label="Students" value={students.length} />
+          <DetailField label="Status" value={statusFilter} />
+        </DetailFieldsGrid>
+      </ExpandedDetailSection>
+
+      <Separator />
+
+      <ExpandedDetailSection
+        title={statusFilter === "Requested" ? "Students awaiting issue" : "Issued IDs"}
+      >
+        <StudentsSection
+          students={students}
+          franchiseName={franchiseName}
+          isExpanded
+          onToggle={onToggleRow}
+          onIssueId={onIssueId}
+          statusFilter={statusFilter}
+          expandedRows={expandedRows}
         />
-
-        <div className="pl-12 pr-6 py-6" ref={containerRef}>
-          {/* Horizontal connector for the students table */}
-          <div className="relative" ref={studentsDotRef}>
-            <TreeConnector type="horizontal" />
-          </div>
-
-          {/* Students Section - Directly show students without franchise details */}
-          <StudentsSection
-            students={students}
-            franchiseName={franchiseName}
-            isExpanded={true}
-            onToggle={onToggleRow}
-            onIssueId={onIssueId}
-            statusFilter={statusFilter}
-            expandedRows={expandedRows}
-          />
-        </div>
-      </div>
-    </div>
+      </ExpandedDetailSection>
+    </ExpandedDetailSurface>
   );
 }

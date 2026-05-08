@@ -121,7 +121,9 @@ export default function InstructorDetails({
                           <TableCell className="text-center">
                             <div className="flex flex-col items-center gap-1">
                               <Badge
-                                className={getTrainingLevelColor(instructor.displayOrder)}
+                                className={getTrainingLevelColor(
+                                  instructor.displayOrder ?? 1,
+                                )}
                               >
                                 {instructor.trainingLevelName || "N/A"}
                               </Badge>
@@ -134,11 +136,11 @@ export default function InstructorDetails({
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge variant="outline" className="font-mono">
-                              Level {instructor.displayOrder}
+                              Level {instructor.displayOrder ?? "—"}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
-                            {formatCurrency(instructor.amount)}
+                            {formatCurrency(instructor.amount ?? 0)}
                           </TableCell>
                           <TableCell className="text-center">
                             {!isCompleted ? (

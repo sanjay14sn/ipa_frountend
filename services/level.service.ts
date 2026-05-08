@@ -1,77 +1,66 @@
-
+import { api } from "@/lib/axios";
+import { unwrapData } from "@/lib/unwrap-api";
 
 export interface Level {
   id: number;
-  streamId: number;
   name: string;
   code: string;
-  totalMarks: number;
-  passMark: number;
+  programId: number;
+  streamId: number;
   displayOrder: number;
-  durationInMonths: number;
-  isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: number;
-  updatedBy?: number;
+  totalMarks: number;
+  isActive?: boolean;
+  passMark?: number;
+  durationInMonths?: number;
 }
 
 export interface CreateLevelDto {
-  streamId: number;
   name: string;
   code: string;
-  totalMarks: number;
-  passMark: number;
+  programId: number;
+  streamId: number;
   displayOrder: number;
-  durationInMonths: number;
-  isActive: boolean;
-}
-
-export interface UpdateLevelDto {
-  name?: string;
-  code?: string;
-  totalMarks?: number;
-  passMark?: number;
-  displayOrder?: number;
-  durationInMonths?: number;
+  totalMarks: number;
   isActive?: boolean;
+  passMark?: number;
+  durationInMonths?: number;
 }
 
-export interface LevelsResponse {
-  statusCode: number;
-  timeStamp: string;
-  method: string;
-  path: string;
-  message: string;
-  result: Level[] | Level;
-}
-
-import { api } from "@/lib/axios";
+export type UpdateLevelDto = Partial<
+  Omit<CreateLevelDto, "programId">
+> & { programId?: number };
 
 export async function getAllLevels(): Promise<Level[]> {
-  const response = await api.get<LevelsResponse>("/level");
-  return Array.isArray(response.data.result) ? response.data.result : [];
+  const response = await api.get("/catalog/level");
+  const data = unwrapData<Level[]>(response);
+  return Array.isArray(data) ? data : [];
 }
 
 export async function getLevelsByProgram(programId: number): Promise<Level[]> {
-  const response = await api.get<LevelsResponse>(`/level/program/${programId}`);
-  return Array.isArray(response.data.result) ? response.data.result : [];
+  const response = await api.get(`/catalog/level/by-program/${programId}`);
+  const data = unwrapData<Level[]>(response);
+  return Array.isArray(data) ? data : [];
 }
 
 export async function getLevelsByStream(streamId: number): Promise<Level[]> {
-  const response = await api.get<LevelsResponse>(`/level/stream/${streamId}`);
-  return Array.isArray(response.data.result) ? response.data.result : [];
+  const response = await api.get(`/catalog/level/stream/${streamId}`);
+  const data = unwrapData<Level[]>(response);
+  return Array.isArray(data) ? data : [];
 }
 
-export async function createLevel(level: CreateLevelDto): Promise<Level> {
-  const response = await api.post<LevelsResponse>("/level", level);
-  return response.data.result as Level;
+export async function createLevel(data: CreateLevelDto): Promise<Level> {
+  const response = await api.post("/catalog/level", data);
+  return unwrapData<Level>(response);
 }
 
-export async function updateLevel(id: number, level: UpdateLevelDto): Promise<void> {
-  await api.patch(`/level/update/${id}`, level);
+export async function updateLevel(
+  id: number,
+  data: UpdateLevelDto,
+): Promise<Level> {
+  const response = await api.patch(`/catalog/level/${id}`, data);
+  return unwrapData<Level>(response);
 }
 
 export async function deleteLevel(id: number): Promise<void> {
-  await api.delete(`/level/delete/${id}`);
+  await api.delete(`/catalog/level/${id}`);
 }

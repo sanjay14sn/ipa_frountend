@@ -97,7 +97,7 @@ export default function InstructorDetailCard({
                   <p className="text-gray-900 mt-1">
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${getTrainingLevelColor(
-                        instructor.displayOrder
+                        instructor.displayOrder ?? 1
                       )}`}
                     >
                       {instructor.trainingLevelName || "N/A"}
@@ -115,7 +115,7 @@ export default function InstructorDetailCard({
                 <div>
                   <span className="text-gray-500">Amount</span>
                   <p className="text-gray-900 mt-1 font-medium">
-                    {formatCurrency(instructor.amount)}
+                    {formatCurrency(instructor.amount ?? 0)}
                   </p>
                 </div>
 
@@ -132,7 +132,7 @@ export default function InstructorDetailCard({
                   <div>
                     <span className="text-gray-500">Monthly Installment</span>
                     <p className="text-gray-900 mt-1 font-medium">
-                      {formatCurrency(instructor.installmentAmount)}
+                      {formatCurrency(instructor.installmentAmount ?? 0)}
                     </p>
                   </div>
                 )}
