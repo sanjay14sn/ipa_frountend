@@ -24,7 +24,27 @@ import StudentsTable from "./components/StudentsTable";
 
 export function StudentsManageSection() {
   const { user } = useUser();
-  const { students, isLoading, revalidate } = useStudents();
+
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [levelId, setLevelId] = useState<number | undefined>(undefined);
+  const [idStatus, setIdStatus] = useState<string | undefined>(undefined);
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC");
+  const ITEMS_PER_PAGE = 10;
+
+  const { students, meta, isLoading, revalidate } = useStudents({
+    page,
+    limit: ITEMS_PER_PAGE,
+    search: search || undefined,
+    status: statusFilter === "all" ? undefined : statusFilter,
+    levelId,
+    idStatus: idStatus === "all" || !idStatus ? undefined : idStatus,
+    sortBy,
+    sortOrder,
+  });
+
   const [editStudent, setEditStudent] = useState<StudentData | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [deleteStudentId, setDeleteStudentId] = useState<string | null>(null);
@@ -36,14 +56,6 @@ export function StudentsManageSection() {
     return <div className="p-6 text-sm text-muted-foreground">Loading...</div>;
   }
 
-  if (isLoading) {
-    return (
-      <div className="p-6 text-sm text-muted-foreground">
-        Loading students...
-      </div>
-    );
-  }
-
   const hasRequestableIds = students.some(
     (student) => student.idIssued === StudentIdStatus.NOT_ISSUED,
   );
@@ -52,9 +64,28 @@ export function StudentsManageSection() {
     <>
       <StudentsTable
         students={students}
-        onStudentUpdate={() => {
-          void revalidate();
+        meta={meta}
+        currentPage={page}
+        onPageChange={(p) => setPage(p)}
+        searchValue={search}
+        onSearchChange={(v) => { setSearch(v); setPage(1); }}
+        statusFilter={statusFilter}
+        levelId={levelId}
+        idStatus={idStatus ?? "all"}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        isLoading={isLoading}
+        onFilterChange={(key, value) => {
+          if (key === "status")   { setStatusFilter(value); setPage(1); }
+          if (key === "level")    { setLevelId(value === "all" ? undefined : Number(value)); setPage(1); }
+          if (key === "idStatus") { setIdStatus(value === "all" ? undefined : value); setPage(1); }
         }}
+        onSortChange={(newSortBy, newSortOrder) => {
+          setSortBy(newSortBy);
+          setSortOrder(newSortOrder);
+          setPage(1);
+        }}
+        onStudentUpdate={() => void revalidate()}
         onStudentDelete={(studentId) => {
           setDeleteStudentId(studentId);
           setIsDeleteModalOpen(true);

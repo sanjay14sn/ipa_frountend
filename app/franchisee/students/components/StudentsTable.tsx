@@ -13,13 +13,23 @@ import type {
 import { StudentData, StudentIdStatus } from "@/services/student.service";
 import StudentCertificatesModal from "../../certificate-requests/components/StudentCertificatesModal";
 import StudentDetails from "./StudentDetails";
-import {
-  getStudentLevelForFilter,
-  getStudentLevelName,
-} from "../utils/student-helpers";
+import { getStudentLevelName } from "../utils/student-helpers";
 
 interface StudentsTableProps {
   students?: StudentData[];
+  meta?: { total: number; totalPages: number };
+  currentPage?: number;
+  onPageChange?: (page: number) => void;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+  statusFilter?: string;
+  levelId?: number;
+  idStatus?: string;
+  sortBy?: string;
+  sortOrder?: string;
+  isLoading?: boolean;
+  onFilterChange?: (key: string, value: string) => void;
+  onSortChange?: (sortBy: string, sortOrder: "ASC" | "DESC") => void;
   onStudentUpdate?: (updatedStudent: StudentData) => void;
   onStudentDelete?: (studentId: string) => void;
   onStudentEdit?: (student: StudentData) => void;
@@ -63,37 +73,36 @@ function hasOnlyWeekLeft(deactivateDate?: Date | string): boolean {
   return diffDays >= 0 && diffDays <= 7;
 }
 
-function lower(value: unknown): string {
-  return String(value ?? "").toLowerCase();
-}
-
 export default function StudentsTable({
   students = [],
+  meta,
+  currentPage,
+  onPageChange,
+  searchValue,
+  onSearchChange,
+  statusFilter,
+  levelId,
+  idStatus,
+  sortBy,
+  sortOrder,
+  isLoading,
+  onFilterChange,
+  onSortChange,
   onStudentDelete,
   onStudentEdit,
   onRequestIds,
   toolbarActions,
 }: StudentsTableProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [levelFilter, setLevelFilter] = useState<string>("all");
   const [streamFilter, setStreamFilter] = useState<string>("all");
-  const [idStatusFilter, setIdStatusFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"name" | "dateJoined" | "level">(
-    "dateJoined",
-  );
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(
     null,
   );
   const [isCertificatesModalOpen, setIsCertificatesModalOpen] = useState(false);
-  const itemsPerPage = 10;
 
   const uniqueLevels = useMemo(
     () =>
       Array.from(
-        new Set(students.map((student) => getStudentLevelName(student)).filter(Boolean)),
+        new Set((students ?? []).map(getStudentLevelName).filter(Boolean)),
       ),
     [students],
   );
@@ -101,79 +110,15 @@ export default function StudentsTable({
   const uniqueStreams = useMemo(
     () =>
       Array.from(
-        new Set(students.map((student) => student.stream).filter(Boolean)),
+        new Set((students ?? []).map((s) => s.stream).filter(Boolean)),
       ),
     [students],
   );
 
-  const filteredData = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    const rows = students.filter((student) => {
-      const matchesSearch =
-        !term ||
-        [
-          student.name,
-          student.rollNo,
-          student.mail,
-          student.fatherName,
-          student.motherName,
-          student.fatherContactNo,
-          student.motherContactNo,
-          student.standard,
-          student.stream,
-          getStudentLevelName(student),
-        ].some((value) => lower(value).includes(term));
-
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && student.isActive) ||
-        (statusFilter === "inactive" && !student.isActive);
-      const matchesLevel =
-        levelFilter === "all" ||
-        getStudentLevelForFilter(student) === levelFilter;
-      const matchesStream =
-        streamFilter === "all" || student.stream === streamFilter;
-      const matchesIdStatus =
-        idStatusFilter === "all" || student.idIssued === idStatusFilter;
-
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesLevel &&
-        matchesStream &&
-        matchesIdStatus
-      );
-    });
-
-    return [...rows].sort((a, b) => {
-      let comparison = 0;
-      if (sortBy === "name") {
-        comparison = a.name.localeCompare(b.name);
-      } else if (sortBy === "level") {
-        comparison = getStudentLevelName(a).localeCompare(getStudentLevelName(b));
-      } else {
-        comparison =
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      }
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
-  }, [
-    students,
-    searchTerm,
-    statusFilter,
-    levelFilter,
-    streamFilter,
-    idStatusFilter,
-    sortBy,
-    sortOrder,
-  ]);
-
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredData.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredData, currentPage]);
-
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 0;
+  const streamFilteredStudents = useMemo(() => {
+    if (streamFilter === "all") return students ?? [];
+    return (students ?? []).filter((s) => s.stream === streamFilter);
+  }, [students, streamFilter]);
 
   const columns: DataTableColumn<StudentData>[] = [
     {
@@ -305,62 +250,71 @@ export default function StudentsTable({
     },
   ];
 
-  const filters: DataTableFilter[] = [
-    {
-      key: "status",
-      label: "Status",
-      options: [
-        { value: "all", label: "All Status" },
-        { value: "active", label: "Active" },
-        { value: "inactive", label: "Inactive" },
-      ],
-      defaultValue: "all",
-    },
-    {
-      key: "level",
-      label: "Level",
-      options: [
-        { value: "all", label: "All Levels" },
-        ...uniqueLevels.map((level) => ({ value: String(level), label: String(level) })),
-      ],
-      defaultValue: "all",
-    },
-    {
-      key: "stream",
-      label: "Stream",
-      options: [
-        { value: "all", label: "All Streams" },
-        ...uniqueStreams.map((stream) => ({
-          value: String(stream),
-          label: String(stream),
-        })),
-      ],
-      defaultValue: "all",
-    },
-    {
-      key: "idStatus",
-      label: "ID Status",
-      options: [
-        { value: "all", label: "All ID Status" },
-        { value: StudentIdStatus.NOT_ISSUED, label: "Not Issued" },
-        { value: StudentIdStatus.REQUESTED, label: "Requested" },
-        { value: StudentIdStatus.ISSUED, label: "Issued" },
-      ],
-      defaultValue: "all",
-    },
-  ];
+  const filters: DataTableFilter[] = useMemo(
+    () => [
+      {
+        key: "status",
+        label: "Status",
+        options: [
+          { value: "all", label: "All statuses" },
+          { value: "active", label: "Active" },
+          { value: "inactive", label: "Inactive" },
+        ],
+        defaultValue: statusFilter ?? "all",
+      },
+      {
+        key: "level",
+        label: "Level",
+        options: [
+          { value: "all", label: "All levels" },
+          ...uniqueLevels.map((l) => ({ value: l, label: l })),
+        ],
+        defaultValue: levelId ? String(levelId) : "all",
+      },
+      {
+        key: "stream",
+        label: "Stream",
+        options: [
+          { value: "all", label: "All streams" },
+          ...uniqueStreams.map((s) => ({ value: s ?? "", label: s ?? "" })).filter((o) => o.value),
+        ],
+        defaultValue: streamFilter,
+      },
+      {
+        key: "idStatus",
+        label: "ID Status",
+        options: [
+          { value: "all", label: "All statuses" },
+          { value: "Not Issued", label: "Not Issued" },
+          { value: "Requested", label: "Requested" },
+          { value: "Issued", label: "Issued" },
+        ],
+        defaultValue: idStatus ?? "all",
+      },
+    ],
+    [statusFilter, uniqueLevels, uniqueStreams, streamFilter, levelId, idStatus],
+  );
 
   const sortOptions: DataTableSortOption[] = [
-    { value: "dateJoined", label: "Date Joined" },
+    { value: "createdAt", label: "Date Joined" },
     { value: "name", label: "Name" },
     { value: "level", label: "Level" },
   ];
 
+  const handleFilterChange = (key: string, value: string | string[]) => {
+    const val = Array.isArray(value) ? (value[0] ?? "all") : value;
+    if (key === "stream") {
+      setStreamFilter(val);
+    } else {
+      onFilterChange?.(key, val);
+    }
+  };
+
   return (
     <>
       <DataTable
-        data={paginatedData}
-        loading={false}
+        data={streamFilteredStudents}
+        loading={isLoading ?? false}
         columns={columns}
         getRowId={(student) => student.id.toString()}
         renderMainCell={(student) => (
@@ -382,30 +336,17 @@ export default function StudentsTable({
         )}
         renderExpandedContent={(student) => <StudentDetails student={student} />}
         searchPlaceholder="Search students, roll numbers, email, or parent names..."
-        onSearchChange={(value) => {
-          setSearchTerm(value);
-          setCurrentPage(1);
-        }}
+        onSearchChange={(v) => onSearchChange?.(v)}
         filters={filters}
-        onFilterChange={(key, value) => {
-          if (key === "status") setStatusFilter(value as string);
-          else if (key === "level") setLevelFilter(value as string);
-          else if (key === "stream") setStreamFilter(value as string);
-          else if (key === "idStatus") setIdStatusFilter(value as string);
-          setCurrentPage(1);
-        }}
+        onFilterChange={handleFilterChange}
         sortOptions={sortOptions}
-        defaultSortBy="dateJoined"
-        defaultSortOrder="DESC"
-        onSortChange={(newSortBy, newSortOrder) => {
-          setSortBy(newSortBy as "name" | "dateJoined" | "level");
-          setSortOrder(newSortOrder.toLowerCase() as "asc" | "desc");
-          setCurrentPage(1);
-        }}
-        pagination={{ total: filteredData.length, totalPages }}
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
+        defaultSortBy={sortBy ?? "createdAt"}
+        defaultSortOrder={(sortOrder as "ASC" | "DESC") ?? "DESC"}
+        onSortChange={(s, o) => onSortChange?.(s, o)}
+        pagination={meta ? { total: meta.total, totalPages: meta.totalPages } : undefined}
+        currentPage={currentPage ?? 1}
+        onPageChange={(p) => onPageChange?.(p)}
+        itemsPerPage={10}
         emptyMessage="No students found matching your criteria"
         resultsText={(count, total) => `Showing ${count} of ${total} students`}
         toolbarActions={
