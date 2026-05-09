@@ -124,6 +124,7 @@ export interface OrderData {
 export interface CreateOrderDto {
   studentIds: number[];
   notes?: string;
+  paymentRecordId?: number;
 }
 
 export interface UpdateOrderDto {
@@ -137,6 +138,22 @@ export interface InvoiceLine {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  studentId?: number;
+  inventoryItemId?: number;
+  itemType?: 'LEVEL' | 'KIT' | 'FEE';
+}
+
+export interface StudentBreakdown {
+  studentId: number;
+  studentName: string;
+  levelId: number;
+  levelName: string;
+  isFirstLevel: boolean;
+  royalty: number;
+  materialCost: number;
+  kitCost: number;
+  totalPrice: number;
+  durationInMonths: number;
 }
 
 export interface InvoicePreview {
@@ -144,6 +161,7 @@ export interface InvoicePreview {
   programId: number;
   levelId: number;
   isFirstLevel: boolean;
+  students: StudentBreakdown[];
   lines: InvoiceLine[];
   totalAmount: number;
 }
@@ -204,6 +222,7 @@ export interface AdminOrderListParams {
 export interface InitiateOrderPaymentDto {
   studentIds: number[];
   notes?: string;
+  totalAmount: number;
 }
 
 export interface OrderPaymentResponse {
@@ -559,6 +578,20 @@ export async function previewOrderInvoice(
     levelId: Number(data?.levelId ?? 0),
     isFirstLevel: Boolean(data?.isFirstLevel ?? false),
     totalAmount: Number(data?.totalAmount ?? 0),
+    students: Array.isArray(data?.students)
+      ? data.students.map((s: any) => ({
+          studentId: Number(s?.studentId ?? 0),
+          studentName: String(s?.studentName ?? ""),
+          levelId: Number(s?.levelId ?? 0),
+          levelName: String(s?.levelName ?? ""),
+          isFirstLevel: Boolean(s?.isFirstLevel ?? false),
+          royalty: Number(s?.royalty ?? 0),
+          materialCost: Number(s?.materialCost ?? 0),
+          kitCost: Number(s?.kitCost ?? 0),
+          totalPrice: Number(s?.totalPrice ?? 0),
+          durationInMonths: Number(s?.durationInMonths ?? 0),
+        }))
+      : [],
     lines: Array.isArray(data?.lines)
       ? data.lines.map((line: any) => ({
           code: String(line?.code ?? ""),
@@ -566,6 +599,9 @@ export async function previewOrderInvoice(
           quantity: Number(line?.quantity ?? 0),
           unitPrice: Number(line?.unitPrice ?? 0),
           totalPrice: Number(line?.totalPrice ?? 0),
+          studentId: line?.studentId != null ? Number(line.studentId) : undefined,
+          inventoryItemId: line?.inventoryItemId != null ? Number(line.inventoryItemId) : undefined,
+          itemType: line?.itemType ?? undefined,
         }))
       : [],
   };
@@ -595,13 +631,12 @@ export async function getInvoiceDetails(
 export async function initiateOrderPayment(
   paymentData: InitiateOrderPaymentDto,
 ): Promise<OrderPaymentResponse> {
-  const createdOrder = await createOrder({
-    studentIds: paymentData.studentIds,
-    notes: paymentData.notes,
-  });
-  const amount = Number(createdOrder.totalAmount ?? 0);
-
-  if ((createdOrder.paymentStatus ?? "").toUpperCase() === "FREE" || amount <= 0) {
+  // Zero-amount: create the FREE order immediately — no Razorpay involved
+  if (paymentData.totalAmount <= 0) {
+    const createdOrder = await createOrder({
+      studentIds: paymentData.studentIds,
+      notes: paymentData.notes,
+    });
     return {
       orderId: "",
       businessOrderId: createdOrder.id,
@@ -617,12 +652,12 @@ export async function initiateOrderPayment(
     };
   }
 
+  // Non-zero: initiate Razorpay payment BEFORE creating the order.
+  // The order is created (as PAID) only after verifyOrderPayment succeeds.
   const response = await api.post("/billing/payment/initiate", {
     type: "ORDER_PAYMENT",
-    amount,
-    franchiseId: createdOrder.franchiseId,
-    orderId: createdOrder.id,
-    acquirerData: paymentData.notes ? { notes: paymentData.notes } : undefined,
+    amount: paymentData.totalAmount,
+    acquirerData: { studentIds: paymentData.studentIds },
   });
   const billing = unwrapData<{
     razorpayOrderId: string;
@@ -633,12 +668,12 @@ export async function initiateOrderPayment(
 
   return {
     orderId: billing.razorpayOrderId,
-    businessOrderId: createdOrder.id,
+    businessOrderId: 0, // order not yet created; created after payment success
     paymentRecordId: Number(billing.paymentId ?? 0),
-    amount: Number(billing.amount ?? amount),
+    amount: Number(billing.amount ?? paymentData.totalAmount),
     currency: "INR",
-    franchiseId: createdOrder.franchiseId ?? "",
-    franchiseName: createdOrder.franchise?.name ?? "",
+    franchiseId: "",
+    franchiseName: "",
     paymentType: "ORDER_PAYMENT",
     key:
       billing.keyId ||
@@ -743,6 +778,7 @@ export async function previewCIOrderInvoice(
     levelId: 0,
     isFirstLevel: false,
     totalAmount: Number(data?.totalAmount ?? 0),
+    students: [],
     lines: Array.isArray(data?.lines)
       ? data.lines.map((line: any) => ({
           code: String(line?.code ?? ""),

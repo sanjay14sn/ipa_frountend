@@ -37,6 +37,7 @@ import RazorpayPayment, {
 } from "@/components/RazorpayPayment";
 import {
   abandonOrderPayment,
+  createOrder,
   initiateOrderPayment,
   previewOrderInvoice,
   verifyOrderPayment,
@@ -204,11 +205,16 @@ export default function FranchiseeOrdersPage() {
       toast.error("Select at least one student to place the order.");
       return;
     }
+    if (!invoicePreview) {
+      toast.error("Invoice preview is not loaded. Please wait and try again.");
+      return;
+    }
     try {
       setSubmitting(true);
       const response = await initiateOrderPayment({
         studentIds: selectedStudents,
         notes: notes.trim() || undefined,
+        totalAmount: invoicePreview.totalAmount,
       });
       setPaymentData(response);
       setIsOrderModalOpen(false);
@@ -253,13 +259,20 @@ export default function FranchiseeOrdersPage() {
         razorpayPaymentId: response.razorpay_payment_id,
         razorpaySignature: response.razorpay_signature,
       });
+      // Payment captured — now create the order, which is immediately PAID
+      await createOrder({
+        studentIds: paymentData!.studentIds,
+        notes: paymentData!.notes,
+        paymentRecordId: paymentData!.paymentRecordId,
+      });
       toast.success("Payment verified and order placed.");
       setPaymentData(null);
       resetStudentDraft();
       await refetchOrders();
     } catch (error: any) {
       toast.error(
-        error?.response?.data?.message || "Payment verification failed",
+        error?.response?.data?.message ||
+          "Payment verified but order creation failed. Please contact support.",
       );
     } finally {
       setSubmitting(false);
@@ -590,6 +603,11 @@ export default function FranchiseeOrdersPage() {
   );
 }
 
+function stripStudentPrefix(description: string) {
+  const idx = description.indexOf(' - ');
+  return idx !== -1 ? description.slice(idx + 3) : description;
+}
+
 function InvoicePreviewCard({
   loading,
   preview,
@@ -603,6 +621,18 @@ function InvoicePreviewCard({
   emptyMessage: string;
   zeroAmountLabel?: string;
 }) {
+  const linesByStudentId = useMemo(() => {
+    const map = new Map<number, InvoicePreview['lines']>();
+    if (!preview) return map;
+    for (const line of preview.lines) {
+      if (line.studentId == null) continue;
+      const bucket = map.get(line.studentId) ?? [];
+      bucket.push(line);
+      map.set(line.studentId, bucket);
+    }
+    return map;
+  }, [preview]);
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -618,14 +648,88 @@ function InvoicePreviewCard({
           </div>
         ) : preview ? (
           <>
-            {preview.lines.length > 0 ? (
+            {preview.students.length > 0 ? (
+              <div className="space-y-3">
+                {preview.students.map((student) => {
+                  const studentLines = linesByStudentId.get(student.studentId) ?? [];
+                  const levelItems = studentLines.filter((l) => l.itemType === 'LEVEL');
+                  const kitItems = studentLines.filter((l) => l.itemType === 'KIT');
+                  const isFeeOnly = studentLines.some((l) => l.itemType === 'FEE');
+
+                  return (
+                    <div key={student.studentId} className="overflow-hidden rounded-lg border">
+                      <div className="flex items-center gap-2 bg-muted/50 px-3 py-2">
+                        <span className="text-sm font-semibold text-card-foreground">{student.studentName}</span>
+                        <span className="text-xs text-muted-foreground">· {student.levelName}</span>
+                      </div>
+
+                      <div className="divide-y">
+                        {isFeeOnly ? (
+                          <div className="flex items-center justify-between px-3 py-2">
+                            <span className="text-sm font-medium text-card-foreground">Program Fees</span>
+                            <span className="text-sm text-card-foreground">{currencyFormatter.format(student.totalPrice)}</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div>
+                              <div className="flex items-center justify-between px-3 py-2">
+                                <span className="text-sm font-medium text-card-foreground">Material Cost</span>
+                                <span className="text-sm text-card-foreground">{currencyFormatter.format(student.materialCost)}</span>
+                              </div>
+                              {levelItems.length > 0 && (
+                                <div className="space-y-0.5 px-3 pb-2">
+                                  {levelItems.map((item, i) => (
+                                    <div key={i} className="flex items-center justify-between pl-4 text-xs text-muted-foreground">
+                                      <span>↳ {stripStudentPrefix(item.description)}</span>
+                                      <span>×{item.quantity}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {student.isFirstLevel && (student.kitCost > 0 || kitItems.length > 0) && (
+                              <div>
+                                <div className="flex items-center justify-between px-3 py-2">
+                                  <span className="text-sm font-medium text-card-foreground">Starting Kit</span>
+                                  <span className="text-sm text-card-foreground">{currencyFormatter.format(student.kitCost)}</span>
+                                </div>
+                                {kitItems.length > 0 && (
+                                  <div className="space-y-0.5 px-3 pb-2">
+                                    {kitItems.map((item, i) => (
+                                      <div key={i} className="flex items-center justify-between pl-4 text-xs text-muted-foreground">
+                                        <span>↳ {stripStudentPrefix(item.description)}</span>
+                                        <span>×{item.quantity}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            <div className="flex items-center justify-between px-3 py-2">
+                              <span className="text-sm font-medium text-card-foreground">Royalty</span>
+                              <span className="text-sm text-card-foreground">{currencyFormatter.format(student.royalty)}</span>
+                            </div>
+                          </>
+                        )}
+
+                        <div className="flex items-center justify-between bg-muted/20 px-3 py-2">
+                          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Student total</span>
+                          <span className="text-sm font-semibold text-card-foreground">{currencyFormatter.format(student.totalPrice)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : preview.lines.length > 0 ? (
               <div className="overflow-hidden rounded-lg border">
                 <table className="min-w-full text-sm">
                   <thead className="bg-muted/50">
                     <tr>
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground">Line</th>
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground">Qty</th>
-                      <th className="px-3 py-2 text-left font-medium text-muted-foreground">Unit</th>
                       <th className="px-3 py-2 text-right font-medium text-muted-foreground">Total</th>
                     </tr>
                   </thead>
@@ -637,9 +741,6 @@ function InvoicePreviewCard({
                           <div className="text-xs text-muted-foreground">{line.code}</div>
                         </td>
                         <td className="px-3 py-2 text-card-foreground">{line.quantity}</td>
-                        <td className="px-3 py-2 text-card-foreground">
-                          {currencyFormatter.format(line.unitPrice)}
-                        </td>
                         <td className="px-3 py-2 text-right text-card-foreground">
                           {currencyFormatter.format(line.totalPrice)}
                         </td>
