@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CheckCircle, IndianRupee, Settings } from "lucide-react";
+import { CheckCircle, IndianRupee, Package, Settings } from "lucide-react";
 import {
   approveFranchiseAdmin,
   createPayrollDetails,
@@ -22,11 +22,16 @@ import {
   type FranchiseData,
   rejectFranchise,
 } from "@/services/franchisee.service";
+import {
+  getProgramKitItems,
+  setFranchiseProgramKitItems,
+} from "@/services/inventory.service";
 import { getErrorMessage } from "@/lib/error-utils";
 import { toast } from "sonner";
 import type { PayrollDetails, ProgramPayroll } from "./types";
 import PendingApprovalsTable from "./PendingApprovalsTable";
 import { TablePageShell, TableSectionSurface } from "@/components/shared";
+import { StartingKitEditor, type KitRow } from "./StartingKitEditor";
 
 const emptyProgramPayroll = (): ProgramPayroll => ({
   programId: 0,
@@ -57,6 +62,7 @@ export function PendingApprovalsSection() {
     franchiseId: "",
     programPayroll: emptyProgramPayroll(),
   });
+  const [kitRows, setKitRows] = useState<KitRow[]>([]);
   const [preparePayrollLoading, setPreparePayrollLoading] = useState(false);
 
   const triggerRefresh = () => {
@@ -89,6 +95,17 @@ export function PendingApprovalsSection() {
         );
         return;
       }
+
+      const kitItems = await getProgramKitItems(selectedProgram.id).catch(() => []);
+      setKitRows(
+        kitItems.map((item) => ({
+          programKitId: item.programKitId,
+          inventoryItemName: item.name,
+          defaultQuantity: item.defaultQuantity ?? 1,
+          selected: true,
+          quantity: item.defaultQuantity ?? 1,
+        })),
+      );
 
       setSelectedApplication(application);
       setPayrollDetails({
@@ -167,6 +184,23 @@ export function PendingApprovalsSection() {
       });
 
       await approveFranchiseAdmin(selectedApplication.id, row.programId);
+
+      const selectedKitItems = kitRows.filter((r) => r.selected);
+      if (selectedKitItems.length > 0) {
+        await setFranchiseProgramKitItems(
+          selectedApplication.id,
+          row.programId,
+          selectedKitItems.map((r) => ({
+            programKitId: r.programKitId,
+            quantity: r.quantity,
+          })),
+        ).catch(() => {
+          toast.warning(
+            "Application approved, but starting kit could not be saved. Edit it from the franchise page.",
+          );
+        });
+      }
+
       await invalidateApprovalQueries();
 
       setShowPayrollDialog(false);
@@ -175,6 +209,7 @@ export function PendingApprovalsSection() {
         franchiseId: "",
         programPayroll: emptyProgramPayroll(),
       });
+      setKitRows([]);
       triggerRefresh();
       toast.success("Agreement terms saved and application approved");
     } catch (error) {
@@ -236,6 +271,7 @@ export function PendingApprovalsSection() {
               franchiseId: "",
               programPayroll: emptyProgramPayroll(),
             });
+            setKitRows([]);
           }
         }}
       >
@@ -581,6 +617,20 @@ export function PendingApprovalsSection() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {kitRows.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+                      <Package className="h-4 w-4" />
+                      Starting kit items
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      These items will be allocated to the franchise on approval.
+                      Uncheck items to exclude or adjust quantities.
+                    </p>
+                    <StartingKitEditor rows={kitRows} onChange={setKitRows} />
+                  </div>
+                )}
               </div>
 
               <div className="-mx-4 mt-4 flex flex-col-reverse gap-3 border-t border-border px-4 pb-1 pt-4 sm:-mx-5 sm:flex-row sm:px-5">

@@ -57,6 +57,11 @@ export type ProgramKitItemSummary = InventoryItemSummary & {
   selected?: boolean;
 };
 
+export type FranchiseProgramKitItemSummary = ProgramKitItemSummary & {
+  quantity: number;
+  selected: boolean;
+};
+
 export type CreateInventoryDto = {
   sku?: string;
   legacyItemCode?: string;
@@ -163,6 +168,15 @@ function normalizeProgramKitRow(raw: any): ProgramKitItemSummary {
     inventoryIsActive: Boolean(raw?.inventoryIsActive ?? summary.isActive ?? true),
     isActive: Boolean(raw?.isActive ?? true),
     selected: raw?.selected == null ? undefined : Boolean(raw.selected),
+  };
+}
+
+function normalizeFranchiseProgramKitRow(raw: any): FranchiseProgramKitItemSummary {
+  const base = normalizeProgramKitRow(raw);
+  return {
+    ...base,
+    quantity: Number(raw?.quantity ?? raw?.defaultQuantity ?? 1),
+    selected: Boolean(raw?.selected ?? false),
   };
 }
 
@@ -371,4 +385,28 @@ export async function getInventoryMonitoring(): Promise<InventoryMonitoringSumma
       ? data.staleStock.map(normalizeInventoryRow)
       : [],
   };
+}
+
+export async function getFranchiseProgramKitItems(
+  franchiseId: string,
+  programId: number,
+): Promise<FranchiseProgramKitItemSummary[]> {
+  const response = await api.get(
+    `/inventory/franchise/${franchiseId}/program/${programId}/kit-items`,
+  );
+  const data = unwrapData<unknown[]>(response);
+  return Array.isArray(data) ? data.map(normalizeFranchiseProgramKitRow) : [];
+}
+
+export async function setFranchiseProgramKitItems(
+  franchiseId: string,
+  programId: number,
+  items: { programKitId: number; quantity: number }[],
+): Promise<FranchiseProgramKitItemSummary[]> {
+  const response = await api.put(
+    `/inventory/franchise/${franchiseId}/program/${programId}/kit-items`,
+    { items },
+  );
+  const data = unwrapData<unknown[]>(response);
+  return Array.isArray(data) ? data.map(normalizeFranchiseProgramKitRow) : [];
 }

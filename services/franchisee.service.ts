@@ -412,7 +412,7 @@ export async function getFranchiseApplicationDetail(
   };
 }
 
-/** Assigned inventory lines (starting kit) per program. ipa-new: GET /admin/franchise/:id/starting-kits */
+/** Assigned inventory lines (starting kit) per franchise. ipa-new: GET /inventory/franchise/:id/starting-kits */
 export interface FranchiseStartingKitRow {
   id: number;
   programId: number;
@@ -430,7 +430,7 @@ export async function getFranchiseStartingKits(
   franchiseId: string,
 ): Promise<FranchiseStartingKitRow[]> {
   const response = await api.get(
-    `/admin/franchise/${franchiseId}/starting-kits`,
+    `/inventory/franchise/${franchiseId}/starting-kits`,
   );
   const data = unwrapData<unknown>(response);
   return Array.isArray(data) ? (data as FranchiseStartingKitRow[]) : [];

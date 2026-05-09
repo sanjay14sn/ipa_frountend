@@ -27,6 +27,7 @@ import { FranchiseStudentsTable } from "./components/FranchiseStudentsTable";
 import { FranchiseCiListTable } from "./components/FranchiseCiListTable";
 import PaymentsTable from "@/app/admin/payments/components/PaymentsTable";
 import { AdminAgreementsSection } from "@/app/admin/franchise/components/admin-agreements-section";
+import { FranchiseStartingKitSection } from "./components/FranchiseStartingKitSection";
 
 const TABS = [
   "students",
@@ -34,6 +35,7 @@ const TABS = [
   "orders",
   "payments",
   "agreements",
+  "kit",
 ] as const;
 
 function formatDate(value: string | Date | null | undefined) {
@@ -197,6 +199,7 @@ function FranchiseDetailInner() {
             <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="agreements">Agreements</TabsTrigger>
+            <TabsTrigger value="kit">Starting Kit</TabsTrigger>
           </TabsList>
         </div>
       </div>
@@ -219,6 +222,13 @@ function FranchiseDetailInner() {
 
       <TabsContent value="agreements" className="mt-0">
         <AdminAgreementsSection fixedFranchiseId={franchiseId} embed />
+      </TabsContent>
+
+      <TabsContent value="kit" className="mt-0">
+        <FranchiseStartingKitSection
+          franchiseId={franchiseId}
+          programId={franchise?.program?.id ?? detail?.selectedProgram?.id ?? null}
+        />
       </TabsContent>
     </Tabs>
   );
