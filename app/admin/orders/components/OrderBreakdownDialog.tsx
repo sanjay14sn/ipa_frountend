@@ -59,6 +59,7 @@ export function OrderBreakdownDialog({ orderId, onClose }: OrderBreakdownDialogP
       return;
     }
     let cancelled = false;
+    setOrder(null);
     setLoading(true);
     getOrderByIdAdmin(orderId)
       .then((data) => { if (!cancelled) setOrder(data); })

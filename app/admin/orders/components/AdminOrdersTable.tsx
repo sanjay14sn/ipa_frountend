@@ -295,7 +295,7 @@ export default function AdminOrdersTable({
         },
       },
     ],
-    [busyOrderId, handleMarkPaid, handleCancel, setVerifyDialogOrderId, setDetailOrderId],
+    [busyOrderId, handleMarkPaid, handleCancel, setVerifyDialogOrderId],
   );
 
   return (
