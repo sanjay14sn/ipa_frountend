@@ -10,6 +10,7 @@ import {
   cancelOrderAdmin,
   markOrderPaidAdmin,
   type OrderData,
+  type OrderItemData,
 } from "@/services/order.service";
 import { verifyShipment, downloadChallan, type VerifyShipmentDto } from "@/services/fulfillment.service";
 import { useAdminOrderRows } from "@/hooks/api/order.hooks";
@@ -24,13 +25,13 @@ import {
   DetailField,
 } from "@/components/shared";
 
-function clubOrderItems(lines: import("@/services/order.service").OrderItemData[]) {
+function clubOrderItems(lines: OrderItemData[]) {
   const map = new Map<
     number,
     { inventoryId: number; name: string; sku: string | null; quantity: number; reservedQty: number; backorderedQty: number; fulfilledQty: number }
   >();
   for (const line of lines) {
-    const id = line.inventory?.id ?? line.id;
+    const id = line.inventory?.id ?? -(line.id);
     const existing = map.get(id);
     if (existing) {
       existing.quantity += line.quantity;
