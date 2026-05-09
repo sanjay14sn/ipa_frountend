@@ -58,6 +58,11 @@ export interface OrderItemData {
     name: string;
     sku?: string | null;
   } | null;
+  student?: {
+    id: number;
+    name: string;
+    rollNo?: string | null;
+  } | null;
 }
 
 export interface PaymentDetails {
@@ -348,6 +353,13 @@ function normalizeOrderLine(raw: any): OrderItemData {
           id: Number(raw.inventory.id ?? 0),
           name: String(raw.inventory.name ?? ""),
           sku: raw.inventory.sku ?? null,
+        }
+      : null,
+    student: raw?.student
+      ? {
+          id: Number(raw.student.id ?? 0),
+          name: String(raw.student.name ?? ""),
+          rollNo: raw.student.rollNo ?? null,
         }
       : null,
   };
