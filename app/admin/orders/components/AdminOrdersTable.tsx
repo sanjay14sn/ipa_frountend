@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, ShieldCheck, X, Download } from "lucide-react";
+import { CreditCard, Eye, ShieldCheck, X, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import {
@@ -15,6 +15,7 @@ import {
 import { verifyShipment, downloadChallan, type VerifyShipmentDto } from "@/services/fulfillment.service";
 import { useAdminOrderRows } from "@/hooks/api/order.hooks";
 import { VerifyShipmentDialog } from "@/app/admin/shipping/components/VerifyShipmentDialog";
+import { OrderBreakdownDialog } from "./OrderBreakdownDialog";
 import {
   DataTable,
   DataTableColumn,
@@ -66,6 +67,7 @@ export default function AdminOrdersTable({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
   const [verifyDialogOrderId, setVerifyDialogOrderId] = useState<number | null>(null);
+  const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
 
   const ordersQuery = useAdminOrderRows({
     page: currentPage,
@@ -232,6 +234,15 @@ export default function AdminOrdersTable({
             order.fulfillmentStatus === "READY_TO_SHIP";
           return (
             <div className="flex items-center justify-end gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 p-0"
+                title="View details"
+                onClick={() => setDetailOrderId(order.id)}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
               {order.paymentStatus === "PENDING" ? (
                 <Button
                   variant="ghost"
@@ -284,7 +295,7 @@ export default function AdminOrdersTable({
         },
       },
     ],
-    [busyOrderId, handleMarkPaid, handleCancel, setVerifyDialogOrderId],
+    [busyOrderId, handleMarkPaid, handleCancel, setVerifyDialogOrderId, setDetailOrderId],
   );
 
   return (
@@ -390,6 +401,11 @@ export default function AdminOrdersTable({
       resultsText={(count, tot) =>
         `Showing ${count} of ${tot} order${tot !== 1 ? "s" : ""}`
       }
+    />
+
+    <OrderBreakdownDialog
+      orderId={detailOrderId}
+      onClose={() => setDetailOrderId(null)}
     />
 
     <VerifyShipmentDialog
