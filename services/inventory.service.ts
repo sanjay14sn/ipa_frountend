@@ -410,3 +410,22 @@ export async function setFranchiseProgramKitItems(
   const data = unwrapData<unknown[]>(response);
   return Array.isArray(data) ? data.map(normalizeFranchiseProgramKitRow) : [];
 }
+
+export async function getAgreementProgramKitItems(
+  agreementId: number,
+): Promise<FranchiseProgramKitItemSummary[]> {
+  const response = await api.get(`/inventory/agreement/${agreementId}/kit-items`);
+  const data = unwrapData<unknown[]>(response);
+  return Array.isArray(data) ? data.map(normalizeFranchiseProgramKitRow) : [];
+}
+
+export async function setAgreementProgramKitItems(
+  agreementId: number,
+  items: { programKitId: number; quantity: number }[],
+): Promise<FranchiseProgramKitItemSummary[]> {
+  const response = await api.put(`/inventory/agreement/${agreementId}/kit-items`, {
+    items,
+  });
+  const data = unwrapData<unknown[]>(response);
+  return Array.isArray(data) ? data.map(normalizeFranchiseProgramKitRow) : [];
+}

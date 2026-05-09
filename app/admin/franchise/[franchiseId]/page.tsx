@@ -14,29 +14,16 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { getFranchiseApplicationDetail } from "@/services/franchisee.service";
 import AdminOrdersTable from "@/app/admin/orders/components/AdminOrdersTable";
 import { FranchiseStudentsTable } from "./components/FranchiseStudentsTable";
 import { FranchiseCiListTable } from "./components/FranchiseCiListTable";
 import PaymentsTable from "@/app/admin/payments/components/PaymentsTable";
-import { AdminAgreementsSection } from "@/app/admin/franchise/components/admin-agreements-section";
-import { FranchiseStartingKitSection } from "./components/FranchiseStartingKitSection";
+import { FranchiseAgreementsWorkspace } from "@/app/admin/franchise/components/FranchiseAgreementsWorkspace";
 
-const TABS = [
-  "students",
-  "ci",
-  "orders",
-  "payments",
-  "agreements",
-  "kit",
-] as const;
+const TABS = ["students", "ci", "orders", "payments", "agreements"] as const;
 
 function formatDate(value: string | Date | null | undefined) {
   if (!value) return "-";
@@ -107,9 +94,7 @@ function FranchiseDetailInner() {
   const franchise = detail?.franchise;
   const franchisee = detail?.franchisee;
   const title = franchise?.name ?? "Franchise";
-  const subtitle = [franchise?.city, franchise?.state]
-    .filter(Boolean)
-    .join(", ");
+  const subtitle = [franchise?.city, franchise?.state].filter(Boolean).join(", ");
   const programNames = uniqueValues([
     detail?.selectedProgram?.name,
     franchise?.program?.name,
@@ -152,7 +137,7 @@ function FranchiseDetailInner() {
                     ) : null}
                   </div>
                   <p className="max-w-3xl text-sm text-muted-foreground">
-                    {subtitle || "Franchise hub"} · {franchiseId}
+                    {subtitle || "Franchise hub"} | {franchiseId}
                   </p>
                 </>
               )}
@@ -167,7 +152,7 @@ function FranchiseDetailInner() {
               label="Franchisee"
               value={compactText(franchisee?.name)}
               helper={
-                uniqueValues([franchisee?.mail, franchisee?.phone]).join(" · ") ||
+                uniqueValues([franchisee?.mail, franchisee?.phone]).join(" | ") ||
                 "Owner contact"
               }
             />
@@ -199,7 +184,6 @@ function FranchiseDetailInner() {
             <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="agreements">Agreements</TabsTrigger>
-            <TabsTrigger value="kit">Starting Kit</TabsTrigger>
           </TabsList>
         </div>
       </div>
@@ -221,14 +205,9 @@ function FranchiseDetailInner() {
       </TabsContent>
 
       <TabsContent value="agreements" className="mt-0">
-        <AdminAgreementsSection fixedFranchiseId={franchiseId} embed />
-      </TabsContent>
-
-      <TabsContent value="kit" className="mt-0">
-        <FranchiseStartingKitSection
-          franchiseId={franchiseId}
-          programId={franchise?.program?.id ?? detail?.selectedProgram?.id ?? null}
-        />
+        <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-5">
+          <FranchiseAgreementsWorkspace agreements={detail?.agreements ?? []} />
+        </div>
       </TabsContent>
     </Tabs>
   );
