@@ -253,6 +253,12 @@ export default function FranchiseeOrdersPage() {
   }
 
   async function handlePaymentSuccess(response: RazorpaySuccessResponse) {
+    const pd = paymentData;
+    if (!pd) {
+      toast.error("Payment state lost. Please contact support.");
+      setSubmitting(false);
+      return;
+    }
     try {
       await verifyOrderPayment({
         razorpayOrderId: response.razorpay_order_id,
@@ -261,15 +267,19 @@ export default function FranchiseeOrdersPage() {
       });
       // Payment captured — now create the order, which is immediately PAID
       await createOrder({
-        studentIds: paymentData!.studentIds,
-        notes: paymentData!.notes,
-        paymentRecordId: paymentData!.paymentRecordId,
+        studentIds: pd.studentIds,
+        notes: pd.notes,
+        paymentRecordId: pd.paymentRecordId,
       });
       toast.success("Payment verified and order placed.");
       setPaymentData(null);
       resetStudentDraft();
       await refetchOrders();
     } catch (error: any) {
+      // Payment was captured but order creation failed — clear payment state
+      // so the user is not left with an active Razorpay modal
+      setPaymentData(null);
+      resetStudentDraft();
       toast.error(
         error?.response?.data?.message ||
           "Payment verified but order creation failed. Please contact support.",
@@ -777,28 +787,6 @@ function InvoicePreviewCard({
             Invoice preview is unavailable for the selection.
           </p>
         )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function StatCard({
-  title,
-  value,
-  icon,
-}: {
-  title: string;
-  value: number;
-  icon: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {icon}
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold text-card-foreground">{value}</div>
       </CardContent>
     </Card>
   );
