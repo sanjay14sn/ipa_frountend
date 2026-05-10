@@ -10,17 +10,15 @@ import {
   Receipt,
   Truck,
   Users,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@/context/user-context";
 import { useStudents } from "@/hooks/api/student.hooks";
 import { useFranchiseeOrders } from "@/hooks/api/order.hooks";
 import { useCourseInstructors } from "@/hooks/api/course-instructor.hooks";
-import { TablePageShell } from "@/components/shared";
+import { TablePageShell, MultiSelectDropdown } from "@/components/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -32,6 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import OrdersTable from "./components/OrdersTable";
+import InvoicePreviewCard from "./components/InvoicePreviewCard";
 import RazorpayPayment, {
   type RazorpaySuccessResponse,
 } from "@/components/RazorpayPayment";
@@ -47,12 +46,6 @@ import {
   type OrderPaymentResponse,
   OrderStatus,
 } from "@/services/order.service";
-
-const currencyFormatter = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 2,
-});
 
 export default function FranchiseeOrdersPage() {
   const { user } = useUser();
@@ -81,8 +74,8 @@ export default function FranchiseeOrdersPage() {
   const [loadingCiInvoice, setLoadingCiInvoice] = useState(false);
   const [ciSubmitting, setCiSubmitting] = useState(false);
 
-  const activeStudents = useMemo(
-    () => students.filter((student) => student.isActive),
+  const eligibleStudents = useMemo(
+    () => students.filter((student) => student.isActive && !student.materialsOrdered),
     [students],
   );
   const activeCIs = useMemo(
@@ -93,12 +86,6 @@ export default function FranchiseeOrdersPage() {
           !ci.materialsOrdered,
       ),
     [courseInstructors],
-  );
-  const selectedStudentRows = activeStudents.filter((student) =>
-    selectedStudents.includes(student.id),
-  );
-  const selectedCIRows = activeCIs.filter((ci) =>
-    selectedInstructors.includes(ci.id),
   );
 
   // Student invoice preview effect
@@ -184,21 +171,6 @@ export default function FranchiseeOrdersPage() {
     setCiSubmitting(false);
   }
 
-  function toggleStudentSelection(studentId: number) {
-    setSelectedStudents((current) =>
-      current.includes(studentId)
-        ? current.filter((id) => id !== studentId)
-        : [...current, studentId],
-    );
-  }
-
-  function toggleCISelection(ciId: number) {
-    setSelectedInstructors((current) =>
-      current.includes(ciId)
-        ? current.filter((id) => id !== ciId)
-        : [...current, ciId],
-    );
-  }
 
   async function handlePlaceOrder() {
     if (selectedStudents.length === 0) {
@@ -364,58 +336,18 @@ export default function FranchiseeOrdersPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Select students</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="max-h-[360px] space-y-2 overflow-y-auto">
-                  {activeStudents.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      No active students available for ordering.
-                    </p>
-                  ) : (
-                    activeStudents.map((student) => (
-                      <label
-                        key={student.id}
-                        className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:bg-accent/40 transition-colors"
-                      >
-                        <Checkbox
-                          checked={selectedStudents.includes(student.id)}
-                          onCheckedChange={() => toggleStudentSelection(student.id)}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium text-card-foreground">{student.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {student.rollNo} | {getLevelDisplay(student.level)}
-                          </div>
-                        </div>
-                      </label>
-                    ))
-                  )}
-                </div>
-
-                {selectedStudentRows.length > 0 ? (
-                  <div className="rounded-lg border border-dashed p-3">
-                    <div className="mb-2 text-sm font-medium">Selected students</div>
-                    <div className="space-y-2">
-                      {selectedStudentRows.map((student) => (
-                        <div
-                          key={student.id}
-                          className="flex items-center justify-between rounded bg-muted/30 px-3 py-2 text-sm"
-                        >
-                          <span className="text-card-foreground">
-                            {student.name} | {student.rollNo}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2"
-                            onClick={() => toggleStudentSelection(student.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
+              <CardContent className="space-y-4">
+                <MultiSelectDropdown
+                  options={eligibleStudents.map((student) => ({
+                    value: student.id,
+                    label: student.name,
+                    sublabel: `${student.rollNo} | ${getLevelDisplay(student.level)}`,
+                  }))}
+                  selected={selectedStudents}
+                  onChange={setSelectedStudents}
+                  placeholder="Select students…"
+                  emptyMessage="No eligible students. Students with a pending or fulfilled order for their current level will not appear here."
+                />
 
                 <div className="space-y-2">
                   <Label>Notes (optional)</Label>
@@ -483,58 +415,18 @@ export default function FranchiseeOrdersPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Select instructors</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="max-h-[360px] space-y-2 overflow-y-auto">
-                  {activeCIs.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      No active course instructors with training levels available.
-                    </p>
-                  ) : (
-                    activeCIs.map((ci) => (
-                      <label
-                        key={ci.id}
-                        className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:bg-accent/40 transition-colors"
-                      >
-                        <Checkbox
-                          checked={selectedInstructors.includes(ci.id)}
-                          onCheckedChange={() => toggleCISelection(ci.id)}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium text-card-foreground">{ci.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {ci.instructorId} | {ci.status}
-                          </div>
-                        </div>
-                      </label>
-                    ))
-                  )}
-                </div>
-
-                {selectedCIRows.length > 0 ? (
-                  <div className="rounded-lg border border-dashed p-3">
-                    <div className="mb-2 text-sm font-medium">Selected instructors</div>
-                    <div className="space-y-2">
-                      {selectedCIRows.map((ci) => (
-                        <div
-                          key={ci.id}
-                          className="flex items-center justify-between rounded bg-muted/30 px-3 py-2 text-sm"
-                        >
-                          <span className="text-card-foreground">
-                            {ci.name} | {ci.instructorId}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2"
-                            onClick={() => toggleCISelection(ci.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
+              <CardContent className="space-y-4">
+                <MultiSelectDropdown
+                  options={activeCIs.map((ci) => ({
+                    value: ci.id,
+                    label: ci.name,
+                    sublabel: `${ci.instructorId} | ${ci.status}`,
+                  }))}
+                  selected={selectedInstructors}
+                  onChange={setSelectedInstructors}
+                  placeholder="Select instructors…"
+                  emptyMessage="No eligible instructors. Instructors with materials already ordered will not appear here."
+                />
 
                 <div className="space-y-2">
                   <Label>Notes (optional)</Label>
@@ -613,181 +505,3 @@ export default function FranchiseeOrdersPage() {
   );
 }
 
-function stripStudentPrefix(description: string) {
-  const idx = description.indexOf(' - ');
-  return idx !== -1 ? description.slice(idx + 3) : description;
-}
-
-function InvoicePreviewCard({
-  loading,
-  preview,
-  selected,
-  emptyMessage,
-  zeroAmountLabel,
-}: {
-  loading: boolean;
-  preview: InvoicePreview | null;
-  selected: number;
-  emptyMessage: string;
-  zeroAmountLabel?: string;
-}) {
-  const linesByStudentId = useMemo(() => {
-    const map = new Map<number, InvoicePreview['lines']>();
-    if (!preview) return map;
-    for (const line of preview.lines) {
-      if (line.studentId == null) continue;
-      const bucket = map.get(line.studentId) ?? [];
-      bucket.push(line);
-      map.set(line.studentId, bucket);
-    }
-    return map;
-  }, [preview]);
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Invoice preview</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {selected === 0 ? (
-          <p className="text-sm text-muted-foreground">{emptyMessage}</p>
-        ) : loading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            Loading invoice preview...
-          </div>
-        ) : preview ? (
-          <>
-            {preview.students.length > 0 ? (
-              <div className="space-y-3">
-                {preview.students.map((student) => {
-                  const studentLines = linesByStudentId.get(student.studentId) ?? [];
-                  const levelItems = studentLines.filter((l) => l.itemType === 'LEVEL');
-                  const kitItems = studentLines.filter((l) => l.itemType === 'KIT');
-                  const isFeeOnly = studentLines.some((l) => l.itemType === 'FEE');
-
-                  return (
-                    <div key={student.studentId} className="overflow-hidden rounded-lg border">
-                      <div className="flex items-center gap-2 bg-muted/50 px-3 py-2">
-                        <span className="text-sm font-semibold text-card-foreground">{student.studentName}</span>
-                        <span className="text-xs text-muted-foreground">· {student.levelName}</span>
-                      </div>
-
-                      <div className="divide-y">
-                        {isFeeOnly ? (
-                          <div className="flex items-center justify-between px-3 py-2">
-                            <span className="text-sm font-medium text-card-foreground">Program Fees</span>
-                            <span className="text-sm text-card-foreground">{currencyFormatter.format(student.totalPrice)}</span>
-                          </div>
-                        ) : (
-                          <>
-                            <div>
-                              <div className="flex items-center justify-between px-3 py-2">
-                                <span className="text-sm font-medium text-card-foreground">Material Cost</span>
-                                <span className="text-sm text-card-foreground">{currencyFormatter.format(student.materialCost)}</span>
-                              </div>
-                              {levelItems.length > 0 && (
-                                <div className="space-y-0.5 px-3 pb-2">
-                                  {levelItems.map((item, i) => (
-                                    <div key={i} className="flex items-center justify-between pl-4 text-xs text-muted-foreground">
-                                      <span>↳ {stripStudentPrefix(item.description)}</span>
-                                      <span>×{item.quantity}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-
-                            {student.isFirstLevel && (student.kitCost > 0 || kitItems.length > 0) && (
-                              <div>
-                                <div className="flex items-center justify-between px-3 py-2">
-                                  <span className="text-sm font-medium text-card-foreground">Starting Kit</span>
-                                  <span className="text-sm text-card-foreground">{currencyFormatter.format(student.kitCost)}</span>
-                                </div>
-                                {kitItems.length > 0 && (
-                                  <div className="space-y-0.5 px-3 pb-2">
-                                    {kitItems.map((item, i) => (
-                                      <div key={i} className="flex items-center justify-between pl-4 text-xs text-muted-foreground">
-                                        <span>↳ {stripStudentPrefix(item.description)}</span>
-                                        <span>×{item.quantity}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            <div className="flex items-center justify-between px-3 py-2">
-                              <span className="text-sm font-medium text-card-foreground">Royalty</span>
-                              <span className="text-sm text-card-foreground">{currencyFormatter.format(student.royalty)}</span>
-                            </div>
-                          </>
-                        )}
-
-                        <div className="flex items-center justify-between bg-muted/20 px-3 py-2">
-                          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Student total</span>
-                          <span className="text-sm font-semibold text-card-foreground">{currencyFormatter.format(student.totalPrice)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : preview.lines.length > 0 ? (
-              <div className="overflow-hidden rounded-lg border">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-medium text-muted-foreground">Line</th>
-                      <th className="px-3 py-2 text-left font-medium text-muted-foreground">Qty</th>
-                      <th className="px-3 py-2 text-right font-medium text-muted-foreground">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.lines.map((line, index) => (
-                      <tr key={`${line.code}-${index}`} className="border-t">
-                        <td className="px-3 py-2">
-                          <div className="font-medium text-card-foreground">{line.description}</div>
-                          <div className="text-xs text-muted-foreground">{line.code}</div>
-                        </td>
-                        <td className="px-3 py-2 text-card-foreground">{line.quantity}</td>
-                        <td className="px-3 py-2 text-right text-card-foreground">
-                          {currencyFormatter.format(line.totalPrice)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No materials configured for the selected instructors&apos; active training levels.
-              </p>
-            )}
-
-            <div className="rounded-lg border bg-muted/20 p-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Preview total</span>
-                <span className="text-lg font-semibold text-card-foreground">
-                  {currencyFormatter.format(preview.totalAmount)}
-                </span>
-              </div>
-              {zeroAmountLabel && preview.totalAmount === 0 && (
-                <p className="mt-2 text-xs text-muted-foreground">{zeroAmountLabel}</p>
-              )}
-              {!zeroAmountLabel && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Pre-shipment stages such as allocation and backorder stay internal; you will see these orders as Processing until they ship.
-                </p>
-              )}
-            </div>
-          </>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Invoice preview is unavailable for the selection.
-          </p>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
