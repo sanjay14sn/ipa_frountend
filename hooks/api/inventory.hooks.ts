@@ -64,6 +64,7 @@ export function useInventoryPaginatedQuery(filters: InventoryPaginatedFilters) {
       }),
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: 30 * 60 * 1000,
+    placeholderData: (prev) => prev,
   });
 
   return {
@@ -151,6 +152,16 @@ export async function invalidateProgramKitItems(programId: number) {
   try {
     await getQueryClientBridge().invalidateQueries({
       queryKey: queryKeys.inventory.programKitItems(programId),
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+export async function invalidateLevelItems(levelId: number) {
+  try {
+    await getQueryClientBridge().invalidateQueries({
+      queryKey: queryKeys.inventory.levelItems(levelId),
     });
   } catch {
     /* ignore */

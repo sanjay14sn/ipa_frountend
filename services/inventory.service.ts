@@ -317,6 +317,22 @@ export async function assignInventoryToProgramKit(
   return normalizeProgramKitRow(unwrapData(response));
 }
 
+export async function bulkAssignInventoryToProgramKit(
+  programId: number,
+  items: Array<{ inventoryId: number; quantity?: number }>,
+): Promise<{ assigned: number; failed: number[] }> {
+  const response = await api.post(
+    `/inventory/program/${programId}/kit-items/bulk-assign`,
+    {
+      items: items.map((item) => ({
+        inventoryId: item.inventoryId,
+        ...(item.quantity !== undefined ? { defaultQuantity: item.quantity } : {}),
+      })),
+    },
+  );
+  return unwrapData(response) as { assigned: number; failed: number[] };
+}
+
 export async function updateProgramKitItem(
   programId: number,
   programKitId: number,
@@ -345,6 +361,22 @@ export async function assignInventoryToLevel(
     inventoryId,
     ...(defaultQuantity !== undefined ? { defaultQuantity } : {}),
   });
+}
+
+export async function bulkAssignInventoryToLevel(
+  levelId: number,
+  items: Array<{ inventoryId: number; quantity?: number }>,
+): Promise<{ assigned: number; failed: number[] }> {
+  const response = await api.post(
+    `/inventory/level/${levelId}/items/bulk-assign`,
+    {
+      items: items.map((item) => ({
+        inventoryId: item.inventoryId,
+        ...(item.quantity !== undefined ? { defaultQuantity: item.quantity } : {}),
+      })),
+    },
+  );
+  return unwrapData(response) as { assigned: number; failed: number[] };
 }
 
 export async function unassignInventoryFromLevel(
