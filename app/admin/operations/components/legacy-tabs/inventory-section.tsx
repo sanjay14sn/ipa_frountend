@@ -425,28 +425,6 @@ export function InventorySection() {
                 </p>
               </CardHeader>
               <CardContent className="space-y-3">
-                <InventoryCheckboxLinkPanel
-                  key={levelIdNum}
-                  linkedInventoryIds={new Set(assignedItems.map((item) => item.id))}
-                  catalogItems={catalogQuery.data ?? []}
-                  isCatalogLoading={catalogQuery.isLoading}
-                  onSave={async (items) => {
-                    const { assigned, failed } = await bulkAssignInventoryToLevel(levelIdNum, items);
-                    await invalidateLevelItems(levelIdNum);
-                    await assignedItemsQuery.refetch();
-                    if (failed.length > 0) {
-                      toast({
-                        title: `${assigned} assigned, ${failed.length} failed`,
-                        variant: "destructive",
-                      });
-                    } else {
-                      toast({
-                        title: `${items.length} item${items.length !== 1 ? "s" : ""} assigned to level`,
-                      });
-                    }
-                  }}
-                />
-
                 <div className="grid gap-2">
                   {assignedItems.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
@@ -477,6 +455,28 @@ export function InventorySection() {
                     ))
                   )}
                 </div>
+
+                <InventoryCheckboxLinkPanel
+                  key={levelIdNum}
+                  linkedInventoryIds={new Set(assignedItems.map((item) => item.id))}
+                  catalogItems={catalogQuery.data ?? []}
+                  isCatalogLoading={catalogQuery.isLoading}
+                  onSave={async (items) => {
+                    const { assigned, failed } = await bulkAssignInventoryToLevel(levelIdNum, items);
+                    await invalidateLevelItems(levelIdNum);
+                    await assignedItemsQuery.refetch();
+                    if (failed.length > 0) {
+                      toast({
+                        title: `${assigned} assigned, ${failed.length} failed`,
+                        variant: "destructive",
+                      });
+                    } else {
+                      toast({
+                        title: `${items.length} item${items.length !== 1 ? "s" : ""} assigned to level`,
+                      });
+                    }
+                  }}
+                />
               </CardContent>
             </Card>
           ) : null}
