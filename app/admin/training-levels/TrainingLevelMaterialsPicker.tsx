@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,10 @@ export function TrainingLevelMaterialsPicker({
     refetch: refetchAssigned,
   } = useInventoryItemsForTrainingLevel(trainingLevelId, hasRequested);
 
-  const assignedIds = new Set(assigned.map((item) => item.id));
+  const assignedIds = useMemo(
+    () => new Set(assigned.map((item) => item.id)),
+    [assigned],
+  );
 
   const handleRemove = async (inventoryId: number) => {
     try {

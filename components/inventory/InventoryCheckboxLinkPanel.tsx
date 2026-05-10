@@ -68,6 +68,16 @@ export function InventoryCheckboxLinkPanel({
     }));
   }
 
+  function handleQuantityBlur(id: number) {
+    setPendingAdditions((prev) => {
+      const current = prev[id];
+      if (!isPositiveInteger(current)) {
+        return { ...prev, [id]: 1 };
+      }
+      return prev;
+    });
+  }
+
   async function handleSave() {
     if (!isDirty) return;
     const items = Object.entries(pendingAdditions).map(([id, qty]) => ({
@@ -134,6 +144,7 @@ export function InventoryCheckboxLinkPanel({
                   inputMode="numeric"
                   value={String(qty)}
                   onChange={(e) => setQuantity(id, e.target.value)}
+                  onBlur={() => handleQuantityBlur(id)}
                   aria-label={`Quantity for ${item.name}`}
                   className="h-7 w-16 shrink-0 text-sm"
                 />
@@ -215,6 +226,7 @@ export function InventoryCheckboxLinkPanel({
                       inputMode="numeric"
                       value={String(qty)}
                       onChange={(e) => setQuantity(item.id, e.target.value)}
+                      onBlur={() => handleQuantityBlur(item.id)}
                       aria-label={`Quantity for ${item.name}`}
                       className="h-7 w-16 text-sm"
                       onClick={(e) => e.stopPropagation()}
