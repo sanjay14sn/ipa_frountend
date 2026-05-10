@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,23 +11,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import {
   useAllInventory,
   useInventoryItemsForTrainingLevel,
+  invalidateTrainingLevelItems,
 } from "@/hooks/api/inventory.hooks";
 import {
-  assignInventoryToTrainingLevel,
+  bulkAssignInventoryToTrainingLevel,
   unassignInventoryFromTrainingLevel,
 } from "@/services/inventory.service";
+import { InventoryCheckboxLinkPanel } from "@/components/inventory/InventoryCheckboxLinkPanel";
 
 export function TrainingLevelMaterialsPicker({
   trainingLevelId,
@@ -39,7 +34,6 @@ export function TrainingLevelMaterialsPicker({
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
-  const [selectedItemId, setSelectedItemId] = useState<number | "">("");
 
   const { data: catalog = [], isLoading: isLoadingCatalog } = useAllInventory(
     hasRequested,
@@ -50,29 +44,7 @@ export function TrainingLevelMaterialsPicker({
     refetch: refetchAssigned,
   } = useInventoryItemsForTrainingLevel(trainingLevelId, hasRequested);
 
-  const assignedIds = useMemo(
-    () => new Set(assigned.map((item) => item.id)),
-    [assigned],
-  );
-  const available = useMemo(
-    () => catalog.filter((item) => !assignedIds.has(item.id)),
-    [assignedIds, catalog],
-  );
-  const catalogEmpty = hasRequested && catalog.length === 0;
-
-  const handleAdd = async (inventoryId: number) => {
-    try {
-      await assignInventoryToTrainingLevel(trainingLevelId, inventoryId);
-      toast({ title: "Item linked to training level" });
-      await refetchAssigned();
-    } catch (e) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(e),
-        variant: "destructive",
-      });
-    }
-  };
+  const assignedIds = new Set(assigned.map((item) => item.id));
 
   const handleRemove = async (inventoryId: number) => {
     try {
@@ -92,8 +64,6 @@ export function TrainingLevelMaterialsPicker({
     <div className="flex min-w-0 flex-wrap items-center gap-1">
       {!hasRequested ? (
         <span className="text-xs text-muted-foreground">Open to load</span>
-      ) : catalogEmpty ? (
-        <span className="text-xs text-muted-foreground">No catalog items</span>
       ) : isLoadingAssigned || isLoadingCatalog ? (
         <span className="text-xs text-muted-foreground">Loading...</span>
       ) : (
@@ -127,6 +97,7 @@ export function TrainingLevelMaterialsPicker({
               </DialogHeader>
 
               <div className="space-y-4">
+                {/* Section 1: Already linked */}
                 <div className="rounded-lg border p-3">
                   <div className="mb-2 text-sm font-medium">Linked items</div>
                   {isLoadingAssigned || isLoadingCatalog ? (
@@ -157,43 +128,29 @@ export function TrainingLevelMaterialsPicker({
                   )}
                 </div>
 
-                {catalogEmpty ? (
-                  <p className="text-sm text-muted-foreground">No catalog items available.</p>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-[1fr,120px]">
-                    <Select
-                      value={selectedItemId === "" ? "none" : String(selectedItemId)}
-                      onValueChange={(value) =>
-                        setSelectedItemId(value === "none" ? "" : Number(value))
-                      }
-                      disabled={isLoadingAssigned || isLoadingCatalog}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select inventory item" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Select inventory item</SelectItem>
-                        {available.map((item) => (
-                          <SelectItem key={item.id} value={String(item.id)}>
-                            {item.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      disabled={selectedItemId === ""}
-                      onClick={() => {
-                        if (selectedItemId !== "") {
-                          void handleAdd(selectedItemId);
-                          setSelectedItemId("");
-                        }
-                      }}
-                    >
-                      Add
-                    </Button>
-                  </div>
-                )}
+                {/* Sections 2 + 3: Pending selections + catalog */}
+                <InventoryCheckboxLinkPanel
+                  key={trainingLevelId}
+                  linkedInventoryIds={assignedIds}
+                  catalogItems={catalog}
+                  isCatalogLoading={isLoadingCatalog}
+                  onSave={async (items) => {
+                    const { assigned: count, failed } =
+                      await bulkAssignInventoryToTrainingLevel(trainingLevelId, items);
+                    await invalidateTrainingLevelItems(trainingLevelId);
+                    await refetchAssigned();
+                    if (failed.length > 0) {
+                      toast({
+                        title: `${count} linked, ${failed.length} failed`,
+                        variant: "destructive",
+                      });
+                    } else {
+                      toast({
+                        title: `${items.length} item${items.length !== 1 ? "s" : ""} linked to training level`,
+                      });
+                    }
+                  }}
+                />
               </div>
             </DialogContent>
           </Dialog>
