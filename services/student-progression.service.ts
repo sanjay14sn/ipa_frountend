@@ -7,6 +7,8 @@ export type StudentLevelProgressionStatus =
   | 'COMPLETED'
   | 'FAILED';
 
+export type CertificateStatus = 'NONE' | 'PENDING' | 'ISSUED' | 'REJECTED';
+
 export interface StudentLevelProgression {
   id: number;
   studentId: number;
@@ -14,12 +16,16 @@ export interface StudentLevelProgression {
   status: StudentLevelProgressionStatus;
   marks: number | null;
   theoryMarks: number | null;
+  totalMarks: number | null;
+  instructorId: number | null;
   materialsOrdered: boolean;
   materialsOrderedAt: string | null;
   completedAt: string | null;
-  certificateIssued: boolean;
-  certificatePdfPath: string | null;
+  certificateStatus: CertificateStatus;
+  certificateRequestDate: string | null;
   certificateIssuedAt: string | null;
+  certificatePdfPath: string | null;
+  rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
 }
