@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { InventoryItemSummary } from "@/services/inventory.service";
+import { useToast } from "@/hooks/use-toast";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 interface InventoryCheckboxLinkPanelProps {
   linkedInventoryIds: Set<number>;
@@ -27,6 +29,7 @@ export function InventoryCheckboxLinkPanel({
   const [pendingAdditions, setPendingAdditions] = useState<Record<number, number>>({});
   const [search, setSearch] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
 
   const available = catalogItems.filter(
     (item) => !linkedInventoryIds.has(item.id),
@@ -76,6 +79,12 @@ export function InventoryCheckboxLinkPanel({
       await onSave(items);
       setPendingAdditions({});
       setSearch("");
+    } catch (error) {
+      toast({
+        title: "Failed to save",
+        description: getUserFriendlyMessage(error),
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
     }
