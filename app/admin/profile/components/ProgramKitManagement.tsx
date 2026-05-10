@@ -282,6 +282,7 @@ export function ProgramKitManagement({
         </div>
 
         <InventoryCheckboxLinkPanel
+          key={programId}
           linkedInventoryIds={new Set(kitItems.map((item) => item.inventoryId))}
           catalogItems={catalog}
           isCatalogLoading={isCatalogLoading}
