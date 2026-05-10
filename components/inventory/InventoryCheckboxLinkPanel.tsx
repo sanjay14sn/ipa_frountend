@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Loader2, Save } from "lucide-react";
+import { Check, Loader2, Save, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,6 +92,7 @@ export function InventoryCheckboxLinkPanel({
 
   return (
     <div className="rounded-lg border border-dashed bg-slate-50/60 p-4">
+      {/* Header row */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="text-sm font-medium text-gray-900">Add existing inventory</h4>
         {isDirty ? (
@@ -112,6 +113,44 @@ export function InventoryCheckboxLinkPanel({
         ) : null}
       </div>
 
+      {/* Section 2: Pending selections */}
+      {isDirty ? (
+        <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+          <p className="mb-2 text-xs font-medium text-emerald-900">
+            {pendingCount} selected — not yet saved
+          </p>
+          {Object.entries(pendingAdditions).map(([idStr, qty]) => {
+            const id = Number(idStr);
+            const item = catalogItems.find((c) => c.id === id);
+            if (!item) return null;
+            return (
+              <div key={id} className="flex items-center gap-2 py-1">
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900">
+                  {item.name}
+                </span>
+                <Input
+                  type="number"
+                  min="1"
+                  inputMode="numeric"
+                  value={String(qty)}
+                  onChange={(e) => setQuantity(id, e.target.value)}
+                  className="h-7 w-16 shrink-0 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => toggleItem(id)}
+                  aria-label={`Remove ${item.name} from selection`}
+                  className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-red-50 hover:text-destructive"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {/* Section 3: Searchable catalog */}
       <Input
         className="mt-3"
         placeholder="Search by name, SKU, or category..."
