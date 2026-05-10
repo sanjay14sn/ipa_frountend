@@ -140,7 +140,8 @@ export const queryKeys = {
     monitoring: ["inventory", "monitoring"] as const,
   },
   fulfillment: {
-    shipments: ["fulfillment", "shipments"] as const,
+    shipments: (params?: Record<string, unknown> | null) =>
+      listQueryKey("shipments", params ?? undefined),
   },
   auth: {
     franchiseeProfile: (franchiseId?: string) =>

@@ -50,7 +50,7 @@ function AdminOperationsHubInner() {
               Track paid demand, allocation, backorders, and cancellation from the order side.
             </p>
           </div>
-          <AdminOrdersTable />
+          {tab === "orders" && <AdminOrdersTable />}
         </TabsContent>
 
         <TabsContent value="shipping" className="mt-4 space-y-6">
@@ -60,7 +60,7 @@ function AdminOperationsHubInner() {
               Only fully ready orders appear here, and the UI never exposes partial shipments.
             </p>
           </div>
-          <AdminShippingTable />
+          {tab === "shipping" && <AdminShippingTable />}
         </TabsContent>
 
         <TabsContent value="payments" className="mt-4 space-y-6">
@@ -70,11 +70,11 @@ function AdminOperationsHubInner() {
               Billing stays in the hub, but order creation and stock allocation are now handled elsewhere.
             </p>
           </div>
-          <PaymentsTable />
+          {tab === "payments" && <PaymentsTable />}
         </TabsContent>
 
         <TabsContent value="inventory" className="mt-4">
-          <InventorySection />
+          {tab === "inventory" && <InventorySection />}
         </TabsContent>
 
         <TabsContent value="procurement" className="mt-4 space-y-6">
@@ -84,11 +84,11 @@ function AdminOperationsHubInner() {
               Manage suppliers, item sourcing, purchase orders, receipts, and replenishment drafts.
             </p>
           </div>
-          <ProcurementSection />
+          {tab === "procurement" && <ProcurementSection />}
         </TabsContent>
 
         <TabsContent value="monitoring" className="mt-4">
-          <MonitoringSection />
+          {tab === "monitoring" && <MonitoringSection />}
         </TabsContent>
       </Tabs>
     </TablePageShell>
