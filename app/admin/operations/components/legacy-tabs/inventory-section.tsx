@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -47,7 +47,7 @@ import { getAllPrograms, type Program } from "@/services/program.service";
 import type { Level } from "@/services/level.service";
 import type { Stream } from "@/services/stream.service";
 import {
-  assignInventoryToLevel,
+  bulkAssignInventoryToLevel,
   createInventory,
   deleteInventory,
   getAllInventory,
@@ -63,8 +63,10 @@ import {
 } from "@/services/inventory.service";
 import {
   invalidateInventoryAdminLists,
+  invalidateLevelItems,
   useInventoryPaginatedQuery,
 } from "@/hooks/api/inventory.hooks";
+import { InventoryCheckboxLinkPanel } from "@/components/inventory/InventoryCheckboxLinkPanel";
 import { useLevelsByProgram } from "@/hooks/api/level.hooks";
 import { useStreamsByProgram } from "@/hooks/api/stream.hooks";
 
@@ -139,8 +141,6 @@ export function InventorySection() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [assignItemId, setAssignItemId] = useState<number | "">("");
-  const [assignDefaultQuantity, setAssignDefaultQuantity] = useState(1);
   const [formData, setFormData] = useState<InventoryFormState>(EMPTY_FORM);
   const [editingItem, setEditingItem] = useState<InventoryItemSummary | null>(null);
   const [editForm, setEditForm] = useState<InventoryFormState>(EMPTY_FORM);
@@ -185,13 +185,6 @@ export function InventorySection() {
   const total = inventoryQuery.total;
   const totalPages = inventoryQuery.totalPages;
   const loading = inventoryQuery.isPending;
-
-  const availableToAssign = useMemo(() => {
-    const catalogItems = catalogQuery.data ?? [];
-    const assignedItemList = assignedItemsQuery.data ?? [];
-    const assignedIds = new Set(assignedItemList.map((item) => item.id));
-    return catalogItems.filter((item) => !assignedIds.has(item.id));
-  }, [assignedItemsQuery.data, catalogQuery.data]);
 
   useEffect(() => {
     const timer = setTimeout(() => setSearchDebounced(search.trim()), 300);
@@ -287,23 +280,6 @@ export function InventorySection() {
       toast({ title: "Inventory item deleted" });
       setIsDeleteOpen(false);
       setDeletingItem(null);
-      await refreshInventoryViews();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
-    }
-  }
-
-  async function handleAssign() {
-    if (!levelIdNum || assignItemId === "") return;
-    try {
-      await assignInventoryToLevel(levelIdNum, Number(assignItemId), assignDefaultQuantity);
-      toast({ title: "Item assigned to level" });
-      setAssignItemId("");
-      setAssignDefaultQuantity(1);
       await refreshInventoryViews();
     } catch (error) {
       toast({
@@ -449,51 +425,20 @@ export function InventorySection() {
                 </p>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="grid gap-3 md:grid-cols-[1fr,140px,140px]">
-                  <div className="space-y-2">
-                    <Label>Add catalog item</Label>
-                    <Select
-                      value={assignItemId === "" ? "none" : String(assignItemId)}
-                      onValueChange={(value) =>
-                        setAssignItemId(value === "none" ? "" : Number(value))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose inventory item" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Choose inventory item</SelectItem>
-                        {availableToAssign.map((item) => (
-                          <SelectItem key={item.id} value={String(item.id)}>
-                            {item.name} ({item.sku})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Default qty</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={assignDefaultQuantity}
-                      onChange={(event) =>
-                        setAssignDefaultQuantity(
-                          Math.max(1, Number(event.target.value) || 1),
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    <Button
-                      className="w-full"
-                      onClick={() => void handleAssign()}
-                      disabled={assignItemId === ""}
-                    >
-                      Assign
-                    </Button>
-                  </div>
-                </div>
+                <InventoryCheckboxLinkPanel
+                  key={levelIdNum}
+                  linkedInventoryIds={new Set(assignedItems.map((item) => item.id))}
+                  catalogItems={catalogQuery.data ?? []}
+                  isCatalogLoading={catalogQuery.isLoading}
+                  onSave={async (items) => {
+                    await bulkAssignInventoryToLevel(levelIdNum, items);
+                    await invalidateLevelItems(levelIdNum);
+                    await assignedItemsQuery.refetch();
+                    toast({
+                      title: `${items.length} item${items.length !== 1 ? "s" : ""} assigned to level`,
+                    });
+                  }}
+                />
 
                 <div className="grid gap-2">
                   {assignedItems.length === 0 ? (
