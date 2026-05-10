@@ -168,5 +168,15 @@ export async function invalidateLevelItems(levelId: number) {
   }
 }
 
+export async function invalidateTrainingLevelItems(trainingLevelId: number) {
+  try {
+    await getQueryClientBridge().invalidateQueries({
+      queryKey: queryKeys.inventory.trainingLevelItems(trainingLevelId),
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
 export type { Inventory };
 export type { ProgramKitItemSummary };

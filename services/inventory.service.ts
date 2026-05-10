@@ -397,6 +397,22 @@ export async function assignInventoryToTrainingLevel(
   });
 }
 
+export async function bulkAssignInventoryToTrainingLevel(
+  trainingLevelId: number,
+  items: Array<{ inventoryId: number; quantity?: number }>,
+): Promise<{ assigned: number; failed: number[] }> {
+  const response = await api.post(
+    `/inventory/training-level/${trainingLevelId}/items/bulk-assign`,
+    {
+      items: items.map((item) => ({
+        inventoryId: item.inventoryId,
+        ...(item.quantity !== undefined ? { defaultQuantity: item.quantity } : {}),
+      })),
+    },
+  );
+  return unwrapData(response) as { assigned: number; failed: number[] };
+}
+
 export async function unassignInventoryFromTrainingLevel(
   trainingLevelId: number,
   inventoryId: number,
