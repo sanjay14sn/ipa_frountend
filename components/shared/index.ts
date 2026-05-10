@@ -48,3 +48,6 @@ export {
   DetailCard,
   DetailMessage,
 } from "./detail-layout";
+
+export { MultiSelectDropdown } from "./MultiSelectDropdown";
+export type { MultiSelectOption } from "./MultiSelectDropdown";
