@@ -134,6 +134,7 @@ export function InventoryCheckboxLinkPanel({
                   inputMode="numeric"
                   value={String(qty)}
                   onChange={(e) => setQuantity(id, e.target.value)}
+                  aria-label={`Quantity for ${item.name}`}
                   className="h-7 w-16 shrink-0 text-sm"
                 />
                 <button
@@ -214,6 +215,7 @@ export function InventoryCheckboxLinkPanel({
                       inputMode="numeric"
                       value={String(qty)}
                       onChange={(e) => setQuantity(item.id, e.target.value)}
+                      aria-label={`Quantity for ${item.name}`}
                       className="h-7 w-16 text-sm"
                       onClick={(e) => e.stopPropagation()}
                     />
