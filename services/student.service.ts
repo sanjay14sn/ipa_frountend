@@ -59,6 +59,7 @@ export interface StudentData {
   updatedAt: Date;
   createdBy: number;
   updatedBy: number;
+  materialsOrdered?: boolean;
 }
 
 export interface StudentsResponse {
@@ -152,6 +153,7 @@ function mapStudentRow(row: Record<string, unknown>): StudentData {
     updatedAt: new Date(String(row.updatedAt ?? "")),
     createdBy: Number(row.createdBy ?? 0),
     updatedBy: Number(row.updatedBy ?? 0),
+    materialsOrdered: Boolean(row.materialsOrdered ?? false),
   };
 }
 
