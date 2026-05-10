@@ -82,7 +82,7 @@ export function MultiSelectDropdown({
                   return (
                     <CommandItem
                       key={option.value}
-                      value={`${option.label} ${option.sublabel ?? ""}`}
+                      value={option.sublabel ? `${option.label} ${option.sublabel}` : option.label}
                       onSelect={() => toggle(option.value)}
                     >
                       <Check
@@ -115,6 +115,7 @@ export function MultiSelectDropdown({
               <span className="max-w-[180px] truncate text-xs">{option.label}</span>
               <button
                 type="button"
+                aria-label={`Remove ${option.label}`}
                 className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 onClick={(e) => removeSelected(option.value, e)}
               >
