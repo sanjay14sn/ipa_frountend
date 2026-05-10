@@ -287,10 +287,17 @@ export function ProgramKitManagement({
           catalogItems={catalog}
           isCatalogLoading={isCatalogLoading}
           onSave={async (items) => {
-            await bulkAssignInventoryToProgramKit(programId, items);
+            const { assigned, failed } = await bulkAssignInventoryToProgramKit(programId, items);
             await invalidateProgramKitItems(programId);
             await programKitQuery.refetch();
-            toast({ title: `${items.length} item${items.length !== 1 ? "s" : ""} added to kit` });
+            if (failed.length > 0) {
+              toast({
+                title: `${assigned} added, ${failed.length} failed`,
+                variant: "destructive",
+              });
+            } else {
+              toast({ title: `${items.length} item${items.length !== 1 ? "s" : ""} added to kit` });
+            }
           }}
         />
       </div>

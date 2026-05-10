@@ -431,12 +431,19 @@ export function InventorySection() {
                   catalogItems={catalogQuery.data ?? []}
                   isCatalogLoading={catalogQuery.isLoading}
                   onSave={async (items) => {
-                    await bulkAssignInventoryToLevel(levelIdNum, items);
+                    const { assigned, failed } = await bulkAssignInventoryToLevel(levelIdNum, items);
                     await invalidateLevelItems(levelIdNum);
                     await assignedItemsQuery.refetch();
-                    toast({
-                      title: `${items.length} item${items.length !== 1 ? "s" : ""} assigned to level`,
-                    });
+                    if (failed.length > 0) {
+                      toast({
+                        title: `${assigned} assigned, ${failed.length} failed`,
+                        variant: "destructive",
+                      });
+                    } else {
+                      toast({
+                        title: `${items.length} item${items.length !== 1 ? "s" : ""} assigned to level`,
+                      });
+                    }
                   }}
                 />
 
