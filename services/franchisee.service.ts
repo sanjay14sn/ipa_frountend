@@ -19,6 +19,9 @@ export interface Franchisee {
   dob: Date;
   bloodGroup: string;
   communicationAddress: string;
+  city: string;
+  state: string;
+  pincode: string;
   phone: string;
   mail: string;
   education: string;
@@ -302,6 +305,9 @@ export async function applyFranchisee(application: FranchiseeApplication) {
       dob: formatDobForApi(fe.dob),
       bloodGroup: fe.bloodGroup || undefined,
       communicationAddress: fe.communicationAddress || undefined,
+      city: fe.city || undefined,
+      state: fe.state || undefined,
+      pincode: fe.pincode || undefined,
       phone: fe.phone,
       mail: fe.mail,
       education: fe.education || undefined,

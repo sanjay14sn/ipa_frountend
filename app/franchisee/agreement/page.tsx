@@ -171,7 +171,7 @@ function FranchiseAgreementContent() {
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
       setCurrentStep(clamped);
     },
-    [getMaxReachableStep, pathname, router, searchParams],
+    [getMaxReachableStep, pathname, router, searchParams, setCurrentStep],
   );
 
   const refreshFranchiseeState = useCallback(async () => {

@@ -91,8 +91,8 @@ export interface ShipmentSummary {
 export interface OrderData {
   id: number;
   totalItems?: number;
-  totalStudents?: number;
-  totalInstructors?: number;
+  totalStudents?: number | null;
+  totalInstructors?: number | null;
   totalAmount: string | number;
   status: OrderStatus | string;
   adminStatus?: string;
@@ -392,11 +392,20 @@ function normalizeOrder(row: any): OrderData {
     row?.adminStatus ??
     OrderStatus.PENDING;
 
+  // Compute derived counts from grouped items when available
+  const groupedKeys = Object.keys(groupedItems);
+  const derivedStudents = groupedKeys.length > 0
+    ? groupedKeys.filter(k => !k.startsWith("CI:") && k !== "Order items").length
+    : null;
+  const derivedInstructors = groupedKeys.length > 0
+    ? groupedKeys.filter(k => k.startsWith("CI:")).length
+    : null;
+
   return {
     id: Number(row?.id ?? 0),
     totalItems: Number(row?.totalItems ?? lineItems.length),
-    totalStudents: Number(row?.totalStudents ?? 0),
-    totalInstructors: Number(row?.totalInstructors ?? 0),
+    totalStudents: derivedStudents,
+    totalInstructors: derivedInstructors,
     totalAmount: toCurrencyString(row?.totalAmount),
     status,
     adminStatus: row?.adminStatus ?? undefined,
@@ -581,8 +590,11 @@ export async function verifyOrderAdmin(
 
 export async function previewOrderInvoice(
   studentIds: number[],
+  franchiseId?: string | number,
 ): Promise<InvoicePreview> {
-  const response = await api.post("/order/preview-invoice", { studentIds });
+  const body: Record<string, unknown> = { studentIds };
+  if (franchiseId != null) body.franchiseId = String(franchiseId);
+  const response = await api.post("/order/preview-invoice", body);
   const data = unwrapData<any>(response);
   return {
     franchiseId: String(data?.franchiseId ?? ""),

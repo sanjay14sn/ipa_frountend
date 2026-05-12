@@ -38,7 +38,8 @@ function CIShell({ children }: { children: React.ReactNode }) {
     }
     if (
       user &&
-      agreementPhase === "PENDING_CI_SIGNATURE" &&
+      agreementPhase !== "SIGNED" &&
+      agreementPhase !== null &&
       !UNLOCKED_PATHS.includes(pathname)
     ) {
       router.replace("/ci/agreement");
@@ -60,13 +61,13 @@ function CIShell({ children }: { children: React.ReactNode }) {
     return <div className="min-h-screen bg-background">{children}</div>;
   }
 
-  // Agreement page gets a bare shell only during unsigned onboarding.
-  if (pathname === "/ci/agreement" && agreementPhase === "PENDING_CI_SIGNATURE") {
+  // Agreement page gets a bare shell until both parties have signed.
+  if (pathname === "/ci/agreement" && agreementPhase !== "SIGNED") {
     return <div className="min-h-screen bg-background">{children}</div>;
   }
 
   const ciHomeHref =
-    agreementPhase === "PENDING_CI_SIGNATURE" ? "/ci/agreement" : "/ci/dashboard";
+    agreementPhase === "SIGNED" ? "/ci/dashboard" : "/ci/agreement";
 
   return (
     <SidebarProvider>

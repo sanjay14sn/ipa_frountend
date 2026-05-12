@@ -27,6 +27,15 @@ import {
 } from "@/services/course-instructor.service";
 import { queryKeys } from "./query-keys";
 import { getQueryClientBridge } from "./query-client-bridge";
+import {
+  listFranchiseeTrainingSessions,
+  listWaitingForSession,
+  listSessionAssignments,
+  bulkAssignToSession,
+  type FranchiseeTrainingSession,
+  type WaitingCI,
+  type SessionAssignedCI,
+} from "@/services/ci-training-franchisee.service";
 
 export type { CourseInstructorData, CreateCourseInstructorRequest };
 
@@ -248,4 +257,77 @@ export function useCreateCourseInstructor() {
       void qc.invalidateQueries({ queryKey: CI_LIST_PREFIX });
     },
   });
+}
+
+export function useFranchiseeTrainingSessions(params?: {
+  trainingLevelId?: number;
+  programId?: number;
+  fromDate?: string;
+  toDate?: string;
+}) {
+  const q = useQuery({
+    queryKey: queryKeys.courseInstructors.franchiseeSessions(
+      params as Record<string, unknown> | undefined,
+    ),
+    queryFn: () => listFranchiseeTrainingSessions(params),
+    placeholderData: (prev) => prev,
+  });
+  return {
+    sessions: q.data ?? ([] as FranchiseeTrainingSession[]),
+    isLoading: q.isLoading,
+    error: q.error,
+    revalidate: q.refetch,
+  };
+}
+
+export function useWaitingForSession(sessionId: number | null) {
+  const q = useQuery({
+    queryKey: ["ci-training-waiting-session", sessionId],
+    queryFn: () => listWaitingForSession(sessionId!),
+    enabled: sessionId != null,
+    placeholderData: (prev) => prev,
+  });
+  return {
+    waiting: q.data ?? ([] as WaitingCI[]),
+    isLoading: q.isLoading,
+    error: q.error,
+    refetch: q.refetch,
+  };
+}
+
+export function useSessionAssignments(sessionId: number | null) {
+  const q = useQuery({
+    queryKey: ["ci-training-session-assignments", sessionId],
+    queryFn: () => listSessionAssignments(sessionId!),
+    enabled: sessionId != null,
+    placeholderData: (prev) => prev,
+  });
+  return {
+    assigned: q.data ?? ([] as SessionAssignedCI[]),
+    isLoading: q.isLoading,
+    error: q.error,
+    refetch: q.refetch,
+  };
+}
+
+export async function bulkAssignToSessionWithRevalidation(
+  sessionId: number,
+  assignmentIds: number[],
+) {
+  const result = await bulkAssignToSession(sessionId, assignmentIds);
+  try {
+    const qc = getQueryClientBridge();
+    void qc.invalidateQueries({
+      queryKey: queryKeys.courseInstructors.franchiseeSessions(),
+    });
+    void qc.invalidateQueries({
+      queryKey: ["ci-training-waiting-session", sessionId],
+    });
+    void qc.invalidateQueries({
+      queryKey: ["ci-training-session-assignments", sessionId],
+    });
+  } catch {
+    /* ignore */
+  }
+  return result;
 }

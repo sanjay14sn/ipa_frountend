@@ -2,19 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Check, Loader2, Plus, Pencil, Save, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -152,7 +145,10 @@ function CIStudentLevelsPicker({
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
-  const [selectedLevelId, setSelectedLevelId] = useState<number | "">("");
+  const [pendingIds, setPendingIds] = useState<Set<number>>(new Set());
+  const [search, setSearch] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
   const { data: levels = [], isLoading: isLoadingLevels } = useLevelsByProgram(
     hasRequested ? programId : undefined,
   );
@@ -179,14 +175,25 @@ function CIStudentLevelsPicker({
     () => new Set(assigned.map((item) => item.levelId)),
     [assigned],
   );
-  const available = useMemo(
-    () => levels.filter((level) => !assignedIds.has(level.id)),
-    [assignedIds, levels],
-  );
   const streamNameById = useMemo(
     () => new Map(streams.map((stream) => [stream.id, stream.name])),
     [streams],
   );
+  const available = useMemo(
+    () => levels.filter((level) => !assignedIds.has(level.id)),
+    [assignedIds, levels],
+  );
+  const filtered = search.trim()
+    ? available.filter((l) => {
+        const q = search.toLowerCase();
+        const streamName = streamNameById.get(l.streamId) ?? "";
+        return (
+          l.name.toLowerCase().includes(q) ||
+          l.code.toLowerCase().includes(q) ||
+          streamName.toLowerCase().includes(q)
+        );
+      })
+    : available;
 
   function levelDisplay(levelId: number) {
     const level = levels.find((entry) => entry.id === levelId);
@@ -195,12 +202,24 @@ function CIStudentLevelsPicker({
     return `${level.code} (${streamLabel})`;
   }
 
-  async function updateMappings(levelIds: number[], successTitle: string) {
+  function togglePending(id: number) {
+    setPendingIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleRemove(levelId: number) {
+    const nextLevelIds = assigned
+      .map((item) => item.levelId)
+      .filter((currentId) => currentId !== levelId);
     try {
-      await setStudentLevelMappings(trainingLevelId, levelIds, programId);
+      await setStudentLevelMappings(trainingLevelId, nextLevelIds, programId);
       await queryClient.invalidateQueries({ queryKey: mappingQueryKey });
       await refetchAssigned();
-      toast({ title: successTitle });
+      toast({ title: "Student level removed" });
     } catch (error) {
       toast({
         title: "Error",
@@ -210,23 +229,36 @@ function CIStudentLevelsPicker({
     }
   }
 
-  async function handleAdd(levelId: number) {
-    const nextLevelIds = [...assigned.map((item) => item.levelId), levelId];
-    await updateMappings(nextLevelIds, "Student level linked");
+  async function handleSave() {
+    if (pendingIds.size === 0) return;
+    const count = pendingIds.size;
+    const newIds = [...assigned.map((item) => item.levelId), ...pendingIds];
+    setIsSaving(true);
+    try {
+      await setStudentLevelMappings(trainingLevelId, newIds, programId);
+      await queryClient.invalidateQueries({ queryKey: mappingQueryKey });
+      await refetchAssigned();
+      setPendingIds(new Set());
+      setSearch("");
+      toast({ title: `${count} level${count !== 1 ? "s" : ""} linked` });
+    } catch (error) {
+      toast({
+        title: "Failed to save",
+        description: getUserFriendlyMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   }
 
-  async function handleRemove(levelId: number) {
-    const nextLevelIds = assigned
-      .map((item) => item.levelId)
-      .filter((currentId) => currentId !== levelId);
-    await updateMappings(nextLevelIds, "Student level removed");
-  }
+  const isLoading = isLoadingAssigned || isLoadingLevels || isLoadingStreams;
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1">
       {!hasRequested ? (
         <span className="text-xs text-muted-foreground">Open to load</span>
-      ) : isLoadingAssigned || isLoadingLevels || isLoadingStreams ? (
+      ) : isLoading ? (
         <span className="text-xs text-muted-foreground">Loading...</span>
       ) : (
         <span className="text-xs text-muted-foreground">
@@ -251,7 +283,16 @@ function CIStudentLevelsPicker({
             <Plus className="h-3.5 w-3.5" />
           </Button>
 
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <Dialog
+            open={isOpen}
+            onOpenChange={(open) => {
+              setIsOpen(open);
+              if (!open) {
+                setPendingIds(new Set());
+                setSearch("");
+              }
+            }}
+          >
             <DialogContent className="sm:max-w-[560px]">
               <DialogHeader>
                 <DialogTitle>Student Levels</DialogTitle>
@@ -261,12 +302,15 @@ function CIStudentLevelsPicker({
               </DialogHeader>
 
               <div className="space-y-4">
+                {/* Section 1: Already linked */}
                 <div className="rounded-lg border p-3">
                   <div className="mb-2 text-sm font-medium">Linked levels</div>
-                  {isLoadingAssigned || isLoadingLevels || isLoadingStreams ? (
+                  {isLoading ? (
                     <p className="text-sm text-muted-foreground">Loading...</p>
                   ) : assigned.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No linked student levels.</p>
+                    <p className="text-sm text-muted-foreground">
+                      No linked student levels.
+                    </p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {assigned.map((item, index) => (
@@ -282,7 +326,7 @@ function CIStudentLevelsPicker({
                             type="button"
                             disabled={disabled}
                             className="rounded-sm px-1 text-gray-500 hover:bg-muted hover:text-destructive disabled:opacity-50"
-                            aria-label={`Remove ${levelDisplay(item.levelId) || item.levelName || `L${item.levelId}`}`}
+                            aria-label={`Remove ${levelDisplay(item.levelId)}`}
                             onClick={() => void handleRemove(item.levelId)}
                           >
                             x
@@ -293,38 +337,119 @@ function CIStudentLevelsPicker({
                   )}
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-[1fr,120px]">
-                  <Select
-                    value={selectedLevelId === "" ? "none" : String(selectedLevelId)}
-                    onValueChange={(value) =>
-                      setSelectedLevelId(value === "none" ? "" : Number(value))
-                    }
-                    disabled={isLoadingLevels || isLoadingStreams || isLoadingAssigned}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select student level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Select student level</SelectItem>
-                      {available.map((level) => (
-                        <SelectItem key={level.id} value={String(level.id)}>
-                          {level.code} ({streamNameById.get(level.streamId) ?? `stream ${level.streamId}`})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    disabled={selectedLevelId === ""}
-                    onClick={() => {
-                      if (selectedLevelId !== "") {
-                        void handleAdd(selectedLevelId);
-                        setSelectedLevelId("");
-                      }
-                    }}
-                  >
-                    Add
-                  </Button>
+                {/* Sections 2 + 3: Pending + searchable catalog */}
+                <div className="rounded-lg border border-dashed bg-slate-50/60 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="text-sm font-medium text-gray-900">
+                      Add student levels
+                    </h4>
+                    {pendingIds.size > 0 ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={isSaving}
+                        onClick={() => void handleSave()}
+                        className="bg-primary hover:bg-primary/90"
+                      >
+                        {isSaving ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="mr-2 h-4 w-4" />
+                        )}
+                        Save Changes ({pendingIds.size})
+                      </Button>
+                    ) : null}
+                  </div>
+
+                  {/* Section 2: Pending */}
+                  {pendingIds.size > 0 ? (
+                    <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+                      <p className="mb-2 text-xs font-medium text-emerald-900">
+                        {pendingIds.size} selected — not yet saved
+                      </p>
+                      {[...pendingIds].map((id) => {
+                        const level = levels.find((l) => l.id === id);
+                        if (!level) return null;
+                        return (
+                          <div key={id} className="flex items-center gap-2 py-1">
+                            <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900">
+                              {levelDisplay(id)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => togglePending(id)}
+                              aria-label={`Remove ${levelDisplay(id)} from selection`}
+                              className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-red-50 hover:text-destructive"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+
+                  {/* Section 3: Search + catalog */}
+                  <Input
+                    className="mt-3"
+                    placeholder="Search by name, code, or stream..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+
+                  <div className="mt-3 max-h-64 overflow-y-auto rounded-lg border bg-white">
+                    {isLoadingLevels || isLoadingStreams ? (
+                      <div className="flex items-center gap-2 px-3 py-6 text-sm text-gray-500">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading levels...
+                      </div>
+                    ) : filtered.length === 0 ? (
+                      <div className="px-3 py-6 text-sm text-gray-500">
+                        {available.length === 0
+                          ? "All program levels are already linked."
+                          : "No levels match your search."}
+                      </div>
+                    ) : (
+                      filtered.map((level) => {
+                        const checked = pendingIds.has(level.id);
+                        const streamName = streamNameById.get(level.streamId);
+                        return (
+                          <div
+                            key={level.id}
+                            className={`flex items-center gap-3 border-b px-3 py-2.5 last:border-b-0 transition-colors ${
+                              checked ? "bg-emerald-50/60" : "hover:bg-gray-50"
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => togglePending(level.id)}
+                              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                                checked
+                                  ? "border-emerald-600 bg-emerald-600 text-white"
+                                  : "border-gray-300 bg-white text-transparent"
+                              }`}
+                              aria-label={
+                                checked
+                                  ? `Uncheck ${levelDisplay(level.id)}`
+                                  : `Check ${levelDisplay(level.id)}`
+                              }
+                            >
+                              <Check className="h-3 w-3" />
+                            </button>
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-sm font-medium text-gray-900">
+                                {level.name}
+                              </div>
+                              <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-gray-500">
+                                <span>{level.code}</span>
+                                {streamName ? <span>{streamName}</span> : null}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </div>
             </DialogContent>

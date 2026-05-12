@@ -491,19 +491,12 @@ function CIAgreementContent() {
     );
   }
 
-  if (agreement.phase !== "PENDING_CI_SIGNATURE") {
+  if (agreement.phase === "SIGNED") {
     return (
       <div className="space-y-4">
-        {agreement.phase === "PENDING_FRANCHISEE_SIGNATURE" ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            You have signed this agreement. It becomes active after your franchisee countersigns.
-          </div>
-        ) : null}
-        {agreement.phase === "SIGNED" ? (
-          <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-            Your Course Instructor Agreement is fully signed and active.
-          </div>
-        ) : null}
+        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+          Your Course Instructor Agreement is fully signed and active.
+        </div>
         <CIAgreementDetail agreement={agreement} />
       </div>
     );
@@ -527,8 +520,9 @@ function CIAgreementContent() {
               Course Instructor Agreement
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Complete each step in order: review your details, accept the terms,
-              then sign the agreement.
+              {agreement.phase === "PENDING_FRANCHISEE_SIGNATURE"
+                ? "You have signed the agreement. It becomes active once your franchisee countersigns."
+                : "Complete each step in order: review your details, accept the terms, then sign the agreement."}
             </p>
           </div>
 
@@ -574,10 +568,15 @@ function CIAgreementContent() {
             {/* Step 3 — Sign */}
             {currentStep === 3 && (
               <div className="space-y-4">
-                <h2 className="text-xl font-normal text-card-foreground">Your signature</h2>
+                <h2 className="text-xl font-normal text-card-foreground">
+                  {agreement.phase === "PENDING_FRANCHISEE_SIGNATURE"
+                    ? "Agreement submitted"
+                    : "Your signature"}
+                </h2>
                 <p className="text-sm text-muted-foreground">
-                  Upload your signature to sign the agreement. The agreement becomes active after
-                  your franchisee countersigns.
+                  {agreement.phase === "PENDING_FRANCHISEE_SIGNATURE"
+                    ? "Your signature has been recorded. The agreement becomes active once your franchisee countersigns."
+                    : "Upload your signature to sign the agreement. The agreement becomes active after your franchisee countersigns."}
                 </p>
                 <SignatureStep
                   agreement={agreement}
@@ -588,28 +587,30 @@ function CIAgreementContent() {
             )}
 
             {/* Navigation */}
-            <div className="mt-5 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-lg border-border sm:order-1"
-                onClick={goBack}
-                disabled={currentStep === 1}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-              {currentStep < 3 && (
+            {agreement.phase !== "PENDING_FRANCHISEE_SIGNATURE" && (
+              <div className="mt-5 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <Button
                   type="button"
-                  className="rounded-lg sm:order-2"
-                  onClick={goNext}
+                  variant="outline"
+                  className="rounded-lg border-border sm:order-1"
+                  onClick={goBack}
+                  disabled={currentStep === 1}
                 >
-                  Next
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
                 </Button>
-              )}
-            </div>
+                {currentStep < 3 && (
+                  <Button
+                    type="button"
+                    className="rounded-lg sm:order-2"
+                    onClick={goNext}
+                  >
+                    Next
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            )}
 
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  AlertTriangle,
   CheckCircle,
   Clock,
   Loader2,
@@ -14,7 +15,7 @@ import {
 import { toast } from "sonner";
 import { useUser } from "@/context/user-context";
 import { useStudents } from "@/hooks/api/student.hooks";
-import { useFranchiseeOrders } from "@/hooks/api/order.hooks";
+import { useFranchiseeOrders, invalidateAdminOrders } from "@/hooks/api/order.hooks";
 import { useCourseInstructors } from "@/hooks/api/course-instructor.hooks";
 import { TablePageShell, MultiSelectDropdown } from "@/components/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,6 +66,13 @@ export default function FranchiseeOrdersPage() {
   const [loadingInvoice, setLoadingInvoice] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [paymentData, setPaymentData] = useState<OrderPaymentResponse | null>(null);
+  // Preserved when payment is captured but createOrder fails — allows the user to retry
+  // without going through Razorpay again.
+  const [pendingOrderRetry, setPendingOrderRetry] = useState<{
+    studentIds: number[];
+    notes?: string;
+    paymentRecordId: number;
+  } | null>(null);
 
   // --- CI order state ---
   const [isCIOrderModalOpen, setIsCIOrderModalOpen] = useState(false);
@@ -195,6 +203,7 @@ export default function FranchiseeOrdersPage() {
         resetStudentDraft();
         setPaymentData(null);
         await refetchOrders();
+        void invalidateAdminOrders();
       }
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to place order");
@@ -231,13 +240,23 @@ export default function FranchiseeOrdersPage() {
       setSubmitting(false);
       return;
     }
+    // Step 1 — verify Razorpay signature. If this fails, payment was not captured.
     try {
       await verifyOrderPayment({
         razorpayOrderId: response.razorpay_order_id,
         razorpayPaymentId: response.razorpay_payment_id,
         razorpaySignature: response.razorpay_signature,
       });
-      // Payment captured — now create the order, which is immediately PAID
+    } catch (error: any) {
+      setPaymentData(null);
+      resetStudentDraft();
+      setSubmitting(false);
+      toast.error(error?.response?.data?.message || "Payment verification failed. Please contact support.");
+      return;
+    }
+    // Step 2 — payment is captured. Create the order. If this fails the money is
+    // already collected, so we preserve the retry payload instead of losing it.
+    try {
       await createOrder({
         studentIds: pd.studentIds,
         notes: pd.notes,
@@ -245,17 +264,45 @@ export default function FranchiseeOrdersPage() {
       });
       toast.success("Payment verified and order placed.");
       setPaymentData(null);
+      setPendingOrderRetry(null);
       resetStudentDraft();
       await refetchOrders();
+      void invalidateAdminOrders();
     } catch (error: any) {
-      // Payment was captured but order creation failed — clear payment state
-      // so the user is not left with an active Razorpay modal
       setPaymentData(null);
       resetStudentDraft();
-      toast.error(
-        error?.response?.data?.message ||
-          "Payment verified but order creation failed. Please contact support.",
-      );
+      if (pd.paymentRecordId != null) {
+        setPendingOrderRetry({
+          studentIds: pd.studentIds,
+          notes: pd.notes,
+          paymentRecordId: pd.paymentRecordId,
+        });
+        toast.error(
+          error?.response?.data?.message ||
+            "Order creation failed. Use the retry button to complete your order.",
+        );
+      } else {
+        toast.error(
+          error?.response?.data?.message ??
+            "Order creation failed and payment record is missing. Please contact support.",
+        );
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleRetryOrder() {
+    if (!pendingOrderRetry) return;
+    try {
+      setSubmitting(true);
+      await createOrder(pendingOrderRetry);
+      toast.success("Order placed successfully.");
+      setPendingOrderRetry(null);
+      await refetchOrders();
+      void invalidateAdminOrders();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Order creation failed again. Please contact support.");
     } finally {
       setSubmitting(false);
     }
@@ -315,6 +362,24 @@ export default function FranchiseeOrdersPage() {
           {cancelledOrders} order{cancelledOrders !== 1 ? "s" : ""} cancelled.
         </p>
       ) : null}
+
+      {pendingOrderRetry && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>Your payment was captured but the order was not created. Click <strong>Retry order</strong> to complete it without paying again.</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setPendingOrderRetry(null)}>
+              Dismiss
+            </Button>
+            <Button size="sm" disabled={submitting} onClick={handleRetryOrder}>
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Retry order
+            </Button>
+          </div>
+        </div>
+      )}
 
       <OrdersTable orders={orders} loading={ordersLoading} />
 

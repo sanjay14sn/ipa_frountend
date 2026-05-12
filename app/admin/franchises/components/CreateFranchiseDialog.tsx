@@ -143,6 +143,7 @@ export function CreateFranchiseDialog({
     communicationAddress: "",
     city: "",
     state: "",
+    pincode: "",
     education: "",
     occupation: "",
     reference: "",
@@ -172,6 +173,10 @@ export function CreateFranchiseDialog({
         if (!formData.phone.trim()) newErrors.phone = "Phone is required";
         if (!formData.state.trim()) newErrors.city = "State is required";
         else if (!formData.city.trim()) newErrors.city = "City is required";
+        if (!formData.pincode.trim()) newErrors.pincode = "Pincode is required";
+        else if (!/^\d{6}$/.test(formData.pincode.trim())) {
+          newErrors.pincode = "Enter a valid 6-digit pincode";
+        }
         break;
 
       case 2: // Franchise Details
@@ -286,6 +291,9 @@ export function CreateFranchiseDialog({
           dob: new Date(formData.dob),
           bloodGroup: formData.bloodGroup,
           communicationAddress: formData.communicationAddress,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
           education: formData.education,
           occupation: formData.occupation,
           reference: formData.reference,
@@ -353,6 +361,7 @@ export function CreateFranchiseDialog({
       communicationAddress: "",
       city: "",
       state: "",
+      pincode: "",
       education: "",
       occupation: "",
       reference: "",
@@ -501,6 +510,24 @@ export function CreateFranchiseDialog({
               required
               error={errors.city}
             />
+
+            <div className="space-y-2">
+              <Label htmlFor="pincode">Pincode *</Label>
+              <Input
+                id="pincode"
+                inputMode="numeric"
+                maxLength={6}
+                value={formData.pincode}
+                onChange={(e) => {
+                  setFormData({ ...formData, pincode: e.target.value });
+                  if (errors.pincode) setErrors({ ...errors, pincode: "" });
+                }}
+                className={errors.pincode ? "border-red-500" : ""}
+              />
+              {errors.pincode ? (
+                <p className="text-red-500 text-sm">{errors.pincode}</p>
+              ) : null}
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">

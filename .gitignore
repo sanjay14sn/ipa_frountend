@@ -10,11 +10,20 @@
 # production
 /build
 
+graphify-out
+.claude
+.gitnexus
+/docs
+
+.graphify_python
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+
+agents.md
+claude.md
 
 # env files
 .env*
@@ -25,3 +34,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+*lock*

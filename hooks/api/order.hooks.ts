@@ -61,6 +61,7 @@ export function useAdminOrderRows(
     ),
     queryFn: () => getAdminOrdersFlat(params),
     enabled: options?.enabled ?? true,
+    refetchInterval: 30_000,
     placeholderData: (prev) =>
       prev as
         | Awaited<ReturnType<typeof getAdminOrdersFlat>>

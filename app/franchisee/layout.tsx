@@ -27,7 +27,7 @@ export default function FranchiseeLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { user } = useUser();
+  const { user, loading } = useUser();
   const pathname = usePathname();
   const franchiseStatus = getEffectiveFranchiseStatus(user);
   const isAgreementOnboarding =
@@ -37,10 +37,21 @@ export default function FranchiseeLayout({
     user?.role === "franchisee" && franchiseStatus !== "Active";
 
   useEffect(() => {
+    if (loading) return;
+    if (!user || user.role !== "franchisee") {
+      router.replace("/login");
+      return;
+    }
     if (isPreActiveFranchisee && !isAgreementOnboarding) {
       router.replace("/franchisee/agreement");
     }
-  }, [isAgreementOnboarding, isPreActiveFranchisee, router]);
+  }, [user, loading, isAgreementOnboarding, isPreActiveFranchisee, router]);
+
+  if (loading) {
+    return <div className="min-h-screen bg-surface" />;
+  }
+
+  if (!user || user.role !== "franchisee") return null;
 
   if (isPreActiveFranchisee && !isAgreementOnboarding) {
     return <div className="min-h-screen bg-surface" />;

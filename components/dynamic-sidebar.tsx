@@ -254,7 +254,7 @@ export function DynamicSidebar({
   let sidebarSubtitle = "Admin Dashboard";
 
   const isCIUser = !!ciUser && !user;
-  const ciAgreementLocked = isCIUser && agreementPhase === "PENDING_CI_SIGNATURE";
+  const ciAgreementLocked = isCIUser && agreementPhase !== "SIGNED" && agreementPhase !== null;
 
   if (isCIUser) {
     sidebarTitle = "CI Portal";

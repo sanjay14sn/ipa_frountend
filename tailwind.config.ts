@@ -4,7 +4,7 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   /* Light-only UI: do not set `dark` on <html>; `dark:` variants never apply. */
-  darkMode: ["class"],
+  darkMode: "class",
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",

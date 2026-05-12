@@ -36,6 +36,8 @@ export const queryKeys = {
       listQueryKey("course-instructors", { role: "admin-status", ...params }),
     ciTraining: ["course-instructors", "ci-training"] as const,
     trainingList: ["course-instructors", "training-list"] as const,
+    franchiseeSessions: (params?: Record<string, unknown> | null) =>
+      listQueryKey("course-instructors", { role: "franchisee-sessions", ...params }),
   },
   franchises: {
     list: (params?: Record<string, unknown> | null) =>

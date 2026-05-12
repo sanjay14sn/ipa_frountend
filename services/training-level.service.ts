@@ -1,5 +1,6 @@
 import { api } from "@/lib/axios";
 import { unwrapData } from "@/lib/unwrap-api";
+import type { Level } from "@/services/level.service";
 
 export interface TrainingLevel {
   id: number;
@@ -116,4 +117,27 @@ export async function updateTrainingLevel(
 
 export async function deleteTrainingLevel(id: number): Promise<void> {
   await api.delete(`/catalog/ci-training-level/${id}`);
+}
+
+export async function getStudentLevelsForTrainingLevel(
+  trainingLevelId: number,
+): Promise<Level[]> {
+  const response = await api.get(
+    `/catalog/ci-training-level/${trainingLevelId}/student-levels`,
+  );
+  const data = unwrapData<unknown[]>(response);
+  return Array.isArray(data) ? (data as Level[]) : [];
+}
+
+export async function setStudentLevelsForTrainingLevel(
+  trainingLevelId: number,
+  levelIds: number[],
+  programId: number,
+): Promise<Level[]> {
+  const response = await api.patch(
+    `/catalog/ci-training-level/${trainingLevelId}/student-levels`,
+    { levelIds, programId },
+  );
+  const data = unwrapData<unknown[]>(response);
+  return Array.isArray(data) ? (data as Level[]) : [];
 }

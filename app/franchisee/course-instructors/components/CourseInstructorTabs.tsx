@@ -3,33 +3,26 @@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CourseInstructorsTable from "./CourseInstructorsTable";
-import PaymentCourseInstructorsTable from "./PaymentCourseInstructorsTable";
+import ApprovalPendingCourseInstructorsTable from "./ApprovalPendingCourseInstructorsTable";
+import CITrainingSessionsTab from "./CITrainingSessionsTab";
 import type { CourseInstructorData } from "@/services/course-instructor.service";
 
 interface CourseInstructorTabsProps {
   courseInstructors: CourseInstructorData[];
-  paymentCourseInstructors: CourseInstructorData[];
+  approvalPendingCourseInstructors: CourseInstructorData[];
   onCourseInstructorUpdate?: (
     updatedCourseInstructor: CourseInstructorData,
   ) => void;
   onCourseInstructorDelete?: (courseInstructorId: string) => void;
   onCourseInstructorEdit?: (courseInstructor: CourseInstructorData) => void;
-  onPaymentCourseInstructorUpdate?: (
-    updatedCourseInstructor: CourseInstructorData,
-  ) => void;
-  onPaymentCourseInstructorDelete?: (courseInstructorId: string) => void;
-  onPaymentCourseInstructorEdit?: (courseInstructor: CourseInstructorData) => void;
 }
 
 export default function CourseInstructorTabs({
   courseInstructors,
-  paymentCourseInstructors,
+  approvalPendingCourseInstructors,
   onCourseInstructorUpdate,
   onCourseInstructorDelete,
   onCourseInstructorEdit,
-  onPaymentCourseInstructorUpdate,
-  onPaymentCourseInstructorDelete,
-  onPaymentCourseInstructorEdit,
 }: CourseInstructorTabsProps) {
   return (
     <Tabs defaultValue="regular" className="space-y-4">
@@ -38,9 +31,12 @@ export default function CourseInstructorTabs({
           Active & Training
           <Badge variant="secondary">{courseInstructors.length}</Badge>
         </TabsTrigger>
-        <TabsTrigger value="payment" className="gap-2">
-          Payment Pending
-          <Badge variant="secondary">{paymentCourseInstructors.length}</Badge>
+        <TabsTrigger value="approval" className="gap-2">
+          Approval Pending
+          <Badge variant="secondary">{approvalPendingCourseInstructors.length}</Badge>
+        </TabsTrigger>
+        <TabsTrigger value="ci-sessions" className="gap-2">
+          CI Training Sessions
         </TabsTrigger>
       </TabsList>
 
@@ -53,13 +49,14 @@ export default function CourseInstructorTabs({
         />
       </TabsContent>
 
-      <TabsContent value="payment">
-        <PaymentCourseInstructorsTable
-          courseInstructors={paymentCourseInstructors}
-          onCourseInstructorUpdate={onPaymentCourseInstructorUpdate}
-          onCourseInstructorDelete={onPaymentCourseInstructorDelete}
-          onCourseInstructorEdit={onPaymentCourseInstructorEdit}
+      <TabsContent value="approval">
+        <ApprovalPendingCourseInstructorsTable
+          courseInstructors={approvalPendingCourseInstructors}
         />
+      </TabsContent>
+
+      <TabsContent value="ci-sessions">
+        <CITrainingSessionsTab />
       </TabsContent>
     </Tabs>
   );

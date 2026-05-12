@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +39,58 @@ type ApprovalPackageForm = {
   trainingLevelIds: number[];
 };
 
+function createDefaultPackage(order: number): ApprovalPackageForm {
+  return {
+    name: `Package ${order}`,
+    code: `PKG-${order}`,
+    description: "",
+    packageOrder: order,
+    fee: "",
+    trainingLevelIds: [],
+  };
+}
+
+function sortPackageLevelIds(levelIds: number[], orderMap: Map<number, number>): number[] {
+  return [...new Set(levelIds)].sort((a, b) => {
+    const aOrder = orderMap.get(a);
+    const bOrder = orderMap.get(b);
+    if (aOrder == null && bOrder == null) return a - b;
+    if (aOrder == null) return 1;
+    if (bOrder == null) return -1;
+    return aOrder - bOrder;
+  });
+}
+
+function getLevelSelectionErrors(
+  packages: ApprovalPackageForm[],
+  allLevels: TrainingLevel[],
+): { overlapError: string | null; missingError: string | null } {
+  if (!allLevels.length) return { overlapError: null, missingError: null };
+
+  const levelCountById = new Map<number, number>();
+  for (const pkg of packages) {
+    for (const levelId of pkg.trainingLevelIds) {
+      levelCountById.set(levelId, (levelCountById.get(levelId) ?? 0) + 1);
+    }
+  }
+
+  const overlappedLevels = allLevels.filter((level) => (levelCountById.get(level.id) ?? 0) > 1);
+  const missingLevels = allLevels.filter((level) => !levelCountById.has(level.id));
+
+  return {
+    overlapError: overlappedLevels.length
+      ? `Training levels cannot overlap across packages. Overlap: ${overlappedLevels
+          .map((l) => l.code || l.name || `L${l.displayOrder}`)
+          .join(", ")}.`
+      : null,
+    missingError: missingLevels.length
+      ? `Every CI training level must be selected. Missing: ${missingLevels
+          .map((l) => l.code || l.name || `L${l.displayOrder}`)
+          .join(", ")}.`
+      : null,
+  };
+}
+
 function validatePackageLevels(selectedIds: number[], allLevels: TrainingLevel[]) {
   if (!selectedIds.length) return "Select at least one training level.";
   const orderById = new Map(allLevels.map((level) => [level.id, level.displayOrder]));
@@ -47,16 +99,51 @@ function validatePackageLevels(selectedIds: number[], allLevels: TrainingLevel[]
     .filter((order): order is number => Number.isFinite(order))
     .sort((a, b) => a - b);
 
-  if (orders.length !== selectedIds.length) {
-    return "Package contains an invalid level.";
-  }
+  if (orders.length !== selectedIds.length) return "Package contains an invalid level.";
 
   for (let i = 1; i < orders.length; i += 1) {
-    if (orders[i] !== orders[i - 1] + 1) {
-      return "Package levels must be contiguous.";
+    if (orders[i] !== orders[i - 1] + 1) return "Package levels must be contiguous.";
+  }
+
+  return null;
+}
+
+function validatePackages(packages: ApprovalPackageForm[], allLevels: TrainingLevel[]) {
+  if (!allLevels.length) return "This program has no CI training levels to package.";
+  if (!packages.length) return "Add at least one training package.";
+
+  const orderSet = new Set<number>();
+  const codeSet = new Set<string>();
+  const usedLevels = new Set<number>();
+
+  for (const pkg of packages) {
+    if (!pkg.name.trim() || !pkg.code.trim()) return "Each package needs a name and code.";
+    if (orderSet.has(pkg.packageOrder)) return "Package order must be unique.";
+    orderSet.add(pkg.packageOrder);
+
+    const normalizedCode = pkg.code.trim().toLowerCase();
+    if (codeSet.has(normalizedCode)) return "Package code must be unique.";
+    codeSet.add(normalizedCode);
+
+    const fee = Number(pkg.fee);
+    if (pkg.fee.trim() === "" || !Number.isFinite(fee) || fee < 0)
+      return "Each package needs a valid fee.";
+
+    const levelError = validatePackageLevels(pkg.trainingLevelIds, allLevels);
+    if (levelError) return levelError;
+
+    for (const id of pkg.trainingLevelIds) {
+      if (usedLevels.has(id)) return "Training levels cannot be used in more than one package.";
+      usedLevels.add(id);
     }
   }
 
+  const missingLevels = allLevels.filter((level) => !usedLevels.has(level.id));
+  if (missingLevels.length) {
+    return `Every CI training level must be included. Missing: ${missingLevels
+      .map((level) => level.name || level.code || `Level ${level.displayOrder}`)
+      .join(", ")}.`;
+  }
   return null;
 }
 
@@ -68,23 +155,18 @@ export default function ApproveCIModal({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  const today = new Date().toISOString().slice(0, 10);
-  const oneYearLater = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
+  const { today, oneYearLater } = useMemo(() => {
+    const t = new Date();
+    const from = t.toISOString().slice(0, 10);
+    const until = new Date(t.getTime() + 365 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    return { today: from, oneYearLater: until };
+  }, [instructor?.id]);
 
   const [validFrom, setValidFrom] = useState(today);
   const [validUntil, setValidUntil] = useState(oneYearLater);
-  const [packages, setPackages] = useState<ApprovalPackageForm[]>([
-    {
-      name: "Package 1",
-      code: "PKG-1",
-      description: "",
-      packageOrder: 1,
-      fee: "",
-      trainingLevelIds: [],
-    },
-  ]);
+  const [packages, setPackages] = useState<ApprovalPackageForm[]>([createDefaultPackage(1)]);
 
   const levelsQuery = useQuery({
     queryKey: ["approval-ci-levels", instructor?.programId],
@@ -95,16 +177,7 @@ export default function ApproveCIModal({
   useEffect(() => {
     setValidFrom(today);
     setValidUntil(oneYearLater);
-    setPackages([
-      {
-        name: "Package 1",
-        code: "PKG-1",
-        description: "",
-        packageOrder: 1,
-        fee: "",
-        trainingLevelIds: [],
-      },
-    ]);
+    setPackages([createDefaultPackage(1)]);
   }, [instructor?.id, oneYearLater, today]);
 
   const sortedTrainingLevels = useMemo(
@@ -112,16 +185,25 @@ export default function ApproveCIModal({
       (levelsQuery.data ?? [])
         .slice()
         .sort((a, b) =>
-          a.displayOrder === b.displayOrder
-            ? a.id - b.id
-            : a.displayOrder - b.displayOrder,
+          a.displayOrder === b.displayOrder ? a.id - b.id : a.displayOrder - b.displayOrder,
         ),
     [levelsQuery.data],
   );
 
+  const levelOrderMap = useMemo(() => {
+    const map = new Map<number, number>();
+    sortedTrainingLevels.forEach((level, index) => map.set(level.id, index));
+    return map;
+  }, [sortedTrainingLevels]);
+
   const coveredLevelCount = useMemo(
     () => new Set(packages.flatMap((pkg) => pkg.trainingLevelIds)).size,
     [packages],
+  );
+
+  const levelSelectionErrors = useMemo(
+    () => getLevelSelectionErrors(packages, sortedTrainingLevels),
+    [packages, sortedTrainingLevels],
   );
 
   const updatePackage = (index: number, patch: Partial<ApprovalPackageForm>) => {
@@ -132,71 +214,40 @@ export default function ApproveCIModal({
     );
   };
 
-  const togglePackageLevel = (index: number, levelId: number) => {
+  const removePackageAtIndex = (index: number) => {
     setPackages((prev) =>
-      prev.map((pkg, currentIndex) => {
-        if (currentIndex !== index) return pkg;
-        const hasLevel = pkg.trainingLevelIds.includes(levelId);
-        return {
-          ...pkg,
-          trainingLevelIds: hasLevel
-            ? pkg.trainingLevelIds.filter((id) => id !== levelId)
-            : [...pkg.trainingLevelIds, levelId],
-        };
-      }),
+      prev
+        .filter((_, currentIndex) => currentIndex !== index)
+        .map((item, nextIndex) => ({ ...item, packageOrder: nextIndex + 1 })),
     );
   };
 
-  const validatePackages = (allLevels: TrainingLevel[]) => {
-    if (!allLevels.length) {
-      return "This program has no CI training levels to package.";
-    }
-    if (!packages.length) {
-      return "Add at least one training package.";
-    }
-
-    const orderSet = new Set<number>();
-    const codeSet = new Set<string>();
-    const usedLevels = new Set<number>();
-
-    for (const pkg of packages) {
-      if (!pkg.name.trim() || !pkg.code.trim()) {
-        return "Each package needs a name and code.";
-      }
-      if (orderSet.has(pkg.packageOrder)) {
-        return "Package order must be unique.";
-      }
-      orderSet.add(pkg.packageOrder);
-
-      const normalizedCode = pkg.code.trim().toLowerCase();
-      if (codeSet.has(normalizedCode)) {
-        return "Package code must be unique.";
-      }
-      codeSet.add(normalizedCode);
-
-      const fee = Number(pkg.fee);
-      if (pkg.fee.trim() === "" || !Number.isFinite(fee) || fee < 0) {
-        return "Each package needs a valid fee.";
-      }
-
-      const levelError = validatePackageLevels(pkg.trainingLevelIds, allLevels);
-      if (levelError) return levelError;
-
-      for (const id of pkg.trainingLevelIds) {
-        if (usedLevels.has(id)) {
-          return "Training levels cannot be used in more than one package.";
+  const toggleLevelInMatrix = (packageIndex: number, levelId: number) => {
+    setPackages((prev) =>
+      prev.map((pkg, currentIndex) => {
+        const checked = prev[packageIndex]?.trainingLevelIds.includes(levelId);
+        if (checked) {
+          if (currentIndex !== packageIndex) return pkg;
+          return {
+            ...pkg,
+            trainingLevelIds: pkg.trainingLevelIds.filter((id) => id !== levelId),
+          };
         }
-        usedLevels.add(id);
-      }
-    }
-
-    const missingLevels = allLevels.filter((level) => !usedLevels.has(level.id));
-    if (missingLevels.length) {
-      return `Every CI training level must be included. Missing: ${missingLevels
-        .map((level) => level.name || level.code || `Level ${level.displayOrder}`)
-        .join(", ")}.`;
-    }
-    return null;
+        if (currentIndex === packageIndex) {
+          return {
+            ...pkg,
+            trainingLevelIds: sortPackageLevelIds(
+              [...pkg.trainingLevelIds, levelId],
+              levelOrderMap,
+            ),
+          };
+        }
+        return {
+          ...pkg,
+          trainingLevelIds: pkg.trainingLevelIds.filter((id) => id !== levelId),
+        };
+      }),
+    );
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -204,30 +255,17 @@ export default function ApproveCIModal({
     if (!instructor) return;
 
     if (!validFrom || !validUntil) {
-      toast({
-        title: "Validation error",
-        description: "Both dates are required.",
-        variant: "destructive",
-      });
+      toast({ title: "Validation error", description: "Both dates are required.", variant: "destructive" });
       return;
     }
     if (validUntil <= validFrom) {
-      toast({
-        title: "Validation error",
-        description: "Valid until must be after valid from.",
-        variant: "destructive",
-      });
+      toast({ title: "Validation error", description: "Valid until must be after valid from.", variant: "destructive" });
       return;
     }
 
-    const levels = sortedTrainingLevels;
-    const packageError = validatePackages(levels);
+    const packageError = validatePackages(packages, sortedTrainingLevels);
     if (packageError) {
-      toast({
-        title: "Validation error",
-        description: packageError,
-        variant: "destructive",
-      });
+      toast({ title: "Validation error", description: packageError, variant: "destructive" });
       return;
     }
 
@@ -245,18 +283,13 @@ export default function ApproveCIModal({
           trainingLevelIds: pkg.trainingLevelIds,
         })),
       });
-      toast({
-        title: "Instructor approved",
-        description: `${instructor.name} has been approved.`,
-      });
+      toast({ title: "Instructor approved", description: `${instructor.name} has been approved.` });
       onSuccess();
       onClose();
     } catch (error: any) {
       toast({
         title: "Error",
-        description:
-          error?.response?.data?.message ??
-          "Failed to approve instructor. Please try again.",
+        description: error?.response?.data?.message ?? "Failed to approve instructor. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -271,7 +304,7 @@ export default function ApproveCIModal({
         if (!open && !loading) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-[720px]">
+      <DialogContent className="max-h-[90vh] w-[96vw] overflow-y-auto sm:max-w-[900px]">
         <DialogHeader>
           <DialogTitle>Approve Course Instructor</DialogTitle>
           <DialogDescription>
@@ -305,141 +338,128 @@ export default function ApproveCIModal({
           </div>
 
           <div className="space-y-3 border-t pt-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-2">
               <Label>Training packages</Label>
               <span className="text-xs text-muted-foreground">
                 {coveredLevelCount} / {sortedTrainingLevels.length} levels covered
               </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPackages((prev) => [
-                    ...prev,
-                    {
-                      name: `Package ${prev.length + 1}`,
-                      code: `PKG-${prev.length + 1}`,
-                      description: "",
-                      packageOrder: prev.length + 1,
-                      fee: "",
-                      trainingLevelIds: [],
-                    },
-                  ])
-                }
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Package
-              </Button>
             </div>
 
-            {packages.map((pkg, index) => (
-              <div key={`${pkg.code}-${index}`} className="space-y-3 rounded-md border p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-medium">Package {index + 1}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    disabled={packages.length === 1}
-                    onClick={() =>
-                      setPackages((prev) =>
-                        prev
-                          .filter((_, currentIndex) => currentIndex !== index)
-                          .map((item, nextIndex) => ({
-                            ...item,
-                            packageOrder: nextIndex + 1,
-                          })),
-                      )
-                    }
-                    aria-label="Remove package"
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor={`package-name-${index}`}>Name</Label>
-                    <Input
-                      id={`package-name-${index}`}
-                      value={pkg.name}
-                      onChange={(event) =>
-                        updatePackage(index, { name: event.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`package-code-${index}`}>Code</Label>
-                    <Input
-                      id={`package-code-${index}`}
-                      value={pkg.code}
-                      onChange={(event) =>
-                        updatePackage(index, { code: event.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor={`package-fee-${index}`}>Fee</Label>
-                    <Input
-                      id={`package-fee-${index}`}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={pkg.fee}
-                      onChange={(event) =>
-                        updatePackage(index, { fee: event.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`package-description-${index}`}>Description</Label>
-                    <Input
-                      id={`package-description-${index}`}
-                      value={pkg.description}
-                      onChange={(event) =>
-                        updatePackage(index, { description: event.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Training levels</Label>
-                  <div className="max-h-44 space-y-1 overflow-y-auto rounded-md border p-2">
-                    {levelsQuery.isLoading ? (
-                      <p className="text-sm text-muted-foreground">Loading levels...</p>
-                    ) : sortedTrainingLevels.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        No CI training levels found for this program.
-                      </p>
-                    ) : (
-                      sortedTrainingLevels.map((level) => (
-                        <label
-                          key={level.id}
-                          className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={pkg.trainingLevelIds.includes(level.id)}
-                            onChange={() => togglePackageLevel(index, level.id)}
-                          />
-                          <span>
-                            {level.displayOrder}. {level.name} ({level.code})
-                          </span>
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </div>
+            {levelSelectionErrors.overlapError && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                {levelSelectionErrors.overlapError}
               </div>
-            ))}
+            )}
+            {levelSelectionErrors.missingError && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                {levelSelectionErrors.missingError}
+              </div>
+            )}
+
+            {levelsQuery.isLoading ? (
+              <div className="rounded-md border p-3 text-sm text-muted-foreground">
+                Loading levels...
+              </div>
+            ) : sortedTrainingLevels.length === 0 ? (
+              <div className="rounded-md border p-3 text-sm text-muted-foreground">
+                No CI training levels found for this program.
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-md border">
+                <table className="w-full border-collapse text-sm" style={{ minWidth: `${420 + packages.length * 140}px` }}>
+                  <thead>
+                    <tr className="border-b">
+                      <th className="px-3 py-2 text-left font-medium">Level</th>
+                      <th className="px-3 py-2 text-left font-medium">Code</th>
+                      {packages.map((pkg, index) => (
+                        <th key={`pkg-col-${index}`} className="px-2 py-2 align-top">
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7 shrink-0"
+                                disabled={packages.length === 1}
+                                onClick={() => removePackageAtIndex(index)}
+                                aria-label="Remove package"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                              <Input
+                                value={pkg.code}
+                                onChange={(e) =>
+                                  updatePackage(index, {
+                                    code: e.target.value,
+                                    name: e.target.value.trim() || pkg.name,
+                                  })
+                                }
+                                placeholder={`P${index + 1}`}
+                                className="h-7 min-w-[96px] text-xs"
+                              />
+                            </div>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedTrainingLevels.map((level) => (
+                      <tr key={`level-${level.id}`} className="border-b last:border-b-0">
+                        <td className="px-3 py-2 font-medium">
+                          {level.name || `Level ${level.displayOrder}`}{" "}
+                          <span className="text-xs text-muted-foreground">({level.code})</span>
+                        </td>
+                        <td className="px-3 py-2 text-muted-foreground">{level.code}</td>
+                        {packages.map((pkg, packageIndex) => (
+                          <td
+                            key={`level-${level.id}-pkg-${pkg.packageOrder}`}
+                            className="px-2 py-2 text-center"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={pkg.trainingLevelIds.includes(level.id)}
+                              onChange={() => toggleLevelInMatrix(packageIndex, level.id)}
+                              className="h-4 w-4"
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                    <tr className="border-t bg-muted/20">
+                      <td className="px-3 py-2 font-medium">Fee (₹)</td>
+                      <td className="px-3 py-2" />
+                      {packages.map((pkg, index) => (
+                        <td key={`fee-${pkg.packageOrder}`} className="px-2 py-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={pkg.fee}
+                            onChange={(e) => updatePackage(index, { fee: e.target.value })}
+                            placeholder="0"
+                            className="h-8 text-center"
+                            required
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() =>
+                setPackages((prev) => [...prev, createDefaultPackage(prev.length + 1)])
+              }
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add package
+            </Button>
           </div>
 
           <DialogFooter>

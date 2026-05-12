@@ -57,6 +57,7 @@ import {
 } from "@/services/training-level.service";
 import { getAllPrograms, type Program } from "@/services/program.service";
 import { TrainingLevelMaterialsPicker } from "./TrainingLevelMaterialsPicker";
+import { TrainingLevelStudentLevelsPicker } from "./TrainingLevelStudentLevelsPicker";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 
@@ -336,6 +337,7 @@ export function TrainingLevelsSection() {
                 <TableHead>Theory</TableHead>
                 <TableHead>Practical</TableHead>
                 <TableHead>Fee</TableHead>
+                <TableHead>Student Levels</TableHead>
                 <TableHead>Materials</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -380,6 +382,13 @@ export function TrainingLevelsSection() {
                       minimumFractionDigits: 0,
                       maximumFractionDigits: 2,
                     })}
+                  </TableCell>
+                  <TableCell className="max-w-[220px]">
+                    <TrainingLevelStudentLevelsPicker
+                      trainingLevelId={level.id}
+                      programId={level.programId}
+                      disabled={isLoadingLevels}
+                    />
                   </TableCell>
                   <TableCell className="max-w-[220px]">
                     <TrainingLevelMaterialsPicker

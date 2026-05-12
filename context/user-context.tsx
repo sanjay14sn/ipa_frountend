@@ -18,6 +18,7 @@ import { queryKeys } from "@/hooks/api/query-keys";
 
 interface UserContextType {
   user: User | null;
+  loading: boolean;
   setUser: (user: User) => void;
   switchFranchise: (franchiseId: string) => Promise<void>;
 }
@@ -51,18 +52,23 @@ function normalizeFranchiseeProfile(
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUserState] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       const storedUser = localStorage.getItem("user");
-      if (!storedUser || storedUser === "{}") return;
+      if (!storedUser || storedUser === "{}") {
+        setLoading(false);
+        return;
+      }
 
       try {
         setUserState(JSON.parse(storedUser) as User);
       } catch {
         localStorage.removeItem("user");
       }
+      setLoading(false);
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
@@ -182,7 +188,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <UserContext.Provider
-      value={{ user, setUser: setUserWithStorage, switchFranchise }}
+      value={{ user, loading, setUser: setUserWithStorage, switchFranchise }}
     >
       {children}
     </UserContext.Provider>

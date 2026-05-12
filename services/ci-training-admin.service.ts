@@ -13,7 +13,7 @@ export interface CITrainingSession {
   sessionDate: string;
   venue?: string;
   maxCapacity?: number;
-  status: string;
+  status: 'OPEN' | 'COMPLETED';
   assignmentCount?: number;
   waitingCount?: number;
 }
@@ -160,4 +160,10 @@ export async function completeAssignment(
   input: RecordMarksInput,
 ): Promise<void> {
   await api.patch(`/admin/ci-training/assignment/${assignmentId}/complete`, input);
+}
+
+export async function completeSession(sessionId: number): Promise<CITrainingSession> {
+  const res = await api.patch(`/admin/ci-training/session/${sessionId}/complete`);
+  const payload = res.data?.data ?? res.data;
+  return payload as CITrainingSession;
 }

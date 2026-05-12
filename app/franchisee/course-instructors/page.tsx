@@ -15,7 +15,6 @@ import {
 import { Plus } from "lucide-react";
 import { useUser } from "@/context/user-context";
 import { deleteCourseInstructorWithRevalidation, useCourseInstructors } from "@/hooks/api/course-instructor.hooks";
-import type { CourseInstructorData } from "@/services/course-instructor.service";
 import { TablePageShell } from "@/components/shared";
 import AddCourseInstructorModal from "./components/AddCourseInstructorModal";
 import CourseInstructorTabs from "./components/CourseInstructorTabs";
@@ -41,12 +40,15 @@ export default function FranchiseeCourseInstructorsPage() {
     () => allCourseInstructors.filter((item) => item.status === "Training"),
     [allCourseInstructors],
   );
-  const paymentRows = useMemo(
-    () => allCourseInstructors.filter((item) => item.status === "Payment"),
+  const approvalPendingRows = useMemo(
+    () => allCourseInstructors.filter((item) => item.status === "Pending"),
     [allCourseInstructors],
   );
 
-  const regularRows = useMemo(() => [...activeRows, ...trainingRows], [activeRows, trainingRows]);
+  const regularRows = useMemo(
+    () => [...activeRows, ...trainingRows],
+    [activeRows, trainingRows],
+  );
   const franchiseName = user?.profile?.franchise?.name || user?.franchiseName || "your franchise";
 
   if (!user || !user.franchiseId || (isLoading && allCourseInstructors.length === 0)) {
@@ -66,7 +68,7 @@ export default function FranchiseeCourseInstructorsPage() {
     >
       <CourseInstructorTabs
         courseInstructors={regularRows}
-        paymentCourseInstructors={paymentRows}
+        approvalPendingCourseInstructors={approvalPendingRows}
         onCourseInstructorUpdate={() => {
           void revalidate();
         }}
@@ -74,19 +76,7 @@ export default function FranchiseeCourseInstructorsPage() {
           setDeleteCourseInstructorId(courseInstructorId);
           setIsDeleteModalOpen(true);
         }}
-        onCourseInstructorEdit={() => {
-          // Edit flow is currently not implemented in the multistep create modal.
-        }}
-        onPaymentCourseInstructorUpdate={() => {
-          void revalidate();
-        }}
-        onPaymentCourseInstructorDelete={(courseInstructorId) => {
-          setDeleteCourseInstructorId(courseInstructorId);
-          setIsDeleteModalOpen(true);
-        }}
-        onPaymentCourseInstructorEdit={() => {
-          // Edit flow is currently not implemented in the multistep create modal.
-        }}
+        onCourseInstructorEdit={() => {}}
       />
 
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>

@@ -122,6 +122,9 @@ export function FranchiseApplicationModal({
       dob: new Date(),
       bloodGroup: "",
       communicationAddress: "",
+      city: "",
+      state: "",
+      pincode: "",
       phone: "",
       mail: "",
       education: "",
@@ -165,12 +168,12 @@ export function FranchiseApplicationModal({
         break;
 
       case 2:
-        if (!formData.franchise.state?.trim()) {
-          newErrors.city = "State is required";
-        } else if (!formData.franchise.city.trim()) {
-          newErrors.city = "City is required";
-        } else if (!formData.franchise.pincode?.trim()) {
-          newErrors.pincode = "Pincode is required";
+        if (!formData.franchisee.state?.trim()) {
+          newErrors.franchiseeCity = "State is required";
+        } else if (!formData.franchisee.city.trim()) {
+          newErrors.franchiseeCity = "City is required";
+        } else if (!formData.franchisee.pincode?.trim()) {
+          newErrors.franchiseePincode = "Pincode is required";
         }
         break;
 
@@ -200,6 +203,13 @@ export function FranchiseApplicationModal({
         }
         if (!formData.franchise.address.trim()) {
           newErrors.address = "Centre address is required";
+        }
+        if (!formData.franchise.state?.trim()) {
+          newErrors.centerCity = "State is required";
+        } else if (!formData.franchise.city.trim()) {
+          newErrors.centerCity = "City is required";
+        } else if (!formData.franchise.pincode?.trim()) {
+          newErrors.centerPincode = "Pincode is required";
         }
         break;
     }
@@ -430,34 +440,38 @@ export function FranchiseApplicationModal({
 
             <div className="flex justify-between gap-2">
               <StateCitySelect
-                id="city"
+                id="franchiseeCity"
                 className="w-full"
-                value={formData.franchise.city}
-                stateValue={formData.franchise.state}
-                onChange={(val) => handleInputChange("franchise.city", val)}
+                value={formData.franchisee.city}
+                stateValue={formData.franchisee.state}
+                onChange={(val) =>
+                  handleInputChange("franchisee.city", val)
+                }
                 onStateChange={(val) =>
-                  handleInputChange("franchise.state", val)
+                  handleInputChange("franchisee.state", val)
                 }
                 label="City"
                 required
-                error={errors.city}
+                error={errors.franchiseeCity}
               />
 
               <div className="w-[50%] space-y-2">
-                <Label htmlFor="pinCode">Pincode *</Label>
+                <Label htmlFor="franchiseePincode">Pincode *</Label>
                 <Input
-                  id="pinCode"
-                  value={formData.franchise.pincode ?? ""}
+                  id="franchiseePincode"
+                  value={formData.franchisee.pincode ?? ""}
                   onChange={(e) =>
-                    handleInputChange("franchise.pincode", e.target.value)
+                    handleInputChange("franchisee.pincode", e.target.value)
                   }
                   className={cn(
                     "rounded-lg border-border",
-                    errors.pincode && "border-destructive",
+                    errors.franchiseePincode && "border-destructive",
                   )}
                 />
-                {errors.pincode && (
-                  <p className="text-sm text-destructive">{errors.pincode}</p>
+                {errors.franchiseePincode && (
+                  <p className="text-sm text-destructive">
+                    {errors.franchiseePincode}
+                  </p>
                 )}
               </div>
             </div>
@@ -687,24 +701,62 @@ export function FranchiseApplicationModal({
               )}
             </div>
 
-            <div className="space-y-2 border-t border-border pt-4">
-              <Label htmlFor="address">Centre Address *</Label>
-              <Textarea
-                id="address"
-                value={formData.franchise.address}
-                onChange={(e) =>
-                  handleInputChange("franchise.address", e.target.value)
-                }
-                className={cn(
-                  "rounded-lg border-border",
-                  errors.address && "border-destructive",
+            <div className="space-y-4 border-t border-border pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="address">Centre Address *</Label>
+                <Textarea
+                  id="address"
+                  value={formData.franchise.address}
+                  onChange={(e) =>
+                    handleInputChange("franchise.address", e.target.value)
+                  }
+                  className={cn(
+                    "rounded-lg border-border",
+                    errors.address && "border-destructive",
+                  )}
+                  rows={3}
+                  placeholder="Full address of the proposed centre"
+                />
+                {errors.address && (
+                  <p className="text-sm text-destructive">{errors.address}</p>
                 )}
-                rows={3}
-                placeholder="Full address of the proposed centre"
-              />
-              {errors.address && (
-                <p className="text-sm text-destructive">{errors.address}</p>
-              )}
+              </div>
+
+              <div className="flex justify-between gap-2">
+                <StateCitySelect
+                  id="centerCity"
+                  className="w-full"
+                  value={formData.franchise.city}
+                  stateValue={formData.franchise.state}
+                  onChange={(val) => handleInputChange("franchise.city", val)}
+                  onStateChange={(val) =>
+                    handleInputChange("franchise.state", val)
+                  }
+                  label="City"
+                  required
+                  error={errors.centerCity}
+                />
+
+                <div className="w-[50%] space-y-2">
+                  <Label htmlFor="centerPincode">Pincode *</Label>
+                  <Input
+                    id="centerPincode"
+                    value={formData.franchise.pincode ?? ""}
+                    onChange={(e) =>
+                      handleInputChange("franchise.pincode", e.target.value)
+                    }
+                    className={cn(
+                      "rounded-lg border-border",
+                      errors.centerPincode && "border-destructive",
+                    )}
+                  />
+                  {errors.centerPincode && (
+                    <p className="text-sm text-destructive">
+                      {errors.centerPincode}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         );

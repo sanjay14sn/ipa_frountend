@@ -3,17 +3,19 @@
 import { useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-export function useTabFromUrl<T extends string>(
-  defaultTab: T,
-  allowed: readonly string[],
+export function useTabFromUrl<const TAllowed extends readonly string[]>(
+  defaultTab: TAllowed[number],
+  allowed: TAllowed,
 ) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const raw = searchParams.get("tab");
-  const tab: T =
-    raw && allowed.includes(raw) ? (raw as T) : defaultTab;
+  const tab: TAllowed[number] =
+    raw && (allowed as readonly string[]).includes(raw)
+      ? (raw as TAllowed[number])
+      : defaultTab;
 
   const setTab = useCallback(
     (value: string) => {

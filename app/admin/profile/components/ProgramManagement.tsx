@@ -356,13 +356,28 @@ export function ProgramManagement() {
 
     setIsSavingTemplate(true);
     try {
+      const certificateTitle =
+        typeof templateData.certificateTitle === "string" &&
+        templateData.certificateTitle.trim()
+          ? templateData.certificateTitle
+          : "Certificate of Completion";
+      const issuerName =
+        typeof templateData.issuerName === "string" && templateData.issuerName.trim()
+          ? templateData.issuerName
+          : "Ideal Play Abacus";
+      const additionalText =
+        typeof templateData.additionalText === "string" && templateData.additionalText.trim()
+          ? templateData.additionalText
+          : undefined;
+      const isActive =
+        typeof templateData.isActive === "boolean" ? templateData.isActive : true;
+
       const templatePayload = {
-        certificateTitle:
-          templateData.certificateTitle || "Certificate of Completion",
-        issuerName: templateData.issuerName || "Ideal Play Abacus",
-        additionalText: templateData.additionalText || undefined,
+        certificateTitle,
+        issuerName,
+        additionalText,
         fieldCoordinates: fieldCoordinates || undefined,
-        isActive: templateData.isActive ?? true,
+        isActive,
       };
 
       if (templateFile) {

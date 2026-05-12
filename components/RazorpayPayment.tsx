@@ -70,96 +70,38 @@ export default function RazorpayPayment({
   const hasInitialized = useRef(false);
   const isSettledRef = useRef(false);
 
+  // Keep prop/callback refs always up-to-date without adding them to dep arrays.
+  // This prevents stale-closure bugs AND stops dep changes from re-triggering the
+  // init effect (which would fire a spurious abandon during cleanup).
+  const onSuccessRef = useRef(onSuccess);
+  const onFailureRef = useRef(onFailure);
+  const onAbandonRef = useRef(onAbandon);
+  const amountRef = useRef(amount);
+  const currencyRef = useRef(currency);
+  const franchiseNameRef = useRef(franchiseName);
+  const razorpayKeyRef = useRef(razorpayKey);
+  const userDetailsRef = useRef(userDetails);
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+    onFailureRef.current = onFailure;
+    onAbandonRef.current = onAbandon;
+    amountRef.current = amount;
+    currencyRef.current = currency;
+    franchiseNameRef.current = franchiseName;
+    razorpayKeyRef.current = razorpayKey;
+    userDetailsRef.current = userDetails;
+  });
+
   const settleAsAbandoned = useCallback(
     async (reason: string) => {
       if (isSettledRef.current) return;
       isSettledRef.current = true;
-      if (onAbandon && orderId?.trim()) {
-        await onAbandon({ orderId, reason });
+      if (onAbandonRef.current && orderId?.trim()) {
+        await onAbandonRef.current({ orderId, reason });
       }
     },
-    [onAbandon, orderId],
+    [orderId],
   );
-
-  const initializeRazorpay = useCallback(() => {
-    if (typeof window.Razorpay === "undefined") {
-      console.error("Razorpay SDK not loaded");
-      onFailure({ error: "Razorpay SDK not loaded" });
-      return;
-    }
-
-    const amountPaise = Math.round(Number(amount) * 100);
-
-    const effectiveKey =
-      razorpayKey ||
-      process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
-      (process.env.NEXT_PUBLIC_RAZORPAY_KEY as string) ||
-      "";
-
-    if (!effectiveKey) {
-      console.error("Razorpay Key ID is missing from backend response and env");
-      onFailure({
-        error:
-          "Payment configuration error. Razorpay key is missing. Please contact support.",
-      });
-      return;
-    }
-
-    const options: RazorpayOptions = {
-      key: effectiveKey,
-      amount: amountPaise,
-      currency: currency,
-      name: "IPA Franchise",
-      description: `Order Payment for ${franchiseName}`,
-      order_id: orderId,
-      handler: function (response: RazorpaySuccessResponse) {
-        isSettledRef.current = true;
-        console.log("Payment successful! Verifying...");
-        console.log("Payment ID:", response.razorpay_payment_id);
-        console.log("Order ID:", response.razorpay_order_id);
-        console.log("Signature:", response.razorpay_signature);
-        onSuccess(response);
-      },
-      prefill: {
-        name: userDetails.name,
-        email: (userDetails as any).email || (userDetails as any).mail || "",
-        contact: userDetails.phone,
-      },
-      theme: {
-        color: "#2563eb",
-      },
-      modal: {
-        ondismiss: async function () {
-          await settleAsAbandoned("dismissed");
-          console.log("Payment cancelled by user");
-          onFailure({ error: "Payment cancelled by user" });
-        },
-      },
-    };
-
-    try {
-      const paymentObject = new window.Razorpay(options);
-      paymentObject.on("payment.failed", async function (response: any) {
-        await settleAsAbandoned("payment_failed");
-        console.error("Payment failed:", response);
-        onFailure(response);
-      });
-      paymentObject.open();
-    } catch (error) {
-      console.error("Error initializing Razorpay:", error);
-      onFailure({ error: "Failed to initialize payment gateway" });
-    }
-  }, [
-    amount,
-    currency,
-    franchiseName,
-    onFailure,
-    onSuccess,
-    orderId,
-    razorpayKey,
-    settleAsAbandoned,
-    userDetails,
-  ]);
 
   useEffect(() => {
     if (hasInitialized.current) {
@@ -167,39 +109,107 @@ export default function RazorpayPayment({
     }
     hasInitialized.current = true;
 
-    const rupees = Number(amount);
-    // Parent should not mount us for zero-amount flow; never fake-success with empty ids.
+    const rupees = Number(amountRef.current);
     if (!Number.isFinite(rupees) || rupees <= 0) {
-      onFailure({ error: "Invalid payment amount" });
+      onFailureRef.current({ error: "Invalid payment amount" });
       return;
     }
 
     if (!orderId?.trim()) {
-      onFailure({ error: "Missing Razorpay order id" });
+      onFailureRef.current({ error: "Missing Razorpay order id" });
       return;
     }
 
+    const launch = () => {
+      if (typeof window.Razorpay === "undefined") {
+        console.error("Razorpay SDK not loaded");
+        onFailureRef.current({ error: "Razorpay SDK not loaded" });
+        return;
+      }
+
+      const amountPaise = Math.round(Number(amountRef.current) * 100);
+      const effectiveKey =
+        razorpayKeyRef.current ||
+        process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+        (process.env.NEXT_PUBLIC_RAZORPAY_KEY as string) ||
+        "";
+
+      if (!effectiveKey) {
+        console.error("Razorpay Key ID is missing from backend response and env");
+        onFailureRef.current({
+          error:
+            "Payment configuration error. Razorpay key is missing. Please contact support.",
+        });
+        return;
+      }
+
+      const currentUserDetails = userDetailsRef.current;
+      const options: RazorpayOptions = {
+        key: effectiveKey,
+        amount: amountPaise,
+        currency: currencyRef.current,
+        name: "IPA Franchise",
+        description: `Order Payment for ${franchiseNameRef.current}`,
+        order_id: orderId,
+        handler: function (response: RazorpaySuccessResponse) {
+          isSettledRef.current = true;
+          onSuccessRef.current(response);
+        },
+        prefill: {
+          name: currentUserDetails.name,
+          email:
+            (currentUserDetails as any).email ||
+            (currentUserDetails as any).mail ||
+            "",
+          contact: currentUserDetails.phone,
+        },
+        theme: {
+          color: "#2563eb",
+        },
+        modal: {
+          ondismiss: async function () {
+            const alreadySettled = isSettledRef.current;
+            await settleAsAbandoned("dismissed");
+            if (!alreadySettled) {
+              onFailureRef.current({ error: "Payment cancelled by user" });
+            }
+          },
+        },
+      };
+
+      try {
+        const paymentObject = new window.Razorpay(options);
+        paymentObject.on("payment.failed", function (response: any) {
+          // Do not abandon here — Razorpay allows retrying another payment method
+          // within the same order/modal. ondismiss will handle the final failure.
+          console.error("Payment attempt failed:", response);
+        });
+        paymentObject.open();
+      } catch (error) {
+        console.error("Error initializing Razorpay:", error);
+        onFailureRef.current({ error: "Failed to initialize payment gateway" });
+      }
+    };
+
     if (typeof window.Razorpay !== "undefined") {
-      initializeRazorpay();
+      launch();
       return;
     }
 
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.async = true;
-    script.onload = () => {
-      initializeRazorpay();
-    };
+    script.onload = launch;
     script.onerror = () => {
       console.error("Failed to load Razorpay SDK");
-      onFailure({ error: "Failed to load Razorpay SDK" });
+      onFailureRef.current({ error: "Failed to load Razorpay SDK" });
     };
     document.body.appendChild(script);
-
-    return () => {
-      void settleAsAbandoned("component_unmount");
-    };
-  }, [amount, initializeRazorpay, onFailure, orderId, settleAsAbandoned]);
+    // No cleanup that calls abandon — StrictMode double-effect and parent
+    // re-renders would otherwise abandon a live, in-progress payment.
+    // The parent's beforeunload/pagehide/component-unmount handlers cover
+    // real abandonment, and the modal's ondismiss handles user cancellation.
+  }, [orderId, settleAsAbandoned]);
 
   useEffect(() => {
     const handleWindowClose = () => {

@@ -1,7 +1,10 @@
 "use client";
 
 import type React from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
+import { useUser } from "@/context/user-context";
 import { DynamicSidebar } from "@/components/dynamic-sidebar";
 import {
   SidebarProvider,
@@ -22,6 +25,26 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { user, loading } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user || user.role !== "admin") {
+      router.replace("/admin-login");
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user || user.role !== "admin") return null;
+
   return (
     <SidebarProvider>
       <DynamicSidebar />

@@ -179,7 +179,6 @@ export default function ApproveTrainingModal({
                   onSelect={(date) =>
                     date && handleInputChange("dateOfTraining", date)
                   }
-                  initialFocus
                 />
               </PopoverContent>
             </Popover>

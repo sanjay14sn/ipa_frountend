@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye } from "lucide-react";
+import { FileText } from "lucide-react";
 import { DataTable } from "@/components/shared";
 import type {
   DataTableColumn,
@@ -15,6 +15,7 @@ import {
   OrderStatus,
 } from "@/services/order.service";
 import OrderDetails from "./OrderDetails";
+import OrderInvoiceDialog from "./OrderInvoiceDialog";
 
 interface OrdersTableProps {
   orders?: OrderData[];
@@ -27,9 +28,7 @@ export default function OrdersTable({
   onViewOrderDetails,
   loading = false,
 }: OrdersTableProps) {
-  const [expandedChildren, setExpandedChildren] = useState<Set<string>>(
-    new Set()
-  );
+  const [invoiceOrderId, setInvoiceOrderId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"orderDate">("orderDate");
@@ -81,21 +80,6 @@ export default function OrdersTable({
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
-  const toggleRow = (id: string) => {
-    if (id.includes("-")) {
-      // This is a student section toggle
-      const newExpandedChildren = new Set<string>();
-
-      // If it's already expanded, collapse it (set will be empty)
-      // Otherwise, only add this one (ensuring only one is expanded)
-      if (!expandedChildren.has(id)) {
-        newExpandedChildren.add(id);
-      }
-
-      setExpandedChildren(newExpandedChildren);
-    }
-  };
-
   const getStatusColor = (status: OrderStatus | string) => {
     switch (status as OrderStatus) {
       case OrderStatus.DELIVERED:
@@ -136,11 +120,17 @@ export default function OrdersTable({
       className: "text-center",
       render: (order) => (
         <div className="font-medium">
-          {order.totalStudents || 0}
-          {order.totalInstructors && order.totalInstructors > 0 && (
-            <span className="text-xs text-muted-foreground block">
-              + {order.totalInstructors} CI{order.totalInstructors > 1 ? 's' : ''}
-            </span>
+          {order.totalStudents == null ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <>
+              {order.totalStudents}
+              {order.totalInstructors != null && order.totalInstructors > 0 && (
+                <span className="text-xs text-muted-foreground block">
+                  + {order.totalInstructors} CI{order.totalInstructors > 1 ? 's' : ''}
+                </span>
+              )}
+            </>
           )}
         </div>
       ),
@@ -164,12 +154,31 @@ export default function OrdersTable({
       ),
     },
     {
-      key: "orderDate",
-      header: "Order Date",
+      key: "value",
+      header: "Value",
       className: "text-center",
       render: (order) => (
-        <div className="text-sm">
-          {new Date(order.createdAt).toLocaleDateString()}
+        <span className="font-medium">₹{Number(order.totalAmount).toFixed(2)}</span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "text-right",
+      render: (order) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 p-0"
+            title="View invoice"
+            onClick={(e) => {
+              e.stopPropagation();
+              setInvoiceOrderId(order.id);
+            }}
+          >
+            <FileText className="h-4 w-4" />
+          </Button>
         </div>
       ),
     },
@@ -196,20 +205,24 @@ export default function OrdersTable({
   ];
 
   return (
+    <>
     <DataTable
       data={paginatedData}
       loading={loading}
       columns={columns}
       getRowId={(order) => order.id.toString()}
       renderMainCell={(order) => (
-        <span className="font-medium text-card-foreground">Order #{order.id}</span>
+        <div>
+          <div className="font-medium">Order #{order.id}</div>
+          <div className="text-xs text-muted-foreground">
+            {new Date(order.createdAt).toLocaleString()}
+          </div>
+        </div>
       )}
       renderExpandedContent={(order) => (
         <OrderDetails
           order={order}
           lastRow={false}
-          expandedRows={expandedChildren}
-          onToggleRow={toggleRow}
         />
       )}
       searchPlaceholder="Search orders by number or status..."
@@ -232,5 +245,10 @@ export default function OrdersTable({
       emptyMessage="No orders found matching your criteria"
       resultsText={(count, total) => `Showing ${count} of ${total} orders`}
     />
+    <OrderInvoiceDialog
+      orderId={invoiceOrderId}
+      onClose={() => setInvoiceOrderId(null)}
+    />
+    </>
   );
 }

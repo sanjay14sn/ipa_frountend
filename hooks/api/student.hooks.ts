@@ -334,7 +334,8 @@ export function useApproveCertificateRequest() {
 export function useRejectCertificateRequest() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: rejectCertificateRequest,
+    mutationFn: (certificateRequestId: number) =>
+      rejectCertificateRequest(certificateRequestId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
     },
