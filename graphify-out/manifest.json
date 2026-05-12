@@ -1,0 +1,1326 @@
+{
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\eslint.config.mjs": {
+    "mtime": 1772383760.2218473,
+    "hash": "14b8c4685c8ba166fed3b5e202cb2a18"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\next-env.d.ts": {
+    "mtime": 1778446897.8506567,
+    "hash": "29f60a376e12bf72b67d4994fcc84214"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\next.config.mjs": {
+    "mtime": 1778181215.9626057,
+    "hash": "bc70f5562b3ef837838b3b1d8f7b15d3"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\postcss.config.mjs": {
+    "mtime": 1752652500.0,
+    "hash": "b7941c02b947e17ae32f67ae7e664ec8"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\proxy.ts": {
+    "mtime": 1777713912.1545148,
+    "hash": "4cac343b09e3e971aa50c4b0e735fd1c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\tailwind.config.ts": {
+    "mtime": 1777048202.3435242,
+    "hash": "ffa2ffa0a43a64e10dd3121af547e910"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\layout.tsx": {
+    "mtime": 1777444978.7627463,
+    "hash": "1151d9c5dcc7372eaadaf986779af7a4"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\page.tsx": {
+    "mtime": 1752652500.0,
+    "hash": "90dcea050017e9ad48f0ef29b5e3cbf6"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\layout.tsx": {
+    "mtime": 1778450211.5349147,
+    "hash": "cc85ac87a570a2a09a59c3870ce3c645"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\page.tsx": {
+    "mtime": 1777777578.5387533,
+    "hash": "26ccd4fb1a5cf2d14e7d7ec358f69dc8"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\admins\\page.tsx": {
+    "mtime": 1777577069.146417,
+    "hash": "528527bb6eff94d71ecc6d34c70916e2"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\admins\\sections\\admin-management-section.tsx": {
+    "mtime": 1777577791.3748517,
+    "hash": "b4da42ce57e458f663929455441213dc"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\agreements\\page.tsx": {
+    "mtime": 1777777578.5362418,
+    "hash": "217bd6d5eabb361d3ed33f12d41eb7e1"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\certificate-requests\\page.tsx": {
+    "mtime": 1777777578.5482268,
+    "hash": "2917903a80deb64065ddb83062f3cf68"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\certificate-requests\\components\\AdminCertificateRequestsTable.tsx": {
+    "mtime": 1778213716.8707695,
+    "hash": "b78b6f5851b3b8b3a3c21c3b07d490f5"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\certificate-requests\\components\\FranchiseCertificateDetails.tsx": {
+    "mtime": 1778185466.0640051,
+    "hash": "4883d961d6be76dd162256bd0f47c075"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\ci-training\\page.tsx": {
+    "mtime": 1777777578.5397537,
+    "hash": "ce9bbad09b4a05259a4f2d3d5fa8a73d"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\ci-training\\components\\AllGraduationsView.tsx": {
+    "mtime": 1777048508.9004252,
+    "hash": "2af36f1255183e20cda0c65582039cfa"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\ci-training\\components\\CompletedTrainingTable.tsx": {
+    "mtime": 1777048202.3184643,
+    "hash": "bd89d3dccc6b277f22ba045c9a587746"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\ci-training\\components\\CompleteTrainingConfirmation.tsx": {
+    "mtime": 1771259446.2393181,
+    "hash": "e626f93b500c725c7d62cd614ae129af"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\ci-training\\components\\CompleteTrainingModal.tsx": {
+    "mtime": 1777048202.3284678,
+    "hash": "9a8dba6feac5c211d696635928ecc825"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\ci-training\\components\\InstructorDetailCard.tsx": {
+    "mtime": 1777048202.3184643,
+    "hash": "a56965c6ccb4a19b4f849ef0fae500b2"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\ci-training\\components\\InstructorDetails.tsx": {
+    "mtime": 1777048202.334495,
+    "hash": "972230848290e7844b3d119dc6554125"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\ci-training\\components\\PendingTrainingTable.tsx": {
+    "mtime": 1777048202.3496141,
+    "hash": "81f47bee9d1bf51935a6173413205457"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\ci-training\\components\\TrainingPreviewModal.tsx": {
+    "mtime": 1777048202.3265665,
+    "hash": "c1900765e61e4eb0bab67f94c23cf2ea"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\course-instructor-approvals\\ci-approvals-section.tsx": {
+    "mtime": 1777708476.019196,
+    "hash": "e90d0e47e39d3f99506c2d2c6787033b"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\course-instructor-approvals\\page.tsx": {
+    "mtime": 1777777578.5507193,
+    "hash": "e9b66ba9e0a5b5143ab65f4f978597b7"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\course-instructor-approvals\\components\\ActiveCourseInstructorsTable.tsx": {
+    "mtime": 1778069834.2558997,
+    "hash": "45b837e791d566b9f67acf15a942994f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\course-instructor-approvals\\components\\ApproveCIModal.tsx": {
+    "mtime": 1778448950.2705967,
+    "hash": "e43ceb59a44c8d6c94117d7ea4e3fe78"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\course-instructor-approvals\\components\\ApprovedCourseInstructorsTable.tsx": {
+    "mtime": 1777750870.4467244,
+    "hash": "2e72eff4ddfe0ae57b8b0b062dad7e74"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\course-instructor-approvals\\components\\ApproveTrainingModal.tsx": {
+    "mtime": 1777048508.9004252,
+    "hash": "2b04105ed7de3f22a88bcb9c1812013e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\course-instructor-approvals\\components\\ContactInfoSection.tsx": {
+    "mtime": 1766947395.1212301,
+    "hash": "5d1554152a06f9212b853626cfee120e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\course-instructor-approvals\\components\\CourseInstructorDetailCard.tsx": {
+    "mtime": 1771258843.609442,
+    "hash": "8f3f21f7a63049688ac21ad649e95d2a"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\course-instructor-approvals\\components\\CourseInstructorDetails.tsx": {
+    "mtime": 1777707088.942647,
+    "hash": "be135c5b00ac2f3030d49fb30262af58"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\course-instructor-approvals\\components\\PendingCourseInstructorsTable.tsx": {
+    "mtime": 1777708483.3424642,
+    "hash": "527c7b5016db12e52b94d169af91fc2d"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\course-instructor-approvals\\components\\ProfessionalInfoSection.tsx": {
+    "mtime": 1760041008.837985,
+    "hash": "f6b741340e6bac5936a0dd82bb50119b"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\course-instructor-approvals\\components\\RejectedCourseInstructorsTable.tsx": {
+    "mtime": 1777708496.0503094,
+    "hash": "f2034adbebf0439776b0f5e13a022805"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\course-instructor-approvals\\components\\TrainingSection.tsx": {
+    "mtime": 1777048202.3154304,
+    "hash": "48512a55393093bda5621e6d023c6460"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\course-instructors\\ci-training-section.tsx": {
+    "mtime": 1778240762.9872694,
+    "hash": "920d20ac9d5bcfffcde8bd4ff0e6151a"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\course-instructors\\page.tsx": {
+    "mtime": 1778049226.134702,
+    "hash": "3f04893ac02db29dc978ff647b67fc5b"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\dashboard\\page.tsx": {
+    "mtime": 1777580106.137139,
+    "hash": "b9d743e1a4d5260454d9a9d776fa5eaa"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\dashboard\\components\\countBar.tsx": {
+    "mtime": 1755563670.0,
+    "hash": "cf49ffceee0d3536967d23c4c070a4b5"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\dashboard\\components\\recentApplications.tsx": {
+    "mtime": 1777048202.3204646,
+    "hash": "7be78fe450e166925d67da23c03f769d"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchise\\page.tsx": {
+    "mtime": 1777777376.8397596,
+    "hash": "4b181b2ae7b49e66205d84490eee4e09"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchise\\components\\admin-agreements-section.tsx": {
+    "mtime": 1777833403.3127053,
+    "hash": "67cf9c9bc9118feff55d03415324e8e0"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchise\\components\\AgreementKitItemsDialog.tsx": {
+    "mtime": 1778344142.7062933,
+    "hash": "82f9d48cff50d03ad473275f2a7874a6"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchise\\components\\franchise-management-section.tsx": {
+    "mtime": 1777831850.4002652,
+    "hash": "25bcbfb85ec48278011d674f2dd5d367"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchise\\components\\FranchiseAgreementsWorkspace.tsx": {
+    "mtime": 1778344072.44038,
+    "hash": "5a3c61b89ab748609396808da2b0abab"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchise\\components\\pending-approvals-section.tsx": {
+    "mtime": 1778337417.9439766,
+    "hash": "feaa3b2c6ad3989fee0c7136ee3d0f05"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchise\\components\\PendingApprovalsTable.tsx": {
+    "mtime": 1776770731.0562446,
+    "hash": "1b3a1549b39f5277ecb4a7eac11dc83c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchise\\components\\program-requests-section.tsx": {
+    "mtime": 1777832254.459826,
+    "hash": "ab6ceab7f1b58dc51158f5a14a297d22"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchise\\components\\StartingKitEditor.tsx": {
+    "mtime": 1778337348.1138082,
+    "hash": "81e94972c193bedbe201427bd659eb69"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchise\\components\\types.ts": {
+    "mtime": 1777220348.6856906,
+    "hash": "0a0a778bdc3d8b2937ba6e621f77f9e6"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchise\\[franchiseId]\\page.tsx": {
+    "mtime": 1778344204.2419267,
+    "hash": "3a8dc03effe99ff71aa4c1ce82970ff2"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchise\\[franchiseId]\\components\\FranchiseCiListTable.tsx": {
+    "mtime": 1778069865.1894586,
+    "hash": "83f08277620e11c90c83df0e3ca90ab9"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchise\\[franchiseId]\\components\\FranchiseStudentsTable.tsx": {
+    "mtime": 1777138250.0516238,
+    "hash": "fe98b231ba56e94156c3e8159eeb813e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchises\\page.tsx": {
+    "mtime": 1777777578.5547698,
+    "hash": "4d6a4a195bfe1986a1ff7555ba928ef0"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchises\\components\\CreateFranchiseDialog.tsx": {
+    "mtime": 1777048202.3435242,
+    "hash": "af8468c0aaef6c67ba50ee6ff270fb3b"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchises\\components\\FranchiseDetails.tsx": {
+    "mtime": 1776199812.286057,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchises\\components\\FranchiseeDetails.tsx": {
+    "mtime": 1776199812.277532,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchises\\components\\FranchiseHubTable.tsx": {
+    "mtime": 1777706884.0831604,
+    "hash": "c3100d372e3aa006b4f88679540dbfa2"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchises\\components\\FranchiseRow.tsx": {
+    "mtime": 1776199812.3991768,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchises\\components\\FranchiseTable.tsx": {
+    "mtime": 1777048508.9004252,
+    "hash": "2c815c04498866095844648fa7523ae9"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\franchises\\components\\FranchiseTableExpanded.tsx": {
+    "mtime": 1778343971.0312095,
+    "hash": "66b684a5756a455523835c01361a783a"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\id-requests\\page.tsx": {
+    "mtime": 1777777578.5507193,
+    "hash": "0ed8285ca12bf5b787cd2e09894790fc"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\id-requests\\components\\FranchiseIdDetails.tsx": {
+    "mtime": 1777832273.2101011,
+    "hash": "21733c7bc8bb91c27bb83dbd4f30175a"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\id-requests\\components\\IdCardPreviewModal.tsx": {
+    "mtime": 1778156341.8640501,
+    "hash": "c2f72e338657afd62262997e0bf546d7"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\id-requests\\components\\RequestedIdTable.tsx": {
+    "mtime": 1777048202.3395188,
+    "hash": "394a035b10c47792c8a89c579a33c3ef"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\id-requests\\components\\StudentDetailCard.tsx": {
+    "mtime": 1760041008.8732228,
+    "hash": "c4e7fd258f09cc9d1e3fe7c1913752a0"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\id-requests\\components\\StudentDetails.tsx": {
+    "mtime": 1760041008.8987517,
+    "hash": "1546afb6bf7a05b06ffefe1ae5dd5e85"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\id-requests\\components\\StudentRow.tsx": {
+    "mtime": 1757330859.8383062,
+    "hash": "5933781fd64919150e86ec27027a3d48"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\inventory\\page.tsx": {
+    "mtime": 1777777578.5492165,
+    "hash": "8f2f4ebe250ab001cc88202b1ecaca4a"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\operations\\page.tsx": {
+    "mtime": 1778361697.4359126,
+    "hash": "bee55801a10f13194d42a414cce5ca63"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\operations\\components\\MonitoringSection.tsx": {
+    "mtime": 1777096694.4276488,
+    "hash": "ab14bcd406ec853cad140d23ad40c101"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\operations\\components\\ProcurementSection.tsx": {
+    "mtime": 1777055397.94346,
+    "hash": "1c6fae3b91710f99cb55bae79edc82f7"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\operations\\components\\legacy-tabs\\inventory-section.tsx": {
+    "mtime": 1778443099.827354,
+    "hash": "be95df114db038392c1fea3bbff5d3a7"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\orders\\page.tsx": {
+    "mtime": 1777777578.5337293,
+    "hash": "216c858325bde4732ecb2f4027efd42a"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\orders\\components\\AdminOrderInvoiceDialog.tsx": {
+    "mtime": 1778399875.4042587,
+    "hash": "3b1750bb15bba9f714a7d8ae9598fe9e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\orders\\components\\AdminOrdersTable.tsx": {
+    "mtime": 1778399245.512933,
+    "hash": "5c9041887372514be46b6927086de3bb"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\orders\\components\\OrderBreakdownDialog.tsx": {
+    "mtime": 1778358066.5872219,
+    "hash": "bb3d1640f538a47353dc47b5a7ceb9ca"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\payments\\page.tsx": {
+    "mtime": 1777777578.5547698,
+    "hash": "b938764be9510eddeeeecbb03c679e0a"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\payments\\components\\FranchisePaymentsDetails.tsx": {
+    "mtime": 1778233133.5582135,
+    "hash": "80ff321f3938d971e73a47370ccc0055"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\payments\\components\\PaymentsTable.tsx": {
+    "mtime": 1778233110.2482495,
+    "hash": "8528b7837b0dd9a4a43f00b7518afc7f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\pending-approvals\\page.tsx": {
+    "mtime": 1777832010.2034972,
+    "hash": "94d2796a3ae7185d8681a0bb4a2cf079"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\profile\\components\\CITrainingLevelManagement.tsx": {
+    "mtime": 1778445460.6397762,
+    "hash": "f970691e8ec27cd40a0547e50095c64b"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\profile\\components\\LevelManagement.tsx": {
+    "mtime": 1777532961.6861484,
+    "hash": "59fc2c1b567ba59ce78c4640945ec334"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\profile\\components\\LevelMaterialsPicker.tsx": {
+    "mtime": 1778444841.8799582,
+    "hash": "89bb6455e09363cebe224ad9a00f3d2f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\profile\\components\\ProgramKitManagement.tsx": {
+    "mtime": 1778440957.4586077,
+    "hash": "b0e1f02a39a046ae922c75ec88157042"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\profile\\components\\ProgramManagement.tsx": {
+    "mtime": 1778338507.5341704,
+    "hash": "9fb46e544708945bd1ff08c8ec6ca9a0"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\profile\\components\\StreamManagement.tsx": {
+    "mtime": 1777963121.2320414,
+    "hash": "95f29be81780dc20ea034850156d090d"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\program-requests\\page.tsx": {
+    "mtime": 1777777578.537747,
+    "hash": "987b45eb544e7e50f6bdb8c758a049b1"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\program-requests\\components\\ProgramRequestDetails.tsx": {
+    "mtime": 1777048508.896425,
+    "hash": "a98b66d9337b8d588e9742a76c18a573"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\program-requests\\components\\ProgramRequestsTable.tsx": {
+    "mtime": 1777048202.3184643,
+    "hash": "0e5bf5c8820db965fe5d371b7024250d"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\programs\\page.tsx": {
+    "mtime": 1777580073.1349459,
+    "hash": "4929f073a2e72dcd6dd72c6611f47439"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\shipping\\page.tsx": {
+    "mtime": 1777777578.5537705,
+    "hash": "0ef4c2a38af517c2d218e8f5b29b2f01"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\shipping\\components\\AdminShippingTable.tsx": {
+    "mtime": 1778366290.6670487,
+    "hash": "17dd5abdccc1bf67e97bcf0c70932df9"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\shipping\\components\\ShipShipmentDialog.tsx": {
+    "mtime": 1778133322.2592046,
+    "hash": "e0b2b3e6c11b03a5c6014fbe9c7fb27c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\shipping\\components\\VerifyShipmentDialog.tsx": {
+    "mtime": 1778128139.7697365,
+    "hash": "ac6a894457e6757c6830165eb9bc4251"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\students\\page.tsx": {
+    "mtime": 1777777380.449445,
+    "hash": "ce0784bbc1ff6a6dfecc9c2e87913b0a"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\students\\components\\certificate-requests-section.tsx": {
+    "mtime": 1778138997.9359722,
+    "hash": "7f5e27827845d7434818f4ac388cb8d8"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\students\\components\\id-requests-section.tsx": {
+    "mtime": 1778139015.1070716,
+    "hash": "c0da8ce637773071fd4d6bccc1354618"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\students\\components\\StudentsSection.tsx": {
+    "mtime": 1776754840.4197571,
+    "hash": "fc438086755076e898ba222a9ebc3945"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\training-levels\\page.tsx": {
+    "mtime": 1777777578.552762,
+    "hash": "3b5683d5af7e2b71fdedf9b2c0154678"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\training-levels\\training-levels-section.tsx": {
+    "mtime": 1778444819.1955438,
+    "hash": "c60987090f7d7cea1ce90873753b8514"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\training-levels\\TrainingLevelMaterialsPicker.tsx": {
+    "mtime": 1778443585.4448612,
+    "hash": "dc76fb7bcd0c3928511f315f8cdfa5c4"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin\\training-levels\\TrainingLevelStudentLevelsPicker.tsx": {
+    "mtime": 1778444804.3780863,
+    "hash": "effbc4589d71db086d269c3b91fdbb45"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\admin-login\\page.tsx": {
+    "mtime": 1777570982.3876562,
+    "hash": "84b7665e7529e91c04321779e503ef49"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\ci\\layout.tsx": {
+    "mtime": 1778449566.8940296,
+    "hash": "c9a1a8ec738259da7730292961710e5c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\ci\\page.tsx": {
+    "mtime": 1777777578.552762,
+    "hash": "1d95810675931abede0a99fad0e3d590"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\ci\\agreement\\page.tsx": {
+    "mtime": 1778449830.6209326,
+    "hash": "65972bb271baab6014e37f2dbab38762"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\ci\\change-password\\page.tsx": {
+    "mtime": 1777702446.062753,
+    "hash": "1fb65066db37668245016814dbdec232"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\ci\\components\\ci-dashboard-cards.tsx": {
+    "mtime": 1777726393.1701334,
+    "hash": "df184557b2e35cbce589fee7a5484ba6"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\ci\\dashboard\\page.tsx": {
+    "mtime": 1777826275.9623888,
+    "hash": "eaf02f62340e39c16910bc77f4b3b716"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\ci\\login\\page.tsx": {
+    "mtime": 1777702446.0395129,
+    "hash": "4a3d51b28bad3d90b11040b7d4148532"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\ci\\training\\packages\\page.tsx": {
+    "mtime": 1777878318.8937488,
+    "hash": "dbfe6405b03c75764a4cc29ff4c0c60f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\ci\\training\\progress\\page.tsx": {
+    "mtime": 1777826280.1938632,
+    "hash": "4e53683527def67a668cd330f4412865"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\ci\\training\\upcoming\\page.tsx": {
+    "mtime": 1777826284.4743738,
+    "hash": "4fa6ed5010f049832586bbae846c9e75"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\layout.tsx": {
+    "mtime": 1778450221.4973066,
+    "hash": "0797d7c6d9a82f265878f6e29057842e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\agreement\\page.tsx": {
+    "mtime": 1777868263.8927567,
+    "hash": "cafc60a403e6c7c0db5330fdfc8bb3c5"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\agreement\\components\\AgreementStepper.tsx": {
+    "mtime": 1777139925.5959332,
+    "hash": "570515cc6a12d730f560f746fd2a9212"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\agreement\\components\\AgreementTerms.tsx": {
+    "mtime": 1777140062.8931046,
+    "hash": "b637c5b99c46843500abe63ba1d3a396"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\agreement\\components\\FranchiseAgreementSignaturePanel.tsx": {
+    "mtime": 1777140095.3856378,
+    "hash": "53e5cc6f7acd685861bd8f483549d25c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\agreement\\components\\FranchiseDetails.tsx": {
+    "mtime": 1777140016.5610857,
+    "hash": "1ecf98873c04c848e1a606ff2bec9a40"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\agreement\\components\\FranchiseeInformation.tsx": {
+    "mtime": 1777140016.4097936,
+    "hash": "3208b2e2b238885449ee0b74360e7f32"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\agreement\\components\\LocationDetails.tsx": {
+    "mtime": 1777140016.485231,
+    "hash": "3e2dcd97b0f922c320250e2946c22d2f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\agreement\\components\\PaymentAction.tsx": {
+    "mtime": 1777140016.6354427,
+    "hash": "96b7e9260eb794bd04910c73cef9bf53"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\agreement\\components\\PaymentBreakdown.tsx": {
+    "mtime": 1777117293.1574674,
+    "hash": "bac32887067267191c5c727cd85f54c6"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\agreements\\page.tsx": {
+    "mtime": 1777777578.5492165,
+    "hash": "9ca2e1b9c52b4e51bf9968aad97a6606"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\certificate-requests\\page.tsx": {
+    "mtime": 1777777578.5352354,
+    "hash": "02a8aa1009071ccd11fa76e8e9425772"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\certificate-requests\\components\\BulkRequestCertificateModal.tsx": {
+    "mtime": 1777702090.8266363,
+    "hash": "bb578c6cd88e703fe4f566737bb58a3d"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\certificate-requests\\components\\EligibleStudentsTable.tsx": {
+    "mtime": 1778215341.9347491,
+    "hash": "5a74048dcb403cf6016a1065241e6e64"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\certificate-requests\\components\\FranchiseeCertificatesTable.tsx": {
+    "mtime": 1778183205.3743498,
+    "hash": "41936a0dc2f1bb98bc6008ab8ef56029"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\certificate-requests\\components\\RequestCertificateModal.tsx": {
+    "mtime": 1777702074.363122,
+    "hash": "3ee9ea78a8d2492b2d51153c900069c4"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\certificate-requests\\components\\StudentCertificatesModal.tsx": {
+    "mtime": 1778183224.9422464,
+    "hash": "624254083fa9a71012902c939639eb40"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\contests\\page.tsx": {
+    "mtime": 1777777578.5397537,
+    "hash": "0fe5ac368f12348ab750d0cf4b1c2aa1"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\page.tsx": {
+    "mtime": 1778448400.1468813,
+    "hash": "0470fd57c2921a227fa2ca0ed48dde68"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\components\\AddCourseInstructorModal.tsx": {
+    "mtime": 1777656303.1355643,
+    "hash": "e1959ac2e8956f6da6567c14e49915e8"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\components\\ApprovalPendingCourseInstructorsTable.tsx": {
+    "mtime": 1778448541.4334147,
+    "hash": "9f3356d7c6a0bad1f7da02c2793fc8b4"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\components\\CourseInstructorDetails.tsx": {
+    "mtime": 1778068633.8887064,
+    "hash": "2895f7d346dcb2ec054177a35557e13f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\components\\CourseInstructorsTable.tsx": {
+    "mtime": 1778068666.1897347,
+    "hash": "21c9b34129001695c4241abe92850628"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\components\\CourseInstructorTabs.tsx": {
+    "mtime": 1778448360.8863044,
+    "hash": "1cbb629d415e51faff995d159d057486"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\components\\GraduationHistoryModal.tsx": {
+    "mtime": 1777048202.3154304,
+    "hash": "70233e83e983f4fd14c978226c75959d"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\components\\MultiLevelTrainingPaymentModal.tsx": {
+    "mtime": 1778049790.8072212,
+    "hash": "29e0d27f6d9ee83a5268c0c64bd252f8"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\components\\PaymentCourseInstructorsTable.tsx": {
+    "mtime": 1777868258.1376023,
+    "hash": "ef33f0626bec1a247c5b9eeb66b2034e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\components\\RequestMaterialsModal.tsx": {
+    "mtime": 1774155221.7813866,
+    "hash": "677693065f5a0e72afba35c980d6425a"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\components\\RequestTrainingModal.tsx": {
+    "mtime": 1774094682.98185,
+    "hash": "935dba6bd21eec00955902f14c7d8cb1"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\components\\SignCIAgreementModal.tsx": {
+    "mtime": 1777826291.9430776,
+    "hash": "e446470813d193017e073a814b90514b"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\components\\TrainingCourseInstructorDetails.tsx": {
+    "mtime": 1778049069.7398586,
+    "hash": "693b7e09f17790710be3643f0148e386"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\components\\TrainingCourseInstructorsTable.tsx": {
+    "mtime": 1778049108.5158195,
+    "hash": "1b8eddb8e7f10bc0c0ddeba9d6488054"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\components\\TrainingProgressModal.tsx": {
+    "mtime": 1778069656.0310996,
+    "hash": "10b405edc72e93c0e2834c509c5b694c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\course-instructors\\components\\TrainingProgressView.tsx": {
+    "mtime": 1778068333.966568,
+    "hash": "1ce51516745e9238201e9a9e4906f783"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\dashboard\\page.tsx": {
+    "mtime": 1777833577.7010894,
+    "hash": "0ca6c3de458dc0d25e1275aaf454dc43"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\franchise\\page.tsx": {
+    "mtime": 1777777387.6492798,
+    "hash": "19cf2274c28e38e4be89827cfa8bc03c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\franchise\\components\\ci-agreements-section.tsx": {
+    "mtime": 1777776975.5543578,
+    "hash": "a315e3752b117eb5e03ab6ea29e4dc3f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\franchise\\components\\my-agreements-section.tsx": {
+    "mtime": 1777868242.5309725,
+    "hash": "e79e7c80cd9f753ce2d4afcc3292a489"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\franchise\\components\\program-agreements-section.tsx": {
+    "mtime": 1777868249.2591238,
+    "hash": "73358e6835392aab53246ab51dfbcc2e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\orders\\page.tsx": {
+    "mtime": 1778419672.5100284,
+    "hash": "1e5469a694407d19de30a92fa428340c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\orders\\components\\InvoicePreviewCard.tsx": {
+    "mtime": 1778397182.4735277,
+    "hash": "80bafb6664fff63d7b0294d6f17ee2e3"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\orders\\components\\OrderDetails.tsx": {
+    "mtime": 1778398692.2303927,
+    "hash": "4e6098ea9013a1d4e41790aeec54b462"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\orders\\components\\OrderInvoiceDialog.tsx": {
+    "mtime": 1778398681.5338387,
+    "hash": "25076a30ffa4785d9306988d81784e21"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\orders\\components\\OrdersTable.tsx": {
+    "mtime": 1778399241.4617894,
+    "hash": "116e1aba877db96f28cdb2f2ffc9c922"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\orders\\components\\StudentOrderSection.tsx": {
+    "mtime": 1778112643.7744884,
+    "hash": "f1ba8feee4ebb5efe2d63ec5c7c6df4c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\program-agreements\\page.tsx": {
+    "mtime": 1777777578.5362418,
+    "hash": "c076ccf1b1077b7da5e635afea451df6"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\students\\page.tsx": {
+    "mtime": 1777777393.1065073,
+    "hash": "a7f8cdd84f15a09847fb6c7c43b8854c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\students\\students-manage-section.tsx": {
+    "mtime": 1778241040.4749413,
+    "hash": "520183239f7ee7f81fb362bd1c17aa08"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\students\\components\\AcademicSection.tsx": {
+    "mtime": 1766988359.1944995,
+    "hash": "ee9fed3cf939bd432ce1b90d929fab6c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\students\\components\\AddStudentModal.tsx": {
+    "mtime": 1777048202.3204646,
+    "hash": "e7e32f723bfd5caabe9a5cf539403cf5"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\students\\components\\ContactSection.tsx": {
+    "mtime": 1756104592.584564,
+    "hash": "abd0ee03e8930b399fcc19d9b6f23d76"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\students\\components\\EditStudentModal.tsx": {
+    "mtime": 1776246634.6143768,
+    "hash": "050c18a425b6e1f7b501d134d76def1d"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\students\\components\\ParentSection.tsx": {
+    "mtime": 1756104588.9389553,
+    "hash": "67e1ce42121295ebb1a1cd80f748bcb2"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\students\\components\\RequestedIdStudentsModal.tsx": {
+    "mtime": 1766988359.1964986,
+    "hash": "d7924e643b70d5e765be05570ba2fcad"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\students\\components\\RequestIdModal.tsx": {
+    "mtime": 1776097575.1579099,
+    "hash": "e02f4b6539384a525ba8e9cd01b718d4"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\students\\components\\StudentDetails.tsx": {
+    "mtime": 1778143370.9603186,
+    "hash": "2996b334e1ba2caae2d67955df6d41f6"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\students\\components\\StudentsTable.tsx": {
+    "mtime": 1778241308.4207296,
+    "hash": "733dc0d221b6a6037bb4ea93030506f7"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\students\\components\\legacy-tabs\\certificate-requests-section.tsx": {
+    "mtime": 1777832254.40454,
+    "hash": "e48c4f2fe5923648316d42f26ee00eba"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\students\\components\\legacy-tabs\\contests-section.tsx": {
+    "mtime": 1777048508.8954258,
+    "hash": "888cbb6d62b720a8f422961ae0ce296b"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\franchisee\\students\\utils\\student-helpers.ts": {
+    "mtime": 1766988495.545938,
+    "hash": "78ba349dc345867af1548907cbdf6a28"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\login\\page.tsx": {
+    "mtime": 1772445291.2045918,
+    "hash": "6e06e237f1e7fd821dee536600cb388f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\login\\components\\FranchiseCTA.tsx": {
+    "mtime": 1777048202.3154304,
+    "hash": "8cce2570a81dac505ae75e71acbf40cb"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\login\\components\\LoginCard.tsx": {
+    "mtime": 1777757225.9273148,
+    "hash": "3aabd5bf7acd2389844f89c6909ef555"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\app\\_lib\\create-redirect-page.ts": {
+    "mtime": 1777777409.4922953,
+    "hash": "56853147dd6f0197007293a30c5842fe"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\abacus-ui.tsx": {
+    "mtime": 1755376990.0,
+    "hash": "e27ba4cb90f95255ea278950467dc58a"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\brand.tsx": {
+    "mtime": 1754772986.0,
+    "hash": "7dae5111839e8b17d25510c708fd6ad1"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\dynamic-sidebar.tsx": {
+    "mtime": 1778449572.323104,
+    "hash": "70c2a286cf24a522cee5134fc90ebd94"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\franchise-application-modal.tsx": {
+    "mtime": 1778434985.2807527,
+    "hash": "7c9ca70b47d239413a0b5df9c808e5d0"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\metric-card.tsx": {
+    "mtime": 1754774414.0,
+    "hash": "e11eb24f7cfc889de4a8d7059b884ca1"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\RazorpayPayment.tsx": {
+    "mtime": 1778447738.3334963,
+    "hash": "766b4b2bf9e1ed18b1b69004a883485d"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\request-franchise-modal.tsx": {
+    "mtime": 1777048202.3184643,
+    "hash": "91d1e998088ba667a4f53b2d7c6375b5"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\request-programs-modal.tsx": {
+    "mtime": 1777048508.9014256,
+    "hash": "3d0de67aec5128239e414172b4bcd0dd"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\StateCitySelect.tsx": {
+    "mtime": 1772443988.7888367,
+    "hash": "7fefe82cbd897f52238f9aca5ec90fbb"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\theme-provider.tsx": {
+    "mtime": 1752652500.0,
+    "hash": "3cd89febe6ca9cb784ba567481e50b5d"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\agreements\\AdminCIAgreementDialog.tsx": {
+    "mtime": 1777755788.7636793,
+    "hash": "aab1b9192fe1cedf15eb49448757d6d5"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\agreements\\AgreementRecordDetail.tsx": {
+    "mtime": 1777397918.2343438,
+    "hash": "91142b099a98ed08d68be8bebfeb41ef"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\agreements\\CIAgreementDetail.tsx": {
+    "mtime": 1777751489.7990797,
+    "hash": "7fcca1333936ae3737723fa10ec17113"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\inventory\\CategorySelect.tsx": {
+    "mtime": 1776250795.877948,
+    "hash": "22cc5a60e336b6aaa1b43f5e74632de0"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\inventory\\InventoryCheckboxLinkPanel.tsx": {
+    "mtime": 1778443599.1229074,
+    "hash": "3f3e2ccb3ed0814deb03822bb7da95d9"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\layout\\portal-header-actions.tsx": {
+    "mtime": 1777727757.9843793,
+    "hash": "4f3b03c6ebe9361e1abcb11c5877765d"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\onboarding-v2\\AgreementSigningCard.tsx": {
+    "mtime": 1777048508.8994243,
+    "hash": "943ed9f833f25f6db807e58affe2055e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\onboarding-v2\\OnboardingTimeline.tsx": {
+    "mtime": 1777048202.3587456,
+    "hash": "20b16c300ae8fe18b055c44eb4e06aa7"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\onboarding-v2\\PaymentCard.tsx": {
+    "mtime": 1777048508.896425,
+    "hash": "efc5c431d47d6c3a7007c5f7feba85f5"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\providers\\query-provider.tsx": {
+    "mtime": 1777048202.334495,
+    "hash": "d92453eba03c743d450e1be7340499ec"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\receivables\\InstallmentSummaryCard.tsx": {
+    "mtime": 1777408589.1062582,
+    "hash": "46535050a0dae1ef7b31775da89d9785"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\shared\\AdminTrainingProgressModal.tsx": {
+    "mtime": 1778069815.4192455,
+    "hash": "01fdc16374a7cfebb5e9004dbc5e6528"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\shared\\data-table.tsx": {
+    "mtime": 1777710985.054346,
+    "hash": "986591625826d3171929fe0eb8dc1cfa"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\shared\\detail-layout.tsx": {
+    "mtime": 1777116826.2121916,
+    "hash": "2d0b4337a0792821ea68df4fa602c99f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\shared\\index.ts": {
+    "mtime": 1778419479.591026,
+    "hash": "7a2ee76d23649434af9de88f6236d7e5"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\shared\\MultiSelectDropdown.tsx": {
+    "mtime": 1778419581.7939403,
+    "hash": "d087627fb30c5a3fe0552c1b02a97ef0"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\shared\\NestedSection.tsx": {
+    "mtime": 1777048508.897425,
+    "hash": "bb34681219c4ffcbfa0e7d52373ab182"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\shared\\notification-bell.tsx": {
+    "mtime": 1776150337.532158,
+    "hash": "dfddb29268416517f2c79572b58f8247"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\shared\\SectionedDetail.tsx": {
+    "mtime": 1777048202.3445244,
+    "hash": "74b72159ec69d9edc72a8bd92406ad37"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\shared\\table-shell.tsx": {
+    "mtime": 1777116742.922165,
+    "hash": "5790f71d838e1d3effccf2d08bc3753e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\alert-dialog.tsx": {
+    "mtime": 1777139875.080513,
+    "hash": "49cac00448653a86331a5da04ff9acb8"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\alert.tsx": {
+    "mtime": 1766816203.1004143,
+    "hash": "5c32a2b2cb98a3a5d4cd1b097a1b4881"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\avatar.tsx": {
+    "mtime": 1752652500.0,
+    "hash": "0008445bf0b90f231d702bcd9141726c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\badge.tsx": {
+    "mtime": 1755566760.0,
+    "hash": "60fb626c4cb126b9350688b93c813673"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\breadcrumb.tsx": {
+    "mtime": 1752652500.0,
+    "hash": "60485fccd28b1bb7690978d2f0ea91a7"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\button.tsx": {
+    "mtime": 1770012201.0709655,
+    "hash": "4aa1388f7a9b889dfc03cd40f6553bca"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\calendar.tsx": {
+    "mtime": 1777048202.329468,
+    "hash": "e4a528ae16f6d6f25e46ef9ed25c5d57"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\card.tsx": {
+    "mtime": 1772444192.2106097,
+    "hash": "90b6addc33593745af63254ee4db49eb"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\checkbox.tsx": {
+    "mtime": 1752652500.0,
+    "hash": "83336efee701dce6b2b2f6490e6d61dd"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\command.tsx": {
+    "mtime": 1777140125.9766877,
+    "hash": "f90b419b1e5750c9777e4a0ed8e63b54"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\dialog.tsx": {
+    "mtime": 1777139875.008429,
+    "hash": "f8108e519226ceb1bc54c014d45bcd31"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\dropdown-menu.tsx": {
+    "mtime": 1777139875.3961396,
+    "hash": "b19cffd7f90dd63d05f788c353bc6175"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\form.tsx": {
+    "mtime": 1752652500.0,
+    "hash": "8fa1c93c1955f5ea7d6c27331386377f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\input-otp.tsx": {
+    "mtime": 1752652500.0,
+    "hash": "6d8cd7ab771b7e2de5f0205d46363a2c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\input.tsx": {
+    "mtime": 1752652500.0,
+    "hash": "c7cbc8cd45d01649277bd7107581cb36"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\label.tsx": {
+    "mtime": 1752652500.0,
+    "hash": "14579f07e6e3133b6ee65d3ec778b013"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\popover.tsx": {
+    "mtime": 1777139875.261621,
+    "hash": "f83e2a49a17226a9dc1b17f9abb04848"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\progress.tsx": {
+    "mtime": 1766946320.8013625,
+    "hash": "07af96b9a4e62be70ab13fe9ece9ca77"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\scroll-area.tsx": {
+    "mtime": 1755374144.0,
+    "hash": "785ca974d9f99f0f580c25d24d7357b1"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\select.tsx": {
+    "mtime": 1777140125.8965175,
+    "hash": "d44caee4562a5539bb89034d7bfe7058"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\separator.tsx": {
+    "mtime": 1752652500.0,
+    "hash": "85fd1a835601a122f1f226ccb31a0d67"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\sheet.tsx": {
+    "mtime": 1777139875.161867,
+    "hash": "e28f1a7fedfb693dbfdeec1698629398"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\sidebar.tsx": {
+    "mtime": 1772383792.7265942,
+    "hash": "acb4041208d3bf0a85b3ae2cbce7b95d"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\skeleton.tsx": {
+    "mtime": 1752652500.0,
+    "hash": "a5a4d6d5551d4c7feb8176a23e7eb07c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\switch.tsx": {
+    "mtime": 1760126451.1947684,
+    "hash": "6ad4b53d64d8c73798cb71f1c6f3e1ba"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\table.tsx": {
+    "mtime": 1777116750.3522143,
+    "hash": "10b525a1811565e674f4b7271af8e657"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\tabs.tsx": {
+    "mtime": 1777116832.235323,
+    "hash": "4a57265ec3b15080242287ec71a1f7d2"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\textarea.tsx": {
+    "mtime": 1752652500.0,
+    "hash": "6eb8633e9e461056b9bf88dfaf25fc6d"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\toast.tsx": {
+    "mtime": 1777139875.579153,
+    "hash": "62e7a88936b25c633349cad2cbdc04ef"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\toaster.tsx": {
+    "mtime": 1752652500.0,
+    "hash": "fcdccc15f76eb7acaa4e68813634da20"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\components\\ui\\tooltip.tsx": {
+    "mtime": 1777139875.4863079,
+    "hash": "09525d28eee28d338ebcfd248f56d987"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\context\\ci-auth-context.tsx": {
+    "mtime": 1777720287.9024408,
+    "hash": "901aba597053afe16feb994c17e39e00"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\context\\notification-context.tsx": {
+    "mtime": 1777492046.0427716,
+    "hash": "30e266d9e27b1c33b2248ffa067abfe1"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\context\\user-context.tsx": {
+    "mtime": 1778450200.1359918,
+    "hash": "1f27019b7871eb3e22242071cbbe8d39"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\use-franchisee-profile.ts": {
+    "mtime": 1772442253.3143885,
+    "hash": "ff4bdd4dbae2cdd17e99154f7b0de298"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\use-mobile.tsx": {
+    "mtime": 1752652500.0,
+    "hash": "209b5193af16624cdd89d3591480dd48"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\use-tab-from-url.ts": {
+    "mtime": 1777048202.329468,
+    "hash": "4eb4942894bd11d7751d7b13a4d58340"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\use-toast.ts": {
+    "mtime": 1752652500.0,
+    "hash": "8be7876e08c12ac4eea618920cd25285"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\useNotificationSse.ts": {
+    "mtime": 1777492046.0022652,
+    "hash": "09c8ae74ee7acf5ce2dc8a751c04a88f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\admin.hooks.ts": {
+    "mtime": 1777577869.0217924,
+    "hash": "cdb45ebabed65a10e6a450f697cc0f12"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\agreement.hooks.ts": {
+    "mtime": 1777404189.6545253,
+    "hash": "df3986e8c974d672e2582f23f091a88d"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\course-instructor.hooks.ts": {
+    "mtime": 1777656265.348285,
+    "hash": "27256c100f01498deb8db23565612a30"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\dashboard.hooks.ts": {
+    "mtime": 1777048202.342525,
+    "hash": "815d809d5c38ebf18e65c3aace9a9763"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\franchise.hooks.ts": {
+    "mtime": 1777048202.3364933,
+    "hash": "efcd3b5c3c4779b9a8124b0f3fa1db75"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\franchisee.hooks.ts": {
+    "mtime": 1777048202.3154304,
+    "hash": "74be4e3795ff7634e76e023362793169"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\fulfillment.hooks.ts": {
+    "mtime": 1778366244.644286,
+    "hash": "551ae355e65eb995d1d79a267b5efbeb"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\inventory.hooks.ts": {
+    "mtime": 1778442784.5528114,
+    "hash": "b634b25bfa5d468ed979f915868e1034"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\level.hooks.ts": {
+    "mtime": 1777532779.6007805,
+    "hash": "3be182a288860d164c40fe4af1211522"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\notification.hooks.ts": {
+    "mtime": 1777048508.8903341,
+    "hash": "91b5875d6f2614d821877733e63300b8"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\operations.hooks.ts": {
+    "mtime": 1777060426.1281993,
+    "hash": "304654312cfc7855cd2c0c3894450e9f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\order.hooks.ts": {
+    "mtime": 1777048508.896425,
+    "hash": "96ba8c50a1ee4e8d45f0680f5ae04ca2"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\payment.hooks.ts": {
+    "mtime": 1778227191.669765,
+    "hash": "8950cd3c1722fb785b98dabf0ae84e15"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\procurement.hooks.ts": {
+    "mtime": 1777054142.0976975,
+    "hash": "cbe6c899b957f1cd55f9dec7af588e9b"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\program.hooks.ts": {
+    "mtime": 1777534704.1242652,
+    "hash": "c156cce55e28164f58be612757deced9"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\query-client-bridge.ts": {
+    "mtime": 1777048202.3235672,
+    "hash": "48e14fc8171bc3a8283c34a2c0989c2e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\query-keys.ts": {
+    "mtime": 1778366238.4711308,
+    "hash": "ef9f5853f94f2a332d7eb92927e7dcb1"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\stream-transition.hooks.ts": {
+    "mtime": 1777532911.064212,
+    "hash": "091c09dc346bfdaf7a64baa78217651f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\stream.hooks.ts": {
+    "mtime": 1777532905.532969,
+    "hash": "6c4af41237080953dedd06698b1d6c10"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\student-progression.hooks.ts": {
+    "mtime": 1778419293.0428708,
+    "hash": "597390172a36f1e408c302fa8687b16f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\student.hooks.ts": {
+    "mtime": 1778143626.679168,
+    "hash": "dfc5dcf04ce2d96fbaba3057f05c83f6"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\hooks\\api\\training-level.hooks.ts": {
+    "mtime": 1777532881.9998336,
+    "hash": "9268dc601806a3ae8b2a122ab0f0fcc1"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\lib\\agreement-page-terms.ts": {
+    "mtime": 1777048202.329468,
+    "hash": "5fb8056ee637b7c3ddff5167c7fcfe66"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\lib\\agreementContent.ts": {
+    "mtime": 1755361366.0,
+    "hash": "85c8d43ebd295d9fb2cdc0622ae1774d"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\lib\\api-response.ts": {
+    "mtime": 1777713912.1505141,
+    "hash": "e271c2ab42007c44841ff2a50249274a"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\lib\\api-utils.ts": {
+    "mtime": 1777713912.1515138,
+    "hash": "c17e2b7dcd7704b0bb6f9f97aa89f216"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\lib\\auth.ts": {
+    "mtime": 1777570960.8786569,
+    "hash": "76bd99e62e30ea960fab025946cd88db"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\lib\\axios.ts": {
+    "mtime": 1777713912.1515138,
+    "hash": "76bf5088d8d9f8d8c2f16ea21bf461df"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\lib\\ciAgreementContent.ts": {
+    "mtime": 1777720456.3704863,
+    "hash": "38da4d7d957eb66242df06842426cbfb"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\lib\\data.ts": {
+    "mtime": 1752966314.0,
+    "hash": "01722417f54c9effee39b090881ffda3"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\lib\\error-utils.ts": {
+    "mtime": 1777713912.1515138,
+    "hash": "fb82e05257beb6065fed1b52e742b776"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\lib\\notification.types.ts": {
+    "mtime": 1777048508.9004252,
+    "hash": "3207359482424c9fcca3f0e3340754cb"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\lib\\pricing.ts": {
+    "mtime": 1770538023.9551487,
+    "hash": "3d5b239649f93759cae40ca244accb0c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\lib\\query-key-serializer.ts": {
+    "mtime": 1777048508.896425,
+    "hash": "d699c0a0a00ada4c09c7e4950c84ef32"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\lib\\unwrap-api.ts": {
+    "mtime": 1776253061.1315687,
+    "hash": "5a4b027b82ff9b46cc3302b2002ca511"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\lib\\utils.ts": {
+    "mtime": 1752652500.0,
+    "hash": "5a6fd53fdcf2be529e9cc0b718fde352"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\admin.service.ts": {
+    "mtime": 1777577069.087449,
+    "hash": "378a9fb6096b18ce22ae55873e70dae8"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\agreement.service.ts": {
+    "mtime": 1777713912.153515,
+    "hash": "5c523163a6818ba2a98d495256e69996"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\auth.service.ts": {
+    "mtime": 1777713912.153515,
+    "hash": "b078bfbf157dbd667a2f2ce3d4b1a384"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\catalog-admin.service.ts": {
+    "mtime": 1777832431.32282,
+    "hash": "b8439da4334b22c7d63a3d31e9137ae7"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\ci-auth.service.ts": {
+    "mtime": 1777702141.807241,
+    "hash": "c59633a190a6334cf327d45bb66023da"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\ci-training-admin.service.ts": {
+    "mtime": 1778240413.9606783,
+    "hash": "fe10faa958178689e2a444c51d68456a"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\ci-training.service.test.ts": {
+    "mtime": 1777880989.5170763,
+    "hash": "215020bb7b0dd488998db1dab5802993"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\ci-training.service.ts": {
+    "mtime": 1777881016.2038398,
+    "hash": "582aaa049992fb5712ce1494e1383a73"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\contracting.service.ts": {
+    "mtime": 1777722838.1183465,
+    "hash": "9461ae486092b90aacc10f834c7742eb"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\course-instructor.service.ts": {
+    "mtime": 1778143633.3547218,
+    "hash": "b23b22b0902848dd3adc29d8295f6e0e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\dashboard.service.ts": {
+    "mtime": 1777048202.3496141,
+    "hash": "71bbe2f7567b42cd553917aa4e522e87"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\franchise.enums.ts": {
+    "mtime": 1759388627.124765,
+    "hash": "9e366757a24155495deb255a223ebaab"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\franchise.service.ts": {
+    "mtime": 1777048508.897425,
+    "hash": "41aa65f2506037a9a86547cd1acbd610"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\franchisee.service.ts": {
+    "mtime": 1778434968.5927625,
+    "hash": "f08f8f36b13f039d0ea92ed4c8822396"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\fulfillment.service.ts": {
+    "mtime": 1778366228.8471313,
+    "hash": "ba7ccc943055ca73bd2f26920ea7f500"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\inventory.service.ts": {
+    "mtime": 1778442781.3118367,
+    "hash": "e74601b7cff60ce992bb31442c64544c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\level.service.ts": {
+    "mtime": 1777713912.153515,
+    "hash": "8c6d4d0c6870f2975aa4c62e9b85efe1"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\notification.service.ts": {
+    "mtime": 1777713912.1545148,
+    "hash": "30bbd4aa800c3620513b2ce75fa725f1"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\operations-monitoring.service.ts": {
+    "mtime": 1777060420.1624432,
+    "hash": "d5b1c9a6b3fd8c59308511052a21a378"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\order.service.ts": {
+    "mtime": 1778399868.6881218,
+    "hash": "fd20e0f9f9bd8b2e0c3923169ee34c1f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\payment.service.ts": {
+    "mtime": 1778227180.9855554,
+    "hash": "042c6eb15168176a47ee13a1d7cb1459"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\procurement.service.ts": {
+    "mtime": 1777054101.8634553,
+    "hash": "68a20017b0cb15986de264612b51c69a"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\program.service.ts": {
+    "mtime": 1778162473.1628442,
+    "hash": "26315308ee9e8d303c7d423652c10dbe"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\stream-transition.service.ts": {
+    "mtime": 1777963121.2320414,
+    "hash": "e7c6249df95e4021f50956c47e27f094"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\stream.service.ts": {
+    "mtime": 1777963121.2320414,
+    "hash": "a19240e56ba47814a7594e4374725db9"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\student-progression.service.ts": {
+    "mtime": 1778431987.0288527,
+    "hash": "a329d14bc0040d7ac0685321b2ed8f24"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\student.service.ts": {
+    "mtime": 1778419276.412386,
+    "hash": "9ffa34b396137111f587f16df9a25442"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\services\\training-level.service.ts": {
+    "mtime": 1778444765.3658412,
+    "hash": "7411c5d2bc518a1422ba93d3ea41ea0c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\CLAUDE.md": {
+    "mtime": 1778517747.7925377,
+    "hash": "55cf75016b94f26e8bfc5079aa52297e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\tsc-errors.txt": {
+    "mtime": 1776072775.070696,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\docs\\superpowers\\plans\\2026-05-02-ci-portal-ui-streamline.md": {
+    "mtime": 1777726180.9740257,
+    "hash": "368d73275c83c3b86dd368cf2264c19c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\docs\\superpowers\\plans\\2026-05-02-ci-specific-training-packages.md": {
+    "mtime": 1777744428.2255626,
+    "hash": "77db7f0331b4731c88453cdddb33a6be"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\docs\\superpowers\\plans\\2026-05-10-certificate-to-student-level-progression.md": {
+    "mtime": 1778431760.7696671,
+    "hash": "589903c009d41c2c0ecbbca8688b138a"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\docs\\superpowers\\plans\\2026-05-10-student-level-progression-backend.md": {
+    "mtime": 1778403228.3732574,
+    "hash": "5fedc6ff0a4f3c27b579a749493ce51f"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\docs\\superpowers\\plans\\2026-05-10-student-level-progression-frontend-ui.md": {
+    "mtime": 1778403265.2370636,
+    "hash": "aa13dc7d774b4d2119ad2a0fce130378"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\docs\\superpowers\\plans\\2026-05-11-checkbox-panel-v2.md": {
+    "mtime": 1778442477.161024,
+    "hash": "eb3f370b8d16069833004729627e86c7"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\docs\\superpowers\\specs\\2026-05-10-student-level-progression-design.md": {
+    "mtime": 1778402148.7462108,
+    "hash": "a49b736ce63988df4796c8a3ffb86287"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\docs\\superpowers\\specs\\2026-05-11-checkbox-panel-v2-design.md": {
+    "mtime": 1778442287.6780083,
+    "hash": "5be3aa5a0f482cc20151248eb08ab2dc"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\docs\\superpowers\\specs\\2026-05-11-inventory-bulk-link-design.md": {
+    "mtime": 1778438531.971305,
+    "hash": "62d77a6887cf71ebf38e8c559758f11b"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\public\\franchisee agreement pdf.pdf": {
+    "mtime": 1755354642.0,
+    "hash": "0f6f18611477ac997171f25a304a1c75"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\public\\placeholder-logo.png": {
+    "mtime": 1752652500.0,
+    "hash": "95d8d1a4a9bbcccc875e2c381e74064a"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\public\\placeholder-logo.svg": {
+    "mtime": 1752652500.0,
+    "hash": "1e16dc7df824652c5906a2ab44aef78c"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\public\\placeholder-user.jpg": {
+    "mtime": 1752652500.0,
+    "hash": "7ee6562646feae6d6d77e2c72e204591"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\public\\placeholder.jpg": {
+    "mtime": 1752652500.0,
+    "hash": "1e533b7b4545d1d605144ce893afc601"
+  },
+  "C:\\Users\\Administrator\\Desktop\\IPA\\IPA-frontend\\public\\placeholder.svg": {
+    "mtime": 1752652500.0,
+    "hash": "35707bd9960ba5281c72af927b79291f"
+  }
+}

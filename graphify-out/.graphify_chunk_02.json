@@ -1,0 +1,258 @@
+{
+  "nodes": [
+    {
+      "id": "placeholderlogopng_PlaceholderLogoPng",
+      "label": "Placeholder Logo (PNG)",
+      "file_type": "image",
+      "source_file": "public/placeholder-logo.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "placeholderlogosvg_PlaceholderLogoSvg",
+      "label": "Placeholder Logo (SVG) - Acmelnc Wordmark",
+      "file_type": "image",
+      "source_file": "public/placeholder-logo.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "placeholderuserjpg_PlaceholderUserJpg",
+      "label": "Placeholder User Avatar (JPG)",
+      "file_type": "image",
+      "source_file": "public/placeholder-user.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "placeholderjpg_PlaceholderJpg",
+      "label": "Placeholder Image (JPG - Blank/Minimal)",
+      "file_type": "image",
+      "source_file": "public/placeholder.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "placeholdersvg_PlaceholderSvg",
+      "label": "Placeholder Image (SVG - Generic Content Placeholder)",
+      "file_type": "image",
+      "source_file": "public/placeholder.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_PlaceholderAssets",
+      "label": "Placeholder UI Assets",
+      "file_type": "concept",
+      "source_file": "public/",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_BrandIdentity",
+      "label": "Brand Identity / Logo",
+      "file_type": "concept",
+      "source_file": "public/placeholder-logo.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_UserAvatar",
+      "label": "User Avatar / Profile Image",
+      "file_type": "concept",
+      "source_file": "public/placeholder-user.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_ContentPlaceholder",
+      "label": "Generic Content / Image Placeholder",
+      "file_type": "concept",
+      "source_file": "public/placeholder.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "placeholderlogopng_PlaceholderLogoPng",
+      "target": "concept_BrandIdentity",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/placeholder-logo.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "placeholderlogosvg_PlaceholderLogoSvg",
+      "target": "concept_BrandIdentity",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/placeholder-logo.svg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "placeholderlogopng_PlaceholderLogoPng",
+      "target": "placeholderlogosvg_PlaceholderLogoSvg",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "public/placeholder-logo.png",
+      "source_location": null,
+      "weight": 0.85
+    },
+    {
+      "source": "placeholderlogopng_PlaceholderLogoPng",
+      "target": "concept_PlaceholderAssets",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/placeholder-logo.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "placeholderlogosvg_PlaceholderLogoSvg",
+      "target": "concept_PlaceholderAssets",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/placeholder-logo.svg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "placeholderuserjpg_PlaceholderUserJpg",
+      "target": "concept_UserAvatar",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/placeholder-user.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "placeholderuserjpg_PlaceholderUserJpg",
+      "target": "concept_PlaceholderAssets",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/placeholder-user.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "placeholderjpg_PlaceholderJpg",
+      "target": "concept_ContentPlaceholder",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/placeholder.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "placeholdersvg_PlaceholderSvg",
+      "target": "concept_ContentPlaceholder",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/placeholder.svg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "placeholderjpg_PlaceholderJpg",
+      "target": "placeholdersvg_PlaceholderSvg",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "public/placeholder.jpg",
+      "source_location": null,
+      "weight": 0.85
+    },
+    {
+      "source": "placeholderjpg_PlaceholderJpg",
+      "target": "concept_PlaceholderAssets",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/placeholder.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "placeholdersvg_PlaceholderSvg",
+      "target": "concept_PlaceholderAssets",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/placeholder.svg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "concept_PlaceholderAssets",
+      "target": "concept_UserAvatar",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "public/",
+      "source_location": null,
+      "weight": 0.75
+    },
+    {
+      "source": "concept_PlaceholderAssets",
+      "target": "concept_ContentPlaceholder",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "public/",
+      "source_location": null,
+      "weight": 0.75
+    },
+    {
+      "source": "concept_PlaceholderAssets",
+      "target": "concept_BrandIdentity",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.65,
+      "source_file": "public/",
+      "source_location": null,
+      "weight": 0.65
+    }
+  ],
+  "hyperedges": [],
+  "input_tokens": 0,
+  "output_tokens": 0
+}
