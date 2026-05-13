@@ -79,7 +79,7 @@ export default function UnifiedMaterialRequestDialog({
   franchiseId,
 }: UnifiedMaterialRequestDialogProps) {
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
-  const [selectedInstructorIds] = useState<number[]>([]);
+  const selectedInstructorIds: number[] = [];
   const [startingKitQuantities, setStartingKitQuantities] = useState<
     Record<number, number>
   >({});
