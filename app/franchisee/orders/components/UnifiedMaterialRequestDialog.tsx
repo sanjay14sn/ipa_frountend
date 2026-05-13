@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useState,
-  useCallback,
-  useMemo,
-  useRef,
-  useEffect,
-} from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Search } from "lucide-react";
 import {
@@ -19,10 +13,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { type StudentData } from "@/services/student.service";
 import {
-  previewOrderInvoice,
   initiateOrderPayment,
   type InvoicePreview,
 } from "@/services/order.service";
+import { useUnifiedInvoicePreview } from "@/hooks/use-unified-invoice-preview";
 import { getAllStreams, type Stream } from "@/services/stream.service";
 import { useCourseInstructors } from "@/hooks/api/course-instructor.hooks";
 import type { CourseInstructorData } from "@/services/course-instructor.service";
@@ -142,36 +136,18 @@ export default function UnifiedMaterialRequestDialog({
     selectedInstructorIds.length > 0 ||
     startingKitItems.length > 0;
 
-  const invoiceQuery = useQuery({
-    queryKey: [
-      "unified-invoice-preview",
-      selectedStudentIds,
-      selectedInstructorIds,
-      startingKitItems.map((i) => `${i.streamId}:${i.quantity}`).join(","),
-    ],
-    queryFn: () =>
-      previewOrderInvoice({
-        studentIds: selectedStudentIds,
-        instructorIds: selectedInstructorIds,
-        startingKitItems: startingKitItems.map((i) => ({
-          streamId: i.streamId,
-          quantity: i.quantity,
-        })),
-      }),
-    enabled: open && hasSelection,
-    staleTime: 30_000,
+  const invoicePreview = useUnifiedInvoicePreview({
+    open,
+    hasSelection,
+    selectedStudentIds,
+    selectedInstructorIds,
+    startingKitItems: startingKitItems.map((i) => ({
+      streamId: i.streamId,
+      quantity: i.quantity,
+    })),
   });
 
-  const preview = invoiceQuery.data;
-  const lastKitUnitByStreamRef = useRef<Record<number, number>>({});
-
-  useEffect(() => {
-    if (!preview?.startingKitGroups?.length) return;
-    for (const g of preview.startingKitGroups) {
-      lastKitUnitByStreamRef.current[g.streamId] =
-        g.materialUnit + g.kitUnit + g.royaltyUnit;
-    }
-  }, [preview?.startingKitGroups]);
+  const preview = invoicePreview.preview;
 
   const streamUnitByStreamId = useMemo(() => {
     const m = new Map<number, number>();
@@ -289,7 +265,7 @@ export default function UnifiedMaterialRequestDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex max-h-[92vh] w-full max-w-6xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent className="flex h-[min(58rem,92vh)] min-h-[min(58rem,92vh)] max-h-[min(58rem,92vh)] w-full max-w-6xl flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="shrink-0 border-b border-border px-6 py-4 text-left">
           <DialogTitle>Request materials</DialogTitle>
           <DialogDescription className="sr-only">
@@ -339,9 +315,7 @@ export default function UnifiedMaterialRequestDialog({
                   <div className="space-y-2">
                     {(streamsQuery.data ?? []).map((stream) => {
                       const qty = startingKitQuantities[stream.id] ?? 0;
-                      const unit =
-                        streamUnitByStreamId.get(stream.id) ??
-                        lastKitUnitByStreamRef.current[stream.id];
+                      const unit = streamUnitByStreamId.get(stream.id);
                       return (
                         <div
                           key={stream.id}
@@ -452,7 +426,7 @@ export default function UnifiedMaterialRequestDialog({
                       const subtitle =
                         bd != null
                           ? `${itemCount} ${itemCount === 1 ? "item" : "items"}`
-                          : sel && invoiceQuery.isFetching
+                          : sel && invoicePreview.isFetching
                             ? "…"
                             : null;
                       return (
@@ -625,14 +599,14 @@ export default function UnifiedMaterialRequestDialog({
                 </div>
               )}
 
-              {!emptyInvoice && invoiceQuery.isLoading && (
+              {!emptyInvoice && invoicePreview.isLoading && (
                 <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin" />
                   Loading…
                 </div>
               )}
 
-              {!emptyInvoice && invoiceQuery.isError && (
+              {!emptyInvoice && invoicePreview.isError && (
                 <p className="py-6 text-sm text-destructive">
                   Unable to load invoice.
                 </p>
@@ -824,9 +798,9 @@ export default function UnifiedMaterialRequestDialog({
                 disabled={
                   !hasSelection ||
                   isSubmitting ||
-                  invoiceQuery.isLoading ||
-                  invoiceQuery.isFetching ||
-                  invoiceQuery.isError
+                  invoicePreview.isLoading ||
+                  invoicePreview.isFetching ||
+                  invoicePreview.isError
                 }
               >
                 {isSubmitting && (
