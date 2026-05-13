@@ -168,8 +168,31 @@ export interface InvoiceLine {
   unitPrice: number;
   totalPrice: number;
   studentId?: number;
+  instructorId?: number;
   inventoryItemId?: number;
   itemType?: 'LEVEL' | 'KIT' | 'FEE';
+}
+
+export interface InvoicePreviewLineItem {
+  name: string;
+  quantity: number;
+}
+
+export interface StartingKitGroupPreview {
+  streamId: number;
+  streamName: string;
+  quantity: number;
+  materialUnit: number;
+  kitUnit: number;
+  royaltyUnit: number;
+  items: InvoicePreviewLineItem[];
+}
+
+export interface InstructorGroupPreview {
+  instructorId: number;
+  name: string;
+  instructorCode: string;
+  items: InvoicePreviewLineItem[];
 }
 
 export interface StudentBreakdown {
@@ -193,6 +216,8 @@ export interface InvoicePreview {
   students: StudentBreakdown[];
   lines: InvoiceLine[];
   totalAmount: number;
+  startingKitGroups?: StartingKitGroupPreview[];
+  instructorGroups?: InstructorGroupPreview[];
 }
 
 export interface InvoiceItem {
@@ -654,6 +679,52 @@ export async function verifyOrderAdmin(
   return getOrderByIdAdmin(orderId);
 }
 
+function normalizeInvoicePreviewLineItem(raw: unknown): InvoicePreviewLineItem {
+  const r = raw as Record<string, unknown>;
+  return {
+    name: String(r?.name ?? ""),
+    quantity: Number(r?.quantity ?? 0),
+  };
+}
+
+function normalizeStartingKitGroupPreview(raw: unknown): StartingKitGroupPreview | null {
+  const r = raw as Record<string, unknown>;
+  if (r == null || typeof r !== "object") return null;
+  if (!Array.isArray(r.items)) return null;
+  if (
+    r.streamId == null ||
+    r.streamName == null ||
+    r.quantity == null ||
+    r.materialUnit == null ||
+    r.kitUnit == null ||
+    r.royaltyUnit == null
+  ) {
+    return null;
+  }
+  return {
+    streamId: Number(r.streamId),
+    streamName: String(r.streamName),
+    quantity: Number(r.quantity),
+    materialUnit: Number(r.materialUnit),
+    kitUnit: Number(r.kitUnit),
+    royaltyUnit: Number(r.royaltyUnit),
+    items: (r.items as unknown[]).map(normalizeInvoicePreviewLineItem),
+  };
+}
+
+function normalizeInstructorGroupPreview(raw: unknown): InstructorGroupPreview | null {
+  const r = raw as Record<string, unknown>;
+  if (r == null || typeof r !== "object") return null;
+  if (!Array.isArray(r.items)) return null;
+  if (r.instructorId == null || r.name == null || r.instructorCode == null) return null;
+  return {
+    instructorId: Number(r.instructorId),
+    name: String(r.name),
+    instructorCode: String(r.instructorCode),
+    items: (r.items as unknown[]).map(normalizeInvoicePreviewLineItem),
+  };
+}
+
 export async function previewOrderInvoice(
   dto: Pick<CreateOrderDto, "studentIds" | "instructorIds" | "startingKitItems"> & { franchiseId?: string | number },
 ): Promise<InvoicePreview> {
@@ -689,9 +760,20 @@ export async function previewOrderInvoice(
           unitPrice: Number(line?.unitPrice ?? 0),
           totalPrice: Number(line?.totalPrice ?? 0),
           studentId: line?.studentId != null ? Number(line.studentId) : undefined,
+          instructorId: line?.instructorId != null ? Number(line.instructorId) : undefined,
           inventoryItemId: line?.inventoryItemId != null ? Number(line.inventoryItemId) : undefined,
           itemType: line?.itemType ?? undefined,
         }))
+      : [],
+    startingKitGroups: Array.isArray(data?.startingKitGroups)
+      ? (data.startingKitGroups as unknown[])
+          .map(normalizeStartingKitGroupPreview)
+          .filter((g): g is StartingKitGroupPreview => g != null)
+      : [],
+    instructorGroups: Array.isArray(data?.instructorGroups)
+      ? (data.instructorGroups as unknown[])
+          .map(normalizeInstructorGroupPreview)
+          .filter((g): g is InstructorGroupPreview => g != null)
       : [],
   };
 }
