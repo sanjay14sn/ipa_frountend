@@ -143,8 +143,15 @@ export interface OrderData {
   dispatchItems?: DispatchOrderItemAdmin[];
 }
 
+export interface StartingKitItem {
+  streamId: number;
+  quantity: number;
+}
+
 export interface CreateOrderDto {
-  studentIds: number[];
+  studentIds?: number[];
+  instructorIds?: number[];
+  startingKitItems?: StartingKitItem[];
   notes?: string;
   paymentRecordId?: number;
 }
@@ -242,8 +249,11 @@ export interface AdminOrderListParams {
 }
 
 export interface InitiateOrderPaymentDto {
-  studentIds: number[];
+  studentIds?: number[];
+  instructorIds?: number[];
+  startingKitItems?: StartingKitItem[];
   notes?: string;
+  paymentRecordId?: number;
   totalAmount: number;
 }
 
@@ -645,11 +655,10 @@ export async function verifyOrderAdmin(
 }
 
 export async function previewOrderInvoice(
-  studentIds: number[],
-  franchiseId?: string | number,
+  dto: Pick<CreateOrderDto, "studentIds" | "instructorIds" | "startingKitItems"> & { franchiseId?: string | number },
 ): Promise<InvoicePreview> {
-  const body: Record<string, unknown> = { studentIds };
-  if (franchiseId != null) body.franchiseId = String(franchiseId);
+  const body: Record<string, unknown> = { ...dto };
+  if (dto.franchiseId != null) body.franchiseId = String(dto.franchiseId);
   const response = await api.post("/order/preview-invoice", body);
   const data = unwrapData<any>(response);
   return {
@@ -690,7 +699,7 @@ export async function previewOrderInvoice(
 export async function getInvoiceDetails(
   studentIds: number[],
 ): Promise<InvoiceItem[]> {
-  const preview = await previewOrderInvoice(studentIds);
+  const preview = await previewOrderInvoice({ studentIds });
   return preview.lines.map((line, index) => ({
     studentId: studentIds[index] ?? studentIds[0] ?? 0,
     studentName: line.description,
@@ -715,6 +724,8 @@ export async function initiateOrderPayment(
   if (paymentData.totalAmount <= 0) {
     const createdOrder = await createOrder({
       studentIds: paymentData.studentIds,
+      instructorIds: paymentData.instructorIds,
+      startingKitItems: paymentData.startingKitItems,
       notes: paymentData.notes,
     });
     return {
@@ -726,10 +737,10 @@ export async function initiateOrderPayment(
       franchiseName: createdOrder.franchise?.name ?? "",
       paymentType: "ORDER_PAYMENT",
       key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
-      studentIds: paymentData.studentIds,
-      notes: paymentData.notes,
-      isZeroAmount: true,
-    };
+    studentIds: paymentData.studentIds ?? [],
+    notes: paymentData.notes,
+    isZeroAmount: true,
+  };
   }
 
   // Non-zero: initiate Razorpay payment BEFORE creating the order.
@@ -737,7 +748,11 @@ export async function initiateOrderPayment(
   const response = await api.post("/billing/payment/initiate", {
     type: "ORDER_PAYMENT",
     amount: paymentData.totalAmount,
-    acquirerData: { studentIds: paymentData.studentIds },
+    acquirerData: {
+      studentIds: paymentData.studentIds,
+      instructorIds: paymentData.instructorIds,
+      startingKitItems: paymentData.startingKitItems,
+    },
   });
   const billing = unwrapData<{
     razorpayOrderId: string;
@@ -760,7 +775,7 @@ export async function initiateOrderPayment(
       process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
       process.env.NEXT_PUBLIC_RAZORPAY_KEY ||
       "",
-    studentIds: paymentData.studentIds,
+    studentIds: paymentData.studentIds ?? [],
     notes: paymentData.notes,
     isZeroAmount: false,
   };
