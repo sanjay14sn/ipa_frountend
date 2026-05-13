@@ -40,13 +40,11 @@ interface InvoiceGroupCardProps {
 function kindStyles(kind: CheckoutGroupKind) {
   switch (kind) {
     case "KIT":
-      return "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200/80";
     case "STUDENT":
-      return "bg-sky-50 text-sky-900 ring-1 ring-sky-200/80";
     case "CI":
-      return "bg-violet-50 text-violet-900 ring-1 ring-violet-200/80";
+      return "bg-muted text-card-foreground ring-1 ring-border";
     default:
-      return "bg-muted text-muted-foreground";
+      return "bg-muted text-muted-foreground ring-1 ring-border";
   }
 }
 
@@ -74,7 +72,7 @@ export default function InvoiceGroupCard({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-            <span className="truncate text-sm font-semibold text-foreground">
+            <span className="truncate text-sm font-semibold text-card-foreground">
               {title}
             </span>
             {subtitle ? (
@@ -88,11 +86,11 @@ export default function InvoiceGroupCard({
           </div>
         </div>
         {free ? (
-          <span className="shrink-0 text-sm font-medium text-muted-foreground">
-            No charge
+          <span className="shrink-0 text-sm font-semibold tabular-nums text-muted-foreground">
+            {currencyFormatter.format(0)}
           </span>
         ) : (
-          <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+          <span className="shrink-0 text-sm font-semibold tabular-nums text-card-foreground">
             {currencyFormatter.format(totalAmount)}
           </span>
         )}
@@ -124,7 +122,7 @@ export default function InvoiceGroupCard({
                     ? `${currencyFormatter.format(c.unit!)} × ${qty}`
                     : currencyFormatter.format(c.amount ?? 0)}
                 </span>
-                <span className="w-24 text-right font-medium tabular-nums text-foreground">
+                <span className="w-24 text-right font-medium tabular-nums text-card-foreground">
                   {currencyFormatter.format(rowAmount)}
                 </span>
               </div>
@@ -134,18 +132,14 @@ export default function InvoiceGroupCard({
       ) : null}
 
       <div className="border-b border-border bg-muted/20 px-4 py-2">
-        <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          <span>Items included</span>
-          <span>
-            {items.length} {items.length === 1 ? "line" : "lines"} · not priced
-            individually
-          </span>
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Items
         </div>
       </div>
       <div className="max-h-48 divide-y divide-border overflow-y-auto">
         {items.length === 0 ? (
           <div className="px-4 py-3 text-sm text-muted-foreground">
-            No line items for this group.
+            No items.
           </div>
         ) : (
           items.map((it, i) => (
@@ -153,7 +147,7 @@ export default function InvoiceGroupCard({
               key={`${it.name}-${i}`}
               className="flex items-center justify-between px-4 py-2 text-sm"
             >
-              <span className="truncate text-foreground">{it.name}</span>
+              <span className="truncate text-card-foreground">{it.name}</span>
               <span className="ml-2 shrink-0 tabular-nums text-muted-foreground">
                 ×{it.quantity}
               </span>

@@ -221,7 +221,6 @@ export default function FranchiseeOrdersPage() {
           setIsUnifiedModalOpen(false);
         }}
         eligibleStudents={eligibleStudents}
-        franchiseId={user.franchiseId}
       />
 
       {unifiedPaymentData && !unifiedPaymentData.isZeroAmount && unifiedPaymentData.amount > 0 ? (

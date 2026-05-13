@@ -195,6 +195,29 @@ export interface InstructorGroupPreview {
   items: InvoicePreviewLineItem[];
 }
 
+/** Per-item row inside `studentGroups` from unified `POST /order/preview-invoice`. */
+export interface StudentGroupPreviewItem {
+  name: string;
+  quantity: number;
+  inventoryItemId?: number;
+  itemType?: "LEVEL" | "KIT" | "FEE";
+}
+
+/** Unified preview groups students with line items; `lines` is empty on that contract. */
+export interface StudentGroupPreview {
+  studentId: number;
+  studentName: string;
+  levelId: number;
+  levelName: string;
+  isFirstLevel: boolean;
+  durationInMonths: number;
+  royalty: number;
+  materialCost: number;
+  kitCost: number;
+  totalPrice: number;
+  items: StudentGroupPreviewItem[];
+}
+
 export interface StudentBreakdown {
   studentId: number;
   studentName: string;
@@ -214,8 +237,11 @@ export interface InvoicePreview {
   levelId: number;
   isFirstLevel: boolean;
   students: StudentBreakdown[];
+  /** Populated for legacy student-only preview; unified preview returns `[]` — use `studentGroups`. */
   lines: InvoiceLine[];
   totalAmount: number;
+  /** Present on unified preview (`studentIds` / mixed); mirrors backend `previewUnified`. */
+  studentGroups?: StudentGroupPreview[];
   startingKitGroups?: StartingKitGroupPreview[];
   instructorGroups?: InstructorGroupPreview[];
 }
@@ -714,6 +740,39 @@ function normalizeStartingKitGroupPreview(raw: unknown): StartingKitGroupPreview
   };
 }
 
+function normalizeStudentGroupPreviewItem(raw: unknown): StudentGroupPreviewItem {
+  const r = raw as Record<string, unknown>;
+  const it = r?.itemType;
+  const itemType =
+    it === "LEVEL" || it === "KIT" || it === "FEE" ? it : undefined;
+  return {
+    name: String(r?.name ?? ""),
+    quantity: Number(r?.quantity ?? 0),
+    inventoryItemId:
+      r?.inventoryItemId != null ? Number(r.inventoryItemId) : undefined,
+    itemType,
+  };
+}
+
+function normalizeStudentGroupPreview(raw: unknown): StudentGroupPreview | null {
+  const r = raw as Record<string, unknown>;
+  if (r == null || typeof r !== "object") return null;
+  if (r.studentId == null || !Array.isArray(r.items)) return null;
+  return {
+    studentId: Number(r.studentId),
+    studentName: String(r.studentName ?? ""),
+    levelId: Number(r.levelId ?? 0),
+    levelName: String(r.levelName ?? ""),
+    isFirstLevel: Boolean(r.isFirstLevel ?? false),
+    durationInMonths: Number(r.durationInMonths ?? 0),
+    royalty: Number(r.royalty ?? 0),
+    materialCost: Number(r.materialCost ?? 0),
+    kitCost: Number(r.kitCost ?? 0),
+    totalPrice: Number(r.totalPrice ?? 0),
+    items: (r.items as unknown[]).map(normalizeStudentGroupPreviewItem),
+  };
+}
+
 function normalizeInstructorGroupPreview(raw: unknown): InstructorGroupPreview | null {
   const r = raw as Record<string, unknown>;
   if (r == null || typeof r !== "object") return null;
@@ -730,30 +789,73 @@ function normalizeInstructorGroupPreview(raw: unknown): InstructorGroupPreview |
 export async function previewOrderInvoice(
   dto: Pick<CreateOrderDto, "studentIds" | "instructorIds" | "startingKitItems"> & { franchiseId?: string | number },
 ): Promise<InvoicePreview> {
-  const body: Record<string, unknown> = { ...dto };
-  if (dto.franchiseId != null) body.franchiseId = String(dto.franchiseId);
+  const body: Record<string, unknown> = {};
+  if (dto.studentIds != null && dto.studentIds.length > 0) {
+    body.studentIds = dto.studentIds;
+  }
+  if (dto.instructorIds != null && dto.instructorIds.length > 0) {
+    body.instructorIds = dto.instructorIds;
+  }
+  if (dto.startingKitItems != null && dto.startingKitItems.length > 0) {
+    body.startingKitItems = dto.startingKitItems;
+  }
+  if (dto.franchiseId != null && dto.franchiseId !== "") {
+    body.franchiseId = String(dto.franchiseId);
+  }
   const response = await api.post("/order/preview-invoice", body);
   const data = unwrapData<any>(response);
+
+  const studentGroups: StudentGroupPreview[] = Array.isArray(data?.studentGroups)
+    ? (data.studentGroups as unknown[])
+        .map(normalizeStudentGroupPreview)
+        .filter((g): g is StudentGroupPreview => g != null)
+    : [];
+
+  const studentsFromGroups: StudentBreakdown[] = studentGroups.map((g) => ({
+    studentId: g.studentId,
+    studentName: g.studentName,
+    levelId: g.levelId,
+    levelName: g.levelName,
+    isFirstLevel: g.isFirstLevel,
+    royalty: g.royalty,
+    materialCost: g.materialCost,
+    kitCost: g.kitCost,
+    totalPrice: g.totalPrice,
+    durationInMonths: g.durationInMonths,
+  }));
+
+  const studentsLegacy: StudentBreakdown[] = Array.isArray(data?.students)
+    ? data.students.map((s: any) => ({
+        studentId: Number(s?.studentId ?? 0),
+        studentName: String(s?.studentName ?? ""),
+        levelId: Number(s?.levelId ?? 0),
+        levelName: String(s?.levelName ?? ""),
+        isFirstLevel: Boolean(s?.isFirstLevel ?? false),
+        royalty: Number(s?.royalty ?? 0),
+        materialCost: Number(s?.materialCost ?? 0),
+        kitCost: Number(s?.kitCost ?? 0),
+        totalPrice: Number(s?.totalPrice ?? 0),
+        durationInMonths: Number(s?.durationInMonths ?? 0),
+      }))
+    : [];
+
+  const students =
+    studentsFromGroups.length > 0 ? studentsFromGroups : studentsLegacy;
+
+  const firstGroup = studentGroups[0];
+  const firstLegacy = studentsLegacy[0];
+
   return {
     franchiseId: String(data?.franchiseId ?? ""),
     programId: Number(data?.programId ?? 0),
-    levelId: Number(data?.levelId ?? 0),
-    isFirstLevel: Boolean(data?.isFirstLevel ?? false),
+    levelId: Number(
+      data?.levelId ?? firstGroup?.levelId ?? firstLegacy?.levelId ?? 0,
+    ),
+    isFirstLevel: Boolean(
+      data?.isFirstLevel ?? firstGroup?.isFirstLevel ?? firstLegacy?.isFirstLevel ?? false,
+    ),
     totalAmount: Number(data?.totalAmount ?? 0),
-    students: Array.isArray(data?.students)
-      ? data.students.map((s: any) => ({
-          studentId: Number(s?.studentId ?? 0),
-          studentName: String(s?.studentName ?? ""),
-          levelId: Number(s?.levelId ?? 0),
-          levelName: String(s?.levelName ?? ""),
-          isFirstLevel: Boolean(s?.isFirstLevel ?? false),
-          royalty: Number(s?.royalty ?? 0),
-          materialCost: Number(s?.materialCost ?? 0),
-          kitCost: Number(s?.kitCost ?? 0),
-          totalPrice: Number(s?.totalPrice ?? 0),
-          durationInMonths: Number(s?.durationInMonths ?? 0),
-        }))
-      : [],
+    students,
     lines: Array.isArray(data?.lines)
       ? data.lines.map((line: any) => ({
           code: String(line?.code ?? ""),
@@ -767,6 +869,7 @@ export async function previewOrderInvoice(
           itemType: line?.itemType ?? undefined,
         }))
       : [],
+    studentGroups: studentGroups.length > 0 ? studentGroups : undefined,
     startingKitGroups: Array.isArray(data?.startingKitGroups)
       ? (data.startingKitGroups as unknown[])
           .map(normalizeStartingKitGroupPreview)
@@ -784,6 +887,29 @@ export async function getInvoiceDetails(
   studentIds: number[],
 ): Promise<InvoiceItem[]> {
   const preview = await previewOrderInvoice({ studentIds });
+  if (preview.studentGroups != null && preview.studentGroups.length > 0) {
+    return preview.studentGroups.map((g) => ({
+      studentId: g.studentId,
+      studentName: g.studentName,
+      rollNo: "",
+      levelId: g.levelId,
+      levelName: g.levelName,
+      programId: preview.programId,
+      isFirstLevel: g.isFirstLevel,
+      materialCost: g.materialCost,
+      kitCost: g.kitCost,
+      royalty: g.royalty,
+      durationInMonths: g.durationInMonths,
+      totalPrice: g.totalPrice,
+      inventoryItems: g.items
+        .filter((it) => it.itemType === "LEVEL" || it.itemType === "KIT")
+        .map((it) => ({
+          id: it.inventoryItemId ?? 0,
+          name: it.name,
+        }))
+        .filter((it) => it.id > 0),
+    }));
+  }
   return preview.lines.map((line, index) => ({
     studentId: studentIds[index] ?? studentIds[0] ?? 0,
     studentName: line.description,

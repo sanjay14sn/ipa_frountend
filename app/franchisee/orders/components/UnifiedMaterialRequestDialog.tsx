@@ -33,7 +33,6 @@ interface UnifiedMaterialRequestDialogProps {
   onClose: () => void;
   onPaymentInitiated: (paymentData: unknown) => void;
   eligibleStudents: StudentData[];
-  franchiseId: string;
 }
 
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
@@ -43,11 +42,22 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
 });
 
 function getStudentLevelName(student: StudentData): string {
+  let raw = "";
   if (student.level && typeof student.level === "object") {
     const l = student.level as { name?: string; code?: string };
-    return l.name ?? l.code ?? "";
+    raw = l.name ?? l.code ?? "";
+  } else {
+    raw = String(student.level ?? "");
   }
-  return String(student.level ?? "");
+  const t = raw.trim();
+  if (t === "" || t === "_") return "";
+  return t;
+}
+
+function displayInstructorCode(id: string | number | undefined | null): string {
+  const t = String(id ?? "").trim();
+  if (t === "" || t === "_") return "";
+  return t;
 }
 
 function stripStudentLineDescription(description: string): string {
@@ -60,6 +70,12 @@ function studentLineItems(
   studentId: number,
 ): Array<{ name: string; quantity: number }> {
   if (!preview) return [];
+  const group = preview.studentGroups?.find((g) => g.studentId === studentId);
+  if (group?.items?.length) {
+    return group.items
+      .filter((it) => it.itemType === "LEVEL" || it.itemType === "KIT")
+      .map((it) => ({ name: it.name, quantity: it.quantity }));
+  }
   return preview.lines
     .filter(
       (l) =>
@@ -77,7 +93,6 @@ export default function UnifiedMaterialRequestDialog({
   onClose,
   onPaymentInitiated,
   eligibleStudents,
-  franchiseId,
 }: UnifiedMaterialRequestDialogProps) {
   const { courseInstructors, isLoading: ciListLoading } = useCourseInstructors(
     { page: 1, limit: 10_000 },
@@ -133,7 +148,6 @@ export default function UnifiedMaterialRequestDialog({
       selectedStudentIds,
       selectedInstructorIds,
       startingKitItems.map((i) => `${i.streamId}:${i.quantity}`).join(","),
-      franchiseId,
     ],
     queryFn: () =>
       previewOrderInvoice({
@@ -143,7 +157,6 @@ export default function UnifiedMaterialRequestDialog({
           streamId: i.streamId,
           quantity: i.quantity,
         })),
-        franchiseId,
       }),
     enabled: open && hasSelection,
     staleTime: 30_000,
@@ -267,10 +280,6 @@ export default function UnifiedMaterialRequestDialog({
   };
 
   const emptyInvoice = !hasSelection;
-  const cardCount =
-    startingKitItems.length +
-    selectedStudentIds.length +
-    selectedInstructorIds.length;
 
   const instructorById = useMemo(() => {
     const m = new Map<number, CourseInstructorData>();
@@ -282,12 +291,9 @@ export default function UnifiedMaterialRequestDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="flex max-h-[92vh] w-full max-w-6xl flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="shrink-0 border-b border-border px-6 py-4 text-left">
-          <DialogTitle className="text-xl font-semibold tracking-tight">
-            Request materials
-          </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            Pick starting kits, students, and CI instructors on the left — the
-            invoice on the right updates live.
+          <DialogTitle>Request materials</DialogTitle>
+          <DialogDescription className="sr-only">
+            Select line items, review invoice, pay.
           </DialogDescription>
         </DialogHeader>
 
@@ -295,18 +301,14 @@ export default function UnifiedMaterialRequestDialog({
           {/* Left — selection */}
           <div className="flex min-h-0 w-full flex-col border-border lg:w-[min(420px,42%)] lg:border-r">
             <div className="shrink-0 border-b border-border px-4 py-3">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-primary">
-                Step 1
-              </div>
               <div className="flex items-baseline justify-between gap-2">
-                <h3 className="text-base font-semibold text-foreground">
-                  Choose what to include
+                <h3 className="text-base font-semibold text-card-foreground">
+                  Selection
                 </h3>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground tabular-nums">
                   {selectedKitsTotalQty +
                     selectedStudentIds.length +
-                    selectedInstructorIds.length}{" "}
-                  selected
+                    selectedInstructorIds.length}
                 </span>
               </div>
             </div>
@@ -315,14 +317,14 @@ export default function UnifiedMaterialRequestDialog({
               {/* Kits */}
               <section>
                 <div className="mb-2 flex items-center gap-2">
-                  <h4 className="text-sm font-semibold text-foreground">
-                    Starting kits
+                  <h4 className="text-sm font-semibold text-card-foreground">
+                    Kits
                   </h4>
                   <span
                     className={
                       selectedKitsTotalQty === 0
                         ? "rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
-                        : "rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary"
+                        : "rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-card-foreground"
                     }
                   >
                     {selectedKitsTotalQty}
@@ -331,7 +333,7 @@ export default function UnifiedMaterialRequestDialog({
                 {streamsQuery.isLoading ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading streams…
+                    Loading…
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -346,28 +348,19 @@ export default function UnifiedMaterialRequestDialog({
                           className={
                             "flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 " +
                             (qty > 0
-                              ? "border-primary/30 bg-primary/[0.04]"
+                              ? "border-border bg-muted/50"
                               : "border-border bg-card")
                           }
                         >
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-semibold text-foreground">
+                            <div className="truncate text-sm font-semibold text-card-foreground">
                               {stream.name}
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              First-level starter materials
-                              {unit != null && unit > 0 ? (
-                                <>
-                                  {" "}
-                                  <span className="text-muted-foreground/50">
-                                    ·
-                                  </span>{" "}
-                                  <span className="font-medium text-foreground">
-                                    {currencyFormatter.format(unit)} each
-                                  </span>
-                                </>
-                              ) : null}
-                            </div>
+                            {unit != null && unit > 0 ? (
+                              <div className="text-xs tabular-nums text-muted-foreground">
+                                {currencyFormatter.format(unit)}
+                              </div>
+                            ) : null}
                           </div>
                           <div className="flex shrink-0 items-center rounded-lg border border-border bg-background">
                             <button
@@ -403,14 +396,14 @@ export default function UnifiedMaterialRequestDialog({
               {/* Students */}
               <section>
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <h4 className="text-sm font-semibold text-foreground">
-                    Student materials
+                  <h4 className="text-sm font-semibold text-card-foreground">
+                    Students
                   </h4>
                   <span
                     className={
                       selectedStudentIds.length === 0
                         ? "rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
-                        : "rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary"
+                        : "rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-card-foreground"
                     }
                   >
                     {selectedStudentIds.length}
@@ -418,7 +411,7 @@ export default function UnifiedMaterialRequestDialog({
                   <span className="flex-1" />
                   <button
                     type="button"
-                    className="text-xs font-medium text-primary hover:underline"
+                    className="text-xs font-medium text-muted-foreground underline-offset-2 hover:text-card-foreground hover:underline"
                     onClick={toggleAllStudents}
                     disabled={stuFiltered.length === 0}
                   >
@@ -426,16 +419,16 @@ export default function UnifiedMaterialRequestDialog({
                     stuFiltered.every((s) =>
                       selectedStudentIds.includes(s.id),
                     )
-                      ? "Clear shown"
-                      : "Select all shown"}
+                      ? "Clear"
+                      : "Select all"}
                   </button>
                 </div>
                 <div className="relative mb-2">
                   <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                   <input
                     type="search"
-                    placeholder="Search by name or level"
-                    aria-label="Search students by name or level"
+                    placeholder="Search students"
+                    aria-label="Search students"
                     value={stuQuery}
                     onChange={(e) => setStuQuery(e.target.value)}
                     className="w-full rounded-lg border border-input bg-background py-2 pl-8 pr-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
@@ -444,7 +437,7 @@ export default function UnifiedMaterialRequestDialog({
                 <div className="max-h-56 space-y-1 overflow-y-auto rounded-lg border border-border">
                   {stuFiltered.length === 0 ? (
                     <p className="px-3 py-4 text-center text-xs text-muted-foreground">
-                      No matches.
+                      No results.
                     </p>
                   ) : (
                     stuFiltered.map((s) => {
@@ -455,6 +448,13 @@ export default function UnifiedMaterialRequestDialog({
                       const itemCount = preview
                         ? studentLineItems(preview, s.id).length
                         : 0;
+                      const levelName = getStudentLevelName(s);
+                      const subtitle =
+                        bd != null
+                          ? `${itemCount} ${itemCount === 1 ? "item" : "items"}`
+                          : sel && invoiceQuery.isFetching
+                            ? "…"
+                            : null;
                       return (
                         <button
                           key={s.id}
@@ -463,7 +463,7 @@ export default function UnifiedMaterialRequestDialog({
                           onClick={() => toggleStudent(s.id)}
                           className={
                             "flex w-full items-center gap-2 border-b border-border px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-muted/50 " +
-                            (sel ? "bg-primary/[0.06]" : "")
+                            (sel ? "bg-muted/60" : "")
                           }
                         >
                           <span
@@ -477,20 +477,20 @@ export default function UnifiedMaterialRequestDialog({
                             {sel ? "✓" : ""}
                           </span>
                           <div className="min-w-0 flex-1">
-                            <div className="font-medium text-foreground">
+                            <div className="font-medium text-card-foreground">
                               {s.name}
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              {bd != null
-                                ? `${currencyFormatter.format(bd.totalPrice)} · ${itemCount} ${itemCount === 1 ? "item" : "items"}`
-                                : invoiceQuery.isFetching
-                                  ? "…"
-                                  : "—"}
-                            </div>
+                            {subtitle != null ? (
+                              <div className="text-xs text-muted-foreground">
+                                {subtitle}
+                              </div>
+                            ) : null}
                           </div>
-                          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-                            {getStudentLevelName(s)}
-                          </span>
+                          {levelName ? (
+                            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                              {levelName}
+                            </span>
+                          ) : null}
                         </button>
                       );
                     })
@@ -501,14 +501,14 @@ export default function UnifiedMaterialRequestDialog({
               {/* CI */}
               <section>
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <h4 className="text-sm font-semibold text-foreground">
-                    CI training materials
+                  <h4 className="text-sm font-semibold text-card-foreground">
+                    Instructors
                   </h4>
                   <span
                     className={
                       selectedInstructorIds.length === 0
                         ? "rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
-                        : "rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary"
+                        : "rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-card-foreground"
                     }
                   >
                     {selectedInstructorIds.length}
@@ -516,7 +516,7 @@ export default function UnifiedMaterialRequestDialog({
                   <span className="flex-1" />
                   <button
                     type="button"
-                    className="text-xs font-medium text-primary hover:underline"
+                    className="text-xs font-medium text-muted-foreground underline-offset-2 hover:text-card-foreground hover:underline"
                     onClick={toggleAllInstructors}
                     disabled={ciFiltered.length === 0}
                   >
@@ -524,8 +524,8 @@ export default function UnifiedMaterialRequestDialog({
                     ciFiltered.every((c) =>
                       selectedInstructorIds.includes(c.id),
                     )
-                      ? "Clear shown"
-                      : "Select all shown"}
+                      ? "Clear"
+                      : "Select all"}
                   </button>
                 </div>
                 <div className="relative mb-2">
@@ -533,7 +533,7 @@ export default function UnifiedMaterialRequestDialog({
                   <input
                     type="search"
                     placeholder="Search instructors"
-                    aria-label="Search instructors by name or code"
+                    aria-label="Search instructors"
                     value={ciQuery}
                     onChange={(e) => setCiQuery(e.target.value)}
                     className="w-full rounded-lg border border-input bg-background py-2 pl-8 pr-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
@@ -543,15 +543,16 @@ export default function UnifiedMaterialRequestDialog({
                   {ciListLoading ? (
                     <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading instructors…
+                      Loading…
                     </div>
                   ) : ciFiltered.length === 0 ? (
                     <p className="px-3 py-4 text-center text-xs text-muted-foreground">
-                      No matches.
+                      No results.
                     </p>
                   ) : (
                     ciFiltered.map((c) => {
                       const sel = selectedInstructorIds.includes(c.id);
+                      const codeLine = displayInstructorCode(c.instructorId);
                       return (
                         <button
                           key={c.id}
@@ -560,7 +561,7 @@ export default function UnifiedMaterialRequestDialog({
                           onClick={() => toggleInstructor(c.id)}
                           className={
                             "flex w-full items-center gap-2 border-b border-border px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-muted/50 " +
-                            (sel ? "bg-primary/[0.06]" : "")
+                            (sel ? "bg-muted/60" : "")
                           }
                         >
                           <span
@@ -574,16 +575,15 @@ export default function UnifiedMaterialRequestDialog({
                             {sel ? "✓" : ""}
                           </span>
                           <div className="min-w-0 flex-1">
-                            <div className="font-medium text-foreground">
+                            <div className="font-medium text-card-foreground">
                               {c.name}
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              {c.instructorId}
-                            </div>
+                            {codeLine ? (
+                              <div className="text-xs text-muted-foreground">
+                                {codeLine}
+                              </div>
+                            ) : null}
                           </div>
-                          <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200">
-                            No charge
-                          </span>
                         </button>
                       );
                     })
@@ -596,45 +596,45 @@ export default function UnifiedMaterialRequestDialog({
           {/* Right — live invoice */}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/20">
             <div className="shrink-0 border-b border-border px-4 py-3">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-primary">
-                Live invoice
-              </div>
-              <div className="flex items-baseline justify-between gap-2">
-                <h3 className="text-base font-semibold text-foreground">
-                  Order summary
-                </h3>
-                <span className="text-xs text-muted-foreground">
-                  {emptyInvoice
-                    ? "Nothing added yet"
-                    : `${cardCount} ${cardCount === 1 ? "card" : "cards"}`}
+              <h3 className="flex min-w-0 flex-wrap items-baseline gap-x-1 text-base font-semibold text-card-foreground">
+                <span className="shrink-0">Invoice</span>
+                <span className="min-w-0 font-normal text-muted-foreground">
+                  <span aria-hidden className="text-muted-foreground/80">
+                    -
+                  </span>{" "}
+                  <span className="font-medium tabular-nums text-card-foreground">
+                    {selectedKitsTotalQty}
+                  </span>{" "}
+                  {selectedKitsTotalQty === 1 ? "kit" : "kits"},{" "}
+                  <span className="font-medium tabular-nums text-card-foreground">
+                    {selectedStudentIds.length}
+                  </span>{" "}
+                  {selectedStudentIds.length === 1 ? "student" : "students"},{" "}
+                  <span className="font-medium tabular-nums text-card-foreground">
+                    {selectedInstructorIds.length}
+                  </span>{" "}
+                  {selectedInstructorIds.length === 1 ? "CI" : "CIs"}
                 </span>
-              </div>
+              </h3>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
               {emptyInvoice && (
-                <div className="mx-auto max-w-md rounded-xl border border-dashed border-border bg-card/80 px-6 py-10 text-center">
-                  <div className="text-base font-semibold text-foreground">
-                    Your invoice is empty
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Pick a kit, student, or instructor on the left to start
-                    building the order. Costs roll up per group — kit cost +
-                    material + royalty per kit, material + royalty per student.
-                  </p>
+                <div className="flex min-h-[12rem] items-center justify-center px-4 py-10">
+                  <p className="text-sm text-muted-foreground">No selection.</p>
                 </div>
               )}
 
               {!emptyInvoice && invoiceQuery.isLoading && (
                 <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  Loading invoice…
+                  Loading…
                 </div>
               )}
 
               {!emptyInvoice && invoiceQuery.isError && (
                 <p className="py-6 text-sm text-destructive">
-                  Could not load the invoice for this selection.
+                  Unable to load invoice.
                 </p>
               )}
 
@@ -645,7 +645,7 @@ export default function UnifiedMaterialRequestDialog({
                       <div>
                         <div className="mb-2 flex items-center justify-between">
                           <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                            Starting kits
+                            Kits
                           </h4>
                           <span className="text-xs text-muted-foreground">
                             {selectedKitsTotalQty}{" "}
@@ -684,7 +684,7 @@ export default function UnifiedMaterialRequestDialog({
                     <div>
                       <div className="mb-2 flex items-center justify-between">
                         <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          Student materials
+                          Students
                         </h4>
                         <span className="text-xs text-muted-foreground">
                           {selectedStudentIds.length}{" "}
@@ -707,7 +707,7 @@ export default function UnifiedMaterialRequestDialog({
                                 key={sid}
                                 className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground"
                               >
-                                Loading {student?.name ?? "student"}…
+                                Loading…
                               </div>
                             );
                           }
@@ -735,7 +735,11 @@ export default function UnifiedMaterialRequestDialog({
                               key={sid}
                               kind="STUDENT"
                               title={student.name}
-                              subtitle={bd.levelName}
+                              subtitle={(() => {
+                                const n = String(bd.levelName ?? "").trim();
+                                if (!n || n === "_") return undefined;
+                                return n;
+                              })()}
                               costs={costs}
                               items={studentLineItems(preview, sid)}
                               totalAmount={bd.totalPrice}
@@ -752,12 +756,11 @@ export default function UnifiedMaterialRequestDialog({
                     <div>
                       <div className="mb-2 flex items-center justify-between">
                         <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          CI training materials
+                          Instructors
                         </h4>
                         <span className="text-xs text-muted-foreground">
                           {selectedInstructorIds.length} instructor
-                          {selectedInstructorIds.length !== 1 ? "s" : ""} · no
-                          charge
+                          {selectedInstructorIds.length !== 1 ? "s" : ""}
                         </span>
                       </div>
                       <div className="space-y-3">
@@ -771,9 +774,12 @@ export default function UnifiedMaterialRequestDialog({
                               key={iid}
                               kind="CI"
                               title={ins?.name ?? grp?.name ?? "Instructor"}
-                              subtitle={
-                                ins?.instructorId ?? grp?.instructorCode ?? ""
-                              }
+                              subtitle={(() => {
+                                const raw =
+                                  ins?.instructorId ?? grp?.instructorCode;
+                                const s = displayInstructorCode(raw);
+                                return s || undefined;
+                              })()}
                               free
                               items={
                                 grp?.items?.length
@@ -799,40 +805,21 @@ export default function UnifiedMaterialRequestDialog({
         </div>
 
         <footer className="shrink-0 border-t border-border bg-card px-4 py-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Estimated total
-              </div>
-              <div className="text-2xl font-semibold tabular-nums text-foreground">
-                {currencyFormatter.format(preview?.totalAmount ?? 0)}
-              </div>
-              <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
-                <div>
-                  <span className="font-semibold text-foreground">
-                    {selectedKitsTotalQty}
-                  </span>{" "}
-                  kits
-                </div>
-                <div>
-                  <span className="font-semibold text-foreground">
-                    {selectedStudentIds.length}
-                  </span>{" "}
-                  students
-                </div>
-                <div>
-                  <span className="font-semibold text-foreground">
-                    {selectedInstructorIds.length}
-                  </span>{" "}
-                  CIs
-                </div>
-              </div>
+          <div className="ml-auto flex w-full max-w-md flex-col items-end gap-2 text-right">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Estimated total
             </div>
-            <div className="flex shrink-0 justify-end gap-2">
-              <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+            <div className="flex w-full shrink-0 flex-nowrap justify-end gap-2 sm:w-auto">
+              <Button
+                variant="outline"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="min-w-0 flex-1 sm:flex-initial"
+              >
                 Cancel
               </Button>
               <Button
+                className="min-w-0 flex-1 sm:flex-initial"
                 onClick={handleContinue}
                 disabled={
                   !hasSelection ||
@@ -845,7 +832,7 @@ export default function UnifiedMaterialRequestDialog({
                 {isSubmitting && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Continue
+                Pay {currencyFormatter.format(preview?.totalAmount ?? 0)}
               </Button>
             </div>
           </div>

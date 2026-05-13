@@ -46,6 +46,32 @@ export default function InvoicePreviewCard({
   const linesByStudentId = useMemo(() => {
     const map = new Map<number, InvoicePreview['lines']>();
     if (!preview) return map;
+
+    if (preview.studentGroups?.length) {
+      for (const g of preview.studentGroups) {
+        const synthetic: InvoicePreview['lines'] = g.items.map((it) => ({
+          code:
+            it.itemType === 'KIT'
+              ? 'KIT_ITEM'
+              : it.itemType === 'FEE'
+                ? 'PROGRAM_FEES'
+                : 'LEVEL_ITEM',
+          description: `${g.studentName} - ${it.name}`,
+          quantity: it.quantity,
+          unitPrice: 0,
+          totalPrice: 0,
+          studentId: g.studentId,
+          inventoryItemId: it.inventoryItemId,
+          itemType: (it.itemType === 'FEE' ? 'FEE' : it.itemType === 'KIT' ? 'KIT' : 'LEVEL') as
+            | 'LEVEL'
+            | 'KIT'
+            | 'FEE',
+        }));
+        map.set(g.studentId, synthetic);
+      }
+      return map;
+    }
+
     for (const line of preview.lines) {
       if (line.studentId == null) continue;
       const bucket = map.get(line.studentId) ?? [];
