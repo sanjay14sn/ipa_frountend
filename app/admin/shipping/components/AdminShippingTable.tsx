@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShieldCheck, Truck, PackageCheck, X, Download } from "lucide-react";
+import { Truck, PackageCheck, X, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { useAdminShipments } from "@/hooks/api/fulfillment.hooks";
@@ -13,7 +13,6 @@ import {
   deliverShipment,
   downloadChallan,
   shipShipment,
-  verifyShipment,
 } from "@/services/fulfillment.service";
 import {
   DataTable,
@@ -24,12 +23,12 @@ import {
   DetailFieldsGrid,
   DetailField,
 } from "@/components/shared";
-import { VerifyShipmentDialog } from "./VerifyShipmentDialog";
+import { Separator } from "@/components/ui/separator";
 import { ShipShipmentDialog } from "./ShipShipmentDialog";
-import type { VerifyShipmentDto, ShipShipmentDto } from "@/services/fulfillment.service";
+import { DispatchItemsSummaryTable } from "@/app/admin/orders/components/DispatchItemsSummaryTable";
+import type { ShipShipmentDto } from "@/services/fulfillment.service";
 
 const STATUS_LABEL: Record<string, string> = {
-  PENDING: "Ready to ship",
   VERIFIED: "Verified",
   SHIPPED: "Shipped",
   DELIVERED: "Delivered",
@@ -42,7 +41,6 @@ export default function AdminShippingTable() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
-  const [verifyDialogOrderId, setVerifyDialogOrderId] = useState<number | null>(null);
   const [shipDialogOrderId, setShipDialogOrderId] = useState<number | null>(null);
 
   const shipmentsQuery = useAdminShipments({
@@ -76,16 +74,6 @@ export default function AdminShippingTable() {
     [shipmentsQuery, toast],
   );
 
-  const handleVerifyConfirm = useCallback(
-    async (data: VerifyShipmentDto) => {
-      if (verifyDialogOrderId === null) return;
-      const id = verifyDialogOrderId;
-      await runAction(id, () => verifyShipment(id, data), "Shipment verified");
-      setVerifyDialogOrderId(null);
-    },
-    [verifyDialogOrderId, runAction],
-  );
-
   const handleShipConfirm = useCallback(
     async (data: ShipShipmentDto) => {
       if (shipDialogOrderId === null) return;
@@ -102,7 +90,6 @@ export default function AdminShippingTable() {
       label: "Shipment Status",
       options: [
         { value: "all", label: "All statuses" },
-        { value: "PENDING", label: "Ready to ship" },
         { value: "VERIFIED", label: "Verified" },
         { value: "SHIPPED", label: "Shipped" },
         { value: "DELIVERED", label: "Delivered" },
@@ -118,16 +105,26 @@ export default function AdminShippingTable() {
       {
         key: "franchise",
         header: "Franchise",
-        render: (row) => (
+        render: (row) => {
+          const dispatch = row.dispatchItems ?? [];
+          const certCount = dispatch.filter((d) => d.itemType === "CERTIFICATE").length;
+          const idCount = dispatch.filter((d) => d.itemType === "ID_CARD").length;
+          const materialQty = (row.orderItems ?? []).reduce((s, l) => s + l.quantity, 0);
+          return (
           <div>
             <div className="font-medium">
               {row.franchise?.name ?? row.franchiseId}
             </div>
             <div className="text-xs text-muted-foreground">
-              {row.totalItems ?? 0} items
+              {materialQty} inventory qty
+              {certCount > 0
+                ? ` · ${certCount} certificate${certCount === 1 ? "" : "s"}`
+                : ""}
+              {idCount > 0 ? ` · ${idCount} ID card${idCount === 1 ? "" : "s"}` : ""}
             </div>
           </div>
-        ),
+          );
+        },
       },
       {
         key: "shipment",
@@ -163,7 +160,6 @@ export default function AdminShippingTable() {
         header: "Actions",
         className: "text-center",
         render: (row) => {
-          const isReadyToShip = row.status === "PENDING";
           const isVerified = row.status === "VERIFIED";
           const isShipped = row.status === "SHIPPED";
           const isDone = row.status === "DELIVERED" || row.status === "CANCELLED";
@@ -171,18 +167,6 @@ export default function AdminShippingTable() {
 
           return (
             <div className="flex items-center justify-center gap-1">
-              {isReadyToShip ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 p-0"
-                  title="Verify shipment"
-                  disabled={busyOrderId === row.orderId}
-                  onClick={() => setVerifyDialogOrderId(row.orderId)}
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                </Button>
-              ) : null}
               {isVerified ? (
                 <Button
                   variant="ghost"
@@ -247,7 +231,7 @@ export default function AdminShippingTable() {
         },
       },
     ],
-    [busyOrderId, runAction, setShipDialogOrderId, setVerifyDialogOrderId],
+    [busyOrderId, runAction, setShipDialogOrderId],
   );
 
   return (
@@ -257,16 +241,24 @@ export default function AdminShippingTable() {
         loading={shipmentsQuery.isLoading}
         columns={columns}
         getRowId={(row) => String(row.id)}
-        renderMainCell={(row) => (
+        renderMainCell={(row) => {
+          const dispatchOnly =
+            (row.orderItems?.length ?? 0) === 0 && (row.dispatchItems?.length ?? 0) > 0;
+          return (
           <div>
             <div className="font-medium">
               {row.referenceId}
             </div>
-            <div className="text-xs text-muted-foreground">
-              ₹{Number(row.totalAmount).toFixed(2)}
-            </div>
+            {dispatchOnly ? (
+              <div className="text-xs text-muted-foreground">Dispatch only (no material charge)</div>
+            ) : (
+              <div className="text-xs text-muted-foreground">
+                ₹{Number(row.totalAmount).toFixed(2)}
+              </div>
+            )}
           </div>
-        )}
+          );
+        }}
         renderExpandedContent={(row) => (
           <ExpandedDetailSection title="Shipment details">
             <div className="space-y-4">
@@ -302,33 +294,53 @@ export default function AdminShippingTable() {
                 />
               </DetailFieldsGrid>
 
-              <RawTableSurface>
-                <table className="min-w-full text-sm">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="px-3 py-2 text-left">Item</th>
-                      <th className="px-3 py-2 text-left">Reserved</th>
-                      <th className="px-3 py-2 text-left">Fulfilled</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(row.orderItems ?? []).map((line) => (
-                      <tr key={line.id} className="border-t">
-                        <td className="px-3 py-2">
-                          <div className="font-medium">
-                            {line.inventory?.name ?? `Item #${line.id}`}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {line.inventory?.sku || "No SKU"}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2">{line.reservedQty ?? 0}</td>
-                        <td className="px-3 py-2">{line.fulfilledQty ?? 0}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </RawTableSurface>
+              {(row.dispatchItems?.length ?? 0) > 0 ? (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Certificate &amp; ID dispatch
+                    </h3>
+                    <DispatchItemsSummaryTable items={row.dispatchItems ?? []} />
+                  </div>
+                </>
+              ) : null}
+
+              {(row.orderItems?.length ?? 0) > 0 ? (
+                <>
+                  {(row.dispatchItems?.length ?? 0) > 0 ? <Separator /> : null}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-foreground">Inventory</h3>
+                    <RawTableSurface>
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Item</th>
+                          <th className="px-3 py-2 text-left">Reserved</th>
+                          <th className="px-3 py-2 text-left">Fulfilled</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(row.orderItems ?? []).map((line) => (
+                          <tr key={line.id} className="border-t">
+                            <td className="px-3 py-2">
+                              <div className="font-medium">
+                                {line.inventory?.name ?? `Item #${line.id}`}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {line.inventory?.sku || "No SKU"}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2">{line.reservedQty ?? 0}</td>
+                            <td className="px-3 py-2">{line.fulfilledQty ?? 0}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </RawTableSurface>
+                  </div>
+                </>
+              ) : null}
             </div>
           </ExpandedDetailSection>
         )}
@@ -354,12 +366,6 @@ export default function AdminShippingTable() {
         }
       />
 
-      <VerifyShipmentDialog
-        open={verifyDialogOrderId !== null}
-        onOpenChange={(open) => { if (!open) setVerifyDialogOrderId(null); }}
-        onConfirm={handleVerifyConfirm}
-        busy={busyOrderId !== null}
-      />
       <ShipShipmentDialog
         open={shipDialogOrderId !== null}
         onOpenChange={(open) => { if (!open) setShipDialogOrderId(null); }}

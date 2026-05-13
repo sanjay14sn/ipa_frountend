@@ -26,11 +26,18 @@ import {
   requestCertificateForStudent,
   bulkRequestCertificates,
   getPaginatedStudents,
+  getAdminIdCardSummaries,
+  getAdminIdCardDetails,
+  getAdminCertificateSummaries,
+  getAdminCertificatesByFranchise,
+  bulkDispatchCertificates,
+  bulkDispatchIdCards,
   type StudentData,
   type StudentPaginationParams,
   type CertificatePaginationParams,
   type PaginationMeta,
 } from "@/services/student.service";
+import { getDispatchEligibleOrders } from "@/services/order.service";
 import { queryKeys } from "./query-keys";
 import { getQueryClientBridge } from "./query-client-bridge";
 
@@ -181,6 +188,52 @@ export function useAdminCertificateRequests(
   };
 }
 
+export function useAdminIdCardSummaries(
+  params: Record<string, unknown>,
+  refreshKey = 0,
+) {
+  return useQuery({
+    queryKey: [...queryKeys.studentAdmin.idCardSummaries(params), refreshKey],
+    queryFn: () => getAdminIdCardSummaries(params),
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useAdminIdCardDetails(
+  franchiseId: string | null | undefined,
+  params: Record<string, unknown>,
+) {
+  return useQuery({
+    queryKey: queryKeys.studentAdmin.idCardDetails(franchiseId ?? "", params),
+    queryFn: () => getAdminIdCardDetails(franchiseId!, params),
+    enabled: Boolean(franchiseId?.trim()),
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useAdminCertificateSummaries(params: Record<string, unknown>) {
+  return useQuery({
+    queryKey: queryKeys.studentAdmin.certSummaries(params),
+    queryFn: () => getAdminCertificateSummaries(params),
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useAdminCertificateDetails(
+  franchiseId: string | null | undefined,
+  params: CertificatePaginationParams,
+) {
+  return useQuery({
+    queryKey: queryKeys.studentAdmin.certDetails(
+      franchiseId ?? "",
+      params as Record<string, unknown>,
+    ),
+    queryFn: () => getAdminCertificatesByFranchise(franchiseId!, params),
+    enabled: Boolean(franchiseId?.trim()),
+    placeholderData: (prev) => prev,
+  });
+}
+
 export function useFranchiseeCertificates(
   params?: CertificatePaginationParams,
 ) {
@@ -204,6 +257,8 @@ function invalidateStudentLists(qc: ReturnType<typeof getQueryClientBridge>) {
   void qc.invalidateQueries({ queryKey: STUDENTS_LIST_PREFIX });
   void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.requestedIds });
   void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.issuedIds });
+  void qc.invalidateQueries({ queryKey: ["admin-id-card-summaries"] });
+  void qc.invalidateQueries({ queryKey: ["admin-id-card-details", "list"] });
 }
 
 export async function createStudentWithRevalidation(
@@ -293,6 +348,8 @@ export async function approveCertificateRequestWithRevalidation(
   try {
     const qc = getQueryClientBridge();
     void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
+    void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
+    void qc.invalidateQueries({ queryKey: ["admin-cert-details", "list"] });
   } catch {
     /* ignore */
   }
@@ -306,6 +363,8 @@ export async function rejectCertificateRequestWithRevalidation(
   try {
     const qc = getQueryClientBridge();
     void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
+    void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
+    void qc.invalidateQueries({ queryKey: ["admin-cert-details", "list"] });
   } catch {
     /* ignore */
   }
@@ -327,6 +386,8 @@ export function useApproveCertificateRequest() {
     mutationFn: approveCertificateRequest,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
+      void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
+      void qc.invalidateQueries({ queryKey: ["admin-cert-details", "list"] });
     },
   });
 }
@@ -338,6 +399,8 @@ export function useRejectCertificateRequest() {
       rejectCertificateRequest(certificateRequestId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
+      void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
+      void qc.invalidateQueries({ queryKey: ["admin-cert-details", "list"] });
     },
   });
 }
@@ -346,6 +409,8 @@ function invalidateCertificateRequestDomains(qc: QueryClient) {
   void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
   void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.eligible });
   void qc.invalidateQueries({ queryKey: STUDENTS_LIST_PREFIX });
+  void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
+  void qc.invalidateQueries({ queryKey: ["admin-cert-details", "list"] });
 }
 
 export function useRequestCertificateForStudent() {
@@ -361,5 +426,46 @@ export function useBulkRequestCertificates() {
   return useMutation({
     mutationFn: bulkRequestCertificates,
     onSuccess: () => invalidateCertificateRequestDomains(qc),
+  });
+}
+
+export function useDispatchEligibleOrders(franchiseId: string, enabled = false) {
+  return useQuery({
+    queryKey: queryKeys.orders.dispatchEligible(franchiseId),
+    queryFn: () => getDispatchEligibleOrders(franchiseId),
+    enabled: enabled && !!franchiseId,
+  });
+}
+
+export function useBulkDispatchCertificates() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: bulkDispatchCertificates,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
+      void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
+      void qc.invalidateQueries({ queryKey: ["admin-cert-details", "list"] });
+      void qc.invalidateQueries({ queryKey: queryKeys.orders.admin() });
+      void qc.invalidateQueries({
+        queryKey: ["orders", "dispatch-eligible"],
+      });
+    },
+  });
+}
+
+export function useBulkDispatchIdCards() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: bulkDispatchIdCards,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.requestedIds });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.issuedIds });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.idCardSummaries() });
+      void qc.invalidateQueries({ queryKey: ["admin-id-card-details", "list"] });
+      void qc.invalidateQueries({ queryKey: queryKeys.orders.admin() });
+      void qc.invalidateQueries({
+        queryKey: ["orders", "dispatch-eligible"],
+      });
+    },
   });
 }

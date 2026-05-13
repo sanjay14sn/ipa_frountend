@@ -125,8 +125,8 @@ export function InventoryCheckboxLinkPanel({
 
       {/* Section 2: Pending selections */}
       {isDirty ? (
-        <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
-          <p className="mb-2 text-xs font-medium text-emerald-900">
+        <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+          <p className="mb-2 text-xs font-medium text-gray-900">
             {pendingCount} selected — not yet saved
           </p>
           {Object.entries(pendingAdditions).map(([idStr, qty]) => {
@@ -190,7 +190,7 @@ export function InventoryCheckboxLinkPanel({
               <div
                 key={item.id}
                 className={`flex items-center gap-3 border-b px-3 py-2.5 last:border-b-0 transition-colors ${
-                  checked ? "bg-emerald-50/60" : "hover:bg-gray-50"
+                  checked ? "bg-primary/10" : "hover:bg-gray-50"
                 }`}
               >
                 <button
@@ -198,7 +198,7 @@ export function InventoryCheckboxLinkPanel({
                   onClick={() => toggleItem(item.id)}
                   className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
                     checked
-                      ? "border-emerald-600 bg-emerald-600 text-white"
+                      ? "border-primary bg-primary text-primary-foreground"
                       : "border-gray-300 bg-white text-transparent"
                   }`}
                   aria-label={checked ? `Uncheck ${item.name}` : `Check ${item.name}`}

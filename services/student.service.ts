@@ -266,12 +266,15 @@ export interface RequestedIdDetail {
   name: string;
   rollNo: string;
   dateOfBirth?: string;
+  idRequestedAt?: string;
   residentialAddress?: string;
   fatherContactNo?: string;
   motherContactNo?: string;
   franchiseName?: string;
   franchiseeAddress?: string;
   idIssueDate?: string;
+  /** Present when listing mixed Requested/Issued rows (admin id-card "all"). */
+  idIssued?: string;
   franchise?: {
     id: string;
     name: string;
@@ -317,6 +320,10 @@ function mapRequestedIdDetail(row: Record<string, unknown>): RequestedIdDetail {
     franchiseName,
     franchiseeAddress: franchiseAddress || undefined,
     idIssueDate: row.idIssueDate ? String(row.idIssueDate) : undefined,
+    idIssued: row.idIssued != null ? String(row.idIssued) : undefined,
+    idRequestedAt: row.idRequestedAt
+      ? String(row.idRequestedAt)
+      : undefined,
     franchise: {
       id: franchiseId,
       name: franchiseName,
@@ -445,6 +452,8 @@ export interface AdminCertificateRequest {
   studentStandard: string;
   studentStream: string;
   studentLevel: string;
+  /** Level code from program (e.g. stream ladder), when API provides it */
+  studentLevelCode?: string;
   studentIsActive: boolean;
   studentDateOfJoining?: string;
   studentIdIssued: string;
@@ -497,6 +506,8 @@ function mapCertRow(c: CertificateRow): AdminCertificateRequest {
   const passMark = Number(level.passMark ?? 0);
   const studentStream = String(stream.name ?? stream.code ?? "");
 
+  const levelCodeRaw = String(level.code ?? "").trim();
+
   return {
     id: Number(c.id),
     studentId: fallbackStudentId,
@@ -513,6 +524,7 @@ function mapCertRow(c: CertificateRow): AdminCertificateRequest {
     studentStandard: String(student.standard ?? ""),
     studentStream,
     studentLevel: getLevelLabel(level, c.levelId),
+    studentLevelCode: levelCodeRaw || undefined,
     studentIsActive: Boolean(student.isActive ?? true),
     studentDateOfJoining: student.dateOfJoining
       ? String(student.dateOfJoining)
@@ -577,6 +589,25 @@ export async function rejectCertificateRequest(
     `/admin/certification/certificate/${certificateRequestId}/reject`,
     { reason },
   );
+  return unwrapData(response);
+}
+
+export async function bulkDispatchCertificates(dto: {
+  ids: number[];
+  orderId?: number;
+}): Promise<{ succeeded: number[]; failed: number[] }> {
+  const response = await api.post(
+    "/admin/certification/certificates/bulk-dispatch",
+    dto,
+  );
+  return unwrapData(response);
+}
+
+export async function bulkDispatchIdCards(dto: {
+  studentIds: number[];
+  orderId?: number;
+}): Promise<{ succeeded: number[]; failed: number[] }> {
+  const response = await api.post("/admin/id-card/bulk-dispatch", dto);
   return unwrapData(response);
 }
 
@@ -740,6 +771,121 @@ export async function getPaginatedIssuedIds(
   return {
     data: groupRequestedIdDetails(rows as Record<string, unknown>[]),
     meta: buildIdMeta(total, page || 1, limit || 20),
+  };
+}
+
+export interface IdCardFranchiseSummary {
+  franchiseId: string;
+  franchiseName: string;
+  totalRequested: number;
+  totalIssued: number;
+}
+
+export interface CertificateFranchiseSummary {
+  franchiseId: string;
+  franchiseName: string;
+  totalPending: number;
+  totalIssued: number;
+  totalRejected: number;
+}
+
+export async function getAdminIdCardSummaries(
+  params: Record<string, unknown>,
+): Promise<{
+  data: IdCardFranchiseSummary[];
+  meta: { total: number; totalPages: number };
+}> {
+  const response = await api.get("/admin/id-card/summary", {
+    params: compactRequestParams(
+      params as Record<string, string | number | boolean | undefined | null>,
+    ),
+  });
+  const result = unwrapData<unknown>(response);
+  const normalized = normalizePaginatedResult<Record<string, unknown>>(result);
+  const data = normalized.rows.map((row) => ({
+    franchiseId: String(row.franchiseId ?? ""),
+    franchiseName: String(row.franchiseName ?? ""),
+    totalRequested: Number(row.totalRequested ?? 0),
+    totalIssued: Number(row.totalIssued ?? 0),
+  }));
+  const lim = Number(normalized.limit ?? 20) || 20;
+  const totalPages = Math.max(1, Math.ceil(normalized.total / lim));
+  return { data, meta: { total: normalized.total, totalPages } };
+}
+
+export async function getAdminIdCardDetails(
+  franchiseId: string,
+  params: Record<string, unknown>,
+): Promise<{
+  data: RequestedIdDetail[];
+  meta: { total: number; totalPages: number };
+}> {
+  const response = await api.get("/admin/id-card", {
+    params: compactRequestParams({
+      franchiseId,
+      ...(params as Record<string, string | number | boolean | undefined | null>),
+    }),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows, total, page, limit } = normalizePaginatedResult<unknown>(result);
+  const lim = Number(limit || 20) || 20;
+  const data = (rows as Record<string, unknown>[]).map((row) =>
+    mapRequestedIdDetail(row),
+  );
+  const totalPages = Math.max(1, Math.ceil(total / lim));
+  return { data, meta: { total, totalPages } };
+}
+
+export async function getAdminCertificateSummaries(
+  params: Record<string, unknown>,
+): Promise<{
+  data: CertificateFranchiseSummary[];
+  meta: { total: number; totalPages: number };
+}> {
+  const response = await api.get("/admin/certification/summary", {
+    params: compactRequestParams(
+      params as Record<string, string | number | boolean | undefined | null>,
+    ),
+  });
+  const result = unwrapData<unknown>(response);
+  const normalized = normalizePaginatedResult<Record<string, unknown>>(result);
+  const data = normalized.rows.map((row) => ({
+    franchiseId: String(row.franchiseId ?? ""),
+    franchiseName: String(row.franchiseName ?? ""),
+    totalPending: Number(row.totalPending ?? 0),
+    totalIssued: Number(row.totalIssued ?? 0),
+    totalRejected: Number(row.totalRejected ?? 0),
+  }));
+  const lim = Number(normalized.limit ?? 20) || 20;
+  const totalPages = Math.max(1, Math.ceil(normalized.total / lim));
+  return { data, meta: { total: normalized.total, totalPages } };
+}
+
+export async function getAdminCertificatesByFranchise(
+  franchiseId: string,
+  params: CertificatePaginationParams,
+): Promise<PaginatedCertificatesResponse> {
+  const statusParam =
+    params.status?.trim().toLowerCase() === "all" ? undefined : params.status;
+  const response = await api.get("/admin/certification/requests", {
+    params: compactRequestParams({
+      franchiseId,
+      page: params.page,
+      limit: params.limit,
+      search: params.search,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+      status: statusParam,
+    } as Record<string, string | number | boolean | undefined | null>),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows: raw, total, page, limit } = normalizePaginatedResult<unknown>(result);
+  const data = raw.map((row) => mapCertRow(row as CertificateRow));
+  const lim = limit || 20;
+  const totalPages = Math.ceil(total / lim) || 1;
+  return {
+    data,
+    meta: { total, page: page || 1, limit: lim, totalPages },
   };
 }
 

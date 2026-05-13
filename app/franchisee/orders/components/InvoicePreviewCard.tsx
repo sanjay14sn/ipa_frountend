@@ -11,6 +11,15 @@ export interface InvoicePreviewCardProps {
   selected: number;
   emptyMessage: string;
   zeroAmountLabel?: string;
+  /** When set, omits the outer Card — for use inside admin order invoice tabs. */
+  variant?: "card" | "embedded";
+  /** Hide the bottom total block (e.g. when parent shows a sticky footer). */
+  hideFooter?: boolean;
+  /**
+   * `finalized` — paid order views (admin / order details): no "preview" wording.
+   * `preview` — franchisee cart before checkout: estimated totals.
+   */
+  copyVariant?: "preview" | "finalized";
 }
 
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
@@ -30,6 +39,9 @@ export default function InvoicePreviewCard({
   selected,
   emptyMessage,
   zeroAmountLabel,
+  variant = "card",
+  hideFooter = false,
+  copyVariant = "preview",
 }: InvoicePreviewCardProps) {
   const linesByStudentId = useMemo(() => {
     const map = new Map<number, InvoicePreview['lines']>();
@@ -43,18 +55,16 @@ export default function InvoicePreviewCard({
     return map;
   }, [preview]);
 
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Invoice preview</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
+  const isFinalized = copyVariant === "finalized";
+
+  const body = (
+      <>
         {selected === 0 ? (
           <p className="text-sm text-muted-foreground">{emptyMessage}</p>
         ) : loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            Loading invoice preview...
+            Loading invoice…
           </div>
         ) : preview ? (
           <>
@@ -67,31 +77,31 @@ export default function InvoicePreviewCard({
                   const isFeeOnly = studentLines.some((l) => l.itemType === 'FEE');
 
                   return (
-                    <div key={student.studentId} className="overflow-hidden rounded-lg border">
-                      <div className="flex items-center gap-2 bg-muted/50 px-3 py-2">
+                    <div key={student.studentId} className="overflow-hidden rounded-xl border border-border bg-card">
+                      <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-2.5">
                         <span className="text-sm font-semibold text-card-foreground">{student.studentName}</span>
                         <span className="text-xs text-muted-foreground">· {student.levelName}</span>
                       </div>
 
-                      <div className="divide-y">
+                      <div className="divide-y divide-border">
                         {isFeeOnly ? (
-                          <div className="flex items-center justify-between px-3 py-2">
+                          <div className="flex items-center justify-between px-4 py-2.5">
                             <span className="text-sm font-medium text-card-foreground">Program Fees</span>
-                            <span className="text-sm text-card-foreground">{currencyFormatter.format(student.totalPrice)}</span>
+                            <span className="text-sm tabular-nums text-card-foreground">{currencyFormatter.format(student.totalPrice)}</span>
                           </div>
                         ) : (
                           <>
                             <div>
-                              <div className="flex items-center justify-between px-3 py-2">
+                              <div className="flex items-center justify-between px-4 py-2.5">
                                 <span className="text-sm font-medium text-card-foreground">Material Cost</span>
-                                <span className="text-sm text-card-foreground">{currencyFormatter.format(student.materialCost)}</span>
+                                <span className="text-sm tabular-nums text-card-foreground">{currencyFormatter.format(student.materialCost)}</span>
                               </div>
                               {levelItems.length > 0 && (
-                                <div className="space-y-0.5 px-3 pb-2">
+                                <div className="space-y-0.5 px-4 pb-2.5">
                                   {levelItems.map((item, i) => (
                                     <div key={i} className="flex items-center justify-between pl-4 text-xs text-muted-foreground">
-                                      <span>↳ {stripStudentPrefix(item.description)}</span>
-                                      <span>×{item.quantity}</span>
+                                      <span><span className="text-muted-foreground/80">↳</span> {stripStudentPrefix(item.description)}</span>
+                                      <span className="tabular-nums">×{item.quantity}</span>
                                     </div>
                                   ))}
                                 </div>
@@ -100,16 +110,16 @@ export default function InvoicePreviewCard({
 
                             {student.isFirstLevel && (student.kitCost > 0 || kitItems.length > 0) && (
                               <div>
-                                <div className="flex items-center justify-between px-3 py-2">
+                                <div className="flex items-center justify-between px-4 py-2.5">
                                   <span className="text-sm font-medium text-card-foreground">Starting Kit</span>
-                                  <span className="text-sm text-card-foreground">{currencyFormatter.format(student.kitCost)}</span>
+                                  <span className="text-sm tabular-nums text-card-foreground">{currencyFormatter.format(student.kitCost)}</span>
                                 </div>
                                 {kitItems.length > 0 && (
-                                  <div className="space-y-0.5 px-3 pb-2">
+                                  <div className="space-y-0.5 px-4 pb-2.5">
                                     {kitItems.map((item, i) => (
                                       <div key={i} className="flex items-center justify-between pl-4 text-xs text-muted-foreground">
-                                        <span>↳ {stripStudentPrefix(item.description)}</span>
-                                        <span>×{item.quantity}</span>
+                                        <span><span className="text-muted-foreground/80">↳</span> {stripStudentPrefix(item.description)}</span>
+                                        <span className="tabular-nums">×{item.quantity}</span>
                                       </div>
                                     ))}
                                   </div>
@@ -117,16 +127,16 @@ export default function InvoicePreviewCard({
                               </div>
                             )}
 
-                            <div className="flex items-center justify-between px-3 py-2">
+                            <div className="flex items-center justify-between px-4 py-2.5">
                               <span className="text-sm font-medium text-card-foreground">Royalty</span>
-                              <span className="text-sm text-card-foreground">{currencyFormatter.format(student.royalty)}</span>
+                              <span className="text-sm tabular-nums text-card-foreground">{currencyFormatter.format(student.royalty)}</span>
                             </div>
                           </>
                         )}
 
-                        <div className="flex items-center justify-between bg-muted/20 px-3 py-2">
-                          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Student total</span>
-                          <span className="text-sm font-semibold text-card-foreground">{currencyFormatter.format(student.totalPrice)}</span>
+                        <div className="flex items-center justify-between bg-muted/25 px-4 py-2.5">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Student total</span>
+                          <span className="text-sm font-semibold tabular-nums text-card-foreground">{currencyFormatter.format(student.totalPrice)}</span>
                         </div>
                       </div>
                     </div>
@@ -134,24 +144,24 @@ export default function InvoicePreviewCard({
                 })}
               </div>
             ) : preview.lines.length > 0 ? (
-              <div className="overflow-hidden rounded-lg border">
+              <div className="overflow-hidden rounded-xl border border-border bg-card">
                 <table className="min-w-full text-sm">
-                  <thead className="bg-muted/50">
+                  <thead className="bg-muted/60">
                     <tr>
-                      <th className="px-3 py-2 text-left font-medium text-muted-foreground">Line</th>
-                      <th className="px-3 py-2 text-left font-medium text-muted-foreground">Qty</th>
-                      <th className="px-3 py-2 text-right font-medium text-muted-foreground">Total</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Line</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Qty</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground">Total</th>
                     </tr>
                   </thead>
                   <tbody>
                     {preview.lines.map((line, index) => (
-                      <tr key={`${line.code}-${index}`} className="border-t">
-                        <td className="px-3 py-2">
+                      <tr key={`${line.code}-${index}`} className="border-t border-border">
+                        <td className="px-4 py-2.5">
                           <div className="font-medium text-card-foreground">{line.description}</div>
                           <div className="text-xs text-muted-foreground">{line.code}</div>
                         </td>
-                        <td className="px-3 py-2 text-card-foreground">{line.quantity}</td>
-                        <td className="px-3 py-2 text-right text-card-foreground">
+                        <td className="px-4 py-2.5 text-card-foreground">{line.quantity}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-card-foreground">
                           {currencyFormatter.format(line.totalPrice)}
                         </td>
                       </tr>
@@ -165,10 +175,13 @@ export default function InvoicePreviewCard({
               </p>
             )}
 
-            <div className="rounded-lg border bg-muted/20 p-4">
+            {!hideFooter ? (
+            <div className="rounded-xl border border-border bg-muted/25 p-4">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Preview total</span>
-                <span className="text-lg font-semibold text-card-foreground">
+                <span className="text-muted-foreground">
+                  {isFinalized ? "Total" : "Estimated total"}
+                </span>
+                <span className="text-lg font-semibold tabular-nums text-card-foreground">
                   {currencyFormatter.format(preview.totalAmount)}
                 </span>
               </div>
@@ -177,16 +190,33 @@ export default function InvoicePreviewCard({
               )}
               {!zeroAmountLabel && (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Pre-shipment stages such as allocation and backorder stay internal; you will see these orders as Processing until they ship.
+                  {isFinalized
+                    ? "Payment has been received at the franchise. Allocation and shipping status are tracked on the order."
+                    : "Pre-shipment stages such as allocation and backorder stay internal; you will see these orders as Processing until they ship."}
                 </p>
               )}
             </div>
+            ) : null}
           </>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Invoice preview is unavailable for the selection.
+            Could not load the invoice for this selection.
           </p>
         )}
+      </>
+  );
+
+  if (variant === "embedded") {
+    return <div className="space-y-3">{body}</div>;
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base text-primary">Invoice</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {body}
       </CardContent>
     </Card>
   );

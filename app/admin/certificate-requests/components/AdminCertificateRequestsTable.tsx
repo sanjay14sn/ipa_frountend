@@ -1,215 +1,110 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/shared";
-import type {
-  DataTableColumn,
-  DataTableFilter,
-} from "@/components/shared";
-import {
-  AdminCertificateRequest,
-  AdminCertificateRequestsByFranchise,
-} from "@/services/student.service";
-import { useToast } from "@/hooks/use-toast";
-import {
-  approveCertificateRequestWithRevalidation,
-  rejectCertificateRequestWithRevalidation,
-} from "@/hooks/api/student.hooks";
+import type { DataTableColumn } from "@/components/shared";
+import type { CertificateFranchiseSummary } from "@/services/student.service";
+import { useAdminCertificateSummaries } from "@/hooks/api/student.hooks";
 import FranchiseCertificateDetails from "./FranchiseCertificateDetails";
 
-interface FranchiseCertGroup {
-  franchiseId: string;
-  franchiseName: string;
-  requests: AdminCertificateRequest[];
-}
-
 interface AdminCertificateRequestsTableProps {
-  certificateRequestsByFranchise?: AdminCertificateRequestsByFranchise;
-  onRefresh?: () => void;
   scopedFranchiseId?: string;
 }
 
 export default function AdminCertificateRequestsTable({
-  certificateRequestsByFranchise,
-  onRefresh,
   scopedFranchiseId,
 }: AdminCertificateRequestsTableProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("Pending");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+  const limit = 10;
 
-  const allGroups = useMemo((): FranchiseCertGroup[] => {
-    if (!certificateRequestsByFranchise) return [];
-    return Object.entries(certificateRequestsByFranchise).map(
-      ([franchiseName, requests]) => ({
-        franchiseId: String(requests[0]?.franchiseId ?? franchiseName),
-        franchiseName,
-        requests,
-      })
-    );
-  }, [certificateRequestsByFranchise]);
-
-  const filteredGroups = useMemo((): FranchiseCertGroup[] => {
-    const scoped = scopedFranchiseId?.trim();
-    return allGroups
-      .map((group) => ({
-        ...group,
-        requests: group.requests.filter((r) => r.status === statusFilter),
-      }))
-      .filter((group) => {
-        if (group.requests.length === 0) return false;
-        if (scoped && group.franchiseId !== scoped) return false;
-        if (searchTerm) {
-          const term = searchTerm.toLowerCase();
-          return (
-            group.franchiseName.toLowerCase().includes(term) ||
-            group.requests.some(
-              (r) =>
-                r.studentName.toLowerCase().includes(term) ||
-                r.studentRollNo.toLowerCase().includes(term) ||
-                r.instructorName.toLowerCase().includes(term)
-            )
-          );
-        }
-        return true;
-      });
-  }, [allGroups, statusFilter, scopedFranchiseId, searchTerm]);
-
-  const totalRequests = useMemo(
-    () => filteredGroups.reduce((a, g) => a + g.requests.length, 0),
-    [filteredGroups]
+  const requestParams = useMemo(
+    () => ({
+      page: currentPage,
+      limit,
+      search: searchTerm || undefined,
+      ...(scopedFranchiseId?.trim()
+        ? { franchiseId: scopedFranchiseId.trim() }
+        : {}),
+    }),
+    [currentPage, searchTerm, scopedFranchiseId],
   );
 
-  const paginatedGroups = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredGroups.slice(start, start + itemsPerPage);
-  }, [filteredGroups, currentPage]);
+  const summariesQuery = useAdminCertificateSummaries(requestParams);
+  const summaries = summariesQuery.data?.data ?? [];
+  const total = summariesQuery.data?.meta.total ?? 0;
+  const totalPages = summariesQuery.data?.meta.totalPages ?? 1;
+  const loading = summariesQuery.isLoading && !summariesQuery.data;
 
-  const totalPages = Math.ceil(filteredGroups.length / itemsPerPage);
-
-  const handleApprove = async (requestId: number) => {
-    try {
-      await approveCertificateRequestWithRevalidation(requestId);
-      toast({
-        title: "Success",
-        description: "Certificate request approved successfully",
-      });
-      onRefresh?.();
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to approve certificate request",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleReject = async (requestId: number) => {
-    try {
-      await rejectCertificateRequestWithRevalidation(requestId);
-      toast({
-        title: "Success",
-        description: "Certificate request rejected successfully",
-      });
-      onRefresh?.();
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to reject certificate request",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "Issued":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "Rejected":
-        return "bg-red-100 text-red-800 border-red-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
-  const columns: DataTableColumn<FranchiseCertGroup>[] = [
+  const columns: DataTableColumn<CertificateFranchiseSummary>[] = [
     {
       key: "franchise",
       header: "Franchise",
       className: "w-[300px]",
     },
     {
-      key: "students",
-      header: "Students",
+      key: "pending",
+      header: "Pending",
       className: "text-center",
-      render: (group) => (
+      render: (g) => (
         <Badge variant="secondary">
-          {group.requests.length} student
-          {group.requests.length !== 1 ? "s" : ""}
+          {g.totalPending} pending
         </Badge>
       ),
     },
     {
-      key: "status",
-      header: "Status",
+      key: "issued",
+      header: "Issued",
       className: "text-center",
-      render: () => (
-        <Badge className={`${getStatusColor(statusFilter)} border`}>
-          {statusFilter}
+      render: (g) => (
+        <Badge variant="outline" className="border-green-300 text-green-700">
+          {g.totalIssued} issued
         </Badge>
       ),
     },
-  ];
-
-  const filters: DataTableFilter[] = [
     {
-      key: "status",
-      label: "Status",
-      options: [
-        { value: "Pending", label: "Pending" },
-        { value: "Issued", label: "Issued" },
-        { value: "Rejected", label: "Rejected" },
-      ],
-      defaultValue: "Pending",
+      key: "rejected",
+      header: "Rejected",
+      className: "text-center",
+      render: (g) => (
+        <Badge variant="outline" className="border-red-300 text-red-700">
+          {g.totalRejected} rejected
+        </Badge>
+      ),
     },
   ];
 
   return (
     <DataTable
-      data={paginatedGroups}
-      loading={false}
+      data={summaries}
+      loading={loading}
       columns={columns}
-      getRowId={(group) => group.franchiseId}
-      renderMainCell={(group) => (
-        <div className="font-medium text-gray-900">{group.franchiseName}</div>
+      getRowId={(g) => g.franchiseId}
+      renderMainCell={(g) => (
+        <div className="font-medium text-gray-900">{g.franchiseName}</div>
       )}
-      renderExpandedContent={(group) => (
+      renderExpandedContent={(g) => (
         <FranchiseCertificateDetails
-          franchiseName={group.franchiseName}
-          requests={group.requests}
-          statusFilter={statusFilter}
-          onApprove={handleApprove}
-          onReject={handleReject}
+          franchiseId={g.franchiseId}
+          franchiseName={g.franchiseName}
+          totalPending={g.totalPending}
+          totalIssued={g.totalIssued}
+          totalRejected={g.totalRejected}
         />
       )}
       searchPlaceholder="Search by student name, roll number, instructor, or franchise..."
-      onSearchChange={setSearchTerm}
-      filters={filters}
-      onFilterChange={(key, value) => {
-        if (key === "status") setStatusFilter(value as string);
+      onSearchChange={(value) => {
+        setSearchTerm(value);
+        setCurrentPage(1);
       }}
-      pagination={{ total: filteredGroups.length, totalPages }}
+      pagination={{ total, totalPages }}
       currentPage={currentPage}
       onPageChange={setCurrentPage}
-      itemsPerPage={itemsPerPage}
-      emptyMessage="No certificate requests found matching your criteria"
-      resultsText={(_, total) =>
-        `Showing ${totalRequests} ${statusFilter.toLowerCase()} certificate request${totalRequests !== 1 ? "s" : ""} across ${total} franchise${total !== 1 ? "s" : ""}`
+      itemsPerPage={limit}
+      emptyMessage="No certificate request activity found for franchises"
+      resultsText={(_, t) =>
+        `${t} franchise${t !== 1 ? "es" : ""} with certificate requests`
       }
     />
   );

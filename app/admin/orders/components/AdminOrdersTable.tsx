@@ -16,6 +16,8 @@ import { verifyShipment, downloadChallan, type VerifyShipmentDto } from "@/servi
 import { useAdminOrderRows } from "@/hooks/api/order.hooks";
 import { VerifyShipmentDialog } from "@/app/admin/shipping/components/VerifyShipmentDialog";
 import { AdminOrderInvoiceDialog } from "./AdminOrderInvoiceDialog";
+import { DispatchItemsSummaryTable } from "./DispatchItemsSummaryTable";
+import { isStandaloneDispatchOrderType } from "./dispatch-order-helpers";
 import { Separator } from "@/components/ui/separator";
 import {
   DataTable,
@@ -172,16 +174,27 @@ export default function AdminOrdersTable({
       {
         key: "franchise",
         header: "Franchise",
-        render: (order) => (
+        render: (order) => {
+          const dispatch = order.dispatchItems ?? [];
+          const certCount = dispatch.filter((d) => d.itemType === "CERTIFICATE").length;
+          const idCount = dispatch.filter((d) => d.itemType === "ID_CARD").length;
+          const materialQty = (order.lineItems ?? []).reduce((s, l) => s + l.quantity, 0);
+          return (
           <div>
             <div className="font-medium">
               {order.franchise?.name ?? order.franchiseId}
             </div>
             <div className="text-xs text-muted-foreground">
-              {order.totalStudents == null ? "—" : `${order.totalStudents} students`} · {order.totalItems ?? 0} items
+              {order.totalStudents == null ? "—" : `${order.totalStudents} students`} ·{" "}
+              {materialQty} inventory qty
+              {certCount > 0
+                ? ` · ${certCount} certificate${certCount === 1 ? "" : "s"}`
+                : ""}
+              {idCount > 0 ? ` · ${idCount} ID card${idCount === 1 ? "" : "s"}` : ""}
             </div>
           </div>
-        ),
+          );
+        },
       },
       {
         key: "payment",
@@ -218,11 +231,14 @@ export default function AdminOrdersTable({
       {
         key: "value",
         header: "Value",
-        render: (order) => (
-          <span className="font-medium">
-            ₹{Number(order.totalAmount).toFixed(2)}
-          </span>
-        ),
+        render: (order) =>
+          isStandaloneDispatchOrderType(order.orderType) ? (
+            <span className="text-sm text-muted-foreground">—</span>
+          ) : (
+            <span className="font-medium">
+              ₹{Number(order.totalAmount).toFixed(2)}
+            </span>
+          ),
       },
       {
         key: "actions",
@@ -319,7 +335,13 @@ export default function AdminOrdersTable({
           </div>
         </div>
       )}
-      renderExpandedContent={(order) => (
+      renderExpandedContent={(order) => {
+        const standalone = isStandaloneDispatchOrderType(order.orderType);
+        const hasDispatch = (order.dispatchItems?.length ?? 0) > 0;
+        const inventoryLines = clubOrderItems(order.lineItems ?? []);
+        const hasInventory = inventoryLines.length > 0;
+
+        return (
         <>
           <ExpandedDetailSection title={`Order #${order.id}`}>
             <DetailFieldsGrid columns={4}>
@@ -328,10 +350,12 @@ export default function AdminOrdersTable({
                 value={new Date(order.createdAt).toLocaleString()}
               />
               <DetailField label="Status" value={order.adminStatus ?? order.status} />
-              <DetailField
-                label="Total amount"
-                value={`₹${Number(order.totalAmount).toFixed(2)}`}
-              />
+              {standalone ? null : (
+                <DetailField
+                  label="Total amount"
+                  value={`₹${Number(order.totalAmount).toFixed(2)}`}
+                />
+              )}
               <DetailField
                 label="Franchise"
                 value={order.franchise?.name ?? String(order.franchiseId ?? "—")}
@@ -342,74 +366,89 @@ export default function AdminOrdersTable({
             </DetailFieldsGrid>
           </ExpandedDetailSection>
 
+          {hasDispatch ? (
+            <>
+              <Separator />
+              <ExpandedDetailSection title="Certificate & ID dispatch">
+                <DispatchItemsSummaryTable items={order.dispatchItems ?? []} />
+              </ExpandedDetailSection>
+            </>
+          ) : null}
+
           <Separator />
 
           <ExpandedDetailSection title="Order details">
-            <div className="space-y-4">
-              <DetailFieldsGrid columns={4}>
-                <DetailField label="Order type" value={order.orderType} />
-                <DetailField
-                  label="Ready to ship"
-                  value={
-                    order.readyToShipAt
-                      ? new Date(order.readyToShipAt).toLocaleString()
-                      : "Not yet"
-                  }
-                />
-                <DetailField label="Notes" value={order.notes || "None"} />
-                <DetailField
-                  label="Shipment"
-                  value={order.shipment?.status || "Not created"}
-                />
-                <DetailField
-                  label="DC Challan"
-                  value={
-                    order.shipment?.dcPdfPath && order.adminStatus !== "Cancelled" ? (
-                      <button
-                        className="flex items-center gap-1 text-primary underline underline-offset-2 hover:opacity-75"
-                        onClick={() => void downloadChallan(order.shipment!.dcPdfPath!)}
-                      >
-                        <Download className="h-3 w-3" />
-                        Download
-                      </button>
-                    ) : (
-                      "Not generated"
-                    )
-                  }
-                />
-              </DetailFieldsGrid>
-
-              <RawTableSurface>
-                <table className="min-w-full text-sm">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="px-3 py-2 text-left">Item</th>
-                      <th className="px-3 py-2 text-left">Ordered</th>
-                      <th className="px-3 py-2 text-left">Reserved</th>
-                      <th className="px-3 py-2 text-left">Backordered</th>
-                      <th className="px-3 py-2 text-left">Fulfilled</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {clubOrderItems(order.lineItems ?? []).map((line) => (
-                      <tr key={line.inventoryId} className="border-t">
-                        <td className="px-3 py-2">
-                          <div className="font-medium">{line.name}</div>
-                          <div className="text-xs text-muted-foreground">{line.sku || "No SKU"}</div>
-                        </td>
-                        <td className="px-3 py-2">{line.quantity}</td>
-                        <td className="px-3 py-2">{line.reservedQty}</td>
-                        <td className="px-3 py-2">{line.backorderedQty}</td>
-                        <td className="px-3 py-2">{line.fulfilledQty}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </RawTableSurface>
-            </div>
+            <DetailFieldsGrid columns={4}>
+              <DetailField label="Order type" value={order.orderType} />
+              <DetailField
+                label="Ready to ship"
+                value={
+                  order.readyToShipAt
+                    ? new Date(order.readyToShipAt).toLocaleString()
+                    : "Not yet"
+                }
+              />
+              <DetailField label="Notes" value={order.notes || "None"} />
+              <DetailField
+                label="Shipment"
+                value={order.shipment?.status || "Not created"}
+              />
+              <DetailField
+                label="DC Challan"
+                value={
+                  order.shipment?.dcPdfPath && order.adminStatus !== "Cancelled" ? (
+                    <button
+                      className="flex items-center gap-1 text-primary underline underline-offset-2 hover:opacity-75"
+                      onClick={() => void downloadChallan(order.shipment!.dcPdfPath!)}
+                    >
+                      <Download className="h-3 w-3" />
+                      Download
+                    </button>
+                  ) : (
+                    "Not generated"
+                  )
+                }
+              />
+            </DetailFieldsGrid>
           </ExpandedDetailSection>
+
+          {hasInventory ? (
+            <>
+              <Separator />
+              <ExpandedDetailSection title="Inventory">
+                <RawTableSurface>
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Item</th>
+                        <th className="px-3 py-2 text-left">Ordered</th>
+                        <th className="px-3 py-2 text-left">Reserved</th>
+                        <th className="px-3 py-2 text-left">Backordered</th>
+                        <th className="px-3 py-2 text-left">Fulfilled</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inventoryLines.map((line) => (
+                        <tr key={line.inventoryId} className="border-t">
+                          <td className="px-3 py-2">
+                            <div className="font-medium">{line.name}</div>
+                            <div className="text-xs text-muted-foreground">{line.sku || "No SKU"}</div>
+                          </td>
+                          <td className="px-3 py-2">{line.quantity}</td>
+                          <td className="px-3 py-2">{line.reservedQty}</td>
+                          <td className="px-3 py-2">{line.backorderedQty}</td>
+                          <td className="px-3 py-2">{line.fulfilledQty}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </RawTableSurface>
+              </ExpandedDetailSection>
+            </>
+          ) : null}
         </>
-      )}
+        );
+      }}
       searchPlaceholder="Search by order, franchise, or status"
       onSearchChange={(s) => {
         setSearch(s);

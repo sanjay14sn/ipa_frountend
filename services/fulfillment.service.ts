@@ -1,5 +1,6 @@
 import { api } from "@/lib/axios";
 import { unwrapData } from "@/lib/unwrap-api";
+import type { DispatchOrderItemAdmin } from "@/services/order.service";
 
 export type ShipmentOrderItem = {
   id: number;
@@ -24,6 +25,8 @@ export type ShipmentData = {
   readyToShipAt: string | null;
   totalItems: number;
   orderItems: ShipmentOrderItem[];
+  /** Certificate / ID card dispatch lines when order is a dispatch shipment */
+  dispatchItems?: DispatchOrderItemAdmin[];
   createdAt: string;
   updatedAt: string;
 };

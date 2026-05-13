@@ -62,6 +62,7 @@ export default function OrderInvoiceDialog({
             preview={invoiceQuery.data ?? null}
             selected={studentIds.length}
             emptyMessage="No student items found in this order."
+            copyVariant="finalized"
           />
         )}
       </DialogContent>

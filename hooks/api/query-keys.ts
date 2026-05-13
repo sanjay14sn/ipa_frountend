@@ -26,6 +26,20 @@ export const queryKeys = {
       [...listQueryKey("certification", params), "admin-requests"] as const,
     franchiseeCerts: (params?: Record<string, unknown> | null) =>
       [...listQueryKey("certification", params), "franchisee"] as const,
+    idCardSummaries: (params?: Record<string, unknown> | null) =>
+      listQueryKey("admin-id-card-summaries", params ?? undefined),
+    idCardDetails: (franchiseId: string, params?: Record<string, unknown> | null) =>
+      listQueryKey("admin-id-card-details", {
+        franchiseId,
+        ...(params ?? {}),
+      }),
+    certSummaries: (params?: Record<string, unknown> | null) =>
+      listQueryKey("admin-cert-summaries", params ?? undefined),
+    certDetails: (franchiseId: string, params?: Record<string, unknown> | null) =>
+      listQueryKey("admin-cert-details", {
+        franchiseId,
+        ...(params ?? {}),
+      }),
   },
   courseInstructors: {
     franchisee: (params?: Record<string, unknown> | null) =>
@@ -62,6 +76,8 @@ export const queryKeys = {
     adminDetail: (id: number) => ["orders", "admin", id] as const,
     franchiseeDetail: (id: number) =>
       ["orders", "franchisee", "detail", id] as const,
+    dispatchEligible: (franchiseId: string) =>
+      ["orders", "dispatch-eligible", franchiseId] as const,
   },
   programs: {
     all: ["programs"] as const,

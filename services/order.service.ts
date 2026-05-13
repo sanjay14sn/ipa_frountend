@@ -88,6 +88,22 @@ export interface ShipmentSummary {
   dcPdfPath?: string | null;
 }
 
+/** Certificate / ID card dispatch line on an order (admin API) */
+export interface DispatchOrderItemAdmin {
+  id: number;
+  itemType: string;
+  studentId: number;
+  studentName: string;
+  rollNo: string;
+  levelId: number | null;
+  progressionId: number | null;
+  levelCode: string | null;
+  levelName: string | null;
+  marksDisplay: string | null;
+  instructorName: string | null;
+  instructorCode: string | null;
+}
+
 export interface OrderData {
   id: number;
   totalItems?: number;
@@ -124,6 +140,7 @@ export interface OrderData {
   dcPdfPath?: string | null;
   shipment?: ShipmentSummary | null;
   paymentDetails?: PaymentDetails | null;
+  dispatchItems?: DispatchOrderItemAdmin[];
 }
 
 export interface CreateOrderDto {
@@ -337,6 +354,24 @@ function toCurrencyString(value: number | string | null | undefined): string {
   return Number(value ?? 0).toFixed(2);
 }
 
+function normalizeDispatchItem(raw: unknown): DispatchOrderItemAdmin {
+  const r = raw as Record<string, unknown>;
+  return {
+    id: Number(r?.id ?? 0),
+    itemType: String(r?.itemType ?? ""),
+    studentId: Number(r?.studentId ?? 0),
+    studentName: String(r?.studentName ?? ""),
+    rollNo: String(r?.rollNo ?? ""),
+    levelId: r?.levelId != null ? Number(r.levelId) : null,
+    progressionId: r?.progressionId != null ? Number(r.progressionId) : null,
+    levelCode: r?.levelCode != null ? String(r.levelCode) : null,
+    levelName: r?.levelName != null ? String(r.levelName) : null,
+    marksDisplay: r?.marksDisplay != null ? String(r.marksDisplay) : null,
+    instructorName: r?.instructorName != null ? String(r.instructorName) : null,
+    instructorCode: r?.instructorCode != null ? String(r.instructorCode) : null,
+  };
+}
+
 function normalizeOrderLine(raw: any): OrderItemData {
   return {
     id: Number(raw?.id ?? 0),
@@ -444,6 +479,9 @@ function normalizeOrder(row: any): OrderData {
         }
       : null,
     paymentDetails: row?.paymentDetails ?? null,
+    dispatchItems: Array.isArray(row?.dispatchItems)
+      ? (row.dispatchItems as unknown[]).map(normalizeDispatchItem)
+      : [],
   };
 }
 
@@ -534,6 +572,24 @@ export async function getAdminOrdersFlat(params?: AdminOrderListParams) {
     limit: normalized.limit,
     totalPages: Math.max(1, Math.ceil(normalized.total / (normalized.limit || 20))),
   };
+}
+
+export interface DispatchEligibleOrder {
+  id: number;
+  referenceId: string;
+  orderType: string;
+  createdAt: string;
+  shipment: { status: string } | null;
+  itemCount: number;
+}
+
+export async function getDispatchEligibleOrders(
+  franchiseId: string,
+): Promise<DispatchEligibleOrder[]> {
+  const response = await api.get("/admin/order/dispatch-eligible", {
+    params: { franchiseId },
+  });
+  return unwrapData<DispatchEligibleOrder[]>(response);
 }
 
 export async function getOrdersByFranchise(): Promise<Record<string, OrderData[]>> {
