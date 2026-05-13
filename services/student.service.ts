@@ -49,7 +49,7 @@ export interface StudentData {
   mail: string;
   standard: string;
   levelId?: number;
-  level: StudentLevel | string | { id: number; name: string; code: string; streamId: number };
+  level: StudentLevel | string | { id: number; name: string; code: string; streamId: number; displayOrder?: number };
   stream: StudentStream | string;
   isActive: boolean;
   idIssued: StudentIdStatus;
@@ -84,6 +84,7 @@ function normalizeStudentLevel(
       name: String(level.name ?? level.code ?? row.levelName ?? "N/A"),
       code: String(level.code ?? level.name ?? row.levelName ?? "N/A"),
       streamId: Number(level.streamId ?? 0),
+      displayOrder: level.displayOrder != null ? Number(level.displayOrder) : undefined,
     };
   }
 
