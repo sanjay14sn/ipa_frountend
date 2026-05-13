@@ -92,7 +92,11 @@ export function AdminOrderInvoiceDialog({
 
   const invoiceQuery = useQuery({
     queryKey: ["admin-order-invoice", orderId, studentIds],
-    queryFn: () => previewOrderInvoice(studentIds, order?.franchiseId),
+    queryFn: () =>
+      previewOrderInvoice({
+        studentIds,
+        franchiseId: order?.franchiseId,
+      }),
     enabled: showInvoicePreview && order != null,
   });
 

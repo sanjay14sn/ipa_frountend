@@ -293,6 +293,8 @@ export interface OrderPaymentResponse {
   paymentType: string;
   key: string;
   studentIds: number[];
+  instructorIds?: number[];
+  startingKitItems?: StartingKitItem[];
   notes?: string;
   isZeroAmount?: boolean;
 }
@@ -819,10 +821,12 @@ export async function initiateOrderPayment(
       franchiseName: createdOrder.franchise?.name ?? "",
       paymentType: "ORDER_PAYMENT",
       key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
-    studentIds: paymentData.studentIds ?? [],
-    notes: paymentData.notes,
-    isZeroAmount: true,
-  };
+      studentIds: paymentData.studentIds ?? [],
+      instructorIds: paymentData.instructorIds,
+      startingKitItems: paymentData.startingKitItems,
+      notes: paymentData.notes,
+      isZeroAmount: true,
+    };
   }
 
   // Non-zero: initiate Razorpay payment BEFORE creating the order.
@@ -858,6 +862,8 @@ export async function initiateOrderPayment(
       process.env.NEXT_PUBLIC_RAZORPAY_KEY ||
       "",
     studentIds: paymentData.studentIds ?? [],
+    instructorIds: paymentData.instructorIds,
+    startingKitItems: paymentData.startingKitItems,
     notes: paymentData.notes,
     isZeroAmount: false,
   };

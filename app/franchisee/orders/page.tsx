@@ -21,6 +21,7 @@ import {
   createOrder,
   verifyOrderPayment,
   OrderStatus,
+  type StartingKitItem,
 } from "@/services/order.service";
 import UnifiedMaterialRequestDialog from "./components/UnifiedMaterialRequestDialog";
 
@@ -40,19 +41,23 @@ export default function FranchiseeOrdersPage() {
   // --- Retry state (preserved when payment is captured but createOrder fails) ---
   const [submitting, setSubmitting] = useState(false);
   const [pendingOrderRetry, setPendingOrderRetry] = useState<{
-    studentIds: number[];
+    studentIds?: number[];
+    instructorIds?: number[];
+    startingKitItems?: StartingKitItem[];
     notes?: string;
     paymentRecordId: number;
   } | null>(null);
 
   const eligibleStudents = useMemo(
     () =>
-      students.filter(
-        (s) =>
-          s.isActive &&
-          !s.materialsOrdered &&
-          (s.level?.displayOrder ?? 1) > 1,
-      ),
+      students.filter((s) => {
+        if (!s.isActive || s.materialsOrdered) return false;
+        const ord =
+          typeof s.level === "object" && s.level != null
+            ? (s.level as { displayOrder?: number }).displayOrder
+            : undefined;
+        return (ord ?? 1) > 1;
+      }),
     [students],
   );
 
@@ -93,6 +98,8 @@ export default function FranchiseeOrdersPage() {
     try {
       await createOrder({
         studentIds: pd.studentIds,
+        instructorIds: pd.instructorIds,
+        startingKitItems: pd.startingKitItems,
         notes: pd.notes,
         paymentRecordId: pd.paymentRecordId,
       });
@@ -106,6 +113,8 @@ export default function FranchiseeOrdersPage() {
       if (pd.paymentRecordId != null) {
         setPendingOrderRetry({
           studentIds: pd.studentIds,
+          instructorIds: pd.instructorIds,
+          startingKitItems: pd.startingKitItems,
           notes: pd.notes,
           paymentRecordId: pd.paymentRecordId,
         });

@@ -37,7 +37,7 @@ export default function OrderInvoiceDialog({
 
   const invoiceQuery = useQuery({
     queryKey: ["order-invoice", orderId],
-    queryFn: () => previewOrderInvoice(studentIds),
+    queryFn: () => previewOrderInvoice({ studentIds }),
     enabled: studentIds.length > 0,
   });
 

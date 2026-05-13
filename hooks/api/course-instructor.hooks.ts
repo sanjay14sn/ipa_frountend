@@ -49,6 +49,7 @@ export function useCourseInstructors(
     CourseInstructorListParams,
     "search" | "page" | "limit" | "sortBy" | "sortOrder"
   >,
+  options?: { enabled?: boolean },
 ) {
   const q = useQuery({
     queryKey: queryKeys.courseInstructors.franchisee(
@@ -63,6 +64,7 @@ export function useCourseInstructors(
         sortOrder: listParams?.sortOrder,
       })).result ?? [],
     placeholderData: (prev) => prev,
+    enabled: options?.enabled ?? true,
   });
   return {
     courseInstructors: q.data ?? [],
