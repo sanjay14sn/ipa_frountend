@@ -320,12 +320,13 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 flex-col rounded-lg border border-dashed bg-slate-50/60 px-2 py-1.5 sm:px-2 sm:py-2",
+        "flex min-h-0 flex-1 flex-col rounded-lg border border-dashed bg-slate-50/60",
+        mode === "purchase-order" ? "gap-0.5 px-1.5 py-1" : "gap-0.5 px-2 py-1.5 sm:px-2 sm:py-2",
         className,
       )}
     >
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-1.5">
-        <h4 className="text-sm font-medium leading-tight text-gray-900">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-1">
+        <h4 className="text-xs font-medium leading-tight text-gray-900 sm:text-sm">
           {mode === "sourcing" ? "Add inventory sourcing" : "Add order lines"}
         </h4>
         {isDirty ? (
@@ -347,8 +348,15 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
       </div>
 
       {isDirty ? (
-        <div className="mt-1.5 max-h-[min(22vh,200px)] shrink-0 space-y-1.5 overflow-y-auto rounded-lg border border-primary/20 bg-primary/5 px-1.5 py-1 sm:px-2 sm:py-1.5">
-          <p className="shrink-0 text-xs font-medium leading-tight text-gray-900">
+        <div
+          className={cn(
+            "mt-1 shrink-0 space-y-1.5 overflow-y-auto rounded-md border border-primary/20 bg-primary/5 px-1 py-0.5 sm:px-1.5 sm:py-1",
+            mode === "purchase-order"
+              ? "max-h-[min(32vh,240px)]"
+              : "max-h-[min(22vh,200px)]",
+          )}
+        >
+          <p className="shrink-0 text-[11px] font-medium leading-tight text-gray-900 sm:text-xs">
             {pendingCount} selected — adjust fields then save
           </p>
           {Object.entries(pending).map(([idStr, draft]) => {
@@ -497,69 +505,65 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
             return (
               <div
                 key={id}
-                className="flex flex-col gap-1.5 rounded-md border bg-background/80 px-1.5 py-1 sm:gap-2 sm:px-2 sm:py-1.5 lg:flex-row lg:items-end lg:gap-3"
+                className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5 rounded border bg-background/80 px-1.5 py-0.5 sm:gap-x-3"
               >
-                <div className="min-w-0 shrink-0 lg:max-w-[min(22rem,30%)] lg:pr-1">
+                <div className="min-w-0 flex-[1_1_38%] sm:flex-[1_1_42%]">
                   <div className="truncate text-sm font-medium leading-tight text-gray-900">
                     {displayName}
                   </div>
-                  <div className="break-words text-xs leading-snug text-muted-foreground">
+                  <div className="truncate text-[11px] leading-tight text-muted-foreground">
                     {displaySkuLine || "—"}
                   </div>
                 </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between sm:gap-2">
-                  <div className="flex min-w-0 flex-1 flex-wrap items-end gap-x-1.5 gap-y-1 sm:gap-x-2 sm:gap-y-1.5">
-                    <div className="min-w-0 flex-1 basis-[6rem] space-y-0.5 sm:max-w-[9rem]">
-                      <Label className="text-[11px] text-muted-foreground">Quantity</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        className="h-8 w-full min-w-0 text-sm"
-                        value={d.orderedQty || ""}
-                        placeholder="1"
-                        onChange={(e) =>
-                          patchDraft(id, {
-                            orderedQty:
-                              e.target.value === ""
-                                ? 0
-                                : Math.max(
-                                    1,
-                                    Math.floor(Number(e.target.value)) || 1,
-                                  ),
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1 basis-[7rem] space-y-0.5 sm:max-w-[12rem]">
-                      <Label className="text-[11px] text-muted-foreground">Unit cost</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        className="h-8 w-full min-w-0 text-sm"
-                        value={d.unitCost || ""}
-                        placeholder="0"
-                        onChange={(e) =>
-                          patchDraft(id, {
-                            unitCost:
-                              e.target.value === ""
-                                ? 0
-                                : Number(e.target.value),
-                          })
-                        }
-                      />
-                    </div>
+                <div className="flex flex-1 flex-wrap items-center justify-end gap-x-2 gap-y-0.5 sm:min-w-0">
+                  <div className="w-[5.25rem] shrink-0 space-y-0">
+                    <Label className="text-[10px] text-muted-foreground">Qty</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      className="h-7 w-full min-w-0 px-1.5 text-sm"
+                      value={d.orderedQty || ""}
+                      placeholder="1"
+                      onChange={(e) =>
+                        patchDraft(id, {
+                          orderedQty:
+                            e.target.value === ""
+                              ? 0
+                              : Math.max(
+                                  1,
+                                  Math.floor(Number(e.target.value)) || 1,
+                                ),
+                        })
+                      }
+                    />
                   </div>
-                  <div className="flex shrink-0 items-end justify-end sm:pl-2 lg:border-l lg:border-border/50 lg:pl-4">
-                    <button
-                      type="button"
-                      onClick={() => toggleItem(id)}
-                      className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-destructive"
-                      aria-label={`Remove ${displayName}`}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                  <div className="w-[6.5rem] shrink-0 space-y-0">
+                    <Label className="text-[10px] text-muted-foreground">Unit cost</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      className="h-7 w-full min-w-0 px-1.5 text-sm"
+                      value={d.unitCost || ""}
+                      placeholder="0"
+                      onChange={(e) =>
+                        patchDraft(id, {
+                          unitCost:
+                            e.target.value === ""
+                              ? 0
+                              : Number(e.target.value),
+                        })
+                      }
+                    />
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleItem(id)}
+                    className="ml-auto shrink-0 rounded p-1 text-gray-400 hover:bg-red-50 hover:text-destructive sm:ml-0"
+                    aria-label={`Remove ${displayName}`}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
             );
@@ -567,13 +571,13 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
         </div>
       ) : null}
 
-      <div
-        className="mt-1.5 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-white shadow-sm"
-        style={{ minHeight: "min(34vh, 360px)" }}
-      >
-        <div className="shrink-0 border-b border-border/80 bg-muted/25 px-1.5 py-1 sm:px-2 sm:py-1.5">
+      <div className="mt-1 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="shrink-0 border-b border-border/80 bg-muted/25 px-1.5 py-0.5 sm:px-2 sm:py-1">
           <Input
-            className="h-8 border-input/80 bg-background text-sm shadow-none"
+            className={cn(
+              "border-input/80 bg-background text-sm shadow-none",
+              mode === "purchase-order" ? "h-7" : "h-8",
+            )}
             placeholder={
               usePoTermList
                 ? "Search by name, SKU, supplier SKU, or preferred…"
@@ -606,7 +610,7 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
               return (
                 <div
                   key={term.id}
-                  className={`flex items-center gap-2 border-b px-2 py-1.5 last:border-b-0 transition-colors sm:gap-2.5 sm:px-2.5 ${
+                  className={`flex items-center gap-1.5 border-b px-1.5 py-1 last:border-b-0 transition-colors sm:gap-2 sm:px-2 ${
                     checked ? "bg-primary/10" : "hover:bg-gray-50"
                   }`}
                 >
@@ -642,7 +646,12 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                       </Badge>
                     )
                   ) : (
-                    <span className="text-xs text-muted-foreground">Edit in list above</span>
+                    <span
+                      className="shrink-0 text-[10px] text-muted-foreground sm:text-xs"
+                      title="Edit in list above"
+                    >
+                      Above
+                    </span>
                   )}
                 </div>
               );
@@ -665,7 +674,7 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
             return (
               <div
                 key={item.id}
-                className={`flex items-center gap-2 border-b px-2 py-1.5 last:border-b-0 transition-colors sm:gap-2.5 sm:px-2.5 ${
+                className={`flex items-center gap-1.5 border-b px-1.5 py-1 last:border-b-0 transition-colors sm:gap-2 sm:px-2 ${
                   checked ? "bg-primary/10" : "hover:bg-gray-50"
                 }`}
               >
@@ -695,7 +704,12 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                     {item.inventoryType}
                   </Badge>
                 ) : (
-                  <span className="text-xs text-muted-foreground">Edit in list above</span>
+                  <span
+                    className="shrink-0 text-[10px] text-muted-foreground sm:text-xs"
+                    title="Edit in list above"
+                  >
+                    Above
+                  </span>
                 )}
               </div>
             );

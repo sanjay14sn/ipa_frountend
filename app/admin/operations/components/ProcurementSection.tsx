@@ -1453,14 +1453,14 @@ export function ProcurementSection() {
       </Dialog>
 
       <Dialog open={isSourcingOpen} onOpenChange={setIsSourcingOpen}>
-        <DialogContent className="flex w-[calc(100%-1rem)] max-h-[92vh] max-w-6xl flex-col gap-2 overflow-hidden p-2 px-2 sm:w-[calc(100%-1.25rem)] sm:gap-2 sm:p-2.5 sm:px-2.5">
+        <DialogContent className="flex w-[calc(100%-1rem)] max-h-[92vh] max-w-6xl flex-col gap-2 overflow-hidden px-4 py-2.5 sm:w-[calc(100%-1.25rem)] sm:gap-2 sm:px-5 sm:py-2.5">
           <DialogHeader className="shrink-0 space-y-1 pr-7">
             <DialogTitle className="text-lg leading-tight">Add sourcing</DialogTitle>
             <DialogDescription className="text-xs leading-snug sm:text-sm">
               Choose one supplier, then select inventory items to create or update sourcing terms in bulk.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col gap-2">
             <div className="shrink-0 space-y-1.5">
               <Label>Supplier</Label>
               <Select
@@ -1469,7 +1469,7 @@ export function ProcurementSection() {
                   setSourcingSupplierId(value === "none" ? "" : Number(value))
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="ring-offset-0 focus-visible:ring-inset">
                   <SelectValue placeholder="Choose supplier" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1545,25 +1545,24 @@ export function ProcurementSection() {
           }
         }}
       >
-        <DialogContent className="flex w-[calc(100%-1rem)] max-h-[92vh] max-w-6xl flex-col gap-2 overflow-hidden p-2 px-2 sm:w-[calc(100%-1.25rem)] sm:gap-2 sm:p-2.5 sm:px-2.5">
-          <DialogHeader className="shrink-0 space-y-1 pr-7">
-            <DialogTitle className="text-lg leading-tight">Create purchase order</DialogTitle>
-            <DialogDescription className="text-xs leading-snug sm:text-sm">
-              Pick a supplier, then select sourcing terms for that supplier to build order lines
-              (quantity and unit cost default from each term). Use Save on the picker to create the
-              purchase order.
+        <DialogContent className="flex w-[calc(100%-1rem)] max-h-[92vh] max-w-6xl flex-col gap-1.5 overflow-hidden p-2 sm:w-[calc(100%-1.25rem)] sm:gap-1.5 sm:p-3">
+          <DialogHeader className="shrink-0 space-y-0.5 pr-7">
+            <DialogTitle className="text-base leading-tight">Create purchase order</DialogTitle>
+            <DialogDescription className="text-xs leading-snug text-muted-foreground">
+              Choose supplier sourcing terms as lines; quantity and unit cost default from each
+              term. Save on the picker creates the order.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-            <div className="shrink-0 space-y-2">
-              <div className="grid gap-2 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>Supplier</Label>
+          <div className="flex min-h-0 flex-1 flex-col gap-1.5">
+            <div className="shrink-0 space-y-1.5">
+              <div className="grid grid-cols-1 gap-1.5 md:grid-cols-12">
+                <div className="space-y-1 md:col-span-4">
+                  <Label className="text-xs">Supplier</Label>
                   <Select
                     value={poForm.supplierId === "" ? "none" : String(poForm.supplierId)}
                     onValueChange={handlePurchaseOrderSupplierSelect}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9 ring-offset-0 focus-visible:ring-inset">
                       <SelectValue placeholder="Choose supplier" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1577,11 +1576,10 @@ export function ProcurementSection() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div className="grid gap-2 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>Reference</Label>
+                <div className="space-y-1 md:col-span-4">
+                  <Label className="text-xs">Reference</Label>
                   <Input
+                    className="h-9"
                     value={poForm.referenceNo}
                     onChange={(event) =>
                       setPoForm((prev) => ({
@@ -1591,9 +1589,10 @@ export function ProcurementSection() {
                     }
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Expected delivery</Label>
+                <div className="space-y-1 md:col-span-4">
+                  <Label className="text-xs">Expected delivery</Label>
                   <Input
+                    className="h-9"
                     type="date"
                     value={poForm.expectedDeliveryAt}
                     onChange={(event) =>
@@ -1604,10 +1603,11 @@ export function ProcurementSection() {
                     }
                   />
                 </div>
-                <div className="space-y-1.5 md:col-span-2">
-                  <Label>Notes</Label>
+                <div className="space-y-1 md:col-span-12">
+                  <Label className="text-xs">Notes</Label>
                   <Textarea
-                    rows={2}
+                    rows={1}
+                    className="min-h-9 resize-y py-2 text-sm leading-snug"
                     value={poForm.notes}
                     onChange={(event) =>
                       setPoForm((prev) => ({ ...prev, notes: event.target.value }))
@@ -1638,7 +1638,7 @@ export function ProcurementSection() {
               </p>
             )}
           </div>
-          <DialogFooter className="shrink-0 gap-2 pt-1 sm:pt-1.5">
+          <DialogFooter className="shrink-0 gap-1.5 pt-0">
             <Button
               variant="outline"
               onClick={() => {
