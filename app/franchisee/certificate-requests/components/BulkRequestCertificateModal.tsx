@@ -27,6 +27,7 @@ import {
   getEligibleCourseInstructorsForCertificate,
 } from "@/services/course-instructor.service";
 import { useBulkRequestCertificates } from "@/hooks/api/student.hooks";
+import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 
 interface BulkRequestCertificateModalProps {
   open: boolean;
@@ -255,11 +256,12 @@ export default function BulkRequestCertificateModal({
                 id="applyToAllMarks"
                 type="number"
                 min="0"
-                value={applyToAllMarks === "0" ? "" : applyToAllMarks}
+                value={applyToAllMarks}
                 onChange={(e) => {
                   const val = e.target.value;
                   setApplyToAllMarks(val);
                 }}
+                onFocus={selectInputValueOnFocus}
                 placeholder="Enter marks (e.g., 85)"
                 className="flex-1"
               />
@@ -295,14 +297,11 @@ export default function BulkRequestCertificateModal({
                     <Input
                       type="number"
                       min="0"
-                      value={
-                        marksMap[student.id] === "0"
-                          ? ""
-                          : marksMap[student.id] || ""
-                      }
+                      value={marksMap[student.id] ?? ""}
                       onChange={(e) =>
                         handleMarksChange(student.id, e.target.value)
                       }
+                      onFocus={selectInputValueOnFocus}
                       placeholder="Marks"
                       required
                     />

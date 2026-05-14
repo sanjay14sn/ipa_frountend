@@ -17,6 +17,7 @@ import {
   CITrainingData,
   CompleteTrainingRequest,
 } from "@/services/course-instructor.service";
+import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 
 interface CompleteTrainingConfirmationProps {
   open: boolean;
@@ -144,6 +145,7 @@ export default function CompleteTrainingConfirmation({
             placeholder="e.g., 95.5"
             value={marksObtained}
             onChange={(e) => setMarksObtained(e.target.value)}
+            onFocus={selectInputValueOnFocus}
             disabled={isCompleting}
           />
         </div>

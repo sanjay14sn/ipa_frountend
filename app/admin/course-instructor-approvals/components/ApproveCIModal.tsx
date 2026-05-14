@@ -23,6 +23,7 @@ import {
   type TrainingLevel,
 } from "@/services/training-level.service";
 import { useToast } from "@/hooks/use-toast";
+import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 
 interface ApproveCIModalProps {
   instructor: AdminCourseInstructorData | null;
@@ -125,8 +126,9 @@ function validatePackages(packages: ApprovalPackageForm[], allLevels: TrainingLe
     if (codeSet.has(normalizedCode)) return "Package code must be unique.";
     codeSet.add(normalizedCode);
 
-    const fee = Number(pkg.fee);
-    if (pkg.fee.trim() === "" || !Number.isFinite(fee) || fee < 0)
+    const feeStr = pkg.fee.trim();
+    const fee = feeStr === "" ? 0 : Number(pkg.fee);
+    if (!Number.isFinite(fee) || fee < 0)
       return "Each package needs a valid fee.";
 
     const levelError = validatePackageLevels(pkg.trainingLevelIds, allLevels);
@@ -437,6 +439,7 @@ export default function ApproveCIModal({
                             step="0.01"
                             value={pkg.fee}
                             onChange={(e) => updatePackage(index, { fee: e.target.value })}
+                            onFocus={selectInputValueOnFocus}
                             placeholder="0"
                             className="h-8 text-center"
                             required

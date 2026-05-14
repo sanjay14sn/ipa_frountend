@@ -14,13 +14,14 @@ import { Button } from "@/components/ui/button";
 import { type StudentData } from "@/services/student.service";
 import {
   initiateOrderPayment,
-  type InvoicePreview,
 } from "@/services/order.service";
 import { useUnifiedInvoicePreview } from "@/hooks/use-unified-invoice-preview";
 import { getAllStreams, type Stream } from "@/services/stream.service";
 import { useCourseInstructors } from "@/hooks/api/course-instructor.hooks";
 import type { CourseInstructorData } from "@/services/course-instructor.service";
-import InvoiceGroupCard from "./checkout/InvoiceGroupCard";
+import UnifiedInvoiceGroupedSummary, {
+  studentLineItems,
+} from "./UnifiedInvoiceGroupedSummary";
 
 interface UnifiedMaterialRequestDialogProps {
   open: boolean;
@@ -52,34 +53,6 @@ function displayInstructorCode(id: string | number | undefined | null): string {
   const t = String(id ?? "").trim();
   if (t === "" || t === "_") return "";
   return t;
-}
-
-function stripStudentLineDescription(description: string): string {
-  const idx = description.indexOf(" - ");
-  return idx !== -1 ? description.slice(idx + 3) : description;
-}
-
-function studentLineItems(
-  preview: InvoicePreview | undefined,
-  studentId: number,
-): Array<{ name: string; quantity: number }> {
-  if (!preview) return [];
-  const group = preview.studentGroups?.find((g) => g.studentId === studentId);
-  if (group?.items?.length) {
-    return group.items
-      .filter((it) => it.itemType === "LEVEL" || it.itemType === "KIT")
-      .map((it) => ({ name: it.name, quantity: it.quantity }));
-  }
-  return preview.lines
-    .filter(
-      (l) =>
-        l.studentId === studentId &&
-        (l.itemType === "LEVEL" || l.itemType === "KIT"),
-    )
-    .map((l) => ({
-      name: stripStudentLineDescription(l.description),
-      quantity: l.quantity,
-    }));
 }
 
 export default function UnifiedMaterialRequestDialog({
@@ -613,166 +586,27 @@ export default function UnifiedMaterialRequestDialog({
               )}
 
               {!emptyInvoice && preview && (
-                <div className="space-y-6">
-                  {startingKitItems.length > 0 &&
-                    (preview.startingKitGroups?.length ?? 0) > 0 && (
-                      <div>
-                        <div className="mb-2 flex items-center justify-between">
-                          <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                            Kits
-                          </h4>
-                          <span className="text-xs text-muted-foreground">
-                            {selectedKitsTotalQty}{" "}
-                            {selectedKitsTotalQty === 1 ? "kit" : "kits"}
-                          </span>
-                        </div>
-                        <div className="space-y-3">
-                          {(preview.startingKitGroups ?? []).map((g) => (
-                            <InvoiceGroupCard
-                              key={g.streamId}
-                              kind="KIT"
-                              title={g.streamName}
-                              kitQty={g.quantity}
-                              costs={[
-                                { label: "Material cost", unit: g.materialUnit },
-                                { label: "Kit cost", unit: g.kitUnit },
-                                { label: "Royalty", unit: g.royaltyUnit },
-                              ]}
-                              items={g.items.map((it) => ({
-                                name: it.name,
-                                quantity: it.quantity,
-                              }))}
-                              totalAmount={
-                                (g.materialUnit + g.kitUnit + g.royaltyUnit) *
-                                g.quantity
-                              }
-                              onRemove={() => setKitQty(g.streamId, 0)}
-                              removeAriaLabel={`Remove starting kit ${g.streamName} from invoice`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                  {selectedStudentIds.length > 0 && (
-                    <div>
-                      <div className="mb-2 flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          Students
-                        </h4>
-                        <span className="text-xs text-muted-foreground">
-                          {selectedStudentIds.length}{" "}
-                          {selectedStudentIds.length === 1
-                            ? "student"
-                            : "students"}
-                        </span>
-                      </div>
-                      <div className="space-y-3">
-                        {selectedStudentIds.map((sid) => {
-                          const student = eligibleStudents.find(
-                            (x) => x.id === sid,
-                          );
-                          const bd = preview.students?.find(
-                            (x) => x.studentId === sid,
-                          );
-                          if (!student || !bd) {
-                            return (
-                              <div
-                                key={sid}
-                                className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground"
-                              >
-                                Loading…
-                              </div>
-                            );
-                          }
-                          const costs = [];
-                          if (bd.materialCost > 0) {
-                            costs.push({
-                              label: "Material cost",
-                              amount: bd.materialCost,
-                            });
-                          }
-                          if (bd.kitCost > 0) {
-                            costs.push({
-                              label: "Starting kit",
-                              amount: bd.kitCost,
-                            });
-                          }
-                          if (bd.royalty > 0) {
-                            costs.push({
-                              label: "Royalty",
-                              amount: bd.royalty,
-                            });
-                          }
-                          return (
-                            <InvoiceGroupCard
-                              key={sid}
-                              kind="STUDENT"
-                              title={student.name}
-                              subtitle={(() => {
-                                const n = String(bd.levelName ?? "").trim();
-                                if (!n || n === "_") return undefined;
-                                return n;
-                              })()}
-                              costs={costs}
-                              items={studentLineItems(preview, sid)}
-                              totalAmount={bd.totalPrice}
-                              onRemove={() => toggleStudent(sid)}
-                              removeAriaLabel={`Remove student ${student.name} from invoice`}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedInstructorIds.length > 0 && (
-                    <div>
-                      <div className="mb-2 flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          Instructors
-                        </h4>
-                        <span className="text-xs text-muted-foreground">
-                          {selectedInstructorIds.length} instructor
-                          {selectedInstructorIds.length !== 1 ? "s" : ""}
-                        </span>
-                      </div>
-                      <div className="space-y-3">
-                        {selectedInstructorIds.map((iid) => {
-                          const ins = instructorById.get(iid);
-                          const grp = preview.instructorGroups?.find(
-                            (g) => g.instructorId === iid,
-                          );
-                          return (
-                            <InvoiceGroupCard
-                              key={iid}
-                              kind="CI"
-                              title={ins?.name ?? grp?.name ?? "Instructor"}
-                              subtitle={(() => {
-                                const raw =
-                                  ins?.instructorId ?? grp?.instructorCode;
-                                const s = displayInstructorCode(raw);
-                                return s || undefined;
-                              })()}
-                              free
-                              items={
-                                grp?.items?.length
-                                  ? grp.items.map((it) => ({
-                                      name: it.name,
-                                      quantity: it.quantity,
-                                    }))
-                                  : []
-                              }
-                              totalAmount={0}
-                              onRemove={() => toggleInstructor(iid)}
-                              removeAriaLabel={`Remove instructor ${ins?.name ?? grp?.name ?? "unknown"} from invoice`}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <UnifiedInvoiceGroupedSummary
+                  preview={preview}
+                  startingKitRows={startingKitItems}
+                  selectedStudentIds={selectedStudentIds}
+                  selectedInstructorIds={selectedInstructorIds}
+                  getStudentById={(id) => {
+                    const s = eligibleStudents.find((x) => x.id === id);
+                    if (s) return { name: s.name };
+                    const bd = preview.students.find((x) => x.studentId === id);
+                    return bd ? { name: bd.studentName } : undefined;
+                  }}
+                  getInstructorById={(id) => {
+                    const c = instructorById.get(id);
+                    return c
+                      ? { name: c.name, instructorId: c.instructorId }
+                      : undefined;
+                  }}
+                  onRemoveKit={(streamId) => setKitQty(streamId, 0)}
+                  onRemoveStudent={(sid) => toggleStudent(sid)}
+                  onRemoveInstructor={(iid) => toggleInstructor(iid)}
+                />
               )}
             </div>
           </div>

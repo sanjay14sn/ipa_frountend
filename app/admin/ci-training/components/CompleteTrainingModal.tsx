@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { completeTraining } from "@/services/course-instructor.service";
 import { useToast } from "@/hooks/use-toast";
+import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 
 interface CompleteTrainingModalProps {
   isOpen: boolean;
@@ -91,8 +92,12 @@ export function CompleteTrainingModal({
     onClose();
   };
 
+  const handleDialogOpenChange = (open: boolean) => {
+    if (!open) handleClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -123,12 +128,11 @@ export function CompleteTrainingModal({
               min="0"
               max="100"
               step="0.01"
-              value={
-                formData.marksObtained === "0" ? "" : formData.marksObtained
-              }
+              value={formData.marksObtained}
               onChange={(e) =>
                 setFormData({ ...formData, marksObtained: e.target.value })
               }
+              onFocus={selectInputValueOnFocus}
               placeholder="e.g., 95.5"
               disabled={loading}
             />

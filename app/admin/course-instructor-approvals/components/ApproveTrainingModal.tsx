@@ -27,6 +27,7 @@ import {
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 import {
   approveTraining,
   ApproveTrainingRequest,
@@ -142,8 +143,12 @@ export default function ApproveTrainingModal({
     }
   };
 
+  const handleDialogOpenChange = (open: boolean) => {
+    if (!open) handleClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Approve Training</DialogTitle>
@@ -194,6 +199,7 @@ export default function ApproveTrainingModal({
               placeholder="Enter training amount"
               value={formData.amount}
               onChange={(e) => handleInputChange("amount", e.target.value)}
+              onFocus={selectInputValueOnFocus}
               required
             />
           </div>

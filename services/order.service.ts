@@ -141,6 +141,8 @@ export interface OrderData {
   shipment?: ShipmentSummary | null;
   paymentDetails?: PaymentDetails | null;
   dispatchItems?: DispatchOrderItemAdmin[];
+  /** Frozen `previewUnified` snapshot from backend when present (unified orders). */
+  invoicePreview?: InvoicePreview | null;
 }
 
 export interface StartingKitItem {
@@ -545,6 +547,10 @@ function normalizeOrder(row: any): OrderData {
     dispatchItems: Array.isArray(row?.dispatchItems)
       ? (row.dispatchItems as unknown[]).map(normalizeDispatchItem)
       : [],
+    invoicePreview:
+      row?.invoicePreview != null && typeof row.invoicePreview === "object"
+        ? parseInvoicePreviewPayload(row.invoicePreview)
+        : null,
   };
 }
 
@@ -786,27 +792,25 @@ function normalizeInstructorGroupPreview(raw: unknown): InstructorGroupPreview |
   };
 }
 
-export async function previewOrderInvoice(
-  dto: Pick<CreateOrderDto, "studentIds" | "instructorIds" | "startingKitItems"> & { franchiseId?: string | number },
-): Promise<InvoicePreview> {
-  const body: Record<string, unknown> = {};
-  if (dto.studentIds != null && dto.studentIds.length > 0) {
-    body.studentIds = dto.studentIds;
+/** Normalize unified / stored preview payload (API or `order.invoicePreview` JSON). */
+export function parseInvoicePreviewPayload(data: unknown): InvoicePreview {
+  if (data == null || typeof data !== "object") {
+    return {
+      franchiseId: "",
+      programId: 0,
+      levelId: 0,
+      isFirstLevel: false,
+      students: [],
+      lines: [],
+      totalAmount: 0,
+      startingKitGroups: [],
+      instructorGroups: [],
+    };
   }
-  if (dto.instructorIds != null && dto.instructorIds.length > 0) {
-    body.instructorIds = dto.instructorIds;
-  }
-  if (dto.startingKitItems != null && dto.startingKitItems.length > 0) {
-    body.startingKitItems = dto.startingKitItems;
-  }
-  if (dto.franchiseId != null && dto.franchiseId !== "") {
-    body.franchiseId = String(dto.franchiseId);
-  }
-  const response = await api.post("/order/preview-invoice", body);
-  const data = unwrapData<any>(response);
+  const d = data as Record<string, unknown>;
 
-  const studentGroups: StudentGroupPreview[] = Array.isArray(data?.studentGroups)
-    ? (data.studentGroups as unknown[])
+  const studentGroups: StudentGroupPreview[] = Array.isArray(d?.studentGroups)
+    ? (d.studentGroups as unknown[])
         .map(normalizeStudentGroupPreview)
         .filter((g): g is StudentGroupPreview => g != null)
     : [];
@@ -824,8 +828,8 @@ export async function previewOrderInvoice(
     durationInMonths: g.durationInMonths,
   }));
 
-  const studentsLegacy: StudentBreakdown[] = Array.isArray(data?.students)
-    ? data.students.map((s: any) => ({
+  const studentsLegacy: StudentBreakdown[] = Array.isArray(d?.students)
+    ? (d!.students as any[]).map((s: any) => ({
         studentId: Number(s?.studentId ?? 0),
         studentName: String(s?.studentName ?? ""),
         levelId: Number(s?.levelId ?? 0),
@@ -846,18 +850,18 @@ export async function previewOrderInvoice(
   const firstLegacy = studentsLegacy[0];
 
   return {
-    franchiseId: String(data?.franchiseId ?? ""),
-    programId: Number(data?.programId ?? 0),
+    franchiseId: String(d?.franchiseId ?? ""),
+    programId: Number(d?.programId ?? 0),
     levelId: Number(
-      data?.levelId ?? firstGroup?.levelId ?? firstLegacy?.levelId ?? 0,
+      d?.levelId ?? firstGroup?.levelId ?? firstLegacy?.levelId ?? 0,
     ),
     isFirstLevel: Boolean(
-      data?.isFirstLevel ?? firstGroup?.isFirstLevel ?? firstLegacy?.isFirstLevel ?? false,
+      d?.isFirstLevel ?? firstGroup?.isFirstLevel ?? firstLegacy?.isFirstLevel ?? false,
     ),
-    totalAmount: Number(data?.totalAmount ?? 0),
+    totalAmount: Number(d?.totalAmount ?? 0),
     students,
-    lines: Array.isArray(data?.lines)
-      ? data.lines.map((line: any) => ({
+    lines: Array.isArray(d?.lines)
+      ? (d.lines as any[]).map((line: any) => ({
           code: String(line?.code ?? ""),
           description: String(line?.description ?? ""),
           quantity: Number(line?.quantity ?? 0),
@@ -870,17 +874,38 @@ export async function previewOrderInvoice(
         }))
       : [],
     studentGroups: studentGroups.length > 0 ? studentGroups : undefined,
-    startingKitGroups: Array.isArray(data?.startingKitGroups)
-      ? (data.startingKitGroups as unknown[])
+    startingKitGroups: Array.isArray(d?.startingKitGroups)
+      ? (d.startingKitGroups as unknown[])
           .map(normalizeStartingKitGroupPreview)
           .filter((g): g is StartingKitGroupPreview => g != null)
       : [],
-    instructorGroups: Array.isArray(data?.instructorGroups)
-      ? (data.instructorGroups as unknown[])
+    instructorGroups: Array.isArray(d?.instructorGroups)
+      ? (d.instructorGroups as unknown[])
           .map(normalizeInstructorGroupPreview)
           .filter((g): g is InstructorGroupPreview => g != null)
       : [],
   };
+}
+
+export async function previewOrderInvoice(
+  dto: Pick<CreateOrderDto, "studentIds" | "instructorIds" | "startingKitItems"> & { franchiseId?: string | number },
+): Promise<InvoicePreview> {
+  const body: Record<string, unknown> = {};
+  if (dto.studentIds != null && dto.studentIds.length > 0) {
+    body.studentIds = dto.studentIds;
+  }
+  if (dto.instructorIds != null && dto.instructorIds.length > 0) {
+    body.instructorIds = dto.instructorIds;
+  }
+  if (dto.startingKitItems != null && dto.startingKitItems.length > 0) {
+    body.startingKitItems = dto.startingKitItems;
+  }
+  if (dto.franchiseId != null && dto.franchiseId !== "") {
+    body.franchiseId = String(dto.franchiseId);
+  }
+  const response = await api.post("/order/preview-invoice", body);
+  const data = unwrapData<any>(response);
+  return parseInvoicePreviewPayload(data);
 }
 
 export async function getInvoiceDetails(

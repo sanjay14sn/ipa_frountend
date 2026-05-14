@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { invalidateStreamsByProgram } from "@/hooks/api/stream.hooks";
 import { invalidateStreamTransitionsByProgram } from "@/hooks/api/stream-transition.hooks";
+import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 
 interface StreamManagementProps {
   programId: number;
@@ -92,7 +93,7 @@ export function StreamManagement({
     isActive: true,
     minAge: "" as string,
     maxAge: "" as string,
-    displayOrder: "0",
+    displayOrder: "" as string,
   });
   const [editFormData, setEditFormData] = useState<UpdateStreamDto>({});
 
@@ -149,7 +150,7 @@ export function StreamManagement({
       isActive: true,
       minAge: "",
       maxAge: "",
-      displayOrder: "0",
+      displayOrder: "",
     });
   };
 
@@ -515,6 +516,8 @@ export function StreamManagement({
                 onChange={(e) =>
                   setFormData({ ...formData, displayOrder: e.target.value })
                 }
+                onFocus={selectInputValueOnFocus}
+                placeholder="0"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -594,16 +597,19 @@ export function StreamManagement({
               <Input
                 type="number"
                 value={
-                  editFormData.displayOrder === undefined
+                  editFormData.displayOrder === undefined ||
+                  editFormData.displayOrder === null
                     ? ""
                     : String(editFormData.displayOrder)
                 }
-                onChange={(e) =>
+                onChange={(e) => {
+                  const v = e.target.value;
                   setEditFormData({
                     ...editFormData,
-                    displayOrder: Number(e.target.value) || 0,
-                  })
-                }
+                    displayOrder: v === "" ? undefined : Number(v),
+                  });
+                }}
+                onFocus={selectInputValueOnFocus}
               />
             </div>
             <div className="flex items-center gap-2">
@@ -715,6 +721,7 @@ export function StreamManagement({
                     toLevelDisplayOrder: e.target.value,
                   })
                 }
+                onFocus={selectInputValueOnFocus}
               />
             </div>
           </div>

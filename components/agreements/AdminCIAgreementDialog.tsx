@@ -23,6 +23,7 @@ import {
 import { getTrainingLevelsByProgram, type TrainingLevel } from "@/services/training-level.service";
 import type { CIAgreementRecord } from "@/services/ci-training.service";
 import { useToast } from "@/hooks/use-toast";
+import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 
 interface AdminCIAgreementDialogProps {
   instructor: { id: number; name?: string; programId?: number } | null;
@@ -68,7 +69,12 @@ function mapPackagesToForm(
       code: pkg.code ?? `PKG-${index + 1}`,
       description: pkg.description ?? "",
       packageOrder: index + 1,
-      fee: String(Number(pkg.fee ?? 0)),
+      fee: (() => {
+        const raw = pkg.fee;
+        if (raw === null || raw === undefined) return "";
+        const n = Number(raw);
+        return Number.isFinite(n) && n === 0 ? "" : String(raw);
+      })(),
       trainingLevelIds: Array.isArray(pkg.trainingLevelIds)
         ? [...new Set(pkg.trainingLevelIds)]
         : [],
@@ -123,8 +129,9 @@ function validatePackages(packages: PackageForm[], allLevels: TrainingLevel[]) {
     }
     codeSet.add(normalizedCode);
 
-    const fee = Number(pkg.fee);
-    if (pkg.fee.trim() === "" || !Number.isFinite(fee) || fee < 0) {
+    const feeStr = pkg.fee.trim();
+    const fee = feeStr === "" ? 0 : Number(pkg.fee);
+    if (!Number.isFinite(fee) || fee < 0) {
       return "Each package needs a valid fee.";
     }
 
@@ -502,6 +509,7 @@ export function AdminCIAgreementDialog({
                       onChange={(event) =>
                         updatePackage(index, { fee: event.target.value })
                       }
+                      onFocus={selectInputValueOnFocus}
                       className="h-9 text-center"
                     />
                   </td>
@@ -550,6 +558,7 @@ export function AdminCIAgreementDialog({
                   onChange={(event) =>
                     updatePackage(index, { fee: event.target.value })
                   }
+                  onFocus={selectInputValueOnFocus}
                 />
               </div>
               <p className="text-xs text-muted-foreground">

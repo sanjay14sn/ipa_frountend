@@ -408,6 +408,22 @@ export async function upsertSupplierItemTerm(
   return normalizeSupplierTerm(unwrapData(response));
 }
 
+export type BulkUpsertSupplierItemTermLine = Omit<
+  UpsertSupplierItemTermDto,
+  "supplierId"
+>;
+
+export async function bulkUpsertSupplierItemTerms(body: {
+  supplierId: number;
+  lines: BulkUpsertSupplierItemTermLine[];
+}): Promise<{ updated: number }> {
+  const response = await api.post(
+    "/admin/procurement/supplier-term/bulk",
+    body,
+  );
+  return unwrapData(response);
+}
+
 export async function createPurchaseOrder(
   body: CreatePurchaseOrderDto,
 ): Promise<PurchaseOrderSummary> {

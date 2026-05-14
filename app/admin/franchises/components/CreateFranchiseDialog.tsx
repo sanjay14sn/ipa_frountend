@@ -30,6 +30,7 @@ import { Program } from "@/services/program.service";
 import { Eye, EyeOff, ArrowRight, CheckCircle, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/error-utils";
+import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 import {
   createFranchiseeByAdmin,
   createPayrollDetails,
@@ -734,6 +735,7 @@ export function CreateFranchiseDialog({
                               val === "" ? 0 : Number(val),
                             );
                           }}
+                          onFocus={selectInputValueOnFocus}
                         />
                       </div>
 
@@ -757,6 +759,7 @@ export function CreateFranchiseDialog({
                               val === "" ? 0 : Number(val),
                             );
                           }}
+                          onFocus={selectInputValueOnFocus}
                         />
                       </div>
 
@@ -801,6 +804,7 @@ export function CreateFranchiseDialog({
                               val === "" ? 0 : Number(val),
                             );
                           }}
+                          onFocus={selectInputValueOnFocus}
                         />
                       </div>
                     </div>
@@ -826,6 +830,7 @@ export function CreateFranchiseDialog({
                               val === "" ? 0 : Number(val),
                             );
                           }}
+                          onFocus={selectInputValueOnFocus}
                         />
                       </div>
 
@@ -850,6 +855,7 @@ export function CreateFranchiseDialog({
                               val === "" ? 0 : Number(val),
                             );
                           }}
+                          onFocus={selectInputValueOnFocus}
                         />
                       </div>
 
@@ -874,6 +880,7 @@ export function CreateFranchiseDialog({
                               val === "" ? 0 : Number(val),
                             );
                           }}
+                          onFocus={selectInputValueOnFocus}
                         />
                       </div>
                     </div>
@@ -921,6 +928,7 @@ export function CreateFranchiseDialog({
                               val === "" ? 0 : Number(val),
                             );
                           }}
+                          onFocus={selectInputValueOnFocus}
                         />
                       </div>
 
@@ -944,6 +952,7 @@ export function CreateFranchiseDialog({
                               val === "" ? 0 : Number(val),
                             );
                           }}
+                          onFocus={selectInputValueOnFocus}
                         />
                       </div>
 
@@ -967,6 +976,7 @@ export function CreateFranchiseDialog({
                               val === "" ? 0 : Number(val),
                             );
                           }}
+                          onFocus={selectInputValueOnFocus}
                         />
                       </div>
                     </div>

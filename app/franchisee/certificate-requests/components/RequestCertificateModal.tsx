@@ -27,6 +27,7 @@ import {
   getEligibleCourseInstructorsForCertificate,
 } from "@/services/course-instructor.service";
 import { useRequestCertificateForStudent } from "@/hooks/api/student.hooks";
+import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 
 interface RequestCertificateModalProps {
   open: boolean;
@@ -211,10 +212,11 @@ export default function RequestCertificateModal({
               id="marksObtained"
               type="number"
               min="0"
-              value={formData.marksObtained === "0" ? "" : formData.marksObtained}
+              value={formData.marksObtained}
               onChange={(e) =>
                 handleInputChange("marksObtained", e.target.value)
               }
+              onFocus={selectInputValueOnFocus}
               placeholder="e.g., 85"
               required
             />

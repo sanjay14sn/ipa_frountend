@@ -49,14 +49,17 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { getAllInventory } from "@/services/inventory.service";
+import { ProcurementBulkLinePicker } from "@/components/procurement/ProcurementBulkLinePicker";
+import type { BulkSourcingLineSubmit } from "@/components/procurement/ProcurementBulkLinePicker";
 import {
+  bulkUpsertSupplierItemTerms,
   createPurchaseOrder,
   createSupplier,
   getPurchaseOrderById,
   postPurchaseReceipt,
-  upsertSupplierItemTerm,
   type CreatePurchaseOrderDto,
   type PostPurchaseReceiptDto,
+  type PurchaseOrderLineInput,
   type PurchaseOrderSummary,
   type Supplier,
   type SupplierItemTerm,
@@ -78,22 +81,8 @@ type SupplierFormState = {
   isActive: boolean;
 };
 
-type SupplierTermFormState = {
-  supplierId: number | "";
-  inventoryItemId: number | "";
-  supplierSku: string;
-  currentUnitCost: number;
-  leadTimeDays: number;
-  moq: number;
-  casePack: number;
-  isPreferred: boolean;
-};
-
 type PurchaseOrderFormState = {
   supplierId: number | "";
-  inventoryItemId: number | "";
-  orderedQty: number;
-  unitCost: number;
   referenceNo: string;
   expectedDeliveryAt: string;
   notes: string;
@@ -125,27 +114,9 @@ const INITIAL_SUPPLIER_FORM: SupplierFormState = {
 const ITEMS_PER_PAGE = 10;
 const ALL_SUPPLIERS_LIMIT = 10_000;
 
-function createTermForm(prefilledInventoryItemId?: number): SupplierTermFormState {
+function createPurchaseOrderForm(): PurchaseOrderFormState {
   return {
     supplierId: "",
-    inventoryItemId: prefilledInventoryItemId ?? "",
-    supplierSku: "",
-    currentUnitCost: 0,
-    leadTimeDays: 0,
-    moq: 0,
-    casePack: 0,
-    isPreferred: true,
-  };
-}
-
-function createPurchaseOrderForm(
-  prefilledInventoryItemId?: number,
-): PurchaseOrderFormState {
-  return {
-    supplierId: "",
-    inventoryItemId: prefilledInventoryItemId ?? "",
-    orderedQty: 1,
-    unitCost: 0,
     referenceNo: "",
     expectedDeliveryAt: "",
     notes: "",
@@ -310,12 +281,12 @@ export function ProcurementSection() {
   const [supplierForm, setSupplierForm] = useState<SupplierFormState>(
     INITIAL_SUPPLIER_FORM,
   );
-  const [termForm, setTermForm] = useState<SupplierTermFormState>(() =>
-    createTermForm(inventoryFilterId),
-  );
   const [poForm, setPoForm] = useState<PurchaseOrderFormState>(() =>
     createPurchaseOrderForm(),
   );
+  const [sourcingSupplierId, setSourcingSupplierId] = useState<number | "">("");
+  const [sourcingItemSeed, setSourcingItemSeed] = useState<number[]>([]);
+  const [poLineSeed, setPoLineSeed] = useState<PurchaseOrderLineInput[] | undefined>();
 
   const [isSupplierOpen, setIsSupplierOpen] = useState(false);
   const [isSourcingOpen, setIsSourcingOpen] = useState(false);
@@ -480,71 +451,26 @@ export function ProcurementSection() {
       ),
     [allSuppliers],
   );
-  const purchaseOrderTermsForItem = useMemo(() => {
-    if (poForm.inventoryItemId === "") return [] as SupplierItemTerm[];
-
-    return allSupplierTerms
-      .filter((term) => term.inventoryItemId === poForm.inventoryItemId)
-      .slice()
-      .sort((left, right) => {
-        if (left.isPreferred !== right.isPreferred) {
-          return Number(right.isPreferred) - Number(left.isPreferred);
-        }
-
-        const leftIsActive = activeSupplierIds.has(left.supplierId);
-        const rightIsActive = activeSupplierIds.has(right.supplierId);
-        if (leftIsActive !== rightIsActive) {
-          return Number(rightIsActive) - Number(leftIsActive);
-        }
-
-        const leftName = left.supplier?.name ?? "";
-        const rightName = right.supplier?.name ?? "";
-        return leftName.localeCompare(rightName);
-      });
-  }, [activeSupplierIds, allSupplierTerms, poForm.inventoryItemId]);
-  const preferredPurchaseOrderTerm = useMemo(
-    () => purchaseOrderTermsForItem[0] ?? null,
-    [purchaseOrderTermsForItem],
-  );
-  const selectedPurchaseOrderTerm = useMemo(() => {
-    if (poForm.supplierId === "") return null;
-    return (
-      purchaseOrderTermsForItem.find((term) => term.supplierId === poForm.supplierId) ??
-      null
+  const linkedItemIdsForSourcingSupplier = useMemo(() => {
+    if (sourcingSupplierId === "") return new Set<number>();
+    return new Set(
+      allSupplierTerms
+        .filter((t) => t.supplierId === sourcingSupplierId)
+        .map((t) => t.inventoryItemId),
     );
-  }, [poForm.supplierId, purchaseOrderTermsForItem]);
-  const purchaseOrderSupplierChoices = useMemo(() => {
-    const termBySupplierId = new Map(
-      purchaseOrderTermsForItem.map((term) => [term.supplierId, term] as const),
-    );
+  }, [allSupplierTerms, sourcingSupplierId]);
 
-    return allSuppliers
-      .slice()
-      .sort((left, right) => {
-        const leftTerm = termBySupplierId.get(left.id);
-        const rightTerm = termBySupplierId.get(right.id);
-        if (Boolean(leftTerm) !== Boolean(rightTerm)) {
-          return Number(Boolean(rightTerm)) - Number(Boolean(leftTerm));
-        }
-        if (leftTerm?.isPreferred !== rightTerm?.isPreferred) {
-          return Number(Boolean(rightTerm?.isPreferred)) - Number(Boolean(leftTerm?.isPreferred));
-        }
-        if (left.isActive !== right.isActive) {
-          return Number(right.isActive) - Number(left.isActive);
-        }
-        return left.name.localeCompare(right.name);
-      })
-      .map((supplier) => ({
-        supplier,
-        term: termBySupplierId.get(supplier.id) ?? null,
-      }));
-  }, [allSuppliers, purchaseOrderTermsForItem]);
-  const selectedPurchaseOrderItem = useMemo(
+  const purchaseOrderSuppliersSorted = useMemo(
     () =>
-      poForm.inventoryItemId === ""
-        ? null
-        : inventoryItems.find((item) => item.id === poForm.inventoryItemId) ?? null,
-    [inventoryItems, poForm.inventoryItemId],
+      allSuppliers
+        .slice()
+        .sort((left, right) => {
+          if (left.isActive !== right.isActive) {
+            return Number(right.isActive) - Number(left.isActive);
+          }
+          return left.name.localeCompare(right.name);
+        }),
+    [allSuppliers],
   );
 
   const receiptRows = useMemo<ReceiptRow[]>(
@@ -581,8 +507,10 @@ export function ProcurementSection() {
 
   useEffect(() => {
     setTermPage(1);
-    if (!inventoryFilterId) return;
-    setTermForm((prev) => ({ ...prev, inventoryItemId: inventoryFilterId }));
+    if (!inventoryFilterId) {
+      return;
+    }
+    setSourcingItemSeed([inventoryFilterId]);
   }, [inventoryFilterId]);
 
   useEffect(() => {
@@ -592,7 +520,8 @@ export function ProcurementSection() {
 
     sourcingShortcutHandled.current = true;
     setActiveTab("suppliers-sourcing");
-    setTermForm(createTermForm(inventoryFilterId));
+    setSourcingSupplierId("");
+    setSourcingItemSeed(inventoryFilterId ? [inventoryFilterId] : []);
     setIsSourcingOpen(true);
 
     const nextParams = new URLSearchParams(searchParams.toString());
@@ -607,113 +536,12 @@ export function ProcurementSection() {
     searchParams,
   ]);
 
-  function applySourcingTermToPurchaseOrderForm(
-    current: PurchaseOrderFormState,
-    term: SupplierItemTerm,
-    options?: { overrideSupplier?: boolean },
-  ): PurchaseOrderFormState {
-    return {
-      ...current,
-      supplierId:
-        options?.overrideSupplier || current.supplierId === ""
-          ? term.supplierId
-          : current.supplierId,
-      orderedQty: suggestPurchaseOrderQuantity(current.orderedQty, term),
-      unitCost: term.currentUnitCost,
-      expectedDeliveryAt:
-        current.expectedDeliveryAt || buildExpectedDeliveryDate(term.leadTimeDays),
-    };
-  }
-
-  function findPurchaseOrderTerm(
-    inventoryItemId: number,
-    supplierId: number,
-  ) {
-    return (
-      allSupplierTerms.find(
-        (term) =>
-          term.inventoryItemId === inventoryItemId && term.supplierId === supplierId,
-      ) ?? null
-    );
-  }
-
-  function handlePurchaseOrderInventoryChange(value: string) {
+  function handlePurchaseOrderSupplierSelect(value: string) {
     if (value === "none") {
-      setPoForm((prev) => ({
-        ...prev,
-        inventoryItemId: "",
-        unitCost: 0,
-        orderedQty: 1,
-      }));
+      setPoForm((prev) => ({ ...prev, supplierId: "" }));
       return;
     }
-
-    const nextInventoryItemId = Number(value);
-    setPoForm((prev) => {
-      const nextBase: PurchaseOrderFormState = {
-        ...prev,
-        inventoryItemId: nextInventoryItemId,
-        unitCost: 0,
-        orderedQty: 1,
-      };
-
-      if (prev.supplierId !== "") {
-        const selectedTerm = findPurchaseOrderTerm(nextInventoryItemId, prev.supplierId);
-        if (selectedTerm) {
-          return applySourcingTermToPurchaseOrderForm(nextBase, selectedTerm);
-        }
-
-        return nextBase;
-      }
-
-      const preferredTerm =
-        allSupplierTerms.find(
-          (term) =>
-            term.inventoryItemId === nextInventoryItemId &&
-            activeSupplierIds.has(term.supplierId) &&
-            term.isPreferred,
-        ) ??
-        allSupplierTerms.find(
-          (term) =>
-            term.inventoryItemId === nextInventoryItemId &&
-            activeSupplierIds.has(term.supplierId),
-        ) ??
-        allSupplierTerms.find((term) => term.inventoryItemId === nextInventoryItemId) ??
-        null;
-
-      return preferredTerm
-        ? applySourcingTermToPurchaseOrderForm(nextBase, preferredTerm, {
-            overrideSupplier: true,
-          })
-        : nextBase;
-    });
-  }
-
-  function handlePurchaseOrderSupplierChange(value: string) {
-    if (value === "none") {
-      setPoForm((prev) => ({
-        ...prev,
-        supplierId: "",
-      }));
-      return;
-    }
-
-    const nextSupplierId = Number(value);
-    setPoForm((prev) => {
-      const nextBase: PurchaseOrderFormState = {
-        ...prev,
-        supplierId: nextSupplierId,
-      };
-
-      if (prev.inventoryItemId === "") {
-        return nextBase;
-      }
-
-      const selectedTerm = findPurchaseOrderTerm(prev.inventoryItemId, nextSupplierId);
-      return selectedTerm
-        ? applySourcingTermToPurchaseOrderForm(nextBase, selectedTerm)
-        : nextBase;
-    });
+    setPoForm((prev) => ({ ...prev, supplierId: Number(value) }));
   }
 
   function openSupplierModal() {
@@ -722,41 +550,136 @@ export function ProcurementSection() {
   }
 
   function openSourcingModal(prefilledInventoryItemId?: number) {
-    setTermForm(createTermForm(prefilledInventoryItemId ?? inventoryFilterId));
+    setSourcingSupplierId("");
+    setSourcingItemSeed(
+      prefilledInventoryItemId != null
+        ? [prefilledInventoryItemId]
+        : inventoryFilterId
+          ? [inventoryFilterId]
+          : [],
+    );
     setActiveTab("suppliers-sourcing");
     setIsSourcingOpen(true);
   }
 
   function openPurchaseOrderModal(prefilledInventoryItemId?: number) {
-    const baseForm = createPurchaseOrderForm(prefilledInventoryItemId);
+    setPoForm(createPurchaseOrderForm());
+    if (prefilledInventoryItemId == null) {
+      setPoLineSeed(undefined);
+      setActiveTab("purchase-orders");
+      setIsPurchaseOrderOpen(true);
+      return;
+    }
     const preferredTerm =
-      prefilledInventoryItemId == null
-        ? null
-        : allSupplierTerms.find(
-            (term) =>
-              term.inventoryItemId === prefilledInventoryItemId &&
-              activeSupplierIds.has(term.supplierId) &&
-              term.isPreferred,
-          ) ??
-          allSupplierTerms.find(
-            (term) =>
-              term.inventoryItemId === prefilledInventoryItemId &&
-              activeSupplierIds.has(term.supplierId),
-          ) ??
-          allSupplierTerms.find(
-            (term) => term.inventoryItemId === prefilledInventoryItemId,
-          ) ??
-          null;
+      allSupplierTerms.find(
+        (term) =>
+          term.inventoryItemId === prefilledInventoryItemId &&
+          activeSupplierIds.has(term.supplierId) &&
+          term.isPreferred,
+      ) ??
+      allSupplierTerms.find(
+        (term) =>
+          term.inventoryItemId === prefilledInventoryItemId &&
+          activeSupplierIds.has(term.supplierId),
+      ) ??
+      allSupplierTerms.find(
+        (term) => term.inventoryItemId === prefilledInventoryItemId,
+      ) ??
+      null;
 
-    setPoForm(
-      preferredTerm
-        ? applySourcingTermToPurchaseOrderForm(baseForm, preferredTerm, {
-            overrideSupplier: true,
-          })
-        : baseForm,
-    );
+    if (preferredTerm) {
+      setPoForm({
+        supplierId: preferredTerm.supplierId,
+        referenceNo: "",
+        expectedDeliveryAt: buildExpectedDeliveryDate(preferredTerm.leadTimeDays),
+        notes: "",
+      });
+      setPoLineSeed([
+        {
+          inventoryItemId: prefilledInventoryItemId,
+          orderedQty: suggestPurchaseOrderQuantity(1, preferredTerm),
+          unitCost: preferredTerm.currentUnitCost,
+        },
+      ]);
+    } else {
+      setPoLineSeed([
+        {
+          inventoryItemId: prefilledInventoryItemId,
+          orderedQty: 1,
+          unitCost: 0,
+        },
+      ]);
+    }
     setActiveTab("purchase-orders");
     setIsPurchaseOrderOpen(true);
+  }
+
+  async function handleBulkSourcingSubmit(lines: BulkSourcingLineSubmit[]) {
+    if (sourcingSupplierId === "") {
+      toast({
+        title: "Validation",
+        description: "Choose a supplier first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      setSubmitting(true);
+      await bulkUpsertSupplierItemTerms({
+        supplierId: Number(sourcingSupplierId),
+        lines,
+      });
+      toast({ title: "Sourcing saved" });
+      setIsSourcingOpen(false);
+      setSourcingSupplierId("");
+      setSourcingItemSeed([]);
+      setTermPage(1);
+      await invalidateProcurementQueries();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: getUserFriendlyMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handlePurchaseOrderPickerSubmit(lines: PurchaseOrderLineInput[]) {
+    if (poForm.supplierId === "") {
+      toast({
+        title: "Validation",
+        description: "Choose a supplier first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const payload: CreatePurchaseOrderDto = {
+      supplierId: Number(poForm.supplierId),
+      referenceNo: poForm.referenceNo || undefined,
+      expectedDeliveryAt: poForm.expectedDeliveryAt || undefined,
+      notes: poForm.notes || undefined,
+      lines,
+    };
+    try {
+      setSubmitting(true);
+      await createPurchaseOrder(payload);
+      toast({ title: "Purchase order created" });
+      setIsPurchaseOrderOpen(false);
+      setPoForm(createPurchaseOrderForm());
+      setPoLineSeed(undefined);
+      setPurchaseOrderPage(1);
+      await invalidateProcurementQueries();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: getUserFriendlyMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function handleCreateSupplier() {
@@ -784,87 +707,6 @@ export function ProcurementSection() {
       setIsSupplierOpen(false);
       setSupplierForm(INITIAL_SUPPLIER_FORM);
       setSupplierPage(1);
-      await invalidateProcurementQueries();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleSaveTerm() {
-    if (termForm.supplierId === "" || termForm.inventoryItemId === "") {
-      toast({
-        title: "Validation",
-        description: "Choose both supplier and inventory item.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      await upsertSupplierItemTerm({
-        supplierId: Number(termForm.supplierId),
-        inventoryItemId: Number(termForm.inventoryItemId),
-        supplierSku: termForm.supplierSku || undefined,
-        currentUnitCost: Number(termForm.currentUnitCost || 0),
-        leadTimeDays: Number(termForm.leadTimeDays || 0),
-        moq: Number(termForm.moq || 0),
-        casePack: Number(termForm.casePack || 0),
-        isPreferred: termForm.isPreferred,
-      });
-      toast({ title: "Sourcing saved" });
-      setIsSourcingOpen(false);
-      setTermForm(createTermForm(inventoryFilterId));
-      setTermPage(1);
-      await invalidateProcurementQueries();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleCreatePurchaseOrder() {
-    if (poForm.supplierId === "" || poForm.inventoryItemId === "") {
-      toast({
-        title: "Validation",
-        description: "Choose supplier and inventory item first.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const payload: CreatePurchaseOrderDto = {
-      supplierId: Number(poForm.supplierId),
-      referenceNo: poForm.referenceNo || undefined,
-      expectedDeliveryAt: poForm.expectedDeliveryAt || undefined,
-      notes: poForm.notes || undefined,
-      lines: [
-        {
-          inventoryItemId: Number(poForm.inventoryItemId),
-          orderedQty: Math.max(1, Number(poForm.orderedQty || 1)),
-          unitCost: Number(poForm.unitCost || 0),
-        },
-      ],
-    };
-
-    try {
-      setSubmitting(true);
-      await createPurchaseOrder(payload);
-      toast({ title: "Purchase order created" });
-      setIsPurchaseOrderOpen(false);
-      setPoForm(createPurchaseOrderForm());
-      setPurchaseOrderPage(1);
       await invalidateProcurementQueries();
     } catch (error) {
       toast({
@@ -1605,47 +1447,20 @@ export function ProcurementSection() {
       </Dialog>
 
       <Dialog open={isSourcingOpen} onOpenChange={setIsSourcingOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[85vh] max-w-6xl flex-col gap-3 overflow-hidden p-3 px-3 sm:gap-4 sm:p-4 sm:px-4">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Add sourcing</DialogTitle>
             <DialogDescription>
-              Inventory shortcuts prefill the item here so Inventory → Procurement feels seamless.
+              Choose one supplier, then select inventory items to create or update sourcing terms in bulk.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Inventory item</Label>
-              <Select
-                value={termForm.inventoryItemId === "" ? "none" : String(termForm.inventoryItemId)}
-                onValueChange={(value) =>
-                  setTermForm((prev) => ({
-                    ...prev,
-                    inventoryItemId: value === "none" ? "" : Number(value),
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose item" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Choose item</SelectItem>
-                  {inventoryItems.map((item) => (
-                    <SelectItem key={item.id} value={String(item.id)}>
-                      {item.name} ({item.sku})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+            <div className="shrink-0 space-y-2">
               <Label>Supplier</Label>
               <Select
-                value={termForm.supplierId === "" ? "none" : String(termForm.supplierId)}
+                value={sourcingSupplierId === "" ? "none" : String(sourcingSupplierId)}
                 onValueChange={(value) =>
-                  setTermForm((prev) => ({
-                    ...prev,
-                    supplierId: value === "none" ? "" : Number(value),
-                  }))
+                  setSourcingSupplierId(value === "none" ? "" : Number(value))
                 }
               >
                 <SelectTrigger>
@@ -1661,339 +1476,175 @@ export function ProcurementSection() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Supplier SKU</Label>
-              <Input
-                value={termForm.supplierSku}
-                onChange={(event) =>
-                  setTermForm((prev) => ({
-                    ...prev,
-                    supplierSku: event.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Unit cost</Label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={termForm.currentUnitCost}
-                onChange={(event) =>
-                  setTermForm((prev) => ({
-                    ...prev,
-                    currentUnitCost: Number(event.target.value) || 0,
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Lead time (days)</Label>
-              <Input
-                type="number"
-                min={0}
-                value={termForm.leadTimeDays}
-                onChange={(event) =>
-                  setTermForm((prev) => ({
-                    ...prev,
-                    leadTimeDays: Number(event.target.value) || 0,
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>MOQ</Label>
-              <Input
-                type="number"
-                min={0}
-                value={termForm.moq}
-                onChange={(event) =>
-                  setTermForm((prev) => ({
-                    ...prev,
-                    moq: Number(event.target.value) || 0,
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Case pack</Label>
-              <Input
-                type="number"
-                min={0}
-                value={termForm.casePack}
-                onChange={(event) =>
-                  setTermForm((prev) => ({
-                    ...prev,
-                    casePack: Number(event.target.value) || 0,
-                  }))
-                }
-              />
-            </div>
-            <div className="flex items-center gap-3 md:col-span-2">
-              <Switch
-                checked={termForm.isPreferred}
-                onCheckedChange={(checked) =>
-                  setTermForm((prev) => ({ ...prev, isPreferred: checked }))
-                }
-              />
-              <Label>Preferred supplier</Label>
-            </div>
+            {sourcingSupplierId !== "" ? (
+              <>
+                <div className="shrink-0 rounded-lg border px-2.5 py-2.5 sm:px-3 sm:py-3">
+                  <div className="mb-2 text-sm font-medium">Existing sourcing</div>
+                  {allSupplierTerms.filter((t) => t.supplierId === sourcingSupplierId)
+                    .length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No rows yet for this supplier.</p>
+                  ) : (
+                    <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto">
+                      {allSupplierTerms
+                        .filter((t) => t.supplierId === sourcingSupplierId)
+                        .map((term) => (
+                          <Badge key={term.id} variant="secondary" className="font-normal">
+                            {term.inventoryItem?.name ?? `Item #${term.inventoryItemId}`}
+                          </Badge>
+                        ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                  <ProcurementBulkLinePicker
+                    key={`sourcing-${String(sourcingSupplierId)}-${sourcingItemSeed.join(",")}`}
+                    mode="sourcing"
+                    resetKey={`${String(sourcingSupplierId)}-${sourcingItemSeed.join(",")}`}
+                    catalogItems={inventoryItems}
+                    isCatalogLoading={inventoryQuery.isLoading}
+                    excludeInventoryIds={linkedItemIdsForSourcingSupplier}
+                    initialSourcingItemIds={sourcingItemSeed}
+                    onSubmitSourcing={handleBulkSourcingSubmit}
+                    className="min-h-0 flex-1"
+                  />
+                </div>
+              </>
+            ) : (
+              <p className="shrink-0 text-sm text-muted-foreground">
+                Select a supplier to enable the item picker. Saving runs from the picker&apos;s Save button.
+              </p>
+            )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSourcingOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => void handleSaveTerm()} disabled={submitting}>
-              Save sourcing
+          <DialogFooter className="shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsSourcingOpen(false);
+                setSourcingSupplierId("");
+                setSourcingItemSeed([]);
+              }}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isPurchaseOrderOpen} onOpenChange={setIsPurchaseOrderOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
+      <Dialog
+        open={isPurchaseOrderOpen}
+        onOpenChange={(open) => {
+          setIsPurchaseOrderOpen(open);
+          if (!open) {
+            setPoLineSeed(undefined);
+          }
+        }}
+      >
+        <DialogContent className="flex max-h-[85vh] max-w-6xl flex-col gap-3 overflow-hidden p-3 px-3 sm:gap-4 sm:p-4 sm:px-4">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Create purchase order</DialogTitle>
             <DialogDescription>
-              Existing sourcing terms are used here to prefill supplier, price, lead time,
-              and MOQ-aware quantities whenever possible.
+              Pick a supplier, add one or more inventory lines (defaults use saved sourcing when
+              available), then use Save on the picker to create the purchase order.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Supplier</Label>
-              <Select
-                value={poForm.supplierId === "" ? "none" : String(poForm.supplierId)}
-                onValueChange={handlePurchaseOrderSupplierChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Choose supplier</SelectItem>
-                  {purchaseOrderSupplierChoices.map(({ supplier, term }) => (
-                    <SelectItem key={supplier.id} value={String(supplier.id)}>
-                      {supplier.name}
-                      {term?.isPreferred
-                        ? " (preferred sourcing)"
-                        : term
-                          ? " (sourcing on file)"
-                          : supplier.isActive
-                            ? ""
-                            : " (inactive)"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Inventory item</Label>
-              <Select
-                value={poForm.inventoryItemId === "" ? "none" : String(poForm.inventoryItemId)}
-                onValueChange={handlePurchaseOrderInventoryChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose item" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Choose item</SelectItem>
-                  {inventoryItems.map((item) => (
-                    <SelectItem key={item.id} value={String(item.id)}>
-                      {item.name} ({item.sku})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {selectedPurchaseOrderItem ? (
-              <div className="rounded-lg border bg-muted/30 p-4 md:col-span-2">
-                {selectedPurchaseOrderTerm ? (
-                  <div className="space-y-3">
-                    <div>
-                      <div className="font-medium">
-                        Using sourcing term from{" "}
-                        {selectedPurchaseOrderTerm.supplier?.name ??
-                          `Supplier #${selectedPurchaseOrderTerm.supplierId}`}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Cost, lead time, and quantity guidance were filled from the saved
-                        sourcing setup for {selectedPurchaseOrderItem.name}. You can still
-                        override any field before saving.
-                      </p>
-                    </div>
-                    <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                      <div>
-                        <div className="text-muted-foreground">Unit cost</div>
-                        <div className="font-medium">
-                          {formatCurrency(selectedPurchaseOrderTerm.currentUnitCost)}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground">Lead time</div>
-                        <div className="font-medium">
-                          {selectedPurchaseOrderTerm.leadTimeDays} day
-                          {selectedPurchaseOrderTerm.leadTimeDays === 1 ? "" : "s"}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground">MOQ / Case pack</div>
-                        <div className="font-medium">
-                          {selectedPurchaseOrderTerm.moq} / {selectedPurchaseOrderTerm.casePack}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground">Supplier SKU</div>
-                        <div className="font-medium">
-                          {selectedPurchaseOrderTerm.supplierSku || "Not set"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : preferredPurchaseOrderTerm ? (
-                  <div className="space-y-3">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <div className="font-medium">Preferred sourcing is available</div>
-                        <p className="text-sm text-muted-foreground">
-                          {preferredPurchaseOrderTerm.supplier?.name ??
-                            `Supplier #${preferredPurchaseOrderTerm.supplierId}`}{" "}
-                          has sourcing details saved for {selectedPurchaseOrderItem.name}.
-                          Apply that term to prefill cost, MOQ, and lead time.
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() =>
-                          setPoForm((prev) =>
-                            applySourcingTermToPurchaseOrderForm(prev, preferredPurchaseOrderTerm, {
-                              overrideSupplier: true,
-                            }),
-                          )
-                        }
-                      >
-                        Use preferred sourcing
-                      </Button>
-                    </div>
-                    <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                      <div>
-                        <div className="text-muted-foreground">Supplier</div>
-                        <div className="font-medium">
-                          {preferredPurchaseOrderTerm.supplier?.name ??
-                            `Supplier #${preferredPurchaseOrderTerm.supplierId}`}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground">Unit cost</div>
-                        <div className="font-medium">
-                          {formatCurrency(preferredPurchaseOrderTerm.currentUnitCost)}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground">Lead time</div>
-                        <div className="font-medium">
-                          {preferredPurchaseOrderTerm.leadTimeDays} day
-                          {preferredPurchaseOrderTerm.leadTimeDays === 1 ? "" : "s"}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground">MOQ / Case pack</div>
-                        <div className="font-medium">
-                          {preferredPurchaseOrderTerm.moq} / {preferredPurchaseOrderTerm.casePack}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <div className="font-medium">No sourcing term on file</div>
-                    <p className="text-sm text-muted-foreground">
-                      This item does not have saved supplier pricing yet. Add sourcing first
-                      if you want automatic supplier and cost defaults.
-                    </p>
-                  </div>
-                )}
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+            <div className="shrink-0 space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Supplier</Label>
+                  <Select
+                    value={poForm.supplierId === "" ? "none" : String(poForm.supplierId)}
+                    onValueChange={handlePurchaseOrderSupplierSelect}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose supplier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Choose supplier</SelectItem>
+                      {purchaseOrderSuppliersSorted.map((supplier) => (
+                        <SelectItem key={supplier.id} value={String(supplier.id)}>
+                          {supplier.name}
+                          {!supplier.isActive ? " (inactive)" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            ) : null}
-            <div className="space-y-2">
-              <Label>Quantity</Label>
-              <Input
-                type="number"
-                min={1}
-                value={poForm.orderedQty}
-                onChange={(event) =>
-                  setPoForm((prev) => ({
-                    ...prev,
-                    orderedQty: Number(event.target.value) || 1,
-                  }))
-                }
-              />
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Reference</Label>
+                  <Input
+                    value={poForm.referenceNo}
+                    onChange={(event) =>
+                      setPoForm((prev) => ({
+                        ...prev,
+                        referenceNo: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Expected delivery</Label>
+                  <Input
+                    type="date"
+                    value={poForm.expectedDeliveryAt}
+                    onChange={(event) =>
+                      setPoForm((prev) => ({
+                        ...prev,
+                        expectedDeliveryAt: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Notes</Label>
+                  <Textarea
+                    rows={3}
+                    value={poForm.notes}
+                    onChange={(event) =>
+                      setPoForm((prev) => ({ ...prev, notes: event.target.value }))
+                    }
+                  />
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Unit cost</Label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={poForm.unitCost}
-                onChange={(event) =>
-                  setPoForm((prev) => ({
-                    ...prev,
-                    unitCost: Number(event.target.value) || 0,
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Reference</Label>
-              <Input
-                value={poForm.referenceNo}
-                onChange={(event) =>
-                  setPoForm((prev) => ({
-                    ...prev,
-                    referenceNo: event.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Expected delivery</Label>
-              <Input
-                type="date"
-                value={poForm.expectedDeliveryAt}
-                onChange={(event) =>
-                  setPoForm((prev) => ({
-                    ...prev,
-                    expectedDeliveryAt: event.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>Notes</Label>
-              <Textarea
-                rows={3}
-                value={poForm.notes}
-                onChange={(event) =>
-                  setPoForm((prev) => ({ ...prev, notes: event.target.value }))
-                }
-              />
-            </div>
+            {poForm.supplierId !== "" ? (
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <ProcurementBulkLinePicker
+                  key={`po-${String(poForm.supplierId)}-${JSON.stringify(poLineSeed ?? [])}`}
+                  mode="purchase-order"
+                  resetKey={`${String(poForm.supplierId)}-${JSON.stringify(poLineSeed ?? [])}`}
+                  catalogItems={inventoryItems}
+                  isCatalogLoading={inventoryQuery.isLoading}
+                  excludeInventoryIds={new Set()}
+                  initialPoLines={poLineSeed}
+                  onSubmitPo={handlePurchaseOrderPickerSubmit}
+                  className="min-h-0 flex-1"
+                />
+              </div>
+            ) : (
+              <p className="shrink-0 text-sm text-muted-foreground">
+                Select a supplier to add order lines.
+              </p>
+            )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPurchaseOrderOpen(false)}>
+          <DialogFooter className="shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsPurchaseOrderOpen(false);
+                setPoLineSeed(undefined);
+              }}
+            >
               Cancel
-            </Button>
-            <Button onClick={() => void handleCreatePurchaseOrder()} disabled={submitting}>
-              Create purchase order
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Post purchase receipt</DialogTitle>
           </DialogHeader>
@@ -2021,12 +1672,15 @@ export function ProcurementSection() {
                     <Input
                       type="number"
                       min={0}
-                      value={line.receivedQty}
+                      value={line.receivedQty || ""}
+                      placeholder="0"
                       onChange={(event) =>
                         updateReceiptLine(
                           index,
                           "receivedQty",
-                          Number(event.target.value) || 0,
+                          event.target.value === ""
+                            ? 0
+                            : Number(event.target.value),
                         )
                       }
                     />
@@ -2036,12 +1690,15 @@ export function ProcurementSection() {
                     <Input
                       type="number"
                       min={0}
-                      value={line.rejectedQty}
+                      value={line.rejectedQty || ""}
+                      placeholder="0"
                       onChange={(event) =>
                         updateReceiptLine(
                           index,
                           "rejectedQty",
-                          Number(event.target.value) || 0,
+                          event.target.value === ""
+                            ? 0
+                            : Number(event.target.value),
                         )
                       }
                     />
@@ -2052,12 +1709,15 @@ export function ProcurementSection() {
                       type="number"
                       min={0}
                       step="0.01"
-                      value={line.unitCost}
+                      value={line.unitCost || ""}
+                      placeholder="0"
                       onChange={(event) =>
                         updateReceiptLine(
                           index,
                           "unitCost",
-                          Number(event.target.value) || 0,
+                          event.target.value === ""
+                            ? 0
+                            : Number(event.target.value),
                         )
                       }
                     />

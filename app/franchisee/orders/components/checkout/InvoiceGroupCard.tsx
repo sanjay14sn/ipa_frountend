@@ -33,7 +33,9 @@ interface InvoiceGroupCardProps {
   costs?: CheckoutCostRow[];
   items: CheckoutLineItem[];
   totalAmount: number;
-  onRemove: () => void;
+  /** When true, hide remove control (finalized order / row invoice). */
+  readOnly?: boolean;
+  onRemove?: () => void;
   removeAriaLabel?: string;
 }
 
@@ -57,10 +59,12 @@ export default function InvoiceGroupCard({
   costs,
   items,
   totalAmount,
+  readOnly = false,
   onRemove,
   removeAriaLabel = "Remove from invoice",
 }: InvoiceGroupCardProps) {
   const qty = kitQty ?? 1;
+  const showRemove = !readOnly && onRemove != null;
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
@@ -94,16 +98,20 @@ export default function InvoiceGroupCard({
             {currencyFormatter.format(totalAmount)}
           </span>
         )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-          onClick={onRemove}
-          aria-label={removeAriaLabel}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        {showRemove ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+            onClick={onRemove}
+            aria-label={removeAriaLabel}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        ) : (
+          <span className="h-8 w-8 shrink-0" aria-hidden />
+        )}
       </div>
 
       {costs && costs.length > 0 && !free ? (

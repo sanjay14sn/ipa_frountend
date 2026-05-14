@@ -11,6 +11,7 @@ import {
   type FranchiseProgramKitItemSummary,
 } from "@/services/inventory.service";
 import { getErrorMessage } from "@/lib/error-utils";
+import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -247,6 +248,7 @@ export function AgreementKitItemsDialog({
                                   event.target.value,
                                 )
                               }
+                              onFocus={selectInputValueOnFocus}
                               disabled={saving}
                             />
                           </td>
@@ -352,6 +354,7 @@ export function AgreementKitItemsDialog({
                       min={1}
                       value={addQuantity}
                       onChange={(event) => setAddQuantity(event.target.value)}
+                      onFocus={selectInputValueOnFocus}
                       className="mt-1 h-9"
                       disabled={saving}
                     />
