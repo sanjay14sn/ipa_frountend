@@ -8,7 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import type { InventoryItemSummary } from "@/services/inventory.service";
-import type { PurchaseOrderLineInput } from "@/services/procurement.service";
+import type {
+  PurchaseOrderLineInput,
+  SupplierItemTerm,
+} from "@/services/procurement.service";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { cn } from "@/lib/utils";
@@ -37,6 +40,21 @@ type PoDraft = {
   unitCost: number;
 };
 
+function suggestPurchaseOrderQuantityFromTerm(
+  requestedQty: number,
+  term?: Pick<SupplierItemTerm, "moq" | "casePack"> | null,
+) {
+  let quantity = Math.max(1, Math.ceil(requestedQty || 1));
+  if (!term) return quantity;
+  if (term.moq > 0) {
+    quantity = Math.max(quantity, term.moq);
+  }
+  if (term.casePack > 0) {
+    quantity = Math.ceil(quantity / term.casePack) * term.casePack;
+  }
+  return quantity;
+}
+
 type ProcurementBulkLinePickerProps =
   | {
       mode: "sourcing";
@@ -60,6 +78,13 @@ type ProcurementBulkLinePickerProps =
       onSubmitPo: (lines: PurchaseOrderLineInput[]) => Promise<void>;
       onSubmitSourcing?: undefined;
       initialPoLines?: PurchaseOrderLineInput[];
+      /**
+       * When set (including `[]`), the scroll list uses these supplier item terms
+       * instead of the full inventory catalog. Omit for legacy inventory-only picking.
+       */
+      supplierTerms?: SupplierItemTerm[];
+      /** True while the global supplier-terms query used to populate `supplierTerms` is still loading */
+      supplierTermsCatalogLoading?: boolean;
       className?: string;
     };
 
@@ -83,6 +108,11 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
     resetKey,
     className,
   } = props;
+
+  const usePoTermList =
+    mode === "purchase-order" && props.supplierTerms !== undefined;
+  const supplierTermsCatalogLoading =
+    mode === "purchase-order" && props.supplierTermsCatalogLoading === true;
 
   const [search, setSearch] = useState("");
   const [pending, setPending] = useState<Record<number, SourcingDraft | PoDraft>>({});
@@ -150,21 +180,55 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
     }
   }, [resetKey, mode, poSeedKey, sourcingSeedKey, excludeKey]);
 
-  const available = useMemo(
+  const availableCatalog = useMemo(
     () => catalogItems.filter((item) => !excludeInventoryIds.has(item.id)),
     [catalogItems, excludeInventoryIds],
   );
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return available;
+  const availableTerms = useMemo(() => {
+    if (mode !== "purchase-order") {
+      return [] as SupplierItemTerm[];
+    }
+    if (props.supplierTerms === undefined) {
+      return [] as SupplierItemTerm[];
+    }
+    return props.supplierTerms.filter(
+      (t) => !excludeInventoryIds.has(t.inventoryItemId),
+    );
+  }, [
+    mode,
+    excludeInventoryIds,
+    mode === "purchase-order" ? props.supplierTerms : undefined,
+  ]);
+
+  const filteredCatalog = useMemo(() => {
+    if (!search.trim()) return availableCatalog;
     const q = search.toLowerCase();
-    return available.filter(
+    return availableCatalog.filter(
       (item) =>
         item.name.toLowerCase().includes(q) ||
         (item.sku ?? "").toLowerCase().includes(q) ||
         (item.category?.name ?? "").toLowerCase().includes(q),
     );
-  }, [available, search]);
+  }, [availableCatalog, search]);
+
+  const filteredTerms = useMemo(() => {
+    if (!search.trim()) return availableTerms;
+    const q = search.toLowerCase();
+    return availableTerms.filter((term) => {
+      const item = catalogItems.find((c) => c.id === term.inventoryItemId);
+      const name = (term.inventoryItem?.name ?? item?.name ?? "").toLowerCase();
+      const sku = (item?.sku ?? term.inventoryItem?.sku ?? "").toLowerCase();
+      const supSku = (term.supplierSku ?? "").toLowerCase();
+      const preferred = term.isPreferred ? "preferred" : "";
+      return (
+        name.includes(q) ||
+        sku.includes(q) ||
+        supSku.includes(q) ||
+        preferred.includes(q)
+      );
+    });
+  }, [availableTerms, search, catalogItems]);
 
   const pendingCount = Object.keys(pending).length;
   const isDirty = pendingCount > 0;
@@ -178,6 +242,16 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
       }
       if (mode === "sourcing") {
         return { ...prev, [id]: defaultSourcingDraft() };
+      }
+      if (mode === "purchase-order" && props.supplierTerms !== undefined) {
+        const term = props.supplierTerms.find((t) => t.inventoryItemId === id);
+        return {
+          ...prev,
+          [id]: {
+            orderedQty: suggestPurchaseOrderQuantityFromTerm(1, term ?? null),
+            unitCost: Number(term?.currentUnitCost ?? 0),
+          },
+        };
       }
       return {
         ...prev,
@@ -246,12 +320,12 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 flex-col rounded-lg border border-dashed bg-slate-50/60 px-2.5 py-3 sm:px-3 sm:py-3",
+        "flex min-h-0 flex-1 flex-col rounded-lg border border-dashed bg-slate-50/60 px-2 py-1.5 sm:px-2 sm:py-2",
         className,
       )}
     >
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
-        <h4 className="text-sm font-medium text-gray-900">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-1.5">
+        <h4 className="text-sm font-medium leading-tight text-gray-900">
           {mode === "sourcing" ? "Add inventory sourcing" : "Add order lines"}
         </h4>
         {isDirty ? (
@@ -273,44 +347,60 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
       </div>
 
       {isDirty ? (
-        <div className="mt-3 max-h-[min(32vh,280px)] shrink-0 space-y-3 overflow-y-auto rounded-lg border border-primary/20 bg-primary/5 px-2 py-2.5 sm:px-2.5 sm:py-3">
-          <p className="shrink-0 text-xs font-medium text-gray-900">
+        <div className="mt-1.5 max-h-[min(22vh,200px)] shrink-0 space-y-1.5 overflow-y-auto rounded-lg border border-primary/20 bg-primary/5 px-1.5 py-1 sm:px-2 sm:py-1.5">
+          <p className="shrink-0 text-xs font-medium leading-tight text-gray-900">
             {pendingCount} selected — adjust fields then save
           </p>
           {Object.entries(pending).map(([idStr, draft]) => {
             const id = Number(idStr);
             const item = catalogItems.find((c) => c.id === id);
-            if (!item) return null;
+            const poTerm =
+              mode === "purchase-order" && props.supplierTerms !== undefined
+                ? props.supplierTerms.find((t) => t.inventoryItemId === id)
+                : undefined;
+            const displayName =
+              poTerm?.inventoryItem?.name ?? item?.name ?? `Item #${id}`;
+            const displaySkuLine =
+              [item?.sku, poTerm?.supplierSku].filter(Boolean).join(" · ") ||
+              poTerm?.inventoryItem?.sku ||
+              item?.sku ||
+              "";
+            if (!item && mode === "sourcing") return null;
+            if (mode === "purchase-order" && !item && !poTerm) return null;
             if (mode === "sourcing") {
               const d = draft as SourcingDraft;
               return (
                 <div
                   key={id}
-                  className="flex flex-col gap-3 rounded-md border bg-background/80 px-2 py-2.5 sm:gap-4 sm:px-3 sm:py-3 lg:flex-row lg:items-end lg:gap-5"
+                  className="flex flex-col gap-1.5 rounded-md border bg-background/80 px-1.5 py-1 sm:gap-2 sm:px-2 sm:py-1.5 lg:flex-row lg:items-end lg:gap-3"
                 >
                   <div className="min-w-0 shrink-0 lg:max-w-[min(22rem,30%)] lg:pr-1">
-                    <div className="truncate text-sm font-medium text-gray-900">{item.name}</div>
-                    <div className="break-words text-xs text-muted-foreground">{item.sku}</div>
+                    <div className="truncate text-sm font-medium leading-tight text-gray-900">
+                      {displayName}
+                    </div>
+                    <div className="break-words text-xs leading-snug text-muted-foreground">
+                      {displaySkuLine || "—"}
+                    </div>
                   </div>
-                  <div className="flex min-w-0 flex-1 flex-col gap-3 lg:flex-row lg:items-end lg:gap-6">
-                    <div className="flex min-w-0 flex-1 flex-wrap items-end gap-x-3 gap-y-3 sm:gap-x-4">
-                      <div className="min-w-0 flex-1 basis-[7rem] space-y-1 sm:max-w-[14rem]">
-                        <Label className="text-xs text-muted-foreground">Supplier SKU</Label>
+                  <div className="flex min-w-0 flex-1 flex-col gap-1.5 lg:flex-row lg:items-end lg:gap-3">
+                    <div className="flex min-w-0 flex-1 flex-wrap items-end gap-x-1.5 gap-y-1 sm:gap-x-2 sm:gap-y-1.5">
+                      <div className="min-w-0 flex-1 basis-[7rem] space-y-0.5 sm:max-w-[14rem]">
+                        <Label className="text-[11px] text-muted-foreground">Supplier SKU</Label>
                         <Input
-                          className="h-9 w-full min-w-0 text-sm"
+                          className="h-8 w-full min-w-0 text-sm"
                           value={d.supplierSku}
                           onChange={(e) =>
                             patchDraft(id, { supplierSku: e.target.value })
                           }
                         />
                       </div>
-                      <div className="min-w-0 flex-1 basis-[5.25rem] space-y-1 sm:max-w-[8rem]">
-                        <Label className="text-xs text-muted-foreground">Cost</Label>
+                      <div className="min-w-0 flex-1 basis-[5.25rem] space-y-0.5 sm:max-w-[8rem]">
+                        <Label className="text-[11px] text-muted-foreground">Cost</Label>
                         <Input
                           type="number"
                           min={0}
                           step="0.01"
-                          className="h-9 w-full min-w-0 text-sm"
+                          className="h-8 w-full min-w-0 text-sm"
                           value={d.currentUnitCost || ""}
                           placeholder="0"
                           onChange={(e) =>
@@ -323,12 +413,12 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                           }
                         />
                       </div>
-                      <div className="min-w-0 flex-1 basis-[5.25rem] space-y-1 sm:max-w-[7rem]">
-                        <Label className="text-xs text-muted-foreground">Lead (days)</Label>
+                      <div className="min-w-0 flex-1 basis-[5.25rem] space-y-0.5 sm:max-w-[7rem]">
+                        <Label className="text-[11px] text-muted-foreground">Lead (days)</Label>
                         <Input
                           type="number"
                           min={0}
-                          className="h-9 w-full min-w-0 text-sm"
+                          className="h-8 w-full min-w-0 text-sm"
                           value={d.leadTimeDays || ""}
                           placeholder="0"
                           onChange={(e) =>
@@ -341,12 +431,12 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                           }
                         />
                       </div>
-                      <div className="min-w-0 flex-1 basis-[5rem] space-y-1 sm:max-w-[7rem]">
-                        <Label className="text-xs text-muted-foreground">MOQ</Label>
+                      <div className="min-w-0 flex-1 basis-[5rem] space-y-0.5 sm:max-w-[7rem]">
+                        <Label className="text-[11px] text-muted-foreground">MOQ</Label>
                         <Input
                           type="number"
                           min={0}
-                          className="h-9 w-full min-w-0 text-sm"
+                          className="h-8 w-full min-w-0 text-sm"
                           value={d.moq || ""}
                           placeholder="0"
                           onChange={(e) =>
@@ -359,12 +449,12 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                           }
                         />
                       </div>
-                      <div className="min-w-0 flex-1 basis-[5rem] space-y-1 sm:max-w-[7rem]">
-                        <Label className="text-xs text-muted-foreground">Case pack</Label>
+                      <div className="min-w-0 flex-1 basis-[5rem] space-y-0.5 sm:max-w-[7rem]">
+                        <Label className="text-[11px] text-muted-foreground">Case pack</Label>
                         <Input
                           type="number"
                           min={0}
-                          className="h-9 w-full min-w-0 text-sm"
+                          className="h-8 w-full min-w-0 text-sm"
                           value={d.casePack || ""}
                           placeholder="0"
                           onChange={(e) =>
@@ -378,9 +468,9 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                         />
                       </div>
                     </div>
-                    <div className="flex shrink-0 items-end gap-4 border-t border-border/50 pt-3 sm:justify-end lg:border-0 lg:pt-0 lg:pl-2 xl:border-l xl:border-border/50 xl:pl-5">
-                      <div className="flex flex-col gap-1">
-                        <Label className="text-xs text-muted-foreground">Preferred</Label>
+                    <div className="flex shrink-0 items-end gap-2 border-t border-border/50 pt-2 sm:justify-end sm:gap-3 lg:border-0 lg:pt-0 lg:pl-2 xl:border-l xl:border-border/50 xl:pl-4">
+                      <div className="flex flex-col gap-0.5">
+                        <Label className="text-[11px] text-muted-foreground">Preferred</Label>
                         <div className="flex items-center gap-2">
                           <Switch
                             checked={d.isPreferred}
@@ -394,7 +484,7 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                         type="button"
                         onClick={() => toggleItem(id)}
                         className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-destructive"
-                        aria-label={`Remove ${item.name}`}
+                        aria-label={`Remove ${displayName}`}
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -407,20 +497,24 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
             return (
               <div
                 key={id}
-                className="flex flex-col gap-3 rounded-md border bg-background/80 px-2 py-2.5 sm:gap-4 sm:px-3 sm:py-3 lg:flex-row lg:items-end lg:gap-5"
+                className="flex flex-col gap-1.5 rounded-md border bg-background/80 px-1.5 py-1 sm:gap-2 sm:px-2 sm:py-1.5 lg:flex-row lg:items-end lg:gap-3"
               >
                 <div className="min-w-0 shrink-0 lg:max-w-[min(22rem,30%)] lg:pr-1">
-                  <div className="truncate text-sm font-medium text-gray-900">{item.name}</div>
-                  <div className="break-words text-xs text-muted-foreground">{item.sku}</div>
+                  <div className="truncate text-sm font-medium leading-tight text-gray-900">
+                    {displayName}
+                  </div>
+                  <div className="break-words text-xs leading-snug text-muted-foreground">
+                    {displaySkuLine || "—"}
+                  </div>
                 </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-                  <div className="flex min-w-0 flex-1 flex-wrap items-end gap-x-3 gap-y-3 sm:gap-x-4">
-                    <div className="min-w-0 flex-1 basis-[6rem] space-y-1 sm:max-w-[9rem]">
-                      <Label className="text-xs text-muted-foreground">Quantity</Label>
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between sm:gap-2">
+                  <div className="flex min-w-0 flex-1 flex-wrap items-end gap-x-1.5 gap-y-1 sm:gap-x-2 sm:gap-y-1.5">
+                    <div className="min-w-0 flex-1 basis-[6rem] space-y-0.5 sm:max-w-[9rem]">
+                      <Label className="text-[11px] text-muted-foreground">Quantity</Label>
                       <Input
                         type="number"
                         min={1}
-                        className="h-9 w-full min-w-0 text-sm"
+                        className="h-8 w-full min-w-0 text-sm"
                         value={d.orderedQty || ""}
                         placeholder="1"
                         onChange={(e) =>
@@ -436,13 +530,13 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                         }
                       />
                     </div>
-                    <div className="min-w-0 flex-1 basis-[7rem] space-y-1 sm:max-w-[12rem]">
-                      <Label className="text-xs text-muted-foreground">Unit cost</Label>
+                    <div className="min-w-0 flex-1 basis-[7rem] space-y-0.5 sm:max-w-[12rem]">
+                      <Label className="text-[11px] text-muted-foreground">Unit cost</Label>
                       <Input
                         type="number"
                         min={0}
                         step="0.01"
-                        className="h-9 w-full min-w-0 text-sm"
+                        className="h-8 w-full min-w-0 text-sm"
                         value={d.unitCost || ""}
                         placeholder="0"
                         onChange={(e) =>
@@ -456,12 +550,12 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                       />
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-end justify-end sm:pl-2 lg:border-l lg:border-border/50 lg:pl-5">
+                  <div className="flex shrink-0 items-end justify-end sm:pl-2 lg:border-l lg:border-border/50 lg:pl-4">
                     <button
                       type="button"
                       onClick={() => toggleItem(id)}
                       className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-destructive"
-                      aria-label={`Remove ${item.name}`}
+                      aria-label={`Remove ${displayName}`}
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -473,34 +567,105 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
         </div>
       ) : null}
 
-      <div className="mt-3 flex min-h-0 min-h-[min(26vh,220px)] flex-1 flex-col overflow-hidden rounded-lg border bg-white shadow-sm">
-        <div className="shrink-0 border-b border-border/80 bg-muted/25 px-2 py-2 sm:px-2.5 sm:py-2.5">
+      <div
+        className="mt-1.5 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-white shadow-sm"
+        style={{ minHeight: "min(34vh, 360px)" }}
+      >
+        <div className="shrink-0 border-b border-border/80 bg-muted/25 px-1.5 py-1 sm:px-2 sm:py-1.5">
           <Input
-            className="h-9 border-input/80 bg-background shadow-none"
-            placeholder="Search by name, SKU, or category..."
+            className="h-8 border-input/80 bg-background text-sm shadow-none"
+            placeholder={
+              usePoTermList
+                ? "Search by name, SKU, supplier SKU, or preferred…"
+                : "Search by name, SKU, or category..."
+            }
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
-        {isCatalogLoading ? (
-          <div className="flex items-center gap-2 px-2.5 py-6 text-sm text-gray-500 sm:px-3">
+        {usePoTermList ? (
+          supplierTermsCatalogLoading && availableTerms.length === 0 ? (
+            <div className="flex items-center gap-2 px-2.5 py-4 text-sm text-gray-500 sm:px-3">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading sourcing terms…
+            </div>
+          ) : filteredTerms.length === 0 ? (
+            <div className="px-2.5 py-4 text-sm text-gray-500 sm:px-3">
+              {availableTerms.length === 0
+                ? "No sourcing terms for this supplier — add them under Suppliers & sourcing."
+                : "No terms match your search."}
+            </div>
+          ) : (
+            filteredTerms.map((term) => {
+              const item = catalogItems.find((c) => c.id === term.inventoryItemId);
+              const rowId = term.inventoryItemId;
+              const name =
+                term.inventoryItem?.name ?? item?.name ?? `Item #${rowId}`;
+              const checked = rowId in pending;
+              return (
+                <div
+                  key={term.id}
+                  className={`flex items-center gap-2 border-b px-2 py-1.5 last:border-b-0 transition-colors sm:gap-2.5 sm:px-2.5 ${
+                    checked ? "bg-primary/10" : "hover:bg-gray-50"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleItem(rowId)}
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                      checked
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-gray-300 bg-white text-transparent"
+                    }`}
+                    aria-label={checked ? `Uncheck ${name}` : `Check ${name}`}
+                  >
+                    <Check className="h-3 w-3" />
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium text-gray-900">{name}</div>
+                    <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-gray-500">
+                      {item?.sku ? <span>{item.sku}</span> : null}
+                      {term.supplierSku ? (
+                        <span>Supplier SKU: {term.supplierSku}</span>
+                      ) : null}
+                    </div>
+                  </div>
+                  {!checked ? (
+                    term.isPreferred ? (
+                      <Badge className="shrink-0 text-[10px] bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+                        Preferred
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="shrink-0 text-[10px]">
+                        {item?.inventoryType ?? "—"}
+                      </Badge>
+                    )
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Edit in list above</span>
+                  )}
+                </div>
+              );
+            })
+          )
+        ) : isCatalogLoading ? (
+          <div className="flex items-center gap-2 px-2.5 py-4 text-sm text-gray-500 sm:px-3">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading inventory catalog...
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="px-2.5 py-6 text-sm text-gray-500 sm:px-3">
-            {available.length === 0
+        ) : filteredCatalog.length === 0 ? (
+          <div className="px-2.5 py-4 text-sm text-gray-500 sm:px-3">
+            {availableCatalog.length === 0
               ? "No items to add (all already linked or excluded)."
               : "No items match your search."}
           </div>
         ) : (
-          filtered.map((item) => {
+          filteredCatalog.map((item) => {
             const checked = item.id in pending;
             return (
               <div
                 key={item.id}
-                className={`flex items-center gap-2.5 border-b px-2 py-2.5 last:border-b-0 transition-colors sm:gap-3 sm:px-2.5 ${
+                className={`flex items-center gap-2 border-b px-2 py-1.5 last:border-b-0 transition-colors sm:gap-2.5 sm:px-2.5 ${
                   checked ? "bg-primary/10" : "hover:bg-gray-50"
                 }`}
               >

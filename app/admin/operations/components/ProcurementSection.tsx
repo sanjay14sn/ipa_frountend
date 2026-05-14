@@ -473,6 +473,11 @@ export function ProcurementSection() {
     [allSuppliers],
   );
 
+  const supplierTermsForPo = useMemo(() => {
+    if (poForm.supplierId === "") return [] as SupplierItemTerm[];
+    return allSupplierTerms.filter((t) => t.supplierId === poForm.supplierId);
+  }, [allSupplierTerms, poForm.supplierId]);
+
   const receiptRows = useMemo<ReceiptRow[]>(
     () =>
       receipts.map((receipt) => {
@@ -537,6 +542,7 @@ export function ProcurementSection() {
   ]);
 
   function handlePurchaseOrderSupplierSelect(value: string) {
+    setPoLineSeed(undefined);
     if (value === "none") {
       setPoForm((prev) => ({ ...prev, supplierId: "" }));
       return;
@@ -1447,15 +1453,15 @@ export function ProcurementSection() {
       </Dialog>
 
       <Dialog open={isSourcingOpen} onOpenChange={setIsSourcingOpen}>
-        <DialogContent className="flex max-h-[85vh] max-w-6xl flex-col gap-3 overflow-hidden p-3 px-3 sm:gap-4 sm:p-4 sm:px-4">
-          <DialogHeader className="shrink-0">
-            <DialogTitle>Add sourcing</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="flex w-[calc(100%-1rem)] max-h-[92vh] max-w-6xl flex-col gap-2 overflow-hidden p-2 px-2 sm:w-[calc(100%-1.25rem)] sm:gap-2 sm:p-2.5 sm:px-2.5">
+          <DialogHeader className="shrink-0 space-y-1 pr-7">
+            <DialogTitle className="text-lg leading-tight">Add sourcing</DialogTitle>
+            <DialogDescription className="text-xs leading-snug sm:text-sm">
               Choose one supplier, then select inventory items to create or update sourcing terms in bulk.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-            <div className="shrink-0 space-y-2">
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+            <div className="shrink-0 space-y-1.5">
               <Label>Supplier</Label>
               <Select
                 value={sourcingSupplierId === "" ? "none" : String(sourcingSupplierId)}
@@ -1478,8 +1484,8 @@ export function ProcurementSection() {
             </div>
             {sourcingSupplierId !== "" ? (
               <>
-                <div className="shrink-0 rounded-lg border px-2.5 py-2.5 sm:px-3 sm:py-3">
-                  <div className="mb-2 text-sm font-medium">Existing sourcing</div>
+                <div className="shrink-0 rounded-lg border px-2 py-1.5 sm:px-2 sm:py-2">
+                  <div className="mb-1 text-sm font-medium leading-tight">Existing sourcing</div>
                   {allSupplierTerms.filter((t) => t.supplierId === sourcingSupplierId)
                     .length === 0 ? (
                     <p className="text-sm text-muted-foreground">No rows yet for this supplier.</p>
@@ -1515,7 +1521,7 @@ export function ProcurementSection() {
               </p>
             )}
           </div>
-          <DialogFooter className="shrink-0">
+          <DialogFooter className="shrink-0 gap-2 pt-1 sm:pt-1.5">
             <Button
               variant="outline"
               onClick={() => {
@@ -1539,18 +1545,19 @@ export function ProcurementSection() {
           }
         }}
       >
-        <DialogContent className="flex max-h-[85vh] max-w-6xl flex-col gap-3 overflow-hidden p-3 px-3 sm:gap-4 sm:p-4 sm:px-4">
-          <DialogHeader className="shrink-0">
-            <DialogTitle>Create purchase order</DialogTitle>
-            <DialogDescription>
-              Pick a supplier, add one or more inventory lines (defaults use saved sourcing when
-              available), then use Save on the picker to create the purchase order.
+        <DialogContent className="flex w-[calc(100%-1rem)] max-h-[92vh] max-w-6xl flex-col gap-2 overflow-hidden p-2 px-2 sm:w-[calc(100%-1.25rem)] sm:gap-2 sm:p-2.5 sm:px-2.5">
+          <DialogHeader className="shrink-0 space-y-1 pr-7">
+            <DialogTitle className="text-lg leading-tight">Create purchase order</DialogTitle>
+            <DialogDescription className="text-xs leading-snug sm:text-sm">
+              Pick a supplier, then select sourcing terms for that supplier to build order lines
+              (quantity and unit cost default from each term). Use Save on the picker to create the
+              purchase order.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-            <div className="shrink-0 space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+            <div className="shrink-0 space-y-2">
+              <div className="grid gap-2 md:grid-cols-2">
+                <div className="space-y-1.5">
                   <Label>Supplier</Label>
                   <Select
                     value={poForm.supplierId === "" ? "none" : String(poForm.supplierId)}
@@ -1571,8 +1578,8 @@ export function ProcurementSection() {
                   </Select>
                 </div>
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
+              <div className="grid gap-2 md:grid-cols-2">
+                <div className="space-y-1.5">
                   <Label>Reference</Label>
                   <Input
                     value={poForm.referenceNo}
@@ -1584,7 +1591,7 @@ export function ProcurementSection() {
                     }
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label>Expected delivery</Label>
                   <Input
                     type="date"
@@ -1597,10 +1604,10 @@ export function ProcurementSection() {
                     }
                   />
                 </div>
-                <div className="space-y-2 md:col-span-2">
+                <div className="space-y-1.5 md:col-span-2">
                   <Label>Notes</Label>
                   <Textarea
-                    rows={3}
+                    rows={2}
                     value={poForm.notes}
                     onChange={(event) =>
                       setPoForm((prev) => ({ ...prev, notes: event.target.value }))
@@ -1618,6 +1625,8 @@ export function ProcurementSection() {
                   catalogItems={inventoryItems}
                   isCatalogLoading={inventoryQuery.isLoading}
                   excludeInventoryIds={new Set()}
+                  supplierTerms={supplierTermsForPo}
+                  supplierTermsCatalogLoading={allSupplierTermsQuery.isLoading}
                   initialPoLines={poLineSeed}
                   onSubmitPo={handlePurchaseOrderPickerSubmit}
                   className="min-h-0 flex-1"
@@ -1629,7 +1638,7 @@ export function ProcurementSection() {
               </p>
             )}
           </div>
-          <DialogFooter className="shrink-0">
+          <DialogFooter className="shrink-0 gap-2 pt-1 sm:pt-1.5">
             <Button
               variant="outline"
               onClick={() => {
