@@ -101,6 +101,13 @@ type ReceiptRow = {
   linePreview: string;
 };
 
+type ReceiptPoLineSnapshot = {
+  inventoryItemId: number;
+  orderedQty: number;
+  priorReceivedQty: number;
+  unitCost: number;
+};
+
 const INITIAL_SUPPLIER_FORM: SupplierFormState = {
   name: "",
   contactPerson: "",
@@ -293,6 +300,9 @@ export function ProcurementSection() {
   const [isPurchaseOrderOpen, setIsPurchaseOrderOpen] = useState(false);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [receiptOrderId, setReceiptOrderId] = useState<number | null>(null);
+  const [receiptPoSnapshot, setReceiptPoSnapshot] = useState<
+    ReceiptPoLineSnapshot[] | null
+  >(null);
   const [receiptBody, setReceiptBody] = useState<PostPurchaseReceiptDto>({
     lines: [],
   });
@@ -729,6 +739,14 @@ export function ProcurementSection() {
     try {
       const order = await getPurchaseOrderById(orderId);
       setReceiptOrderId(orderId);
+      setReceiptPoSnapshot(
+        order.lines.map((line) => ({
+          inventoryItemId: line.inventoryItemId,
+          orderedQty: line.orderedQty,
+          priorReceivedQty: line.receivedQty,
+          unitCost: Number(line.unitCost ?? 0),
+        })),
+      );
       setReceiptBody({
         lines: order.lines.map((line) => ({
           inventoryItemId: line.inventoryItemId,
@@ -747,15 +765,33 @@ export function ProcurementSection() {
     }
   }
 
+  function handleReceiptDialogOpenChange(open: boolean) {
+    setIsReceiptOpen(open);
+    if (!open) {
+      setReceiptOrderId(null);
+      setReceiptPoSnapshot(null);
+      setReceiptBody({ lines: [] });
+    }
+  }
+
   async function handlePostReceipt() {
     if (!receiptOrderId) return;
 
     try {
       setSubmitting(true);
-      await postPurchaseReceipt(receiptOrderId, receiptBody);
+      const payload: PostPurchaseReceiptDto = {
+        lines: receiptBody.lines.map((line, index) => ({
+          ...line,
+          unitCost:
+            receiptPoSnapshot?.[index]?.unitCost ?? Number(line.unitCost ?? 0),
+        })),
+      };
+      await postPurchaseReceipt(receiptOrderId, payload);
       toast({ title: "Receipt posted" });
       setIsReceiptOpen(false);
       setReceiptOrderId(null);
+      setReceiptPoSnapshot(null);
+      setReceiptBody({ lines: [] });
       setPurchaseOrderPage(1);
       setReceiptPage(1);
       await invalidateProcurementQueries();
@@ -772,7 +808,7 @@ export function ProcurementSection() {
 
   function updateReceiptLine(
     index: number,
-    key: keyof PostPurchaseReceiptDto["lines"][number],
+    key: "receivedQty" | "rejectedQty",
     value: number,
   ) {
     setReceiptBody((prev) => ({
@@ -1652,90 +1688,163 @@ export function ProcurementSection() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen}>
-        <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Post purchase receipt</DialogTitle>
+      <Dialog open={isReceiptOpen} onOpenChange={handleReceiptDialogOpenChange}>
+        <DialogContent className="flex w-[calc(100%-1rem)] max-h-[min(80vh,580px)] max-w-5xl flex-col gap-2 overflow-hidden p-3 sm:w-[calc(100%-1.25rem)] sm:gap-2 sm:p-4">
+          <DialogHeader className="shrink-0 space-y-1 pr-7">
+            <DialogTitle className="text-lg leading-tight">
+              Post purchase receipt
+            </DialogTitle>
+            {receiptOrderId !== null ? (
+              <DialogDescription className="text-xs leading-snug sm:text-sm">
+                PO #{receiptOrderId} — ordered quantities are from the purchase
+                order. Unit cost is taken from the PO line (not editable).
+              </DialogDescription>
+            ) : null}
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-0.5">
             {receiptBody.lines.map((line, index) => {
               const item = inventoryItems.find(
                 (inventoryItem) => inventoryItem.id === line.inventoryItemId,
               );
+              const meta = receiptPoSnapshot?.[index];
+              const orderedQty = meta?.orderedQty ?? 0;
+              const priorReceived = meta?.priorReceivedQty ?? 0;
+              const openQty = Math.max(0, orderedQty - priorReceived);
+              const moveTotal = line.receivedQty + line.rejectedQty;
+              const exceedsOpen = moveTotal > openQty;
+              const leavesOpen = Math.max(0, openQty - moveTotal);
 
               return (
                 <div
                   key={`${line.inventoryItemId}-${index}`}
-                  className="grid gap-3 rounded-lg border p-3 md:grid-cols-4"
+                  className="space-y-2 rounded-md border border-border/80 px-4 py-3"
                 >
-                  <div>
-                    <div className="font-medium">
-                      {item?.name ?? `Item #${line.inventoryItemId}`}
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-3">
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <div className="text-sm font-medium leading-snug">
+                        {item?.name ?? `Item #${line.inventoryItemId}`}
+                      </div>
+                      <div className="text-xs leading-tight text-muted-foreground">
+                        {item?.sku ?? "No SKU"}
+                      </div>
+                      <div className="pt-0.5 text-[11px] leading-tight text-muted-foreground">
+                        <span>
+                          This receipt:{" "}
+                          <span className="font-medium text-foreground">
+                            {line.receivedQty}
+                          </span>{" "}
+                          accepted,{" "}
+                          <span className="font-medium text-foreground">
+                            {line.rejectedQty}
+                          </span>{" "}
+                          rejected ({moveTotal} of {openQty} open)
+                        </span>
+                        {leavesOpen > 0 && !exceedsOpen ? (
+                          <span className="text-muted-foreground">
+                            {" "}
+                            · {leavesOpen} still open after this receipt
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {item?.sku ?? "No SKU"}
+                    <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
+                      <div className="min-w-0 shrink-0 overflow-x-auto sm:overflow-visible">
+                        <div className="flex w-max max-w-full shrink-0 items-center gap-2 rounded-md border bg-muted/30 px-1 py-1 sm:max-w-none sm:gap-0 sm:px-0 sm:py-1">
+                          <div className="flex shrink-0 flex-col gap-0.5 px-2 py-0 sm:px-3">
+                            <span className="whitespace-nowrap text-xs font-medium uppercase tracking-wide leading-none text-muted-foreground">
+                              Ordered
+                            </span>
+                            <span className="flex h-8 items-center text-sm font-medium tabular-nums leading-none">
+                              {orderedQty}
+                            </span>
+                          </div>
+                          <div className="flex shrink-0 flex-col gap-0.5 px-2 py-0 sm:px-3">
+                            <span className="whitespace-nowrap text-xs font-medium uppercase tracking-wide leading-none text-muted-foreground">
+                              Prev. recv.
+                            </span>
+                            <span className="flex h-8 items-center text-sm font-medium tabular-nums leading-none">
+                              {priorReceived}
+                            </span>
+                          </div>
+                          <div className="flex shrink-0 flex-col gap-0.5 px-2 py-0 sm:px-3">
+                            <span className="whitespace-nowrap text-xs font-medium uppercase tracking-wide leading-none text-muted-foreground">
+                              Open
+                            </span>
+                            <span className="flex h-8 items-center text-sm font-semibold tabular-nums leading-none">
+                              {openQty}
+                            </span>
+                          </div>
+                          <div className="flex min-w-[6.75rem] shrink-0 flex-col gap-0.5 border-l border-border/60 px-2 py-0 sm:min-w-[7rem] sm:px-3">
+                            <span className="whitespace-nowrap text-xs font-medium uppercase tracking-wide leading-none text-muted-foreground">
+                              Unit cost
+                            </span>
+                            <span className="flex h-8 items-center text-sm font-medium tabular-nums leading-none">
+                              {meta != null
+                                ? formatCurrency(meta.unitCost)
+                                : formatCurrency(line.unitCost)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <div className="flex min-w-0 flex-col gap-1.5">
+                          <Label className="text-xs leading-none text-muted-foreground">
+                            Accepted
+                          </Label>
+                          <Input
+                            className="h-8 w-[3.5rem] px-1.5 text-right text-xs tabular-nums"
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={line.receivedQty || ""}
+                            placeholder="0"
+                            onChange={(event) =>
+                              updateReceiptLine(
+                                index,
+                                "receivedQty",
+                                event.target.value === ""
+                                  ? 0
+                                  : Number(event.target.value),
+                              )
+                            }
+                          />
+                        </div>
+                        <div className="flex min-w-0 flex-col gap-1.5">
+                          <Label className="text-xs leading-none text-muted-foreground">
+                            Rejected
+                          </Label>
+                          <Input
+                            className="h-8 w-[3.5rem] px-1.5 text-right text-xs tabular-nums"
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={line.rejectedQty || ""}
+                            placeholder="0"
+                            onChange={(event) =>
+                              updateReceiptLine(
+                                index,
+                                "rejectedQty",
+                                event.target.value === ""
+                                  ? 0
+                                  : Number(event.target.value),
+                              )
+                            }
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <Label>Received</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={line.receivedQty || ""}
-                      placeholder="0"
-                      onChange={(event) =>
-                        updateReceiptLine(
-                          index,
-                          "receivedQty",
-                          event.target.value === ""
-                            ? 0
-                            : Number(event.target.value),
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Rejected</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={line.rejectedQty || ""}
-                      placeholder="0"
-                      onChange={(event) =>
-                        updateReceiptLine(
-                          index,
-                          "rejectedQty",
-                          event.target.value === ""
-                            ? 0
-                            : Number(event.target.value),
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Unit cost</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={line.unitCost || ""}
-                      placeholder="0"
-                      onChange={(event) =>
-                        updateReceiptLine(
-                          index,
-                          "unitCost",
-                          event.target.value === ""
-                            ? 0
-                            : Number(event.target.value),
-                        )
-                      }
-                    />
-                  </div>
+                  {exceedsOpen ? (
+                    <p className="text-xs font-medium text-amber-700 dark:text-amber-500">
+                      Accepted + rejected ({moveTotal}) is more than the open
+                      quantity ({openQty}) for this line.
+                    </p>
+                  ) : null}
                 </div>
               );
             })}
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0 gap-1.5 pt-1">
             <Button variant="outline" onClick={() => setIsReceiptOpen(false)}>
               Cancel
             </Button>

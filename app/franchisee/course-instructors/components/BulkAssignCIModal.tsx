@@ -34,8 +34,8 @@ export default function BulkAssignCIModal({ session, onClose }: BulkAssignCIModa
 
   return (
     <Dialog open={session != null} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[560px]">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] flex-col gap-2 overflow-hidden sm:max-w-[560px]">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Assign CIs to Session</DialogTitle>
           <DialogDescription>
             {session
@@ -45,8 +45,8 @@ export default function BulkAssignCIModal({ session, onClose }: BulkAssignCIModa
         </DialogHeader>
 
         {session ? (
-          <div className="space-y-4">
-            <div className="rounded-lg border p-3">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+            <div className="shrink-0 rounded-lg border p-3">
               <div className="mb-2 text-sm font-medium">Assigned CIs</div>
               {isLoadingAssigned ? (
                 <p className="text-sm text-muted-foreground">Loading...</p>
@@ -74,6 +74,7 @@ export default function BulkAssignCIModal({ session, onClose }: BulkAssignCIModa
 
             <WaitingCICheckboxAssignPanel
               key={session.id}
+              className="min-h-0 flex-1"
               waitingCIs={waiting}
               isWaitingLoading={isLoadingWaiting}
               onSave={async (assignmentIds) => {

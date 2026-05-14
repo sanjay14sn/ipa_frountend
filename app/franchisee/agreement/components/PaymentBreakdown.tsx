@@ -74,18 +74,18 @@ function LevelRecurringFeesBreakdown({ payroll }: { payroll: any }) {
   const { l1, l2 } = getRoyaltyDurationsMonths(program);
 
   const rows: { label: string; amount: number }[] = [
-    { label: "Term fees (per month)", amount: termFees },
-    { label: "CI share (per month)", amount: ci },
-    { label: "Franchise share (per month)", amount: franchise },
-    { label: "Royalty (per month)", amount: royalty },
+    { label: "Term fees", amount: termFees },
+    { label: "CI share", amount: ci },
+    { label: "Franchise share", amount: franchise },
+    { label: "Royalty", amount: royalty },
   ];
 
   return (
     <div className="col-span-2 space-y-2 rounded-xl border border-border bg-accent/30 p-3 text-sm">
       <p className="font-medium text-card-foreground">Per-level recurring fees</p>
       <p className="text-xs text-muted-foreground">
-        Term fees (monthly fee), CI share, franchise share and royalty are per month for the level
-        duration shown below.
+        Term fees (monthly fee), CI share, franchise share and royalty use the monthly rate × the
+        months shown in each column (total for that level period).
       </p>
       <p className="text-xs text-muted-foreground">
         Level 2 onwards: same per-month amounts for each Level 2+ enrollment over that level&apos;s
@@ -119,10 +119,10 @@ function LevelRecurringFeesBreakdown({ payroll }: { payroll: any }) {
               <TableRow key={r.label}>
                 <TableCell className="text-muted-foreground">{r.label}</TableCell>
                 <TableCell className="text-right font-semibold text-card-foreground">
-                  ₹{fmtMoney(r.amount)}
+                  ₹{fmtMoney(r.amount * l1)}
                 </TableCell>
                 <TableCell className="text-right font-semibold text-card-foreground">
-                  ₹{fmtMoney(r.amount)}
+                  ₹{fmtMoney(r.amount * l2)}
                 </TableCell>
               </TableRow>
             ))}

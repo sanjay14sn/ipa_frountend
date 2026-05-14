@@ -93,17 +93,17 @@ export function LevelMaterialsPicker({
           </Button>
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent className="sm:max-w-[560px]">
-              <DialogHeader>
+            <DialogContent className="flex max-h-[90vh] flex-col gap-2 overflow-hidden sm:max-w-[560px]">
+              <DialogHeader className="shrink-0">
                 <DialogTitle>Level Materials</DialogTitle>
                 <DialogDescription>
                   Add and remove inventory items for this level.
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-4">
+              <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
                 {/* Section 1: Already linked */}
-                <div className="rounded-lg border p-3">
+                <div className="shrink-0 rounded-lg border p-3">
                   <div className="mb-2 text-sm font-medium">Linked items</div>
                   {isLoadingAssigned || isLoadingCatalog ? (
                     <p className="text-sm text-muted-foreground">Loading...</p>
@@ -140,6 +140,7 @@ export function LevelMaterialsPicker({
                 {/* Sections 2 + 3: Pending selections + catalog */}
                 <InventoryCheckboxLinkPanel
                   key={levelId}
+                  className="min-h-0 flex-1"
                   linkedInventoryIds={assignedIds}
                   catalogItems={catalog}
                   isCatalogLoading={isLoadingCatalog}

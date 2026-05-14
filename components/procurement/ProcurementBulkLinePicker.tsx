@@ -13,6 +13,7 @@ import type {
   SupplierItemTerm,
 } from "@/services/procurement.service";
 import { useToast } from "@/hooks/use-toast";
+import { CATALOG_PENDING_SPLIT_ROW_HEIGHT } from "@/lib/catalog-line-split-layout";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { cn } from "@/lib/utils";
 
@@ -347,15 +348,21 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
         ) : null}
       </div>
 
-      {isDirty ? (
-        <div
-          className={cn(
-            "mt-1 shrink-0 space-y-1.5 overflow-y-auto rounded-md border border-primary/20 bg-primary/5 px-1 py-0.5 sm:px-1.5 sm:py-1",
-            mode === "purchase-order"
-              ? "max-h-[min(32vh,240px)]"
-              : "max-h-[min(22vh,200px)]",
-          )}
-        >
+      <div
+        className={cn(
+          "mt-1 flex min-h-0 flex-1",
+          isDirty ? "grid grid-cols-1 gap-2" : "flex-col gap-2",
+        )}
+        style={
+          isDirty
+            ? {
+                gridTemplateRows: `${CATALOG_PENDING_SPLIT_ROW_HEIGHT} ${CATALOG_PENDING_SPLIT_ROW_HEIGHT}`,
+              }
+            : { minHeight: "min(48vh, 420px)" }
+        }
+      >
+        {isDirty ? (
+          <div className="h-full min-h-0 space-y-1.5 overflow-y-auto rounded-md border border-primary/20 bg-primary/5 px-1 py-0.5 sm:px-1.5 sm:py-1">
           <p className="shrink-0 text-[11px] font-medium leading-tight text-gray-900 sm:text-xs">
             {pendingCount} selected — adjust fields then save
           </p>
@@ -380,9 +387,9 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
               return (
                 <div
                   key={id}
-                  className="flex flex-col gap-1.5 rounded-md border bg-background/80 px-1.5 py-1 sm:gap-2 sm:px-2 sm:py-1.5 lg:flex-row lg:items-end lg:gap-3"
+                  className="flex w-full flex-col gap-1.5 rounded-md border bg-background/80 px-1.5 py-1 sm:gap-2 sm:px-2 sm:py-1.5 lg:flex-row lg:items-end lg:justify-between lg:gap-3"
                 >
-                  <div className="min-w-0 shrink-0 lg:max-w-[min(22rem,30%)] lg:pr-1">
+                  <div className="min-w-0 max-w-full shrink-0 lg:max-w-[min(26rem,48%)] lg:pr-2">
                     <div className="truncate text-sm font-medium leading-tight text-gray-900">
                       {displayName}
                     </div>
@@ -390,7 +397,7 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                       {displaySkuLine || "—"}
                     </div>
                   </div>
-                  <div className="flex min-w-0 flex-1 flex-col gap-1.5 lg:flex-row lg:items-end lg:gap-3">
+                  <div className="flex w-full min-w-0 flex-col gap-1.5 lg:w-auto lg:flex-row lg:items-end lg:justify-end lg:gap-3">
                     <div className="flex min-w-0 flex-1 flex-wrap items-end gap-x-1.5 gap-y-1 sm:gap-x-2 sm:gap-y-1.5">
                       <div className="min-w-0 flex-1 basis-[7rem] space-y-0.5 sm:max-w-[14rem]">
                         <Label className="text-[11px] text-muted-foreground">Supplier SKU</Label>
@@ -505,9 +512,9 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
             return (
               <div
                 key={id}
-                className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5 rounded border bg-background/80 px-1.5 py-0.5 sm:gap-x-3"
+                className="flex flex-row flex-wrap items-center justify-between gap-x-2 gap-y-0.5 rounded border bg-background/80 px-1.5 py-0.5 sm:gap-x-3"
               >
-                <div className="min-w-0 flex-[1_1_38%] sm:flex-[1_1_42%]">
+                <div className="min-w-0 max-w-[50%] shrink-0 sm:max-w-[45%]">
                   <div className="truncate text-sm font-medium leading-tight text-gray-900">
                     {displayName}
                   </div>
@@ -515,7 +522,7 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                     {displaySkuLine || "—"}
                   </div>
                 </div>
-                <div className="flex flex-1 flex-wrap items-center justify-end gap-x-2 gap-y-0.5 sm:min-w-0">
+                <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-x-2 gap-y-0.5 sm:min-w-0">
                   <div className="w-[5.25rem] shrink-0 space-y-0">
                     <Label className="text-[10px] text-muted-foreground">Qty</Label>
                     <Input
@@ -569,9 +576,13 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
             );
           })}
         </div>
-      ) : null}
-
-      <div className="mt-1 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-white shadow-sm">
+        ) : null}
+        <div
+          className={cn(
+            "flex min-h-0 flex-col overflow-hidden rounded-lg border bg-white shadow-sm",
+            isDirty ? "h-full min-h-0" : "flex-1",
+          )}
+        >
         <div className="shrink-0 border-b border-border/80 bg-muted/25 px-1.5 py-0.5 sm:px-2 sm:py-1">
           <Input
             className={cn(
@@ -716,6 +727,7 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
           })
         )}
         </div>
+      </div>
       </div>
     </div>
   );

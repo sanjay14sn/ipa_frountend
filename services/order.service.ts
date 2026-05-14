@@ -501,11 +501,26 @@ function normalizeOrder(row: any): OrderData {
     ? groupedKeys.filter(k => k.startsWith("CI:")).length
     : null;
 
+  // ipa-new lists aggregate counts from invoice preview, dispatch, and lines.
+  // Do not overwrite those with derived bucket counts (lines may omit studentId / instructorId).
+  const totalStudents =
+    row?.totalStudents !== undefined
+      ? row.totalStudents == null
+        ? null
+        : Number(row.totalStudents)
+      : derivedStudents;
+  const totalInstructors =
+    row?.totalInstructors !== undefined
+      ? row.totalInstructors == null
+        ? null
+        : Number(row.totalInstructors)
+      : derivedInstructors;
+
   return {
     id: Number(row?.id ?? 0),
     totalItems: Number(row?.totalItems ?? lineItems.length),
-    totalStudents: derivedStudents,
-    totalInstructors: derivedInstructors,
+    totalStudents,
+    totalInstructors,
     totalAmount: toCurrencyString(row?.totalAmount),
     status,
     adminStatus: row?.adminStatus ?? undefined,
