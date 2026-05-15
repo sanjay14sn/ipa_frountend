@@ -30,12 +30,18 @@ import {
   getAdminIdCardDetails,
   getAdminCertificateSummaries,
   getAdminCertificatesByFranchise,
+  getAdminStudentLifecycle,
+  getFranchiseeStudentLifecycle,
+  runStudentLifecycleInvalidation,
+  extendStudentLifecycle,
+  reactivateStudentLifecycle,
   bulkDispatchCertificates,
   bulkDispatchIdCards,
   type StudentData,
   type StudentPaginationParams,
   type CertificatePaginationParams,
   type PaginationMeta,
+  type StudentLifecycleRow,
 } from "@/services/student.service";
 import { getDispatchEligibleOrders } from "@/services/order.service";
 import { queryKeys } from "./query-keys";
@@ -49,6 +55,7 @@ export {
   type AdminCertificateRequest,
   type AdminCertificateRequestsByFranchise,
   type FranchiseeCertificate,
+  type StudentLifecycleRow,
 } from "@/services/student.service";
 
 function wantsStudentPagination(params?: StudentPaginationParams): boolean {
@@ -234,6 +241,23 @@ export function useAdminCertificateDetails(
   });
 }
 
+export function useAdminStudentLifecycle(params: StudentPaginationParams) {
+  return useQuery({
+    queryKey: queryKeys.studentAdmin.lifecycle(params as Record<string, unknown>),
+    queryFn: () => getAdminStudentLifecycle(params),
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useFranchiseeStudentLifecycle(studentId: number | null) {
+  return useQuery({
+    queryKey:
+      studentId != null ? queryKeys.students.lifecycle(studentId) : ["students", "lifecycle", "idle"],
+    queryFn: () => getFranchiseeStudentLifecycle(studentId!),
+    enabled: studentId != null,
+  });
+}
+
 export function useFranchiseeCertificates(
   params?: CertificatePaginationParams,
 ) {
@@ -411,6 +435,38 @@ function invalidateCertificateRequestDomains(qc: QueryClient) {
   void qc.invalidateQueries({ queryKey: STUDENTS_LIST_PREFIX });
   void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
   void qc.invalidateQueries({ queryKey: ["admin-cert-details", "list"] });
+}
+
+function invalidateStudentLifecycleDomains(qc: QueryClient) {
+  void qc.invalidateQueries({ queryKey: ["admin-student-lifecycle", "list"] });
+  void qc.invalidateQueries({ queryKey: STUDENTS_LIST_PREFIX });
+  void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
+  void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
+  void qc.invalidateQueries({ queryKey: ["admin-cert-details", "list"] });
+}
+
+export function useRunStudentLifecycleInvalidation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: runStudentLifecycleInvalidation,
+    onSuccess: () => invalidateStudentLifecycleDomains(qc),
+  });
+}
+
+export function useExtendStudentLifecycle() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: extendStudentLifecycle,
+    onSuccess: () => invalidateStudentLifecycleDomains(qc),
+  });
+}
+
+export function useReactivateStudentLifecycle() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: reactivateStudentLifecycle,
+    onSuccess: () => invalidateStudentLifecycleDomains(qc),
+  });
 }
 
 export function useRequestCertificateForStudent() {

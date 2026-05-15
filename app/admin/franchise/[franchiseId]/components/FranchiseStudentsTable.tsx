@@ -50,16 +50,44 @@ export function FranchiseStudentsTable({
 
   const columns: DataTableColumn<StudentData>[] = useMemo(
     () => [
-      { key: "rollNo", header: "Roll no." },
+      {
+        key: "student",
+        header: "Student",
+        className: "min-w-[220px]",
+      },
+      {
+        key: "rollNo",
+        header: "Roll No",
+        className: "min-w-[20rem] whitespace-nowrap",
+        render: (s) => {
+          const roll = s.rollNo?.trim() ? s.rollNo : "N/A";
+          return (
+            <span
+              className="font-mono text-xs leading-normal tracking-tight text-card-foreground"
+              title={roll !== "N/A" ? roll : undefined}
+            >
+              {roll}
+            </span>
+          );
+        },
+      },
       {
         key: "program",
         header: "Program",
-        render: (s) => String(s.programId ?? "—"),
+        className: "w-[9rem] max-w-[9rem]",
+        render: (s) => {
+          const label = String(s.programId ?? "—");
+          return (
+            <span className="block truncate text-sm text-card-foreground" title={label}>
+              {label}
+            </span>
+          );
+        },
       },
       {
         key: "active",
         header: "Active",
-        className: "text-center",
+        className: "w-[5.5rem] text-center",
         render: (s) => (
           <Badge variant={s.isActive ? "secondary" : "outline"}>
             {s.isActive ? "Yes" : "No"}
@@ -69,7 +97,7 @@ export function FranchiseStudentsTable({
       {
         key: "idCard",
         header: "ID",
-        className: "text-center",
+        className: "w-[7rem] text-center",
         render: (s) => <span className="text-sm">{s.idIssued}</span>,
       },
     ],
@@ -90,11 +118,11 @@ export function FranchiseStudentsTable({
       columns={columns}
       getRowId={(s) => String(s.id)}
       renderMainCell={(s) => (
-        <div className="flex flex-col">
-          <span className="font-medium text-card-foreground">{s.name}</span>
-          <span className="text-sm text-muted-foreground">
-            {s.mail || s.rollNo}
-          </span>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="truncate font-medium text-card-foreground">{s.name || "N/A"}</span>
+          {s.mail ? (
+            <span className="truncate text-xs text-muted-foreground">{s.mail}</span>
+          ) : null}
         </div>
       )}
       searchPlaceholder="Search by name or roll number…"

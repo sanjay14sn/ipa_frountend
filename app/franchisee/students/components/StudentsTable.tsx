@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, Award, CreditCard, Edit, Trash2 } from "lucide-react";
+import { AlertTriangle, Award, CalendarClock, CreditCard, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/shared";
@@ -13,7 +13,9 @@ import type {
 import { StudentData, StudentIdStatus } from "@/services/student.service";
 import StudentCertificatesModal from "../../certificate-requests/components/StudentCertificatesModal";
 import StudentDetails from "./StudentDetails";
+import { StudentLifecycleDetailsDialog } from "@/components/students/student-lifecycle-details-dialog";
 import { getStudentLevelName } from "../utils/student-helpers";
+import { useFranchiseeStudentLifecycle } from "@/hooks/api/student.hooks";
 
 interface StudentsTableProps {
   students?: StudentData[];
@@ -98,6 +100,9 @@ export default function StudentsTable({
     null,
   );
   const [isCertificatesModalOpen, setIsCertificatesModalOpen] = useState(false);
+  const [lifecycleStudentId, setLifecycleStudentId] = useState<number | null>(null);
+
+  const lifecycleQuery = useFranchiseeStudentLifecycle(lifecycleStudentId);
 
   const uniqueLevelOptions = useMemo(() => {
     const seen = new Map<number, string>();
@@ -133,12 +138,18 @@ export default function StudentsTable({
     {
       key: "rollNo",
       header: "Roll No",
-      className: "w-[140px]",
-      render: (student) => (
-        <span className="text-sm text-card-foreground">
-          {student.rollNo || "N/A"}
-        </span>
-      ),
+      className: "min-w-[20rem] whitespace-nowrap",
+      render: (student) => {
+        const roll = student.rollNo || "N/A";
+        return (
+          <span
+            className="font-mono text-xs leading-normal tracking-tight text-card-foreground"
+            title={roll !== "N/A" ? roll : undefined}
+          >
+            {roll}
+          </span>
+        );
+      },
     },
     {
       key: "level",
@@ -163,12 +174,15 @@ export default function StudentsTable({
     {
       key: "stream",
       header: "Stream",
-      className: "w-[140px] text-center",
-      render: (student) => (
-        <span className="text-sm text-card-foreground">
-          {student.stream || "N/A"}
-        </span>
-      ),
+      className: "w-[9rem] max-w-[9rem] text-center",
+      render: (student) => {
+        const label = student.stream ? String(student.stream) : "N/A";
+        return (
+          <span className="block truncate text-sm text-card-foreground" title={label}>
+            {label}
+          </span>
+        );
+      },
     },
     {
       key: "phone",
@@ -213,9 +227,20 @@ export default function StudentsTable({
     {
       key: "actions",
       header: "Actions",
-      className: "w-[120px] text-center",
+      className: "w-[168px] text-center",
       render: (student) => (
         <div className="flex items-center justify-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            type="button"
+            onClick={() => setLifecycleStudentId(student.id)}
+            title="Lifecycle details"
+            aria-label="Lifecycle details"
+          >
+            <CalendarClock className="h-4 w-4 text-sky-600" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -375,6 +400,16 @@ export default function StudentsTable({
           studentName={students.find((s) => s.id === selectedStudentId)?.name}
         />
       )}
+
+      <StudentLifecycleDetailsDialog
+        open={lifecycleStudentId != null}
+        onOpenChange={(open) => {
+          if (!open) setLifecycleStudentId(null);
+        }}
+        row={lifecycleQuery.data ?? null}
+        isLoading={Boolean(lifecycleStudentId != null && lifecycleQuery.isLoading)}
+        loadError={lifecycleQuery.isError}
+      />
     </>
   );
 }

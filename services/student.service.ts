@@ -648,6 +648,50 @@ export interface StudentPaginationParams {
   idStatus?: string;  // NEW — "Not Issued" | "Requested" | "Issued"
 }
 
+export type StudentLifecycleStatus =
+  | "ACTIVE"
+  | "AT_RISK"
+  | "EXTENDED"
+  | "INVALIDATED"
+  | "REACTIVATED";
+
+export interface StudentLifecycleRow {
+  id: number;
+  studentId: number;
+  name: string;
+  rollNo: string;
+  franchiseId: string;
+  franchiseName: string;
+  levelId: number;
+  levelName: string;
+  levelCode: string;
+  durationInMonths: number | null;
+  isActive: boolean;
+  dateOfJoining: string | null;
+  certificateStatus: string;
+  progressionStatus: string | null;
+  lifecycleStatus: StudentLifecycleStatus;
+  isAtRisk: boolean;
+  lifecycleDeadline: string | null;
+  lifecycleExtendedUntil: string | null;
+  lifecycleInvalidatedAt: string | null;
+  lifecycleInvalidationReason: string | null;
+  lifecycleReactivatedAt: string | null;
+  lifecycleManagedBy: number | null;
+}
+
+export interface PaginatedStudentLifecycleResponse {
+  data: StudentLifecycleRow[];
+  meta: PaginationMeta;
+}
+
+export interface StudentLifecycleRunResult {
+  success: boolean;
+  invalidatedCount: number;
+  studentIds: number[];
+  runAt: string;
+}
+
 export async function getPaginatedStudents(
   params: StudentPaginationParams,
 ): Promise<PaginatedStudentsResponse> {
@@ -714,6 +758,111 @@ export async function getPaginatedStudentsAdmin(
       hasPreviousPage: pageNum > 1,
     },
   };
+}
+
+function mapLifecycleRow(row: Record<string, unknown>): StudentLifecycleRow {
+  return {
+    id: Number(row.id ?? row.studentId ?? 0),
+    studentId: Number(row.studentId ?? row.id ?? 0),
+    name: String(row.name ?? ""),
+    rollNo: String(row.rollNo ?? ""),
+    franchiseId: String(row.franchiseId ?? ""),
+    franchiseName: String(row.franchiseName ?? ""),
+    levelId: Number(row.levelId ?? 0),
+    levelName: String(row.levelName ?? ""),
+    levelCode: String(row.levelCode ?? ""),
+    durationInMonths:
+      row.durationInMonths == null ? null : Number(row.durationInMonths),
+    isActive: Boolean(row.isActive),
+    dateOfJoining: row.dateOfJoining ? String(row.dateOfJoining) : null,
+    certificateStatus: String(row.certificateStatus ?? "NONE"),
+    progressionStatus: row.progressionStatus ? String(row.progressionStatus) : null,
+    lifecycleStatus: (String(row.lifecycleStatus ?? "ACTIVE") as StudentLifecycleStatus),
+    isAtRisk: Boolean(row.isAtRisk),
+    lifecycleDeadline: row.lifecycleDeadline ? String(row.lifecycleDeadline) : null,
+    lifecycleExtendedUntil: row.lifecycleExtendedUntil
+      ? String(row.lifecycleExtendedUntil)
+      : null,
+    lifecycleInvalidatedAt: row.lifecycleInvalidatedAt
+      ? String(row.lifecycleInvalidatedAt)
+      : null,
+    lifecycleInvalidationReason: row.lifecycleInvalidationReason
+      ? String(row.lifecycleInvalidationReason)
+      : null,
+    lifecycleReactivatedAt: row.lifecycleReactivatedAt
+      ? String(row.lifecycleReactivatedAt)
+      : null,
+    lifecycleManagedBy:
+      row.lifecycleManagedBy == null ? null : Number(row.lifecycleManagedBy),
+  };
+}
+
+export async function getAdminStudentLifecycle(
+  params: StudentPaginationParams,
+): Promise<PaginatedStudentLifecycleResponse> {
+  const response = await api.get("/admin/student/lifecycle", {
+    params: compactRequestParams({
+      page: params.page,
+      limit: params.limit,
+      search: params.search,
+      status: params.status,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+      franchiseId: params.franchiseId,
+    } as Record<string, string | number | boolean | undefined | null>),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows: raw, total, page, limit } = normalizePaginatedResult<unknown>(result);
+  const data = raw.map((r) => mapLifecycleRow(r as Record<string, unknown>));
+  const lim = limit || 20;
+  const totalPages = Math.ceil(total / lim) || 1;
+  const pageNum = page || 1;
+  return {
+    data,
+    meta: {
+      total,
+      page: pageNum,
+      limit: lim,
+      totalPages,
+      hasNextPage: pageNum < totalPages,
+      hasPreviousPage: pageNum > 1,
+    },
+  };
+}
+
+export async function getFranchiseeStudentLifecycle(
+  studentId: number,
+): Promise<StudentLifecycleRow> {
+  const response = await api.get(`/student/${studentId}/lifecycle`);
+  const raw = unwrapData<Record<string, unknown>>(response);
+  return mapLifecycleRow(raw);
+}
+
+export async function runStudentLifecycleInvalidation(): Promise<StudentLifecycleRunResult> {
+  const response = await api.post("/admin/student/lifecycle/run-invalidation");
+  return unwrapData<StudentLifecycleRunResult>(response);
+}
+
+export async function extendStudentLifecycle(input: {
+  studentId: number;
+  extendedUntil: string;
+}): Promise<unknown> {
+  const response = await api.patch(
+    `/admin/student/${input.studentId}/lifecycle/extend`,
+    { extendedUntil: input.extendedUntil },
+  );
+  return unwrapData(response);
+}
+
+export async function reactivateStudentLifecycle(input: {
+  studentId: number;
+  extendedUntil: string;
+}): Promise<unknown> {
+  const response = await api.patch(
+    `/admin/student/${input.studentId}/lifecycle/reactivate`,
+    { extendedUntil: input.extendedUntil },
+  );
+  return unwrapData(response);
 }
 
 function buildIdMeta(

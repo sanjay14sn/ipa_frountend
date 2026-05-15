@@ -15,6 +15,7 @@ export const queryKeys = {
       listQueryKey("students", params ?? undefined),
     all: ["students"] as const,
     detail: (id: number) => ["students", id] as const,
+    lifecycle: (id: number) => ["students", id, "lifecycle"] as const,
   },
   studentAdmin: {
     requestedIds: ["students", "requested-ids"] as const,
@@ -40,6 +41,8 @@ export const queryKeys = {
         franchiseId,
         ...(params ?? {}),
       }),
+    lifecycle: (params?: Record<string, unknown> | null) =>
+      listQueryKey("admin-student-lifecycle", params ?? undefined),
   },
   courseInstructors: {
     franchisee: (params?: Record<string, unknown> | null) =>

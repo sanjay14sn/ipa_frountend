@@ -10,9 +10,10 @@ import {
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { IdRequestsSection } from "./components/id-requests-section";
 import { CertificateRequestsSection } from "./components/certificate-requests-section";
+import { StudentLifecycleSection } from "./components/student-lifecycle-section";
 import { TablePageShell } from "@/components/shared";
 
-const TABS = ["ids", "certificates"] as const;
+const TABS = ["ids", "certificates", "lifecycle"] as const;
 
 function AdminStudentsHubInner() {
   const [tab, setTab] = useTabFromUrl("ids", TABS);
@@ -26,12 +27,16 @@ function AdminStudentsHubInner() {
         <TabsList className="flex h-auto flex-wrap justify-start gap-1">
           <TabsTrigger value="ids">ID requests</TabsTrigger>
           <TabsTrigger value="certificates">Certificate requests</TabsTrigger>
+          <TabsTrigger value="lifecycle">Lifecycle</TabsTrigger>
         </TabsList>
         <TabsContent value="ids" className="mt-4">
           <IdRequestsSection />
         </TabsContent>
         <TabsContent value="certificates" className="mt-4">
           <CertificateRequestsSection />
+        </TabsContent>
+        <TabsContent value="lifecycle" className="mt-4">
+          <StudentLifecycleSection />
         </TabsContent>
       </Tabs>
     </TablePageShell>
