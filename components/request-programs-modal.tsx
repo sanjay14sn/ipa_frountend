@@ -22,8 +22,10 @@ import { CheckCircle, Clock } from "lucide-react";
 import {
   requestProgram,
   hasPendingRequest,
+  getFranchiseList,
   RequestProgramDto,
 } from "@/services/franchise.service";
+import { getEffectiveFranchiseStatus, type User } from "@/lib/auth";
 import { getAllPrograms, Program } from "@/services/program.service";
 import { getErrorMessage } from "@/lib/error-utils";
 import { toast } from "sonner";
@@ -32,6 +34,36 @@ import { useUser } from "@/context/user-context";
 interface RequestProgramsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+function isActiveFranchiseStatus(status: string | undefined): boolean {
+  return (status ?? "").trim().toLowerCase() === "active";
+}
+
+/** Dropdown options when API list is missing, empty, or uses non-exact status casing. */
+function activeFranchiseChoices(
+  user: User | null | undefined,
+): Array<{ id: string; name: string; status: string }> {
+  if (!user) return [];
+  const fromList = (user.franchises ?? []).filter((f) =>
+    isActiveFranchiseStatus(f.status),
+  );
+  if (fromList.length > 0) return fromList;
+  const effective = getEffectiveFranchiseStatus(user, user.franchiseId);
+  if (
+    user.franchiseId &&
+    user.franchiseName &&
+    isActiveFranchiseStatus(effective)
+  ) {
+    return [
+      {
+        id: user.franchiseId,
+        name: user.franchiseName,
+        status: effective ?? "Active",
+      },
+    ];
+  }
+  return [];
 }
 
 export function RequestProgramsModal({
@@ -49,24 +81,39 @@ export function RequestProgramsModal({
   const [pendingCheck, setPendingCheck] = useState<
     "loading" | "pending" | "ok"
   >("loading");
-
-  const activeFranchises =
-    user?.franchises?.filter((f) => f.status === "Active") ?? [];
+  const [franchiseOptions, setFranchiseOptions] = useState<
+    Array<{ id: string; name: string; status: string }>
+  >([]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setFranchiseOptions([]);
+      return;
+    }
 
     setPendingCheck("loading");
-    Promise.all([getAllPrograms(), hasPendingRequest()])
-      .then(([programData, isPending]) => {
+    Promise.all([getAllPrograms(), hasPendingRequest(), getFranchiseList()])
+      .then(([programData, isPending, franchiseList]) => {
         setPrograms(Array.isArray(programData) ? programData : []);
+        const rows = Array.isArray(franchiseList) ? franchiseList : [];
+        const activeFromApi = rows
+          .filter((f) => isActiveFranchiseStatus(f.status))
+          .map((f) => ({
+            id: String(f.id),
+            name: f.name,
+            status: f.status,
+          }));
+        setFranchiseOptions(
+          activeFromApi.length > 0 ? activeFromApi : activeFranchiseChoices(user),
+        );
         setPendingCheck(isPending ? "pending" : "ok");
       })
       .catch(() => {
         setPrograms([]);
+        setFranchiseOptions(activeFranchiseChoices(user));
         setPendingCheck("ok");
       });
-  }, [open]);
+  }, [open, user]);
 
   const handleProgramToggle = (programId: number) => {
     setFormData((prev) => ({
@@ -137,6 +184,7 @@ export function RequestProgramsModal({
     return (
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="mx-4 w-full max-w-md rounded-2xl border-border">
+          <DialogTitle className="sr-only">Loading program requests</DialogTitle>
           <div className="flex items-center justify-center py-10">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
@@ -196,18 +244,25 @@ export function RequestProgramsModal({
               onValueChange={(v) =>
                 setFormData((prev) => ({ ...prev, franchiseId: v }))
               }
+              disabled={franchiseOptions.length === 0}
             >
               <SelectTrigger className="rounded-lg border-border">
                 <SelectValue placeholder="Select franchise" />
               </SelectTrigger>
               <SelectContent>
-                {activeFranchises.map((f) => (
+                {franchiseOptions.map((f) => (
                   <SelectItem key={f.id} value={f.id}>
                     {f.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {franchiseOptions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No active franchises found. If you just became active, refresh
+                the page or sign in again.
+              </p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label>Programs * (Select at least one)</Label>

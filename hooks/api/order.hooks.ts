@@ -87,8 +87,12 @@ export function useOrderByIdAdmin(orderId: number | undefined) {
 
 export async function invalidateFranchiseeOrders() {
   try {
-    await getQueryClientBridge().invalidateQueries({
+    const client = getQueryClientBridge();
+    await client.invalidateQueries({
       queryKey: ["orders-franchisee", "list"],
+    });
+    await client.invalidateQueries({
+      queryKey: ["orders", "franchisee"],
     });
   } catch {
     /* ignore */

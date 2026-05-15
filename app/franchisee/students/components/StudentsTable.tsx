@@ -17,6 +17,22 @@ import { StudentLifecycleDetailsDialog } from "@/components/students/student-lif
 import { getStudentLevelName } from "../utils/student-helpers";
 import { useFranchiseeStudentLifecycle } from "@/hooks/api/student.hooks";
 
+/**
+ * Widths for `table-fixed` + `<colgroup>`. Email must not use `auto` or it
+ * swallows all leftover horizontal space and leaves a dead gap before Status/ID/Actions.
+ */
+const STUDENT_TABLE_COL_GROUP_WIDTHS: string[] = [
+  "9rem",
+  "22%",
+  "5.5rem",
+  "5.5rem",
+  "6.25rem",
+  "clamp(9rem, 11vw, 13rem)",
+  "5.25rem",
+  "5.5rem",
+  "7.25rem",
+];
+
 interface StudentsTableProps {
   students?: StudentData[];
   meta?: { total: number; totalPages: number };
@@ -133,17 +149,17 @@ export default function StudentsTable({
     {
       key: "student",
       header: "Student",
-      className: "min-w-[220px]",
+      className: "h-auto min-h-0 min-w-0 overflow-hidden px-2 py-2",
     },
     {
       key: "rollNo",
       header: "Roll No",
-      className: "min-w-[20rem] whitespace-nowrap",
+      className: "h-auto min-h-0 min-w-0 px-2 py-2",
       render: (student) => {
         const roll = student.rollNo || "N/A";
         return (
           <span
-            className="font-mono text-xs leading-normal tracking-tight text-card-foreground"
+            className="block truncate font-mono text-xs leading-normal tracking-tight text-card-foreground"
             title={roll !== "N/A" ? roll : undefined}
           >
             {roll}
@@ -154,27 +170,19 @@ export default function StudentsTable({
     {
       key: "level",
       header: "Level",
-      className: "w-[120px] text-center",
+      className: "h-auto min-h-0 w-[5.5rem] min-w-[5.5rem] px-2 py-2 text-center",
       render: (student) => (
-        <Badge className={`${getLevelColor(getStudentLevelName(student))} border`}>
+        <Badge
+          className={`${getLevelColor(getStudentLevelName(student))} max-w-full truncate border px-1.5 text-[11px]`}
+        >
           {getStudentLevelName(student)}
         </Badge>
       ),
     },
     {
-      key: "standard",
-      header: "Standard",
-      className: "w-[110px] text-center",
-      render: (student) => (
-        <span className="text-sm text-card-foreground">
-          {student.standard || "N/A"}
-        </span>
-      ),
-    },
-    {
       key: "stream",
       header: "Stream",
-      className: "w-[9rem] max-w-[9rem] text-center",
+      className: "h-auto min-h-0 w-[6rem] min-w-0 max-w-[6rem] px-2 py-2 text-center",
       render: (student) => {
         const label = student.stream ? String(student.stream) : "N/A";
         return (
@@ -187,19 +195,26 @@ export default function StudentsTable({
     {
       key: "phone",
       header: "Phone",
-      className: "w-[140px]",
-      render: (student) => (
-        <span className="text-sm text-card-foreground">
-          {student.fatherContactNo || student.motherContactNo || "N/A"}
-        </span>
-      ),
+      className: "h-auto min-h-0 w-[6.5rem] min-w-0 max-w-[6.5rem] px-2 py-2",
+      render: (student) => {
+        const phone =
+          student.fatherContactNo || student.motherContactNo || "N/A";
+        return (
+          <span className="block truncate text-sm text-card-foreground" title={phone}>
+            {phone}
+          </span>
+        );
+      },
     },
     {
       key: "mail",
       header: "Email",
-      className: "min-w-[220px]",
+      className: "h-auto min-h-0 min-w-0 max-w-[13rem] px-2 py-2",
       render: (student) => (
-        <span className="block max-w-[260px] truncate text-sm text-card-foreground">
+        <span
+          className="block truncate text-sm text-card-foreground"
+          title={student.mail || undefined}
+        >
           {student.mail || "N/A"}
         </span>
       ),
@@ -207,19 +222,23 @@ export default function StudentsTable({
     {
       key: "status",
       header: "Status",
-      className: "w-[110px] text-center",
+      className: "h-auto min-h-0 w-[5.25rem] min-w-[5.25rem] px-2 py-2 text-center",
       render: (student) => (
-        <Badge className={`${getStatusColor(student.isActive)} border`}>
+        <Badge
+          className={`${getStatusColor(student.isActive)} border px-1.5 text-[11px]`}
+        >
           {student.isActive ? "Active" : "Inactive"}
         </Badge>
       ),
     },
     {
       key: "idStatus",
-      header: "ID Status",
-      className: "w-[130px] text-center",
+      header: "ID",
+      className: "h-auto min-h-0 w-[5.5rem] min-w-[5.5rem] px-2 py-2 text-center",
       render: (student) => (
-        <Badge className={`${getIdStatusColor(student.idIssued)} border`}>
+        <Badge
+          className={`${getIdStatusColor(student.idIssued)} max-w-full truncate border px-1.5 text-[11px]`}
+        >
           {student.idIssued}
         </Badge>
       ),
@@ -227,24 +246,24 @@ export default function StudentsTable({
     {
       key: "actions",
       header: "Actions",
-      className: "w-[168px] text-center",
+      className: "h-auto min-h-0 w-[7.25rem] min-w-[7.25rem] max-w-[7.25rem] px-1 py-2 text-center",
       render: (student) => (
-        <div className="flex items-center justify-center gap-1">
+        <div className="flex items-center justify-center gap-0.5">
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-7 w-7 shrink-0 p-0"
             type="button"
             onClick={() => setLifecycleStudentId(student.id)}
             title="Lifecycle details"
             aria-label="Lifecycle details"
           >
-            <CalendarClock className="h-4 w-4 text-sky-600" />
+            <CalendarClock className="h-3.5 w-3.5 text-sky-600" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-7 w-7 shrink-0 p-0"
             onClick={() => {
               setSelectedStudentId(student.id);
               setIsCertificatesModalOpen(true);
@@ -252,27 +271,27 @@ export default function StudentsTable({
             title="View certificates"
             aria-label="View certificates"
           >
-            <Award className="h-4 w-4 text-emerald-600" />
+            <Award className="h-3.5 w-3.5 text-emerald-600" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-7 w-7 shrink-0 p-0"
             onClick={() => onStudentEdit?.(student)}
             title="Edit student"
             aria-label="Edit student"
           >
-            <Edit className="h-4 w-4" />
+            <Edit className="h-3.5 w-3.5" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-7 w-7 shrink-0 p-0"
             onClick={() => onStudentDelete?.(student.id.toString())}
             title="Delete student"
             aria-label="Delete student"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
       ),
@@ -345,6 +364,8 @@ export default function StudentsTable({
         data={streamFilteredStudents}
         loading={isLoading ?? false}
         columns={columns}
+        tableClassName="table-fixed"
+        columnGroupWidths={STUDENT_TABLE_COL_GROUP_WIDTHS}
         getRowId={(student) => student.id.toString()}
         renderMainCell={(student) => (
           <div className="flex min-w-0 items-center gap-2">

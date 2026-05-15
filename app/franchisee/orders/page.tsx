@@ -9,7 +9,11 @@ import {
 import { toast } from "sonner";
 import { useUser } from "@/context/user-context";
 import { useStudents } from "@/hooks/api/student.hooks";
-import { useFranchiseeOrders, invalidateAdminOrders } from "@/hooks/api/order.hooks";
+import {
+  useFranchiseeOrders,
+  invalidateAdminOrders,
+  invalidateFranchiseeOrders,
+} from "@/hooks/api/order.hooks";
 import { TablePageShell } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import OrdersTable from "./components/OrdersTable";
@@ -18,9 +22,11 @@ import RazorpayPayment, {
 } from "@/components/RazorpayPayment";
 import {
   abandonOrderPayment,
+  cancelOrderFranchisee,
   createOrder,
   verifyOrderPayment,
   OrderStatus,
+  type OrderData,
   type StartingKitItem,
 } from "@/services/order.service";
 import UnifiedMaterialRequestDialog from "./components/UnifiedMaterialRequestDialog";
@@ -38,6 +44,7 @@ export default function FranchiseeOrdersPage() {
   // --- Unified modal state ---
   const [isUnifiedModalOpen, setIsUnifiedModalOpen] = useState(false);
   const [unifiedPaymentData, setUnifiedPaymentData] = useState<any>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
 
   // --- Retry state (preserved when payment is captured but createOrder fails) ---
   const [submitting, setSubmitting] = useState(false);
@@ -170,6 +177,30 @@ export default function FranchiseeOrdersPage() {
     setSubmitting(false);
   }
 
+  async function handleCancelOrder(order: OrderData) {
+    try {
+      setCancellingOrderId(order.id);
+      await cancelOrderFranchisee(order.id);
+      toast.success(
+        order.paymentStatus === "PAID"
+          ? "Order cancelled. Refund has been initiated."
+          : "Order cancelled.",
+      );
+      await refetchOrders();
+      void invalidateFranchiseeOrders();
+      void invalidateAdminOrders();
+    } catch (error: any) {
+      toast.error(
+        getUserFriendlyMessage(
+          error,
+          "This order cannot be cancelled from its current status.",
+        ),
+      );
+    } finally {
+      setCancellingOrderId(null);
+    }
+  }
+
   if (!user || !user.franchiseId) {
     return <div>Loading...</div>;
   }
@@ -226,7 +257,12 @@ export default function FranchiseeOrdersPage() {
         </div>
       )}
 
-      <OrdersTable orders={orders} loading={ordersLoading} />
+      <OrdersTable
+        orders={orders}
+        loading={ordersLoading}
+        cancellingOrderId={cancellingOrderId}
+        onCancelOrder={handleCancelOrder}
+      />
 
       <UnifiedMaterialRequestDialog
         open={isUnifiedModalOpen}

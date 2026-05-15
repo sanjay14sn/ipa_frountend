@@ -17,6 +17,17 @@ import type { StudentLifecycleRow, StudentLifecycleStatus } from "@/services/stu
 import { StudentLifecycleActions } from "./student-lifecycle-actions";
 import { StudentLifecycleDetailsDialog } from "@/components/students/student-lifecycle-details-dialog";
 
+const LIFECYCLE_TABLE_COL_GROUP_WIDTHS: string[] = [
+  "8.5rem",
+  "30%",
+  "9rem",
+  "5.5rem",
+  "4.5rem",
+  "5.5rem",
+  "6.5rem",
+  "15.5rem",
+];
+
 const statusLabels: Record<StudentLifecycleStatus, string> = {
   ACTIVE: "Active",
   AT_RISK: "At risk",
@@ -115,17 +126,17 @@ export function StudentLifecycleSection() {
     {
       key: "student",
       header: "Student",
-      className: "min-w-[220px]",
+      className: "min-w-0 overflow-hidden px-2",
     },
     {
       key: "rollNo",
       header: "Roll No",
-      className: "min-w-[20rem] whitespace-nowrap",
+      className: "min-w-0 px-2",
       render: (row) => {
         const roll = row.rollNo || "N/A";
         return (
           <span
-            className="font-mono text-xs leading-normal tracking-tight text-card-foreground"
+            className="block truncate font-mono text-xs leading-normal tracking-tight text-card-foreground"
             title={roll !== "N/A" ? roll : undefined}
           >
             {roll}
@@ -136,7 +147,7 @@ export function StudentLifecycleSection() {
     {
       key: "franchise",
       header: "Franchise",
-      className: "w-[9rem] max-w-[9rem]",
+      className: "min-w-0 px-2",
       render: (row) => {
         const label = row.franchiseName || row.franchiseId || "N/A";
         return (
@@ -149,44 +160,49 @@ export function StudentLifecycleSection() {
     {
       key: "level",
       header: "Level",
-      className: "w-[120px] text-center",
+      className: "w-[5.5rem] min-w-[5.5rem] px-1.5 text-center",
       render: (row) => (
-        <Badge variant="outline" className="border">
+        <Badge
+          variant="outline"
+          className="max-w-full truncate border px-1.5 text-[11px]"
+        >
           {row.levelName || row.levelCode || `Level ${row.levelId}`}
         </Badge>
       ),
     },
     {
       key: "certificate",
-      header: "Certificate",
-      className: "w-[120px] text-center",
+      header: "Cert.",
+      className: "w-[4.5rem] min-w-[4.5rem] px-1 text-center",
       render: (row) => certificateBadge(row.certificateStatus),
     },
     {
       key: "deadline",
       header: "Deadline",
-      className: "w-[120px] text-center text-sm text-card-foreground",
+      className: "w-[5.5rem] min-w-[5.5rem] px-1 text-center text-xs text-card-foreground",
       render: (row) => formatDate(row.lifecycleDeadline),
     },
     {
       key: "status",
       header: "Lifecycle",
-      className: "w-[130px] text-center",
+      className: "w-[6.5rem] min-w-[6.5rem] px-1 text-center",
       render: statusBadge,
     },
     {
       key: "actions",
       header: "Actions",
-      className: "min-w-[200px] text-right",
+      className: "w-[15.5rem] min-w-[15.5rem] max-w-[15.5rem] px-1 text-right",
       render: (row) => (
-        <div className="flex flex-wrap justify-end gap-2">
+        <div className="flex flex-nowrap items-center justify-end gap-1">
           <Button
             type="button"
             variant="outline"
             size="sm"
+            className="h-8 shrink-0 whitespace-nowrap px-2 text-xs"
             onClick={() => setDetailsRow(row)}
+            title="Lifecycle details"
           >
-            <Eye className="mr-1 h-3.5 w-3.5" />
+            <Eye className="mr-1 h-3.5 w-3.5 shrink-0" />
             Details
           </Button>
           <StudentLifecycleActions
@@ -222,6 +238,8 @@ export function StudentLifecycleSection() {
         data={rows}
         loading={loading}
         columns={columns}
+        tableClassName="table-fixed"
+        columnGroupWidths={LIFECYCLE_TABLE_COL_GROUP_WIDTHS}
         getRowId={(row) => String(row.studentId)}
         renderMainCell={(row) => (
           <div className="flex min-w-0 flex-col gap-0.5">

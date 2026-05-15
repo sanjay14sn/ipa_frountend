@@ -3,7 +3,17 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { FileText, Loader2, X } from "lucide-react";
 import { DataTable } from "@/components/shared";
 import type {
   DataTableColumn,
@@ -20,15 +30,20 @@ import OrderInvoiceDialog from "./OrderInvoiceDialog";
 interface OrdersTableProps {
   orders?: OrderData[];
   onViewOrderDetails?: (orderId: number) => void;
+  onCancelOrder?: (order: OrderData) => Promise<void> | void;
+  cancellingOrderId?: number | null;
   loading?: boolean;
 }
 
 export default function OrdersTable({
   orders,
   onViewOrderDetails,
+  onCancelOrder,
+  cancellingOrderId = null,
   loading = false,
 }: OrdersTableProps) {
   const [invoiceOrderId, setInvoiceOrderId] = useState<number | null>(null);
+  const [cancelOrder, setCancelOrder] = useState<OrderData | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"orderDate">("orderDate");
@@ -179,6 +194,25 @@ export default function OrdersTable({
           >
             <FileText className="h-4 w-4" />
           </Button>
+          {order.canCancel ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              title="Cancel order"
+              disabled={cancellingOrderId === order.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCancelOrder(order);
+              }}
+            >
+              {cancellingOrderId === order.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <X className="h-4 w-4" />
+              )}
+            </Button>
+          ) : null}
         </div>
       ),
     },
@@ -249,6 +283,41 @@ export default function OrdersTable({
       orderId={invoiceOrderId}
       onClose={() => setInvoiceOrderId(null)}
     />
+    <AlertDialog
+      open={cancelOrder !== null}
+      onOpenChange={(open) => {
+        if (!open) setCancelOrder(null);
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cancel order?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will cancel Order #{cancelOrder?.id}. If payment was captured,
+            a full refund will be initiated.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep order</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={cancelOrder != null && cancellingOrderId === cancelOrder.id}
+            onClick={(event) => {
+              event.preventDefault();
+              if (!cancelOrder || !onCancelOrder) return;
+              void Promise.resolve(onCancelOrder(cancelOrder)).finally(() => {
+                setCancelOrder(null);
+              });
+            }}
+          >
+            {cancelOrder != null && cancellingOrderId === cancelOrder.id ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            Cancel order
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }

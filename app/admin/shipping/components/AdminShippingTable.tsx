@@ -54,6 +54,16 @@ export default function AdminShippingTable() {
   const total = shipmentsQuery.data?.total ?? 0;
   const totalPages = shipmentsQuery.data?.totalPages ?? 1;
 
+  const shipDialogTrackingSeed = useMemo(() => {
+    if (shipDialogOrderId === null) return null;
+    const row = rows.find((r) => r.orderId === shipDialogOrderId);
+    return {
+      orderId: shipDialogOrderId,
+      tracking: row?.trackingNumber ?? null,
+      carrier: row?.carrier ?? null,
+    };
+  }, [shipDialogOrderId, rows]);
+
   const runAction = useCallback(
     async (orderId: number, action: () => Promise<unknown>, success: string) => {
       try {
@@ -371,6 +381,7 @@ export default function AdminShippingTable() {
         onOpenChange={(open) => { if (!open) setShipDialogOrderId(null); }}
         onConfirm={handleShipConfirm}
         busy={busyOrderId !== null}
+        shipmentTrackingSeed={shipDialogTrackingSeed}
       />
     </>
   );

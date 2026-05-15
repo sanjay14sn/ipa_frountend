@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,11 +14,24 @@ import {
 } from "@/components/ui/dialog";
 import type { ShipShipmentDto } from "@/services/fulfillment.service";
 
+/** Matches backend verify flow (`SHP-{orderId}-{base36 time}`). */
+function suggestedTrackingNumber(orderId: number): string {
+  return `SHP-${orderId}-${Date.now().toString(36).toUpperCase()}`;
+}
+
+export type ShipDialogTrackingSeed = {
+  orderId: number;
+  tracking?: string | null;
+  carrier?: string | null;
+};
+
 interface ShipShipmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: (data: ShipShipmentDto) => Promise<void>;
   busy: boolean;
+  /** When the dialog opens, pre-fill tracking (and carrier) from the shipment row. */
+  shipmentTrackingSeed?: ShipDialogTrackingSeed | null;
 }
 
 export function ShipShipmentDialog({
@@ -26,10 +39,23 @@ export function ShipShipmentDialog({
   onOpenChange,
   onConfirm,
   busy,
+  shipmentTrackingSeed = null,
 }: ShipShipmentDialogProps) {
   const [shippedBy, setShippedBy] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [carrier, setCarrier] = useState("");
+  const seedRef = useRef(shipmentTrackingSeed);
+  seedRef.current = shipmentTrackingSeed;
+
+  useEffect(() => {
+    if (!open) return;
+    const seed = seedRef.current;
+    if (!seed) return;
+    const existing = seed.tracking?.trim();
+    setTrackingNumber(existing || suggestedTrackingNumber(seed.orderId));
+    setCarrier(seed.carrier?.trim() ?? "");
+    setShippedBy("");
+  }, [open]);
 
   function handleOpenChange(next: boolean) {
     if (!next && !busy) {
@@ -57,7 +83,8 @@ export function ShipShipmentDialog({
         <DialogHeader>
           <DialogTitle>Mark as shipped</DialogTitle>
           <DialogDescription>
-            Confirm this shipment has been dispatched. Both fields are optional.
+            Confirm this shipment has been dispatched. Tracking is pre-filled from
+            verification; change it if needed. Other fields are optional.
           </DialogDescription>
         </DialogHeader>
 

@@ -112,6 +112,13 @@ export interface DataTableProps<T> {
   emptyMessage?: string;
   resultsText?: (count: number, total: number) => string;
   toolbarActions?: ReactNode;
+  /** Merged onto the inner `<table>` (e.g. `table-fixed` for dense layouts). */
+  tableClassName?: string;
+  /**
+   * When length matches `columns`, renders `<colgroup><col style="width" /></colgroup>`
+   * so widths are honored under `table-fixed` (avoids one column swallowing leftover space).
+   */
+  columnGroupWidths?: string[];
 }
 
 function buildPaginationPages(
@@ -166,6 +173,8 @@ export default function DataTable<T>({
   emptyMessage = "No items found matching your criteria",
   resultsText = (count, total) => `Showing ${count} of ${total} items`,
   toolbarActions,
+  tableClassName,
+  columnGroupWidths,
 }: DataTableProps<T>) {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedRowSet, setExpandedRowSet] = useState<Set<string>>(
@@ -485,7 +494,18 @@ export default function DataTable<T>({
       )}
 
       <RawTableSurface>
-        <Table>
+        <Table className={tableClassName}>
+          {columnGroupWidths &&
+            columnGroupWidths.length === columns.length && (
+              <colgroup>
+                {columnGroupWidths.map((w, i) => (
+                  <col
+                    key={columns[i]?.key ?? `col-${i}`}
+                    style={w ? { width: w } : undefined}
+                  />
+                ))}
+              </colgroup>
+            )}
           <TableHeader>
             <TableRow className="border-0 hover:bg-transparent">
               {columns.map((column) => (
@@ -539,7 +559,7 @@ export default function DataTable<T>({
                           isExpanded && "border-l-2 border-l-primary"
                         )}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           {hasExpandableRow && (
                             <button
                               type="button"

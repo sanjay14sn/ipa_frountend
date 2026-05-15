@@ -56,19 +56,21 @@ export function StudentLifecycleActions({
 
   return (
     <>
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1">
         <Button
           type="button"
           variant="outline"
           size="sm"
+          className="h-8 shrink-0 whitespace-nowrap px-2 text-xs"
           onClick={() => setMode("extend")}
           disabled={busy}
         >
-          Extend time
+          Extend
         </Button>
         <Button
           type="button"
           size="sm"
+          className="h-8 shrink-0 whitespace-nowrap px-2 text-xs"
           onClick={() => setMode("reactivate")}
           disabled={busy || student.isActive}
         >

@@ -141,6 +141,8 @@ export interface OrderData {
   shipment?: ShipmentSummary | null;
   paymentDetails?: PaymentDetails | null;
   dispatchItems?: DispatchOrderItemAdmin[];
+  canCancel?: boolean;
+  cancelBlockedReason?: string | null;
   /** Frozen `previewUnified` snapshot from backend when present (unified orders). */
   invoicePreview?: InvoicePreview | null;
 }
@@ -562,6 +564,9 @@ function normalizeOrder(row: any): OrderData {
     dispatchItems: Array.isArray(row?.dispatchItems)
       ? (row.dispatchItems as unknown[]).map(normalizeDispatchItem)
       : [],
+    canCancel: Boolean(row?.canCancel ?? false),
+    cancelBlockedReason:
+      row?.cancelBlockedReason != null ? String(row.cancelBlockedReason) : null,
     invoicePreview:
       row?.invoicePreview != null && typeof row.invoicePreview === "object"
         ? parseInvoicePreviewPayload(row.invoicePreview)
@@ -630,6 +635,11 @@ export async function updateFranchiseeOrder(
   throw new Error("updateFranchiseeOrder not supported in ipa-new");
 }
 
+export async function cancelOrderFranchisee(orderId: number): Promise<OrderData> {
+  const response = await api.post(`/order/${orderId}/cancel`);
+  return normalizeOrder(unwrapData(response));
+}
+
 export async function getAllOrdersAdmin(
   params?: AdminOrderListParams,
 ): Promise<GroupedOrdersResponse["result"]> {
@@ -690,8 +700,13 @@ export async function markOrderPaidAdmin(orderId: number): Promise<OrderData> {
   return getOrderByIdAdmin(orderId);
 }
 
-export async function cancelOrderAdmin(orderId: number): Promise<OrderData> {
-  await api.post(`/admin/order/${orderId}/cancel`);
+export async function cancelOrderAdmin(
+  orderId: number,
+  options?: { refund?: boolean },
+): Promise<OrderData> {
+  await api.post(`/admin/order/${orderId}/cancel`, {
+    refund: options?.refund === true,
+  });
   return getOrderByIdAdmin(orderId);
 }
 

@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Eye, ShieldCheck, X, Download } from "lucide-react";
+import { CreditCard, Eye, ShieldCheck, X, Download, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import {
@@ -19,6 +19,18 @@ import { AdminOrderInvoiceDialog } from "./AdminOrderInvoiceDialog";
 import { DispatchItemsSummaryTable } from "./DispatchItemsSummaryTable";
 import { isStandaloneDispatchOrderType } from "./dispatch-order-helpers";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   DataTable,
   DataTableColumn,
@@ -71,6 +83,8 @@ export default function AdminOrdersTable({
   const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
   const [verifyDialogOrderId, setVerifyDialogOrderId] = useState<number | null>(null);
   const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
+  const [cancelDialogOrder, setCancelDialogOrder] = useState<OrderData | null>(null);
+  const [refundOnCancel, setRefundOnCancel] = useState(false);
 
   const ordersQuery = useAdminOrderRows({
     page: currentPage,
@@ -105,25 +119,36 @@ export default function AdminOrdersTable({
     [ordersQuery, toast],
   );
 
-  const handleCancel = useCallback(
-    async (orderId: number) => {
-      try {
-        setBusyOrderId(orderId);
-        await cancelOrderAdmin(orderId);
-        toast({ title: "Order cancelled" });
-        await ordersQuery.refetch();
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: getUserFriendlyMessage(error),
-          variant: "destructive",
-        });
-      } finally {
-        setBusyOrderId(null);
-      }
-    },
-    [ordersQuery, toast],
-  );
+  const handleOpenCancelDialog = useCallback((order: OrderData) => {
+    setRefundOnCancel(order.paymentStatus === "PAID");
+    setCancelDialogOrder(order);
+  }, []);
+
+  const handleConfirmAdminCancel = useCallback(async () => {
+    if (!cancelDialogOrder) return;
+    try {
+      setBusyOrderId(cancelDialogOrder.id);
+      await cancelOrderAdmin(cancelDialogOrder.id, { refund: refundOnCancel });
+      const paid = cancelDialogOrder.paymentStatus === "PAID";
+      toast({
+        title: "Order cancelled",
+        description:
+          refundOnCancel && paid
+            ? "A refund has been submitted for this order."
+            : undefined,
+      });
+      await ordersQuery.refetch();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: getUserFriendlyMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setBusyOrderId(null);
+      setCancelDialogOrder(null);
+    }
+  }, [cancelDialogOrder, refundOnCancel, ordersQuery, toast]);
 
   const handleVerifyConfirm = useCallback(
     async (data: VerifyShipmentDto) => {
@@ -305,7 +330,7 @@ export default function AdminOrdersTable({
                   className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                   title="Cancel order"
                   disabled={busyOrderId === order.id}
-                  onClick={() => void handleCancel(order.id)}
+                  onClick={() => handleOpenCancelDialog(order)}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -315,7 +340,7 @@ export default function AdminOrdersTable({
         },
       },
     ],
-    [busyOrderId, handleMarkPaid, handleCancel, setVerifyDialogOrderId],
+    [busyOrderId, handleMarkPaid, handleOpenCancelDialog, setVerifyDialogOrderId],
   );
 
   return (
@@ -482,6 +507,72 @@ export default function AdminOrdersTable({
       onConfirm={handleVerifyConfirm}
       busy={busyOrderId !== null}
     />
+
+    <AlertDialog
+      open={cancelDialogOrder !== null}
+      onOpenChange={(open) => {
+        if (!open) setCancelDialogOrder(null);
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cancel order</AlertDialogTitle>
+          <AlertDialogDescription>
+            Order{" "}
+            <span className="font-medium text-foreground">
+              #{cancelDialogOrder?.id}
+            </span>
+            {cancelDialogOrder?.referenceId ? (
+              <> · {cancelDialogOrder.referenceId}</>
+            ) : null}{" "}
+            will be cancelled and cannot be restored.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="flex items-start gap-3 rounded-md border p-3">
+          <Checkbox
+            id="admin-cancel-refund"
+            checked={refundOnCancel}
+            disabled={
+              cancelDialogOrder != null && busyOrderId === cancelDialogOrder.id
+            }
+            onCheckedChange={(v) => setRefundOnCancel(v === true)}
+          />
+          <div className="grid gap-1.5 leading-none">
+            <Label htmlFor="admin-cancel-refund" className="cursor-pointer font-medium">
+              Refund payment to customer
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              For paid orders, submits a full refund. Clear this option to cancel the order
+              without a refund.
+            </p>
+          </div>
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel
+            disabled={
+              cancelDialogOrder != null && busyOrderId === cancelDialogOrder.id
+            }
+          >
+            Keep order
+          </AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={
+              cancelDialogOrder != null && busyOrderId === cancelDialogOrder.id
+            }
+            onClick={(e) => {
+              e.preventDefault();
+              void handleConfirmAdminCancel();
+            }}
+          >
+            {cancelDialogOrder != null && busyOrderId === cancelDialogOrder.id ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            Cancel order
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
