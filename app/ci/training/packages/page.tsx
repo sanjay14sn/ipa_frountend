@@ -15,6 +15,7 @@ import {
   verifyCITrainingPayment,
 } from "@/services/ci-training.service";
 import { CheckCircle, Layers, ShoppingCart } from "lucide-react";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 function money(value: number | null | undefined): string {
   return new Intl.NumberFormat("en-IN", {
@@ -194,7 +195,7 @@ export default function CITrainingPackagesPage() {
       });
     } catch (error: any) {
       if (error?.message !== "dismissed") {
-        const apiMessage = error?.response?.data?.message ?? error?.message;
+        const apiMessage = getUserFriendlyMessage(error, "Unable to complete payment.");
         const isAgreementError =
           typeof apiMessage === "string" &&
           apiMessage.toLowerCase().includes("ci agreement must be signed and valid");
@@ -203,7 +204,7 @@ export default function CITrainingPackagesPage() {
           title: isAgreementError ? "Agreement required" : "Payment failed",
           description: isAgreementError
             ? "Sign the CI agreement first, then retry purchase from this page."
-            : apiMessage ?? "Unable to complete payment.",
+            : apiMessage,
           variant: "destructive",
         });
         if (pendingPurchaseRef.current && checkoutOpenedRef.current) {

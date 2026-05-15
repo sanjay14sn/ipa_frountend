@@ -7,7 +7,9 @@
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start",
-    "test:merge": "node --experimental-strip-types --test lib/invoice-preview-merge.test.ts"
+    "test:merge": "node --experimental-strip-types --test lib/invoice-preview-merge.test.ts",
+    "test:errors": "node --experimental-strip-types --test lib/error-utils.test.ts",
+    "test:notifications": "node --experimental-strip-types --experimental-specifier-resolution=node --test lib/notification-content.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

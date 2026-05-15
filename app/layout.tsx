@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { UserProvider } from "@/context/user-context";
 import { NotificationProvider } from "@/context/notification-context";
 import QueryProvider from "@/components/providers/query-provider";
+import { ClientTelemetryProvider } from "@/components/providers/client-telemetry-provider";
 
 export const metadata: Metadata = {
   title: "Abacus Portal",
@@ -27,26 +28,28 @@ export default function RootLayout({
       }
     >
       <body>
-        <QueryProvider>
-          <UserProvider>
-            <NotificationProvider>
-              {children}
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  classNames: {
-                    toast:
-                      "rounded-xl border border-border bg-card text-card-foreground shadow-xl",
-                    title: "text-sm font-medium text-card-foreground",
-                    description: "text-sm text-muted-foreground",
-                    actionButton: "rounded-lg bg-primary text-primary-foreground",
-                    cancelButton: "rounded-lg bg-secondary text-secondary-foreground",
-                  },
-                }}
-              />
-            </NotificationProvider>
-          </UserProvider>
-        </QueryProvider>
+        <ClientTelemetryProvider>
+          <QueryProvider>
+            <UserProvider>
+              <NotificationProvider>
+                {children}
+                <Toaster
+                  position="top-right"
+                  toastOptions={{
+                    classNames: {
+                      toast:
+                        "rounded-xl border border-border bg-card text-card-foreground shadow-xl",
+                      title: "text-sm font-medium text-card-foreground",
+                      description: "text-sm text-muted-foreground",
+                      actionButton: "rounded-lg bg-primary text-primary-foreground",
+                      cancelButton: "rounded-lg bg-secondary text-secondary-foreground",
+                    },
+                  }}
+                />
+              </NotificationProvider>
+            </UserProvider>
+          </QueryProvider>
+        </ClientTelemetryProvider>
       </body>
     </html>
   );

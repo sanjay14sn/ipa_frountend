@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { setQueryClientBridge } from "@/hooks/api/query-client-bridge";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 export default function QueryProvider({
   children,
@@ -29,19 +30,19 @@ export default function QueryProvider({
         },
         queryCache: new QueryCache({
           onError: (error: any) => {
-            const message =
-              error?.response?.data?.message ||
-              error?.message ||
-              "An error occurred while fetching data";
+            const message = getUserFriendlyMessage(
+              error,
+              "An error occurred while fetching data",
+            );
             toast.error(message);
           },
         }),
         mutationCache: new MutationCache({
           onError: (error: any) => {
-            const message =
-              error?.response?.data?.message ||
-              error?.message ||
-              "An error occurred while performing the action";
+            const message = getUserFriendlyMessage(
+              error,
+              "An error occurred while performing the action",
+            );
             toast.error(message);
           },
         }),

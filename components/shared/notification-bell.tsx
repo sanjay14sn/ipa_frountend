@@ -41,6 +41,10 @@ export function NotificationBell() {
   };
 
   const getRedirectUrl = (notification: Notification) => {
+    if (notification.action?.href) {
+      return notification.action.href;
+    }
+
     switch (notification.type) {
       // Student notifications
       case "student_id_requested":
@@ -85,7 +89,27 @@ export function NotificationBell() {
       // Order notifications
       case "order_placed":
       case "order_updated":
+      case "ORDER_PLACED":
+      case "ORDER_CREATED":
+      case "ORDER_SHIPPED":
+      case "ORDER_CANCELLED":
+      case "ORDER_BACKORDERED":
+      case "SHIPMENT_CREATED":
         return "/admin/operations?tab=orders";
+      case "LOW_STOCK":
+      case "REPLENISHMENT_DRAFT_CREATED":
+        return "/admin/operations?tab=inventory";
+      case "FRANCHISE_APPROVED":
+      case "AGREEMENT_PENDING_SIGNATURE":
+      case "PAYMENT_RECEIVED":
+      case "RECEIVABLE_ITEM_PAID":
+      case "RECEIVABLE_REMINDER":
+      case "AGREEMENT_HOLD_APPLIED":
+      case "AGREEMENT_HOLD_CLEARED":
+        return "/admin/franchise?tab=franchises";
+      case "CI_CREDENTIALS_ISSUED":
+      case "CI_AGREEMENT_ISSUED":
+        return "/admin/course-instructors?tab=applications";
       default:
         return undefined;
     }
@@ -167,8 +191,13 @@ export function NotificationBell() {
                   <div className="flex items-start gap-3">
                     <div className="flex-1 space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {notification.message}
+                        {notification.title || notification.message}
                       </p>
+                      {notification.title && notification.message ? (
+                        <p className="text-sm text-muted-foreground leading-snug">
+                          {notification.message}
+                        </p>
+                      ) : null}
                       <p className="text-xs text-muted-foreground">
                         {relativeTime(notification.createdAt)}
                       </p>

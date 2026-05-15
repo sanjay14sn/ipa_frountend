@@ -19,6 +19,7 @@ import {
   CIMaterialsPreview,
 } from "@/services/order.service";
 import { toast } from "sonner";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 interface RequestMaterialsModalProps {
   isOpen: boolean;
@@ -58,7 +59,7 @@ export function RequestMaterialsModal({
       const previewData = await getCIMaterialsPreview(instructorId);
       setPreview(previewData);
     } catch (err: any) {
-      setError(err.message || "Failed to load materials preview");
+      setError(getUserFriendlyMessage(err, "Failed to load materials preview"));
       console.error("Error loading materials preview:", err);
     } finally {
       setLoading(false);
@@ -83,8 +84,10 @@ export function RequestMaterialsModal({
       onSuccess?.();
       onClose();
     } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message || err.message || "Failed to create materials order";
+      const errorMessage = getUserFriendlyMessage(
+        err,
+        "Failed to create materials order",
+      );
       setError(errorMessage);
       toast.error(errorMessage);
       console.error("Error creating materials order:", err);

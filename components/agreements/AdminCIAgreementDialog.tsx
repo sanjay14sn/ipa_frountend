@@ -24,6 +24,7 @@ import { getTrainingLevelsByProgram, type TrainingLevel } from "@/services/train
 import type { CIAgreementRecord } from "@/services/ci-training.service";
 import { useToast } from "@/hooks/use-toast";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 interface AdminCIAgreementDialogProps {
   instructor: { id: number; name?: string; programId?: number } | null;
@@ -295,9 +296,10 @@ export function AdminCIAgreementDialog({
     onError: (error: any) => {
       toast({
         title: "Failed to save packages",
-        description:
-          error?.response?.data?.message ??
+        description: getUserFriendlyMessage(
+          error,
           "Could not update CI training packages.",
+        ),
         variant: "destructive",
       });
     },

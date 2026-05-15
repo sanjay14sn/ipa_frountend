@@ -24,6 +24,7 @@ import {
   type StartingKitItem,
 } from "@/services/order.service";
 import UnifiedMaterialRequestDialog from "./components/UnifiedMaterialRequestDialog";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 export default function FranchiseeOrdersPage() {
   const { user } = useUser();
@@ -92,7 +93,12 @@ export default function FranchiseeOrdersPage() {
     } catch (error: any) {
       setUnifiedPaymentData(null);
       setSubmitting(false);
-      toast.error(error?.response?.data?.message || "Payment verification failed. Please contact support.");
+      toast.error(
+        getUserFriendlyMessage(
+          error,
+          "Payment verification failed. Please contact support.",
+        ),
+      );
       return;
     }
     try {
@@ -119,13 +125,17 @@ export default function FranchiseeOrdersPage() {
           paymentRecordId: pd.paymentRecordId,
         });
         toast.error(
-          error?.response?.data?.message ||
+          getUserFriendlyMessage(
+            error,
             "Order creation failed. Use the retry button to complete your order.",
+          ),
         );
       } else {
         toast.error(
-          error?.response?.data?.message ??
+          getUserFriendlyMessage(
+            error,
             "Order creation failed and payment record is missing. Please contact support.",
+          ),
         );
       }
     } finally {
@@ -143,14 +153,19 @@ export default function FranchiseeOrdersPage() {
       await refetchOrders();
       void invalidateAdminOrders();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Order creation failed again. Please contact support.");
+      toast.error(
+        getUserFriendlyMessage(
+          error,
+          "Order creation failed again. Please contact support.",
+        ),
+      );
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handlePaymentFailure(error: any) {
-    toast.error(error?.error || "Payment was not completed.");
+    toast.error(getUserFriendlyMessage(error, "Payment was not completed."));
     setUnifiedPaymentData(null);
     setSubmitting(false);
   }

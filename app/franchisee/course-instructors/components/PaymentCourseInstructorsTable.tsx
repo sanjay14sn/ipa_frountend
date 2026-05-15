@@ -26,6 +26,7 @@ import { MultiLevelTrainingPaymentModal } from "./MultiLevelTrainingPaymentModal
 import { GraduationHistoryModal } from "./GraduationHistoryModal";
 import { TrainingProgressModal } from "./TrainingProgressModal";
 import { abandonOrderPayment } from "@/services/order.service";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 interface PaymentCourseInstructorsTableProps {
   courseInstructors?: CourseInstructorData[];
@@ -151,8 +152,7 @@ export default function PaymentCourseInstructorsTable({
     } catch (error: any) {
       console.error("Error initiating payment:", error);
       toast.error(
-        error.response?.data?.message ||
-          "Failed to initiate payment. Please try again."
+        getUserFriendlyMessage(error, "Failed to initiate payment. Please try again."),
       );
       setProcessingPayment(null);
       setIsProcessingPayment(false);
@@ -187,8 +187,10 @@ export default function PaymentCourseInstructorsTable({
     } catch (error: any) {
       console.error("Error verifying payment:", error);
       toast.error(
-        error.response?.data?.message ||
-          "Payment verification failed. Please contact support."
+        getUserFriendlyMessage(
+          error,
+          "Payment verification failed. Please contact support.",
+        ),
       );
       setPaymentData(null);
       setProcessingPayment(null);
@@ -198,7 +200,7 @@ export default function PaymentCourseInstructorsTable({
 
   const handlePaymentFailure = async (error: any) => {
     console.error("Payment failed:", error);
-    toast.error(error.error || "Payment failed. Please try again.");
+    toast.error(getUserFriendlyMessage(error, "Payment failed. Please try again."));
 
     setPaymentData(null);
     setProcessingPayment(null);

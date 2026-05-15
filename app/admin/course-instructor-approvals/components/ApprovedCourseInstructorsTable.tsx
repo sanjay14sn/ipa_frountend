@@ -18,6 +18,7 @@ import CourseInstructorDetails from "./CourseInstructorDetails";
 import { useToast } from "@/hooks/use-toast";
 import { FileText, RefreshCw } from "lucide-react";
 import { AdminCIAgreementDialog } from "@/components/agreements/AdminCIAgreementDialog";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 interface ApprovedCourseInstructorsTableProps {}
 
@@ -52,9 +53,10 @@ export default function ApprovedCourseInstructorsTable({
     onError: (error: any) => {
       toast({
         title: "Failed to resend email",
-        description:
-          error?.response?.data?.message ??
+        description: getUserFriendlyMessage(
+          error,
           "Could not resend credentials email.",
+        ),
         variant: "destructive",
       });
     },

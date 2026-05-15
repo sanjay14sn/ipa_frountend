@@ -27,6 +27,7 @@ import {
   type AvailableNextTrainingLevelCounts,
 } from "@/services/course-instructor.service";
 import { useToast } from "@/hooks/use-toast";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 interface RequestTrainingModalProps {
   isOpen: boolean;
@@ -81,7 +82,7 @@ export function RequestTrainingModal({
         setScope("half");
       }
     } catch (err: any) {
-      setError(err.message || "Failed to load training options");
+      setError(getUserFriendlyMessage(err, "Failed to load training options"));
     } finally {
       setLoadingLevels(false);
     }
@@ -108,11 +109,7 @@ export function RequestTrainingModal({
       onSuccess?.();
       onClose();
     } catch (err: any) {
-      setError(
-        err.response?.data?.message ||
-          err.message ||
-          "Failed to submit training request",
-      );
+      setError(getUserFriendlyMessage(err, "Failed to submit training request"));
     } finally {
       setLoading(false);
     }

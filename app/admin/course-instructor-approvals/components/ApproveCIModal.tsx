@@ -24,6 +24,7 @@ import {
 } from "@/services/training-level.service";
 import { useToast } from "@/hooks/use-toast";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 interface ApproveCIModalProps {
   instructor: AdminCourseInstructorData | null;
@@ -291,7 +292,10 @@ export default function ApproveCIModal({
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error?.response?.data?.message ?? "Failed to approve instructor. Please try again.",
+        description: getUserFriendlyMessage(
+          error,
+          "Failed to approve instructor. Please try again.",
+        ),
         variant: "destructive",
       });
     } finally {

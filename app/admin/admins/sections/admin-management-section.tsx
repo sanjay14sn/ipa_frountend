@@ -40,6 +40,7 @@ import {
 import { ShieldPlus, RefreshCw, PencilLine } from "lucide-react";
 import { toast } from "sonner";
 import statesCities from "@/data/indian-states-cities.json";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 type AdminFormMode = "create" | "edit";
 
@@ -116,7 +117,7 @@ export function AdminManagementSection() {
   useEffect(() => {
     if (!adminListQuery.error) return;
     console.error("Failed to load admins", adminListQuery.error);
-    toast.error("Failed to load admins");
+    toast.error(getUserFriendlyMessage(adminListQuery.error, "Failed to load admins"));
   }, [adminListQuery.error]);
 
   const openCreate = () => {
@@ -190,7 +191,7 @@ export function AdminManagementSection() {
       resetDialog();
     } catch (error) {
       console.error("Failed to save admin", error);
-      toast.error("Failed to save admin");
+      toast.error(getUserFriendlyMessage(error, "Failed to save admin"));
     }
   };
 

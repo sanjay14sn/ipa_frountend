@@ -39,6 +39,23 @@ export enum NotificationType {
   // Order notifications
   ORDER_PLACED = 'order_placed',
   ORDER_UPDATED = 'order_updated',
+
+  // Production backend notifications
+  AGREEMENT_PENDING_SIGNATURE = 'AGREEMENT_PENDING_SIGNATURE',
+  PAYMENT_RECEIVED = 'PAYMENT_RECEIVED',
+  RECEIVABLE_ITEM_PAID = 'RECEIVABLE_ITEM_PAID',
+  RECEIVABLE_REMINDER = 'RECEIVABLE_REMINDER',
+  AGREEMENT_HOLD_APPLIED = 'AGREEMENT_HOLD_APPLIED',
+  AGREEMENT_HOLD_CLEARED = 'AGREEMENT_HOLD_CLEARED',
+  ORDER_CREATED = 'ORDER_CREATED',
+  ORDER_SHIPPED = 'ORDER_SHIPPED',
+  ORDER_CANCELLED = 'ORDER_CANCELLED',
+  ORDER_BACKORDERED = 'ORDER_BACKORDERED',
+  LOW_STOCK = 'LOW_STOCK',
+  REPLENISHMENT_DRAFT_CREATED = 'REPLENISHMENT_DRAFT_CREATED',
+  CI_CREDENTIALS_ISSUED = 'CI_CREDENTIALS_ISSUED',
+  CI_AGREEMENT_ISSUED = 'CI_AGREEMENT_ISSUED',
+  SHIPMENT_CREATED = 'SHIPMENT_CREATED',
 }
 
 export type UserType = 'admin' | 'franchisee';
@@ -46,8 +63,13 @@ export type UserType = 'admin' | 'franchisee';
 export interface Notification {
   id: number;
   recipientId: number;
-  type: NotificationType;
+  type: NotificationType | string;
+  title?: string;
   message: string;
+  action?: {
+    label?: string;
+    href?: string;
+  };
   isRead: boolean;
   userType: UserType;
   createdAt: Date;

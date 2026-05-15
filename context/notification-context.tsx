@@ -106,7 +106,8 @@ export function NotificationProvider({
       );
       queryClient.setQueryData<number>(unreadKey, (c) => (c ?? 0) + 1);
 
-      toast.info(notification.message, {
+      toast.info(notification.title || "New notification", {
+        description: notification.message,
         duration: 5000,
       });
     },

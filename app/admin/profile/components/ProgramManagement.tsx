@@ -49,6 +49,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStreamsByProgram } from "@/hooks/api/stream.hooks";
 import { useStreamTransitionsByProgram } from "@/hooks/api/stream-transition.hooks";
 import { usePrograms, invalidatePrograms } from "@/hooks/api/program.hooks";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 interface BasicProgramCatalogPanelProps {
   programId: number;
@@ -421,9 +422,10 @@ export function ProgramManagement() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description:
-          error.response?.data?.message ||
+        description: getUserFriendlyMessage(
+          error,
           "Failed to save certificate template",
+        ),
         variant: "destructive",
       });
     } finally {
