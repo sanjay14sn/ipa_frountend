@@ -25,6 +25,7 @@ import {
   RawTableSurface,
 } from "@/components/shared";
 import { RequestedIdDetail } from "@/services/student.service";
+import { formatEntityCodeForDisplay } from "@/lib/format-entity-code";
 
 interface StudentsSectionProps {
   students: RequestedIdDetail[];
@@ -179,12 +180,21 @@ export default function StudentsSection({
           </TableHeader>
           <TableBody>
             {students.map((student) => (
-              <TableRow key={student.rollNo} className="hover:bg-gray-50">
+              <TableRow
+                key={
+                  student.id != null
+                    ? `id-${student.id}`
+                    : `${student.name}-${student.rollNo}-${student.dateOfBirth ?? ""}`
+                }
+                className="hover:bg-gray-50"
+              >
                 <TableCell>
                   <div className="font-medium text-gray-900">{student.name}</div>
                 </TableCell>
                 <TableCell className="text-center">
-                  <Badge variant="outline">{student.rollNo}</Badge>
+                  <Badge variant="outline" title={student.rollNo}>
+                    {formatEntityCodeForDisplay(student.rollNo)}
+                  </Badge>
                 </TableCell>
                 <TableCell className="text-center text-sm text-gray-600">
                   {student.dateOfBirth

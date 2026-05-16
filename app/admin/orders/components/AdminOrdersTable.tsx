@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Eye, ShieldCheck, X, Download, Loader2 } from "lucide-react";
+import { CreditCard, Eye, ShieldCheck, X, Download, Loader2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import {
@@ -12,7 +12,7 @@ import {
   type OrderData,
   type OrderItemData,
 } from "@/services/order.service";
-import { verifyShipment, downloadChallan, type VerifyShipmentDto } from "@/services/fulfillment.service";
+import { verifyShipment, downloadChallan, regenerateDc, type VerifyShipmentDto } from "@/services/fulfillment.service";
 import { useAdminOrderRows } from "@/hooks/api/order.hooks";
 import { VerifyShipmentDialog } from "@/app/admin/shipping/components/VerifyShipmentDialog";
 import { AdminOrderInvoiceDialog } from "./AdminOrderInvoiceDialog";
@@ -173,6 +173,28 @@ export default function AdminOrdersTable({
     [verifyDialogOrderId, ordersQuery, toast],
   );
 
+  const handleRegenerateDc = useCallback(
+    async (orderId: number) => {
+      try {
+        setBusyOrderId(orderId);
+        const result = await regenerateDc(orderId);
+        toast({ title: "Delivery challan regenerated" });
+        await ordersQuery.refetch();
+        // Auto-download the freshly generated PDF
+        void downloadChallan(result.dcPdfPath);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: getUserFriendlyMessage(error),
+          variant: "destructive",
+        });
+      } finally {
+        setBusyOrderId(null);
+      }
+    },
+    [ordersQuery, toast],
+  );
+
   const filters: DataTableFilter[] = [
     {
       key: "status",
@@ -323,6 +345,22 @@ export default function AdminOrdersTable({
                   <Download className="h-4 w-4" />
                 </Button>
               ) : null}
+              {order.shipment?.dcPdfPath && order.adminStatus !== "Cancelled" ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 p-0"
+                  title="Regenerate delivery challan"
+                  disabled={busyOrderId === order.id}
+                  onClick={() => void handleRegenerateDc(order.id)}
+                >
+                  {busyOrderId === order.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                </Button>
+              ) : null}
               {!isFinal ? (
                 <Button
                   variant="ghost"
@@ -340,7 +378,7 @@ export default function AdminOrdersTable({
         },
       },
     ],
-    [busyOrderId, handleMarkPaid, handleOpenCancelDialog, setVerifyDialogOrderId],
+    [busyOrderId, handleMarkPaid, handleOpenCancelDialog, handleRegenerateDc, setVerifyDialogOrderId],
   );
 
   return (

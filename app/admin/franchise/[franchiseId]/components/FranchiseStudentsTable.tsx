@@ -12,6 +12,7 @@ import {
   getPaginatedStudentsAdmin,
   type StudentData,
 } from "@/services/student.service";
+import { formatEntityCodeForDisplay } from "@/lib/format-entity-code";
 
 interface FranchiseStudentsTableProps {
   franchiseId: string;
@@ -61,12 +62,14 @@ export function FranchiseStudentsTable({
         className: "min-w-[20rem] whitespace-nowrap",
         render: (s) => {
           const roll = s.rollNo?.trim() ? s.rollNo : "N/A";
+          const display =
+            roll !== "N/A" ? formatEntityCodeForDisplay(roll) : "N/A";
           return (
             <span
               className="font-mono text-xs leading-normal tracking-tight text-card-foreground"
               title={roll !== "N/A" ? roll : undefined}
             >
-              {roll}
+              {display}
             </span>
           );
         },

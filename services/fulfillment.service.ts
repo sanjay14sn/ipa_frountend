@@ -113,3 +113,8 @@ export async function cancelShipment(orderId: number) {
   const response = await api.post(`/admin/fulfillment/order/${orderId}/cancel`);
   return unwrapData(response);
 }
+
+export async function regenerateDc(orderId: number): Promise<{ dcPdfPath: string }> {
+  const response = await api.post(`/admin/fulfillment/order/${orderId}/regenerate-dc`);
+  return unwrapData(response) as { dcPdfPath: string };
+}

@@ -16,6 +16,7 @@ import {
   ExpandedDetailSurface,
 } from "@/components/shared";
 import type { StudentLifecycleRow, StudentLifecycleStatus } from "@/services/student.service";
+import { formatEntityCodeForDisplay } from "@/lib/format-entity-code";
 
 const statusLabels: Record<StudentLifecycleStatus, string> = {
   ACTIVE: "Active",
@@ -100,8 +101,11 @@ export function StudentLifecycleDetailsDialog({
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>Lifecycle details</DialogTitle>
-          <DialogDescription>
-            {row?.name || "Student"} · {row?.rollNo || "No roll number"}
+          <DialogDescription title={row?.rollNo ?? undefined}>
+            {row?.name || "Student"} ·{" "}
+            {row?.rollNo
+              ? formatEntityCodeForDisplay(row.rollNo)
+              : "No roll number"}
           </DialogDescription>
         </DialogHeader>
 

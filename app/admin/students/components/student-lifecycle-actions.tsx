@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { StudentLifecycleRow } from "@/services/student.service";
+import { formatEntityCodeForDisplay } from "@/lib/format-entity-code";
 
 interface StudentLifecycleActionsProps {
   student: StudentLifecycleRow;
@@ -87,8 +88,9 @@ export function StudentLifecycleActions({
           <div className="space-y-3 py-2">
             <div className="rounded-lg border bg-muted/30 p-3 text-sm">
               <div className="font-medium text-foreground">{student.name}</div>
-              <div className="text-muted-foreground">
-                {student.rollNo} · {student.levelName || "Current level"}
+              <div className="text-muted-foreground" title={student.rollNo}>
+                {formatEntityCodeForDisplay(student.rollNo)} ·{" "}
+                {student.levelName || "Current level"}
               </div>
             </div>
             <div className="space-y-2">

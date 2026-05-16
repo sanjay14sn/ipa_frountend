@@ -16,6 +16,7 @@ import StudentDetails from "./StudentDetails";
 import { StudentLifecycleDetailsDialog } from "@/components/students/student-lifecycle-details-dialog";
 import { getStudentLevelName } from "../utils/student-helpers";
 import { useFranchiseeStudentLifecycle } from "@/hooks/api/student.hooks";
+import { formatEntityCodeForDisplay } from "@/lib/format-entity-code";
 
 /**
  * Widths for `table-fixed` + `<colgroup>`. Email must not use `auto` or it
@@ -157,12 +158,14 @@ export default function StudentsTable({
       className: "h-auto min-h-0 min-w-0 px-2 py-2",
       render: (student) => {
         const roll = student.rollNo || "N/A";
+        const display =
+          roll !== "N/A" ? formatEntityCodeForDisplay(roll) : "N/A";
         return (
           <span
             className="block truncate font-mono text-xs leading-normal tracking-tight text-card-foreground"
             title={roll !== "N/A" ? roll : undefined}
           >
-            {roll}
+            {display}
           </span>
         );
       },

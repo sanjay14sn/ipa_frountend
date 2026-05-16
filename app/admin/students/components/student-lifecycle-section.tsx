@@ -16,6 +16,7 @@ import {
 import type { StudentLifecycleRow, StudentLifecycleStatus } from "@/services/student.service";
 import { StudentLifecycleActions } from "./student-lifecycle-actions";
 import { StudentLifecycleDetailsDialog } from "@/components/students/student-lifecycle-details-dialog";
+import { formatEntityCodeForDisplay } from "@/lib/format-entity-code";
 
 const LIFECYCLE_TABLE_COL_GROUP_WIDTHS: string[] = [
   "8.5rem",
@@ -134,12 +135,14 @@ export function StudentLifecycleSection() {
       className: "min-w-0 px-2",
       render: (row) => {
         const roll = row.rollNo || "N/A";
+        const display =
+          roll !== "N/A" ? formatEntityCodeForDisplay(roll) : "N/A";
         return (
           <span
             className="block truncate font-mono text-xs leading-normal tracking-tight text-card-foreground"
             title={roll !== "N/A" ? roll : undefined}
           >
-            {roll}
+            {display}
           </span>
         );
       },
@@ -150,9 +153,13 @@ export function StudentLifecycleSection() {
       className: "min-w-0 px-2",
       render: (row) => {
         const label = row.franchiseName || row.franchiseId || "N/A";
+        const franchiseLabel =
+          typeof label === "string" && label !== "N/A"
+            ? formatEntityCodeForDisplay(label)
+            : label;
         return (
           <span className="block truncate text-sm text-card-foreground" title={String(label)}>
-            {label}
+            {franchiseLabel}
           </span>
         );
       },
