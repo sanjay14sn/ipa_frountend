@@ -87,8 +87,17 @@ export interface PaymentSummary {
   amount: number;
   currency: string;
   paidAt: string | null;
-  /** Present on single-order detail responses (e.g. invoice dialog). */
+  razorpayOrderId?: string | null;
   razorpayPaymentId?: string | null;
+  bank?: string | null;
+  wallet?: string | null;
+  vpa?: string | null;
+  email?: string | null;
+  contact?: string | null;
+  fee?: number | null;
+  tax?: number | null;
+  /** Raw Razorpay / checkout payload (order detail responses). */
+  acquirerData?: Record<string, unknown> | null;
 }
 
 export interface ShipmentSummary {
@@ -452,6 +461,37 @@ function normalizeDispatchItem(raw: unknown): DispatchOrderItemAdmin {
   };
 }
 
+function cloneAcquirerDataJson(v: unknown): Record<string, unknown> | null {
+  if (v == null || typeof v !== "object" || Array.isArray(v)) return null;
+  try {
+    return JSON.parse(JSON.stringify(v)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function paymentDetailsFromEmbeddedPayment(p: Record<string, unknown>): PaymentDetails {
+  const acq = p.acquirerData as { card?: { last4?: string; network?: string; type?: string; issuer?: string } } | null | undefined;
+  const card =
+    acq && typeof acq === "object" && acq.card && typeof acq.card === "object"
+      ? (acq.card as { last4?: string; network?: string; type?: string; issuer?: string })
+      : undefined;
+  return {
+    method: p.method != null ? String(p.method) : null,
+    bank: p.bank != null ? String(p.bank) : null,
+    wallet: p.wallet != null ? String(p.wallet) : null,
+    vpa: p.vpa != null ? String(p.vpa) : null,
+    email: p.email != null ? String(p.email) : null,
+    contact: p.contact != null ? String(p.contact) : null,
+    cardLast4: card?.last4 ?? null,
+    cardNetwork: card?.network ?? null,
+    cardType: card?.type ?? null,
+    cardIssuer: card?.issuer ?? null,
+    fee: p.fee != null ? Number(p.fee) : null,
+    tax: p.tax != null ? Number(p.tax) : null,
+  };
+}
+
 function normalizeOrderLine(raw: any): OrderItemData {
   return {
     id: Number(raw?.id ?? 0),
@@ -575,37 +615,37 @@ function normalizeOrder(row: any): OrderData {
       : null,
     payment:
       row?.payment != null
-        ? {
-            id: Number(row.payment.id),
-            status: String(row.payment.status),
-            method: row.payment.method != null ? String(row.payment.method) : null,
-            amount: Number(row.payment.amount ?? 0),
-            currency: String(row.payment.currency ?? "INR"),
-            paidAt: row.payment.paidAt != null ? String(row.payment.paidAt) : null,
-            razorpayPaymentId:
-              row.payment.razorpayPaymentId != null
-                ? String(row.payment.razorpayPaymentId)
-                : undefined,
-          }
+        ? (() => {
+            const p = row.payment as Record<string, unknown>;
+            return {
+              id: Number(p.id),
+              status: String(p.status),
+              method: p.method != null ? String(p.method) : null,
+              amount: Number(p.amount ?? 0),
+              currency: String(p.currency ?? "INR"),
+              paidAt: p.paidAt != null ? String(p.paidAt) : null,
+              razorpayOrderId:
+                p.razorpayOrderId != null ? String(p.razorpayOrderId) : undefined,
+              razorpayPaymentId:
+                p.razorpayPaymentId != null ? String(p.razorpayPaymentId) : undefined,
+              bank: p.bank != null ? String(p.bank) : null,
+              wallet: p.wallet != null ? String(p.wallet) : null,
+              vpa: p.vpa != null ? String(p.vpa) : null,
+              email: p.email != null ? String(p.email) : null,
+              contact: p.contact != null ? String(p.contact) : null,
+              fee: p.fee != null ? Number(p.fee) : null,
+              tax: p.tax != null ? Number(p.tax) : null,
+              acquirerData: cloneAcquirerDataJson(p.acquirerData),
+            };
+          })()
         : null,
     paymentDetails:
       row?.paymentDetails != null
         ? row.paymentDetails
-        : row?.payment != null && row.payment.razorpayPaymentId != null
-          ? {
-              method: row.payment.method ?? null,
-              bank: row.payment.bank ?? null,
-              wallet: row.payment.wallet ?? null,
-              vpa: row.payment.vpa ?? null,
-              email: row.payment.email ?? null,
-              contact: row.payment.contact ?? null,
-              cardLast4: null,
-              cardNetwork: null,
-              cardType: null,
-              cardIssuer: null,
-              fee: row.payment.fee != null ? Number(row.payment.fee) : null,
-              tax: row.payment.tax != null ? Number(row.payment.tax) : null,
-            }
+        : row?.payment != null &&
+            ((row.payment as Record<string, unknown>).razorpayPaymentId != null ||
+              (row.payment as Record<string, unknown>).acquirerData != null)
+          ? paymentDetailsFromEmbeddedPayment(row.payment as Record<string, unknown>)
           : null,
     dispatchItems: Array.isArray(row?.dispatchItems)
       ? (row.dispatchItems as unknown[]).map(normalizeDispatchItem)

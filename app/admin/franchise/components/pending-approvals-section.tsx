@@ -275,8 +275,8 @@ export function PendingApprovalsSection() {
           }
         }}
       >
-        <DialogContent className="max-h-[90vh] max-w-5xl gap-0 overflow-hidden p-0">
-          <DialogHeader className="border-b border-border px-4 py-5 sm:px-5">
+        <DialogContent className="flex max-h-[90vh] max-w-5xl flex-col gap-0 overflow-hidden p-0">
+          <DialogHeader className="shrink-0 border-b border-border px-4 py-5 sm:px-5">
             <div className="mb-3 flex">
               <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
                 Agreement terms
@@ -296,27 +296,28 @@ export function PendingApprovalsSection() {
           </DialogHeader>
 
           {selectedApplication && (
-            <div className="max-h-[calc(90vh-118px)] overflow-y-auto px-4 py-4 sm:px-5">
-              <div className="space-y-4">
-                <h3 className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-                  <IndianRupee className="h-4 w-4" />
-                  Selected program agreement terms
-                </h3>
+            <>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
+                <div className="space-y-4">
+                  <h3 className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+                    <IndianRupee className="h-4 w-4" />
+                    Selected program agreement terms
+                  </h3>
 
-                <Card className="overflow-hidden rounded-xl border-border shadow-sm">
-                  <CardHeader className="border-b border-border bg-accent/30 px-4 py-4">
-                    <CardTitle className="text-base font-medium text-card-foreground">
-                      {program.programName}
-                    </CardTitle>
-                    <p className="mt-1 text-sm font-normal text-muted-foreground">
-                      These fixed columns map directly to the backend agreement
-                      terms.
-                    </p>
-                  </CardHeader>
+                  <Card className="overflow-hidden rounded-xl border-border shadow-sm">
+                    <CardHeader className="border-b border-border bg-accent/30 px-4 py-4">
+                      <CardTitle className="text-base font-medium text-card-foreground">
+                        {program.programName}
+                      </CardTitle>
+                      <p className="mt-1 text-sm font-normal text-muted-foreground">
+                        These fixed columns map directly to the backend agreement
+                        terms.
+                      </p>
+                    </CardHeader>
 
-                  <CardContent className="p-4">
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                      <div className="space-y-2">
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <Label className="text-sm font-medium text-card-foreground">
                             Franchise Fee
@@ -631,25 +632,28 @@ export function PendingApprovalsSection() {
                     <StartingKitEditor rows={kitRows} onChange={setKitRows} />
                   </div>
                 )}
+                </div>
               </div>
 
-              <div className="-mx-4 mt-4 flex flex-col-reverse gap-3 border-t border-border px-4 pb-1 pt-4 sm:-mx-5 sm:flex-row sm:px-5">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowPayrollDialog(false)}
-                  className="h-10 rounded-lg sm:px-6"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={submitPayrollDetails}
-                  className="h-10 flex-1 rounded-lg text-sm font-medium"
-                >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Save terms and approve
-                </Button>
+              <div className="shrink-0 border-t border-border bg-card px-4 py-4 sm:px-5">
+                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowPayrollDialog(false)}
+                    className="h-10 rounded-lg sm:px-6"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={submitPayrollDetails}
+                    className="h-10 rounded-lg text-sm font-medium sm:min-w-[220px]"
+                  >
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Save terms and approve
+                  </Button>
+                </div>
               </div>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

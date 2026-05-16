@@ -11,6 +11,7 @@ import {
   ExpandedDetailSurface,
   RawTableSurface,
 } from "@/components/shared";
+import { OrderPaymentDetailsPanel } from "@/components/orders/OrderPaymentDetailsPanel";
 
 interface OrderDetailsProps {
   order: OrderData;
@@ -135,29 +136,11 @@ export default function OrderDetails({
         <>
           <Separator />
           <ExpandedDetailSection title="Payment">
-            <DetailFieldsGrid columns={4}>
-              <DetailField label="Status" value={detailedOrder.payment.status} />
-              <DetailField
-                label="Method"
-                value={detailedOrder.payment.method ?? "—"}
-              />
-              <DetailField
-                label="Amount"
-                value={new Intl.NumberFormat("en-IN", {
-                  style: "currency",
-                  currency: detailedOrder.payment.currency ?? "INR",
-                  maximumFractionDigits: 2,
-                }).format(Number(detailedOrder.payment.amount))}
-              />
-              <DetailField
-                label="Paid at"
-                value={
-                  detailedOrder.payment.paidAt
-                    ? new Date(detailedOrder.payment.paidAt).toLocaleString()
-                    : "—"
-                }
-              />
-            </DetailFieldsGrid>
+            <OrderPaymentDetailsPanel
+              payment={detailedOrder.payment}
+              hideTitle
+              className="border-0 bg-transparent p-0"
+            />
           </ExpandedDetailSection>
         </>
       ) : null}

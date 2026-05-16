@@ -13,6 +13,7 @@ import type { InvoicePreview, OrderData } from "@/services/order.service";
 import UnifiedInvoiceGroupedSummary from "@/app/franchisee/orders/components/UnifiedInvoiceGroupedSummary";
 import { DispatchRecipientTable } from "@/app/admin/orders/components/DispatchRecipientTable";
 import { isStandaloneDispatchOrderType } from "@/lib/dispatch-order-helpers";
+import { OrderPaymentDetailsPanel } from "@/components/orders/OrderPaymentDetailsPanel";
 
 export type OrderRowInvoiceAudience = "admin" | "franchisee";
 
@@ -69,58 +70,6 @@ function TabCount({ n }: { n: number }) {
     <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground group-data-[state=active]:bg-accent group-data-[state=active]:text-accent-foreground">
       {n}
     </span>
-  );
-}
-
-function PaymentDetailsSection({ order }: { order: OrderData }) {
-  const pd = order.paymentDetails;
-  if (!pd) return null;
-
-  const fmt = (v: number | null) =>
-    v != null ? currencyFormatter.format(v) : "—";
-
-  return (
-    <div className="mt-4 rounded-xl border border-border/70 bg-muted/30 p-4">
-      <div className="mb-3 text-sm font-semibold text-card-foreground">
-        Payment details
-      </div>
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
-        <div>
-          <dt className="text-muted-foreground">Method</dt>
-          <dd className="font-medium text-card-foreground">{pd.method ?? "—"}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Gateway payment ID</dt>
-          <dd className="font-medium text-card-foreground break-all">
-            {order.payment?.razorpayPaymentId ?? "—"}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Amount</dt>
-          <dd className="font-medium text-card-foreground">
-            {order.payment?.amount != null
-              ? currencyFormatter.format(Number(order.payment.amount))
-              : "—"}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Fee</dt>
-          <dd className="font-medium text-card-foreground">{fmt(pd.fee)}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Tax</dt>
-          <dd className="font-medium text-card-foreground">{fmt(pd.tax)}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Paid at</dt>
-          <dd className="font-medium text-card-foreground">
-            {order.payment?.paidAt
-              ? new Date(order.payment.paidAt).toLocaleString()
-              : "—"}
-          </dd>
-        </div>
-      </dl>
-    </div>
   );
 }
 
@@ -251,7 +200,9 @@ export function OrderRowInvoiceDialog({
             <p className="text-sm text-muted-foreground">
               No stored material invoice or dispatch lines for this order.
             </p>
-            {order && <PaymentDetailsSection order={order} />}
+            {order?.payment ? (
+              <OrderPaymentDetailsPanel payment={order.payment} className="mt-4" />
+            ) : null}
           </div>
         ) : tabsMode === "invoice-only" ? (
           <>
@@ -263,7 +214,9 @@ export function OrderRowInvoiceDialog({
                   No stored invoice snapshot for this order.
                 </p>
               )}
-              {order && <PaymentDetailsSection order={order} />}
+              {order?.payment ? (
+                <OrderPaymentDetailsPanel payment={order.payment} className="mt-4" />
+              ) : null}
             </div>
             {snapshot ? (
               <div className="flex shrink-0 items-center justify-between gap-6 border-t border-border bg-muted/30 px-6 py-4">
@@ -310,7 +263,9 @@ export function OrderRowInvoiceDialog({
               <TabsContent value="id-cards" className="mt-0 focus-visible:ring-0">
                 <DispatchRecipientTable rows={idCards} emptyLabel="None on this order." />
               </TabsContent>
-              {order && <PaymentDetailsSection order={order} />}
+              {order?.payment ? (
+                <OrderPaymentDetailsPanel payment={order.payment} className="mt-4" />
+              ) : null}
             </div>
           </Tabs>
         )}

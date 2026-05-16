@@ -40,6 +40,7 @@ import {
   DetailFieldsGrid,
   DetailField,
 } from "@/components/shared";
+import { OrderPaymentDetailsPanel } from "@/components/orders/OrderPaymentDetailsPanel";
 
 function clubOrderItems(lines: OrderItemData[]) {
   const map = new Map<
@@ -513,29 +514,11 @@ export default function AdminOrdersTable({
             <>
               <Separator />
               <ExpandedDetailSection title="Payment">
-                <DetailFieldsGrid columns={4}>
-                  <DetailField label="Status" value={order.payment.status} />
-                  <DetailField
-                    label="Method"
-                    value={order.payment.method ?? "—"}
-                  />
-                  <DetailField
-                    label="Amount"
-                    value={new Intl.NumberFormat("en-IN", {
-                      style: "currency",
-                      currency: order.payment.currency ?? "INR",
-                      maximumFractionDigits: 2,
-                    }).format(Number(order.payment.amount))}
-                  />
-                  <DetailField
-                    label="Paid at"
-                    value={
-                      order.payment.paidAt
-                        ? new Date(order.payment.paidAt).toLocaleString()
-                        : "—"
-                    }
-                  />
-                </DetailFieldsGrid>
+                <OrderPaymentDetailsPanel
+                  payment={order.payment}
+                  hideTitle
+                  className="border-0 bg-transparent p-0"
+                />
               </ExpandedDetailSection>
             </>
           ) : null}
