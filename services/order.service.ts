@@ -80,6 +80,17 @@ export interface PaymentDetails {
   tax: number | null;
 }
 
+export interface PaymentSummary {
+  id: number;
+  status: string;
+  method: string | null;
+  amount: number;
+  currency: string;
+  paidAt: string | null;
+  /** Present on single-order detail responses (e.g. invoice dialog). */
+  razorpayPaymentId?: string | null;
+}
+
 export interface ShipmentSummary {
   id: number;
   status: string;
@@ -140,6 +151,8 @@ export interface OrderData {
   dcPdfPath?: string | null;
   shipment?: ShipmentSummary | null;
   paymentDetails?: PaymentDetails | null;
+  /** Payment summary from the order list response; full payment fields on detail responses. */
+  payment?: PaymentSummary | null;
   dispatchItems?: DispatchOrderItemAdmin[];
   canCancel?: boolean;
   cancelBlockedReason?: string | null;
@@ -560,7 +573,40 @@ function normalizeOrder(row: any): OrderData {
           dcPdfPath: row.shipment.dcPdfPath ?? null,
         }
       : null,
-    paymentDetails: row?.paymentDetails ?? null,
+    payment:
+      row?.payment != null
+        ? {
+            id: Number(row.payment.id),
+            status: String(row.payment.status),
+            method: row.payment.method != null ? String(row.payment.method) : null,
+            amount: Number(row.payment.amount ?? 0),
+            currency: String(row.payment.currency ?? "INR"),
+            paidAt: row.payment.paidAt != null ? String(row.payment.paidAt) : null,
+            razorpayPaymentId:
+              row.payment.razorpayPaymentId != null
+                ? String(row.payment.razorpayPaymentId)
+                : undefined,
+          }
+        : null,
+    paymentDetails:
+      row?.paymentDetails != null
+        ? row.paymentDetails
+        : row?.payment != null && row.payment.razorpayPaymentId != null
+          ? {
+              method: row.payment.method ?? null,
+              bank: row.payment.bank ?? null,
+              wallet: row.payment.wallet ?? null,
+              vpa: row.payment.vpa ?? null,
+              email: row.payment.email ?? null,
+              contact: row.payment.contact ?? null,
+              cardLast4: null,
+              cardNetwork: null,
+              cardType: null,
+              cardIssuer: null,
+              fee: row.payment.fee != null ? Number(row.payment.fee) : null,
+              tax: row.payment.tax != null ? Number(row.payment.tax) : null,
+            }
+          : null,
     dispatchItems: Array.isArray(row?.dispatchItems)
       ? (row.dispatchItems as unknown[]).map(normalizeDispatchItem)
       : [],
