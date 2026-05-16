@@ -131,6 +131,36 @@ export default function OrderDetails({
           </table>
         </RawTableSurface>
       </ExpandedDetailSection>
+      {detailedOrder.payment != null ? (
+        <>
+          <Separator />
+          <ExpandedDetailSection title="Payment">
+            <DetailFieldsGrid columns={4}>
+              <DetailField label="Status" value={detailedOrder.payment.status} />
+              <DetailField
+                label="Method"
+                value={detailedOrder.payment.method ?? "—"}
+              />
+              <DetailField
+                label="Amount"
+                value={new Intl.NumberFormat("en-IN", {
+                  style: "currency",
+                  currency: detailedOrder.payment.currency ?? "INR",
+                  maximumFractionDigits: 2,
+                }).format(Number(detailedOrder.payment.amount))}
+              />
+              <DetailField
+                label="Paid at"
+                value={
+                  detailedOrder.payment.paidAt
+                    ? new Date(detailedOrder.payment.paidAt).toLocaleString()
+                    : "—"
+                }
+              />
+            </DetailFieldsGrid>
+          </ExpandedDetailSection>
+        </>
+      ) : null}
     </ExpandedDetailSurface>
   );
 }
