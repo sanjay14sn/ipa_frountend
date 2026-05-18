@@ -1,5 +1,6 @@
 import { api } from "@/lib/axios";
 import { unwrapData } from "@/lib/unwrap-api";
+import type { ApproveProgramRequestPayload } from "./franchise.service";
 
 export interface ProgramRequestItem {
   id: number;
@@ -48,7 +49,7 @@ export async function listProgramRequestsForAdmin(params?: {
   return Array.isArray(data) ? data : [];
 }
 
-export async function approveProgramRequestAdmin(id: number, payload: unknown): Promise<void> {
+export async function approveProgramRequestAdmin(id: number, payload: ApproveProgramRequestPayload): Promise<void> {
   await api.post(`/admin/program-requests/${id}/approve`, payload);
 }
 

@@ -75,14 +75,29 @@ export interface ProgramRequestRow {
   createdAt?: string;
 }
 
+export interface ProgramRequestPayroll {
+  programId?: number;
+  franchiseFee: number;
+  kitCost: number;
+  materialCost: number;
+  monthlyFee: number;
+  ciShare: number;
+  franchiseShare: number;
+  royalty: number;
+  installment: number;
+  tenure?: number;
+  totalAmount: number;
+  gstFranchiseFee: boolean;
+  gstRoyalty: boolean;
+  gstMaterialCost: boolean;
+  freeload: boolean;
+}
+
 export interface ApproveProgramRequestPayload {
-  franchiseFee?: number;
-  kitCost?: number;
-  payroll?: Record<string, unknown>;
+  payroll: ProgramRequestPayroll;
   dateOfPayment?: string;
   dateOfJoining?: string;
   kitItems?: { inventoryId: number; quantity: number }[];
-  [key: string]: unknown;
 }
 
 export async function getProgramRequests(_params?: {
