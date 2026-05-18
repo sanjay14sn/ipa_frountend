@@ -1,6 +1,7 @@
 import { api } from "@/lib/axios";
 import { unwrapData } from "@/lib/unwrap-api";
 import type { PaymentOrderResponse } from "./franchisee.service";
+import { requestPrograms } from "./program-request.service";
 
 /** Apply for a new franchise (franchisee JWT). */
 export interface ApplyForFranchisePayload {
@@ -145,6 +146,7 @@ export interface RequestProgramDto {
   notes?: string;
 }
 
-export async function requestProgram(_dto: RequestProgramDto): Promise<unknown> {
-  throw new Error("Program requests are not supported in ipa-new");
+export async function requestProgram(dto: RequestProgramDto): Promise<unknown> {
+  await requestPrograms(dto.franchiseId, dto.programIds);
+  return {};
 }
