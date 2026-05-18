@@ -25,11 +25,11 @@ import {
   Users,
   ChevronDown,
 } from "lucide-react";
-import {
+import type {
   ProgramRequestRow,
   ApproveProgramRequestPayload,
-  approveProgramRequest,
 } from "@/services/franchise.service";
+import { approveProgramRequestAdmin } from "@/services/program-request.service";
 import { getErrorMessage } from "@/lib/error-utils";
 import { TablePageShell } from "@/components/shared";
 import ProgramRequestsTable from "@/app/admin/program-requests/components/ProgramRequestsTable";
@@ -206,7 +206,7 @@ export function ProgramRequestsSection() {
         ...(kitItems.length > 0 && { kitItems }),
       };
 
-      await approveProgramRequest(selectedRequest.id, payload);
+      await approveProgramRequestAdmin(selectedRequest.id, payload);
       toast.success("Program request approved and payroll configured");
       setShowPayrollDialog(false);
       setSelectedRequest(null);

@@ -10,11 +10,11 @@ import type {
   DataTableFilter,
   DataTableSortOption,
 } from "@/components/shared";
+import type { ProgramRequestRow } from "@/services/franchise.service";
 import {
-  ProgramRequestRow,
-  getPaginatedProgramRequests,
-  rejectProgramRequest,
-} from "@/services/franchise.service";
+  listProgramRequestsForAdmin,
+  rejectProgramRequestAdmin,
+} from "@/services/program-request.service";
 import { getErrorMessage } from "@/lib/error-utils";
 import { toast } from "sonner";
 import ProgramRequestDetails from "./ProgramRequestDetails";
@@ -44,17 +44,48 @@ export default function ProgramRequestsTable({
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await getPaginatedProgramRequests({
-        page: currentPage,
-        limit: itemsPerPage,
-        search: searchTerm || undefined,
+      const items = await listProgramRequestsForAdmin({
         status: statusFilter !== "all" ? statusFilter : undefined,
-        sortBy: sortBy || undefined,
-        sortOrder: sortOrder || undefined,
       });
-      setRequests(result.data ?? []);
-      setTotalPages(result.meta?.totalPages ?? 0);
-      setTotal(result.meta?.total ?? 0);
+      // Map ProgramRequestItem -> ProgramRequestRow shape used by this table
+      const rows: ProgramRequestRow[] = items.map((item) => ({
+        id: item.id,
+        franchiseId: item.franchiseId,
+        programId: item.programId,
+        status: item.status,
+        program: item.program,
+        franchise: item.franchise,
+        franchisee: item.franchisee,
+        requestedBy: String(item.franchiseeId),
+        createdAt: item.requestedAt,
+      }));
+      // Client-side search filter
+      const searched = searchTerm
+        ? rows.filter((r) => {
+            const q = searchTerm.toLowerCase();
+            return (
+              r.franchise?.name?.toLowerCase().includes(q) ||
+              r.franchiseId?.toLowerCase().includes(q) ||
+              r.program?.name?.toLowerCase().includes(q) ||
+              r.franchisee?.name?.toLowerCase().includes(q) ||
+              r.franchisee?.mail?.toLowerCase().includes(q)
+            );
+          })
+        : rows;
+      // Client-side sort
+      const sorted = [...searched].sort((a, b) => {
+        const aVal = a.createdAt ?? "";
+        const bVal = b.createdAt ?? "";
+        return sortOrder === "ASC"
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      });
+      // Client-side pagination
+      const start = (currentPage - 1) * itemsPerPage;
+      const page = sorted.slice(start, start + itemsPerPage);
+      setRequests(page);
+      setTotal(sorted.length);
+      setTotalPages(Math.max(1, Math.ceil(sorted.length / itemsPerPage)));
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to load program requests"));
       setRequests([]);
@@ -92,7 +123,7 @@ export default function ProgramRequestsTable({
       return;
     setRejectingId(request.id);
     try {
-      await rejectProgramRequest(request.id);
+      await rejectProgramRequestAdmin(request.id, '');
       toast.success("Program request rejected");
       fetchData();
     } catch (error) {

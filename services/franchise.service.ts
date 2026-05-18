@@ -1,7 +1,7 @@
 import { api } from "@/lib/axios";
 import { unwrapData } from "@/lib/unwrap-api";
 import type { PaymentOrderResponse } from "./franchisee.service";
-import { requestPrograms } from "./program-request.service";
+import { requestPrograms, approveProgramRequestAdmin, rejectProgramRequestAdmin } from "./program-request.service";
 
 /** Apply for a new franchise (franchisee JWT). */
 export interface ApplyForFranchisePayload {
@@ -78,6 +78,10 @@ export interface ProgramRequestRow {
 export interface ApproveProgramRequestPayload {
   franchiseFee?: number;
   kitCost?: number;
+  payroll?: Record<string, unknown>;
+  dateOfPayment?: string;
+  dateOfJoining?: string;
+  kitItems?: { inventoryId: number; quantity: number }[];
   [key: string]: unknown;
 }
 
@@ -102,14 +106,14 @@ export async function getPaginatedProgramRequests(_params?: {
 }
 
 export async function approveProgramRequest(
-  _id: number,
-  _payload: ApproveProgramRequestPayload,
+  id: number,
+  payload: ApproveProgramRequestPayload,
 ) {
-  throw new Error("Program requests are not supported in ipa-new");
+  return approveProgramRequestAdmin(id, payload);
 }
 
-export async function rejectProgramRequest(_id: number) {
-  throw new Error("Program requests are not supported in ipa-new");
+export async function rejectProgramRequest(id: number) {
+  return rejectProgramRequestAdmin(id, '');
 }
 
 export async function bulkUploadFranchises(_file: File) {
