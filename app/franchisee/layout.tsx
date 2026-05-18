@@ -18,6 +18,7 @@ import {
   BreadcrumbList,
 } from "@/components/ui/breadcrumb";
 import { PortalHeaderActions } from "@/components/layout/portal-header-actions";
+import { FranchiseSwitcher } from "@/components/franchisee/franchise-switcher";
 import { useUser } from "@/context/user-context";
 import { getEffectiveFranchiseStatus } from "@/lib/auth";
 
@@ -80,6 +81,7 @@ export default function FranchiseeLayout({
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+          <FranchiseSwitcher />
           <PortalHeaderActions />
         </header>
         <div className="flex flex-1 flex-col gap-4 bg-background p-4">

@@ -11,7 +11,7 @@ export interface User {
   phone?: string;
   adminRole?: "super" | "staff";
   state?: string | null;
-  franchises?: Array<{ id: string; name: string; status: string }>;
+  franchises?: Array<{ id: string; name: string; status: string; pendingCount?: number }>;
   profile?: {
     id: number;
     name: string;
