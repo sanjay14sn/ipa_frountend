@@ -58,7 +58,7 @@ interface ProgramPayrollState {
   ciShare: number;
   franchiseShare: number;
   royalty: number;
-  installment: number;
+  installment: boolean;
   tenure: number;
   totalAmount: number;
   gstFranchiseFee: boolean;
@@ -77,7 +77,7 @@ const defaultPayroll = (programId: number, programName: string): ProgramPayrollS
   ciShare: 0,
   franchiseShare: 0,
   royalty: 0,
-  installment: 0,
+  installment: false,
   tenure: 36,
   totalAmount: 0,
   gstFranchiseFee: false,
@@ -139,7 +139,7 @@ export function ProgramRequestsSection() {
         updated.kitCost = 0;
         updated.materialCost = 0;
         updated.monthlyFee = 0;
-        updated.installment = 0;
+        updated.installment = false;
       }
 
       if (updated.freeload) {
@@ -149,8 +149,7 @@ export function ProgramRequestsSection() {
           (Number(updated.franchiseFee) || 0) +
           (Number(updated.kitCost) || 0) +
           (Number(updated.materialCost) || 0) +
-          (Number(updated.monthlyFee) || 0) +
-          (Number(updated.installment) || 0);
+          (Number(updated.monthlyFee) || 0);
         const gst =
           (!updated.gstFranchiseFee
             ? (Number(updated.franchiseFee) || 0) * 0.18
@@ -196,7 +195,7 @@ export function ProgramRequestsSection() {
           ciShare: Number(payroll.ciShare) || 0,
           franchiseShare: Number(payroll.franchiseShare) || 0,
           royalty: Number(payroll.royalty) || 0,
-          installment: Number(payroll.installment) || 0,
+          installment: payroll.installment,
           tenure: Number(payroll.tenure) || 36,
           totalAmount: Number(payroll.totalAmount) || 0,
           gstFranchiseFee: payroll.gstFranchiseFee,
@@ -446,25 +445,23 @@ export function ProgramRequestsSection() {
                   </div>
 
                   {/* Installment */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">
-                      Installment
-                    </Label>
-                    <div className="relative">
-                      <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        type="number"
-                        value={payroll.installment || ""}
+                  <div className="space-y-2 flex flex-col justify-end">
+                    <div className="flex items-center gap-2 h-10">
+                      <input
+                        type="checkbox"
+                        id="installment"
+                        checked={payroll.installment}
                         onChange={(e) =>
-                          handlePayrollChange(
-                            "installment",
-                            e.target.value === "" ? 0 : Number(e.target.value)
-                          )
+                          handlePayrollChange("installment", e.target.checked)
                         }
-                        className="pl-10 h-10"
-                        placeholder="0"
                         disabled={payroll.freeload}
                       />
+                      <Label
+                        htmlFor="installment"
+                        className="text-sm font-medium text-gray-700 cursor-pointer"
+                      >
+                        Allow Installments
+                      </Label>
                     </div>
                   </div>
 

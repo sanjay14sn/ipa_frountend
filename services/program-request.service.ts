@@ -10,7 +10,7 @@ export interface ProgramRequestPayroll {
   ciShare: number;
   franchiseShare: number;
   royalty: number;
-  installment: number;
+  installment: boolean;
   tenure?: number;
   totalAmount: number;
   gstFranchiseFee: boolean;
