@@ -24,9 +24,9 @@ export interface CITrainingPurchaseInitiateResponse {
   paymentId?: number;
 }
 
-export function buildCITrainingPurchasePayload(packageIds: number | number[]) {
+export function buildCITrainingPurchasePayload(packageId: number) {
   return {
-    packageIds: Array.isArray(packageIds) ? packageIds : [packageIds],
+    packageId,
   };
 }
 
@@ -64,11 +64,11 @@ export async function listCIPackages(): Promise<CITrainingPackageItem[]> {
 }
 
 export async function initiateCITrainingPurchase(
-  packageIds: number | number[],
+  packageId: number,
 ): Promise<CITrainingPurchaseInitiateResponse> {
   const res = await api.post(
     "/ci/training/purchase/initiate",
-    buildCITrainingPurchasePayload(packageIds),
+    buildCITrainingPurchasePayload(packageId),
   );
   const payload = res.data.result;
   const payment = payload?.payment ?? {};

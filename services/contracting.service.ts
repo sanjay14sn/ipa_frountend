@@ -4,6 +4,7 @@ import {
   normalizePaginatedResult,
   type PaginatedResult,
 } from "@/lib/unwrap-api";
+import type { CIAgreementRecord } from "@/services/ci-training.service";
 
 export interface CIAgreementData {
   id: number;
@@ -44,13 +45,20 @@ export async function listCIAgreementsForFranchisee(params?: {
   return { ...paginated, rows };
 }
 
+export async function getCIAgreementByIdForFranchisee(
+  agreementId: number,
+): Promise<CIAgreementRecord | null> {
+  const res = await api.get(`/contracting/ci-agreements/${agreementId}`);
+  return unwrapData<CIAgreementRecord | null>(res);
+}
+
 export async function signCIAgreementAsFranchisee(
   agreementId: number,
-  signaturePath: string,
+  signaturePath?: string,
 ): Promise<void> {
   await api.post(
     `/contracting/ci-agreements/${agreementId}/sign-franchisee`,
-    { signaturePath },
+    signaturePath ? { signaturePath } : {},
   );
 }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
-import { Loader2, PenLine, Upload } from "lucide-react";
+import { Eye, Loader2, PenLine, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,9 @@ import {
   type CIAgreementData,
   listCIAgreementsForFranchisee,
   signCIAgreementAsFranchiseeFile,
+  getCIAgreementByIdForFranchisee,
 } from "@/services/contracting.service";
+import { CIAgreementDetail } from "@/components/agreements/CIAgreementDetail";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -194,6 +196,45 @@ function SignDialog({
   );
 }
 
+// ─── View dialog ─────────────────────────────────────────────────────────────
+
+function ViewDialog({
+  agreementId,
+  onClose,
+}: {
+  agreementId: number | null;
+  onClose: () => void;
+}) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["franchisee-ci-agreement-detail", agreementId],
+    queryFn: () => getCIAgreementByIdForFranchisee(agreementId!),
+    enabled: agreementId !== null,
+  });
+
+  return (
+    <Dialog open={agreementId !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-h-[90vh] w-[96vw] overflow-y-auto sm:max-w-[1200px]">
+        <DialogHeader>
+          <DialogTitle>Course Instructor Agreement</DialogTitle>
+          <DialogDescription>Read-only view of the CI agreement.</DialogDescription>
+        </DialogHeader>
+        {isLoading ? (
+          <div className="flex items-center gap-2 rounded-lg border p-4 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading agreement…
+          </div>
+        ) : !data ? (
+          <div className="rounded-lg border p-4 text-sm text-muted-foreground">
+            No agreement details found.
+          </div>
+        ) : (
+          <CIAgreementDetail agreement={data} />
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Section ─────────────────────────────────────────────────────────────────
 
 const PAGE_LIMIT = 10;
@@ -211,6 +252,7 @@ export function CIAgreementsSection() {
   }, [error]);
 
   const [signingAgreement, setSigningAgreement] = useState<CIAgreementData | null>(null);
+  const [viewingAgreementId, setViewingAgreementId] = useState<number | null>(null);
   const rows = data?.rows ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
@@ -240,22 +282,33 @@ export function CIAgreementsSection() {
     {
       key: "sign",
       header: "Action",
-      className: "w-44",
-      render: (r) => {
-        if (r.phase !== "PENDING_FRANCHISEE_SIGNATURE") return null;
-        return (
+      className: "w-56",
+      render: (r) => (
+        <div className="flex items-center gap-1.5">
           <Button
             type="button"
             size="sm"
-            variant="outline"
-            className="h-8"
-            onClick={() => setSigningAgreement(r)}
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            title="View agreement"
+            onClick={() => setViewingAgreementId(r.id)}
           >
-            <PenLine className="mr-1.5 h-3.5 w-3.5" />
-            Sign agreement
+            <Eye className="h-3.5 w-3.5" />
           </Button>
-        );
-      },
+          {r.phase === "PENDING_FRANCHISEE_SIGNATURE" && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8"
+              onClick={() => setSigningAgreement(r)}
+            >
+              <PenLine className="mr-1.5 h-3.5 w-3.5" />
+              Sign agreement
+            </Button>
+          )}
+        </div>
+      ),
     },
   ];
 
@@ -297,6 +350,11 @@ export function CIAgreementsSection() {
           void refetch();
         }}
         onClose={() => setSigningAgreement(null)}
+      />
+
+      <ViewDialog
+        agreementId={viewingAgreementId}
+        onClose={() => setViewingAgreementId(null)}
       />
     </TablePageShell>
   );

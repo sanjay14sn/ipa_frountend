@@ -11,8 +11,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -45,7 +43,6 @@ function phaseBadgeVariant(phase: CIAgreementData["phase"]): "default" | "second
 
 export default function SignCIAgreementModal({ open, onOpenChange }: SignCIAgreementModalProps) {
   const [signingId, setSigningId] = useState<number | null>(null);
-  const [signaturePath, setSignaturePath] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const { data, refetch } = useQuery({
@@ -58,13 +55,12 @@ export default function SignCIAgreementModal({ open, onOpenChange }: SignCIAgree
   const pendingMySignature = agreements.filter((a) => a.phase === "PENDING_FRANCHISEE_SIGNATURE");
 
   const handleSign = async () => {
-    if (!signingId || !signaturePath.trim()) return;
+    if (!signingId) return;
     setSubmitting(true);
     try {
-      await signCIAgreementAsFranchisee(signingId, signaturePath.trim());
+      await signCIAgreementAsFranchisee(signingId);
       toast.success("Agreement signed");
       setSigningId(null);
-      setSignaturePath("");
       void refetch();
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? "Failed to sign.");
@@ -113,22 +109,14 @@ export default function SignCIAgreementModal({ open, onOpenChange }: SignCIAgree
 
               {signingId === ag.id && (
                 <div className="space-y-2 pt-1 border-t">
-                  <div className="space-y-1">
-                    <Label htmlFor={`sig-${ag.id}`} className="text-xs">
-                      Signature reference / path
-                    </Label>
-                    <Input
-                      id={`sig-${ag.id}`}
-                      placeholder="e.g. signatures/franchisee-signed.png"
-                      value={signaturePath}
-                      onChange={(e) => setSignaturePath(e.target.value)}
-                    />
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Your signature from the franchise agreement will be used automatically.
+                  </p>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSign} disabled={submitting || !signaturePath.trim()}>
+                    <Button size="sm" onClick={handleSign} disabled={submitting}>
                       {submitting ? "Signing..." : "Confirm Signature"}
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => { setSigningId(null); setSignaturePath(""); }} disabled={submitting}>
+                    <Button size="sm" variant="ghost" onClick={() => setSigningId(null)} disabled={submitting}>
                       Cancel
                     </Button>
                   </div>
