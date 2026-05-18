@@ -72,7 +72,11 @@ function isAuthFlowRequest(url: string | undefined): boolean {
   return (
     url.includes("/auth/login") ||
     url.includes("/auth/refresh") ||
-    url.includes("/auth/logout")
+    url.includes("/auth/logout") ||
+    url === "/ci/me" ||
+    url === "/ci/refresh" ||
+    url === "/ci/logout" ||
+    url.startsWith("/ci/login")
   );
 }
 
@@ -88,21 +92,28 @@ function parseStoredRole(): UserRole | "" {
   }
 }
 
+type Portal = "franchisee" | "ci" | "admin";
+
 /** When `user` is missing or corrupt, infer portal from the current route. */
-function inferFranchiseeFromPath(): boolean {
-  if (typeof window === "undefined") return false;
+function inferPortalFromPath(): Portal {
+  if (typeof window === "undefined") return "admin";
   const p = window.location.pathname;
-  return p.startsWith("/franchisee");
+  if (p.startsWith("/franchisee")) return "franchisee";
+  if (p.startsWith("/ci")) return "ci";
+  return "admin";
 }
 
-function isFranchiseeSession(role: UserRole | ""): boolean {
-  if (role === "franchisee" || role === "franchise") return true;
-  if (role === "admin") return false;
-  return inferFranchiseeFromPath();
+function getPortal(role: UserRole | ""): Portal {
+  if (role === "franchisee" || role === "franchise") return "franchisee";
+  if (role === "admin") return "admin";
+  return inferPortalFromPath();
 }
 
 function loginPathForSession(role: UserRole | ""): string {
-  return isFranchiseeSession(role) ? "/login" : "/admin-login";
+  const portal = getPortal(role);
+  if (portal === "franchisee") return "/login";
+  if (portal === "ci") return "/ci/login";
+  return "/admin-login";
 }
 
 /** JSON default breaks multipart: server must see multipart + boundary so multer can parse files. */
@@ -180,11 +191,13 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       const role = parseStoredRole();
+      const portal = getPortal(role);
 
       try {
-        const refreshUrl = isFranchiseeSession(role)
-          ? "/franchisee/auth/refresh"
-          : "/admin/auth/refresh";
+        const refreshUrl =
+          portal === "franchisee" ? "/franchisee/auth/refresh" :
+          portal === "ci" ? "/ci/refresh" :
+          "/admin/auth/refresh";
 
         await api.post(refreshUrl, {});
 
@@ -193,9 +206,10 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
 
-        const logoutUrl = isFranchiseeSession(role)
-          ? "/franchisee/auth/logout"
-          : "/admin/auth/logout";
+        const logoutUrl =
+          portal === "franchisee" ? "/franchisee/auth/logout" :
+          portal === "ci" ? "/ci/logout" :
+          "/admin/auth/logout";
 
         try {
           await api.post(logoutUrl);
@@ -205,7 +219,11 @@ api.interceptors.response.use(
 
         if (typeof window !== "undefined") {
           localStorage.removeItem("user");
-          window.location.href = loginPathForSession(role);
+          const loginPath = loginPathForSession(role);
+          const already = loginPath === "/ci/login" && window.location.pathname.startsWith("/ci");
+          if (!already) {
+            window.location.href = loginPath;
+          }
         }
 
         reportApiFailure(refreshError);

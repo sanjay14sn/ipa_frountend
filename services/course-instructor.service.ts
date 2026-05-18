@@ -846,3 +846,71 @@ export interface ApproveTrainingRequest {
   installmentCount?: number;
   installmentAmount?: number;
 }
+
+export interface CIFranchiseSummary {
+  franchiseId: string;
+  franchiseName: string;
+  totalPending: number;
+  totalApproved: number;
+  totalRejected: number;
+}
+
+// GET /admin/course-instructor/summary
+export async function getAdminCISummaries(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}): Promise<{
+  data: CIFranchiseSummary[];
+  meta: { total: number; totalPages: number; page: number; limit: number };
+}> {
+  const response = await api.get("/admin/course-instructor/summary", {
+    params: compactRequestParams(
+      params as Record<string, string | number | boolean | undefined | null>,
+    ),
+  });
+  const result = unwrapData<unknown>(response);
+  const normalized = normalizePaginatedResult<Record<string, unknown>>(result);
+  const data = normalized.rows.map((row) => ({
+    franchiseId: String(row.franchiseId ?? ""),
+    franchiseName: String(row.franchiseName ?? ""),
+    totalPending: Number(row.totalPending ?? 0),
+    totalApproved: Number(row.totalApproved ?? 0),
+    totalRejected: Number(row.totalRejected ?? 0),
+  }));
+  const lim = Number(normalized.limit ?? 10) || 10;
+  const totalPages = Math.max(1, Math.ceil(normalized.total / lim));
+  return {
+    data,
+    meta: { total: normalized.total, totalPages, page: normalized.page, limit: lim },
+  };
+}
+
+// GET /admin/course-instructor?franchiseId=...&status=...
+export async function getAdminCIDetails(
+  franchiseId: string,
+  params: {
+    status?: "Pending" | "Approved" | "Rejected" | "all";
+    page?: number;
+    limit?: number;
+    search?: string;
+  },
+): Promise<PaginatedCourseInstructorsResponse> {
+  const response = await api.get("/admin/course-instructor", {
+    params: compactRequestParams({
+      franchiseId,
+      ...(params as Record<string, string | number | boolean | undefined | null>),
+    }),
+  });
+  const result = unwrapData<unknown>(response);
+  const { rows: raw, total, page, limit } =
+    normalizePaginatedResult<unknown>(result);
+  const data = raw.map((r) => mapRow(r as Record<string, unknown>));
+  const lim = Number(limit ?? 10) || 10;
+  const pageNum = Number(page ?? 1) || 1;
+  const totalPages = Math.max(1, Math.ceil(total / lim));
+  return {
+    data,
+    meta: { total, page: pageNum, limit: lim, totalPages },
+  };
+}

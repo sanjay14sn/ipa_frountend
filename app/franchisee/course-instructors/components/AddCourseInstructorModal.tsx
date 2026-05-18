@@ -143,6 +143,15 @@ interface CourseInstructorFormData {
   additionalDetails: string;
 }
 
+function calculateAge(dob: string): number {
+  const birth = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
 export default function AddCourseInstructorModal({
   open,
   onOpenChange,
@@ -412,7 +421,13 @@ export default function AddCourseInstructorModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="dob">Date of Birth *</Label>
+                <Label htmlFor="dob">
+                  Date of Birth *{formData.dob && (
+                    <span className="ml-2 text-muted-foreground font-normal">
+                      ({calculateAge(formData.dob)} yrs old)
+                    </span>
+                  )}
+                </Label>
                 <Input
                   id="dob"
                   type="date"

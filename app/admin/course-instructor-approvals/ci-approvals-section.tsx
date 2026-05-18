@@ -2,20 +2,28 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TablePageShell, TableSectionSurface } from "@/components/shared";
-import { AdminCourseInstructorData, rejectCourseInstructor } from "@/services/course-instructor.service";
+import {
+  AdminCourseInstructorData,
+  rejectCourseInstructor,
+} from "@/services/course-instructor.service";
 import { toast } from "sonner";
-import PendingCourseInstructorsTable from "./components/PendingCourseInstructorsTable";
-import ApprovedCourseInstructorsTable from "./components/ApprovedCourseInstructorsTable";
-import RejectedCourseInstructorsTable from "./components/RejectedCourseInstructorsTable";
 import ApproveCIModal from "./components/ApproveCIModal";
+import CiApprovalsSummaryTable from "./components/CiApprovalsSummaryTable";
 
 export function CiApprovalsSection() {
   const queryClient = useQueryClient();
   const [approveTarget, setApproveTarget] = useState<AdminCourseInstructorData | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const triggerRefresh = () => {
+    setRefreshTrigger((n) => n + 1);
+    void queryClient.invalidateQueries({
+      queryKey: ["course-instructors", "admin", "summary"],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["course-instructors", "admin", "details"],
+    });
     void queryClient.invalidateQueries({
       queryKey: ["course-instructors", "admin", "status"],
     });
@@ -40,28 +48,11 @@ export function CiApprovalsSection() {
       description="Manage course instructor applications and approval states across franchises."
     >
       <TableSectionSurface>
-        <Tabs defaultValue="pending" className="space-y-4">
-          <TabsList className="flex h-auto flex-wrap justify-start gap-1">
-            <TabsTrigger value="pending">Pending approvals</TabsTrigger>
-            <TabsTrigger value="approved">Approved</TabsTrigger>
-            <TabsTrigger value="rejected">Rejected</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="pending" className="mt-4 space-y-4">
-            <PendingCourseInstructorsTable
-              onApprove={handleApproveInstructor}
-              onReject={handleRejectInstructor}
-            />
-          </TabsContent>
-
-          <TabsContent value="approved" className="mt-4 space-y-4">
-            <ApprovedCourseInstructorsTable />
-          </TabsContent>
-
-          <TabsContent value="rejected" className="mt-4 space-y-4">
-            <RejectedCourseInstructorsTable />
-          </TabsContent>
-        </Tabs>
+        <CiApprovalsSummaryTable
+          refreshTrigger={refreshTrigger}
+          onApprove={handleApproveInstructor}
+          onReject={handleRejectInstructor}
+        />
       </TableSectionSurface>
 
       <ApproveCIModal

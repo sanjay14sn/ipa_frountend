@@ -408,6 +408,9 @@ export async function getEligibleStudents(): Promise<EligibleStudentsResponse> {
   const mapped: EligibleStudent[] = list.map((r) => {
     const s = r as Record<string, unknown>;
     const level = s.level as Record<string, unknown> | null | undefined;
+    const levelStream = level?.stream && typeof level.stream === "object"
+      ? (level.stream as Record<string, unknown>)
+      : undefined;
     return {
       id: s.id as number,
       programId: s.programId as number,
@@ -417,7 +420,7 @@ export async function getEligibleStudents(): Promise<EligibleStudentsResponse> {
       dateOfBirth: String(s.dateOfBirth ?? ""),
       sex: s.sex as string,
       standard: (s.standard as string) ?? "",
-      stream: (s.stream as string) ?? StudentStream.REGULAR,
+      stream: String(levelStream?.name ?? (s.stream as string) ?? StudentStream.REGULAR),
       levelName: level?.name ? String(level.name) : String(s.levelId ?? ""),
       isActive: Boolean(s.isActive),
       lastCertIssuedAt: (s.lastCertIssuedAt as string | null) ?? null,

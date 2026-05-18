@@ -27,11 +27,9 @@ export function CIAuthProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const [me, agreement] = await Promise.all([
-        getCIMe(),
-        getCIAgreement().catch(() => null),
-      ]);
+      const me = await getCIMe();
       setUser(me);
+      const agreement = await getCIAgreement().catch(() => null);
       setAgreementPhase(agreement?.phase ?? null);
     } catch {
       setUser(null);

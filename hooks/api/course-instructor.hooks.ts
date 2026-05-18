@@ -15,6 +15,8 @@ import {
   completeTraining,
   completeTrainingForInstructor,
   getTrainingCourseInstructors,
+  getAdminCISummaries,
+  getAdminCIDetails,
   type CourseInstructorData,
   type CreateCourseInstructorRequest,
   type AdminCourseInstructorsByStatus,
@@ -24,6 +26,7 @@ import {
   type CourseInstructorPaginationParams,
   type CourseInstructorListParams,
   type ApproveCourseInstructorRequest,
+  type CIFranchiseSummary,
 } from "@/services/course-instructor.service";
 import { queryKeys } from "./query-keys";
 import { getQueryClientBridge } from "./query-client-bridge";
@@ -332,4 +335,38 @@ export async function bulkAssignToSessionWithRevalidation(
     /* ignore */
   }
   return result;
+}
+
+export function useAdminCISummaries(
+  params: { page?: number; limit?: number; search?: string },
+  refreshKey = 0,
+) {
+  return useQuery({
+    queryKey: ["course-instructors", "admin", "summary", params, refreshKey],
+    queryFn: () => getAdminCISummaries(params),
+    placeholderData: (prev) => prev,
+  });
+}
+
+export type { CIFranchiseSummary };
+
+export function useAdminCIDetails(
+  franchiseId: string,
+  params: { status?: string; page?: number; limit?: number; search?: string },
+) {
+  return useQuery({
+    queryKey: ["course-instructors", "admin", "details", franchiseId, params],
+    queryFn: () =>
+      getAdminCIDetails(
+        franchiseId,
+        params as {
+          status?: "Pending" | "Approved" | "Rejected" | "all";
+          page?: number;
+          limit?: number;
+          search?: string;
+        },
+      ),
+    enabled: !!franchiseId,
+    placeholderData: (prev) => prev,
+  });
 }
