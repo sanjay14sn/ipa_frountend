@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   CITrainingSession,
   CITrainingAssignment,
@@ -97,7 +97,6 @@ function CreateSessionModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [region, setRegion] = useState("");
@@ -146,19 +145,11 @@ function CreateSessionModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!programId) {
-      toast({
-        title: "Validation",
-        description: "Select a program.",
-        variant: "destructive",
-      });
+      toast.error("Select a program.");
       return;
     }
     if (!trainingLevelId) {
-      toast({
-        title: "Validation",
-        description: "Select a training level.",
-        variant: "destructive",
-      });
+      toast.error("Select a training level.");
       return;
     }
     setLoading(true);
@@ -170,7 +161,7 @@ function CreateSessionModal({
         sessionDate,
         notes: notes || undefined,
       });
-      toast({ title: "Session created" });
+      toast.success("Session created");
       onSuccess();
       onClose();
       setRegion("");
@@ -180,11 +171,7 @@ function CreateSessionModal({
       setNotes("");
       setTrainingLevels([]);
     } catch {
-      toast({
-        title: "Error",
-        description: "Failed to create session.",
-        variant: "destructive",
-      });
+      toast.error("Failed to create session.");
     } finally {
       setLoading(false);
     }
@@ -329,7 +316,6 @@ function RecordMarksModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [theoryMarks, setTheoryMarks] = useState("");
   const [practicalMarks, setPracticalMarks] = useState("");
@@ -344,17 +330,13 @@ function RecordMarksModal({
         practicalMarks:
           practicalMarks.trim() === "" ? undefined : Number(practicalMarks),
       });
-      toast({ title: "Marks recorded" });
+      toast.success("Marks recorded");
       onSuccess();
       onClose();
       setTheoryMarks("");
       setPracticalMarks("");
     } catch (err: unknown) {
-      toast({
-        title: "Error",
-        description: getApiErrorMessage(err, "Failed to record marks."),
-        variant: "destructive",
-      });
+      toast.error(getApiErrorMessage(err, "Failed to record marks."));
     } finally {
       setLoading(false);
     }
@@ -424,7 +406,6 @@ function ReassignModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [targetSessionId, setTargetSessionId] = useState("");
 
@@ -434,16 +415,12 @@ function ReassignModal({
     setLoading(true);
     try {
       await reassignAssignment(assignment.id, Number(targetSessionId));
-      toast({ title: "Reassigned" });
+      toast.success("Reassigned");
       onSuccess();
       onClose();
       setTargetSessionId("");
     } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err?.response?.data?.message ?? "Failed to reassign.",
-        variant: "destructive",
-      });
+      toast.error(err?.response?.data?.message ?? "Failed to reassign.");
     } finally {
       setLoading(false);
     }
@@ -512,7 +489,6 @@ function CompleteSessionModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [drafts, setDrafts] = useState<
     Record<number, CompleteSessionMarksDraft>
@@ -581,11 +557,7 @@ function CompleteSessionModal({
 
     const missing = rows.find((row) => row.theoryMarks.trim() === "");
     if (missing) {
-      toast({
-        title: "Validation",
-        description: "Enter theory marks for every assigned CI.",
-        variant: "destructive",
-      });
+      toast.error("Enter theory marks for every assigned CI.");
       return;
     }
 
@@ -617,16 +589,12 @@ function CompleteSessionModal({
     setLoading(false);
 
     if (failed > 0) {
-      toast({
-        title: "Some CIs were not completed",
-        description: "Review the inline errors and submit again.",
-        variant: "destructive",
-      });
+      toast.error("Some CIs were not completed. Review the inline errors and submit again.");
       onSuccess();
       return;
     }
 
-    toast({ title: "Session completed" });
+    toast.success("Session completed");
     onSuccess();
     closeModal();
   };

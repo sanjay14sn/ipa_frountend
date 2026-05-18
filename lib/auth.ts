@@ -114,41 +114,6 @@ export function getEffectiveFranchiseStatus(
     ?.status;
 }
 
-export const USERS = {
-  admin: {
-    id: "admin-1",
-    password: "admin123",
-    name: "Admin User",
-    role: "admin" as UserRole,
-  },
-  franchise: {
-    id: "franchise-1",
-    password: "franchise123",
-    name: "Franchise Owner",
-    role: "franchise" as UserRole,
-    franchiseId: "1",
-    franchiseName: "Abacus 1",
-    franchiseStatus: "Active",
-  },
-};
-
-export function createFranchiseUser(franchiseData: any): User {
-  return {
-    id: franchiseData.id,
-    name: franchiseData.contactPerson || franchiseData.name,
-    role: "franchise" as UserRole,
-    franchiseId: franchiseData.id,
-    franchiseName: franchiseData.name,
-    franchiseStatus: franchiseData.franchiseStatus || "Pending",
-  };
-}
-
-export function saveUserToStorage(userId: number) {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("userId", userId.toString());
-  }
-}
-
 /** Full user object persisted by `context/user-context` */
 export function getUserFromStorage(): User | null {
   if (typeof window === "undefined") return null;
@@ -161,8 +126,3 @@ export function getUserFromStorage(): User | null {
   }
 }
 
-export function removeUserFromStorage() {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem("userId");
-  }
-}

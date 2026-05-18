@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/shared";
 import type { DataTableColumn, DataTableFilter } from "@/components/shared";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   useAdminStudentLifecycle,
   useExtendStudentLifecycle,
@@ -83,8 +83,6 @@ export function StudentLifecycleSection() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [detailsRow, setDetailsRow] = useState<StudentLifecycleRow | null>(null);
   const limit = 10;
-  const { toast } = useToast();
-
   const params = useMemo(
     () => ({
       page: currentPage,
@@ -218,19 +216,19 @@ export function StudentLifecycleSection() {
             onExtend={async (studentId, extendedUntil) => {
               try {
                 await extendMutation.mutateAsync({ studentId, extendedUntil });
-                toast({ title: "Student extended", description: "The new lifecycle deadline was saved." });
+                toast.success("The new lifecycle deadline was saved.");
                 void lifecycleQuery.refetch();
               } catch {
-                toast({ title: "Extension failed", description: "Could not extend this student.", variant: "destructive" });
+                toast.error("Could not extend this student.");
               }
             }}
             onReactivate={async (studentId, extendedUntil) => {
               try {
                 await reactivateMutation.mutateAsync({ studentId, extendedUntil });
-                toast({ title: "Student reactivated", description: "The student is active with a new deadline." });
+                toast.success("The student is active with a new deadline.");
                 void lifecycleQuery.refetch();
               } catch {
-                toast({ title: "Reactivation failed", description: "Could not reactivate this student.", variant: "destructive" });
+                toast.error("Could not reactivate this student.");
               }
             }}
           />
@@ -277,13 +275,10 @@ export function StudentLifecycleSection() {
             onClick={async () => {
               try {
                 const result = await runInvalidation.mutateAsync();
-                toast({
-                  title: "Invalidation complete",
-                  description: `${result.invalidatedCount} student${result.invalidatedCount === 1 ? "" : "s"} invalidated.`,
-                });
+                toast.success(`${result.invalidatedCount} student${result.invalidatedCount === 1 ? "" : "s"} invalidated.`);
                 void lifecycleQuery.refetch();
               } catch {
-                toast({ title: "Invalidation failed", description: "Could not run lifecycle invalidation.", variant: "destructive" });
+                toast.error("Could not run lifecycle invalidation.");
               }
             }}
             disabled={busy}

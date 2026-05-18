@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, Edit2, GitBranch } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   getStreamsByProgram,
   createStream,
@@ -86,7 +86,6 @@ export function StreamManagement({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingStream, setEditingStream] = useState<Stream | null>(null);
   const [deletingStream, setDeletingStream] = useState<Stream | null>(null);
-  const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -118,15 +117,11 @@ export function StreamManagement({
       setStreams(s);
       setTransitions(t);
     } catch {
-      toast({
-        title: "Error",
-        description: "Failed to load streams or transitions",
-        variant: "destructive",
-      });
+      toast.error("Failed to load streams or transitions");
     } finally {
       setIsLoading(false);
     }
-  }, [programId, toast]);
+  }, [programId]);
 
   useEffect(() => {
     if (skipInitialLoad) return;
@@ -162,11 +157,7 @@ export function StreamManagement({
 
   const handleAddStream = async () => {
     if (!formData.name.trim()) {
-      toast({
-        title: "Error",
-        description: "Stream name is required",
-        variant: "destructive",
-      });
+      toast.error("Stream name is required");
       return;
     }
     const payload: CreateStreamDto = {
@@ -180,17 +171,13 @@ export function StreamManagement({
     try {
       await createStream(payload);
       await invalidateStreamsByProgram(programId);
-      toast({ title: "Success", description: "Stream created" });
+      toast.success("Stream created");
       resetForm();
       setIsAddDialogOpen(false);
       await loadAll();
       notifyParent();
     } catch {
-      toast({
-        title: "Error",
-        description: "Failed to create stream",
-        variant: "destructive",
-      });
+      toast.error("Failed to create stream");
     }
   };
 
@@ -199,18 +186,14 @@ export function StreamManagement({
     try {
       await updateStream(editingStream.id, editFormData);
       await invalidateStreamsByProgram(programId);
-      toast({ title: "Success", description: "Stream updated" });
+      toast.success("Stream updated");
       setIsEditDialogOpen(false);
       setEditingStream(null);
       setEditFormData({});
       await loadAll();
       notifyParent();
     } catch {
-      toast({
-        title: "Error",
-        description: "Failed to update stream",
-        variant: "destructive",
-      });
+      toast.error("Failed to update stream");
     }
   };
 
@@ -219,18 +202,13 @@ export function StreamManagement({
     try {
       await deleteStream(deletingStream.id);
       await invalidateStreamsByProgram(programId);
-      toast({ title: "Success", description: "Stream deleted" });
+      toast.success("Stream deleted");
       setIsDeleteDialogOpen(false);
       setDeletingStream(null);
       await loadAll();
       notifyParent();
     } catch {
-      toast({
-        title: "Error",
-        description:
-          "Failed to delete stream. Remove levels first, or check permissions.",
-        variant: "destructive",
-      });
+      toast.error("Failed to delete stream. Remove levels first, or check permissions.");
     }
   };
 
@@ -259,11 +237,7 @@ export function StreamManagement({
     const toId = Number(transitionForm.toStreamId);
     const ord = Number(transitionForm.toLevelDisplayOrder);
     if (!fromId || !toId || !Number.isFinite(ord) || ord < 1) {
-      toast({
-        title: "Error",
-        description: "Select streams and a valid target level order",
-        variant: "destructive",
-      });
+      toast.error("Select streams and a valid target level order");
       return;
     }
     try {
@@ -275,7 +249,7 @@ export function StreamManagement({
           programId,
         });
         await invalidateStreamTransitionsByProgram(programId);
-        toast({ title: "Success", description: "Transition updated" });
+        toast.success("Transition updated");
       } else {
         await createStreamTransition({
           programId,
@@ -284,18 +258,14 @@ export function StreamManagement({
           toLevelDisplayOrder: ord,
         });
         await invalidateStreamTransitionsByProgram(programId);
-        toast({ title: "Success", description: "Transition added" });
+        toast.success("Transition added");
       }
       setIsTransitionDialogOpen(false);
       setEditingTransition(null);
       await loadAll();
       notifyParent();
     } catch {
-      toast({
-        title: "Error",
-        description: "Failed to save transition (check target level exists)",
-        variant: "destructive",
-      });
+      toast.error("Failed to save transition (check target level exists)");
     }
   };
 
@@ -304,16 +274,12 @@ export function StreamManagement({
     try {
       await deleteStreamTransition(deletingTransition.id);
       await invalidateStreamTransitionsByProgram(programId);
-      toast({ title: "Success", description: "Transition removed" });
+      toast.success("Transition removed");
       setDeletingTransition(null);
       await loadAll();
       notifyParent();
     } catch {
-      toast({
-        title: "Error",
-        description: "Failed to delete transition",
-        variant: "destructive",
-      });
+      toast.error("Failed to delete transition");
     }
   };
 

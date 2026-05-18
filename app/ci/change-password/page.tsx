@@ -6,14 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { changeCIPassword } from "@/services/ci-auth.service";
 import { useCIAuth } from "@/context/ci-auth-context";
 
 export default function CIChangePasswordPage() {
   const router = useRouter();
   const { refresh } = useCIAuth();
-  const { toast } = useToast();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -22,25 +21,21 @@ export default function CIChangePasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirm) {
-      toast({ title: "Passwords do not match", variant: "destructive" });
+      toast.error("Passwords do not match");
       return;
     }
     if (newPassword.length < 8) {
-      toast({ title: "Password must be at least 8 characters", variant: "destructive" });
+      toast.error("Password must be at least 8 characters");
       return;
     }
     setLoading(true);
     try {
       await changeCIPassword(currentPassword, newPassword);
-      toast({ title: "Password changed successfully" });
+      toast.success("Password changed successfully");
       await refresh();
       router.replace("/ci/agreement");
     } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err?.response?.data?.message ?? "Failed to change password.",
-        variant: "destructive",
-      });
+      toast.error(err?.response?.data?.message ?? "Failed to change password.");
     } finally {
       setLoading(false);
     }

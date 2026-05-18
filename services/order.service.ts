@@ -714,12 +714,6 @@ export async function getOrderById(orderId: number): Promise<OrderData> {
   return normalizeOrder(unwrapData(response));
 }
 
-export async function updateFranchiseeOrder(
-  _orderId: number,
-  _updateData: UpdateOrderDto,
-): Promise<OrderData> {
-  throw new Error("updateFranchiseeOrder not supported in ipa-new");
-}
 
 export async function cancelOrderFranchisee(orderId: number): Promise<OrderData> {
   const response = await api.post(`/order/${orderId}/cancel`);
@@ -806,12 +800,6 @@ export async function regenerateDcPdf(orderId: number): Promise<OrderData> {
   return getOrderByIdAdmin(orderId);
 }
 
-export async function updateOrderAdmin(
-  _orderId: number,
-  _updateData: UpdateOrderDto,
-): Promise<OrderData> {
-  throw new Error("updateOrderAdmin not supported in ipa-new");
-}
 
 export async function verifyOrderAdmin(
   orderId: number,
@@ -1169,23 +1157,8 @@ export async function abandonOrderPayment(input: {
   return unwrapData(response);
 }
 
-export async function initiateCustomOrderPayment(
-  _orderData: CreateCustomOrderDto,
-): Promise<OrderPaymentResponse> {
-  throw new Error("Custom orders are disabled in this cutover");
-}
 
-export async function getAvailableItems(
-  _studentIds: number[],
-): Promise<StudentAvailableItems[]> {
-  return [];
-}
 
-export async function getStudentOrderHistory(
-  _studentId: number,
-): Promise<StudentOrderHistory> {
-  throw new Error("Student order history not available in ipa-new");
-}
 
 export interface CIMaterialsPreview {
   ciId: number;

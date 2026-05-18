@@ -41,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { getAllPrograms, type Program } from "@/services/program.service";
 import type { Level } from "@/services/level.service";
@@ -122,7 +122,6 @@ function levelFilterLabel(level: Level, streams: Stream[]) {
 }
 
 export function InventorySection() {
-  const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -222,37 +221,25 @@ export function InventorySection() {
 
   async function handleAdd() {
     if (!formData.name.trim() || !formData.categoryName.trim()) {
-      toast({
-        title: "Validation",
-        description: "Item name and category are required.",
-        variant: "destructive",
-      });
+      toast.error("Item name and category are required.");
       return;
     }
 
     try {
       const categoryId = await resolveInventoryCategoryId(formData.categoryName);
       await createInventory(mapFormToPayload(formData, categoryId));
-      toast({ title: "Inventory item created" });
+      toast.success("Inventory item created");
       setIsAddOpen(false);
       resetAddForm();
       await refreshInventoryViews();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     }
   }
 
   async function handleEdit() {
     if (!editingItem || !editForm.categoryName.trim()) {
-      toast({
-        title: "Validation",
-        description: "Category is required.",
-        variant: "destructive",
-      });
+      toast.error("Category is required.");
       return;
     }
 
@@ -260,16 +247,12 @@ export function InventorySection() {
       const categoryId = await resolveInventoryCategoryId(editForm.categoryName);
       const payload = mapFormToPayload(editForm, categoryId) as UpdateInventoryDto;
       await updateInventory(editingItem.id, payload);
-      toast({ title: "Inventory item updated" });
+      toast.success("Inventory item updated");
       setIsEditOpen(false);
       setEditingItem(null);
       await refreshInventoryViews();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     }
   }
 
@@ -277,16 +260,12 @@ export function InventorySection() {
     if (!deletingItem) return;
     try {
       await deleteInventory(deletingItem.id);
-      toast({ title: "Inventory item deleted" });
+      toast.success("Inventory item deleted");
       setIsDeleteOpen(false);
       setDeletingItem(null);
       await refreshInventoryViews();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     }
   }
 
@@ -294,14 +273,10 @@ export function InventorySection() {
     if (!levelIdNum) return;
     try {
       await unassignInventoryFromLevel(levelIdNum, inventoryId);
-      toast({ title: "Removed from level" });
+      toast.success("Removed from level");
       await refreshInventoryViews();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     }
   }
 
@@ -466,14 +441,9 @@ export function InventorySection() {
                     await invalidateLevelItems(levelIdNum);
                     await assignedItemsQuery.refetch();
                     if (failed.length > 0) {
-                      toast({
-                        title: `${assigned} assigned, ${failed.length} failed`,
-                        variant: "destructive",
-                      });
+                      toast.error(`${assigned} assigned, ${failed.length} failed`);
                     } else {
-                      toast({
-                        title: `${items.length} item${items.length !== 1 ? "s" : ""} assigned to level`,
-                      });
+                      toast.success(`${items.length} item${items.length !== 1 ? "s" : ""} assigned to level`);
                     }
                   }}
                 />

@@ -6,14 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { loginCI } from "@/services/ci-auth.service";
 import { useCIAuth } from "@/context/ci-auth-context";
 
 export default function CILoginPage() {
   const router = useRouter();
   const { refresh } = useCIAuth();
-  const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,11 +25,7 @@ export default function CILoginPage() {
       await refresh();
       router.replace("/ci/agreement");
     } catch (err: any) {
-      toast({
-        title: "Login failed",
-        description: err?.response?.data?.message ?? "Invalid credentials.",
-        variant: "destructive",
-      });
+      toast.error(err?.response?.data?.message ?? "Invalid credentials.");
     } finally {
       setLoading(false);
     }

@@ -5,7 +5,7 @@ import { Check, Loader2, Save, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { CATALOG_PENDING_SPLIT_ROW_HEIGHT } from "@/lib/catalog-line-split-layout";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { cn } from "@/lib/utils";
@@ -31,7 +31,6 @@ export function WaitingCICheckboxAssignPanel({
   const [pendingIds, setPendingIds] = useState<Set<number>>(new Set());
   const [search, setSearch] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const { toast } = useToast();
 
   const filtered = useMemo(() => {
     if (!search.trim()) return waitingCIs;
@@ -68,11 +67,7 @@ export function WaitingCICheckboxAssignPanel({
       setPendingIds(new Set());
       setSearch("");
     } catch (error) {
-      toast({
-        title: "Failed to save",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     } finally {
       setIsSaving(false);
     }

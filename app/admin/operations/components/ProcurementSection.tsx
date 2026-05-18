@@ -46,7 +46,7 @@ import {
   useSupplierTerms,
   useSuppliers,
 } from "@/hooks/api/procurement.hooks";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { getAllInventory } from "@/services/inventory.service";
 import { ProcurementBulkLinePicker } from "@/components/procurement/ProcurementBulkLinePicker";
@@ -262,7 +262,6 @@ function ProcurementRecordsCard({
 }
 
 export function ProcurementSection() {
-  const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -632,11 +631,7 @@ export function ProcurementSection() {
 
   async function handleBulkSourcingSubmit(lines: BulkSourcingLineSubmit[]) {
     if (sourcingSupplierId === "") {
-      toast({
-        title: "Validation",
-        description: "Choose a supplier first.",
-        variant: "destructive",
-      });
+      toast.error("Choose a supplier first.");
       return;
     }
     try {
@@ -645,18 +640,14 @@ export function ProcurementSection() {
         supplierId: Number(sourcingSupplierId),
         lines,
       });
-      toast({ title: "Sourcing saved" });
+      toast.success("Sourcing saved");
       setIsSourcingOpen(false);
       setSourcingSupplierId("");
       setSourcingItemSeed([]);
       setTermPage(1);
       await invalidateProcurementQueries();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     } finally {
       setSubmitting(false);
     }
@@ -664,11 +655,7 @@ export function ProcurementSection() {
 
   async function handlePurchaseOrderPickerSubmit(lines: PurchaseOrderLineInput[]) {
     if (poForm.supplierId === "") {
-      toast({
-        title: "Validation",
-        description: "Choose a supplier first.",
-        variant: "destructive",
-      });
+      toast.error("Choose a supplier first.");
       return;
     }
     const payload: CreatePurchaseOrderDto = {
@@ -681,18 +668,14 @@ export function ProcurementSection() {
     try {
       setSubmitting(true);
       await createPurchaseOrder(payload);
-      toast({ title: "Purchase order created" });
+      toast.success("Purchase order created");
       setIsPurchaseOrderOpen(false);
       setPoForm(createPurchaseOrderForm());
       setPoLineSeed(undefined);
       setPurchaseOrderPage(1);
       await invalidateProcurementQueries();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     } finally {
       setSubmitting(false);
     }
@@ -700,11 +683,7 @@ export function ProcurementSection() {
 
   async function handleCreateSupplier() {
     if (!supplierForm.name.trim()) {
-      toast({
-        title: "Validation",
-        description: "Supplier name is required.",
-        variant: "destructive",
-      });
+      toast.error("Supplier name is required.");
       return;
     }
 
@@ -719,17 +698,13 @@ export function ProcurementSection() {
         gstin: supplierForm.gstin || undefined,
         isActive: supplierForm.isActive,
       });
-      toast({ title: "Supplier created" });
+      toast.success("Supplier created");
       setIsSupplierOpen(false);
       setSupplierForm(INITIAL_SUPPLIER_FORM);
       setSupplierPage(1);
       await invalidateProcurementQueries();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     } finally {
       setSubmitting(false);
     }
@@ -757,11 +732,7 @@ export function ProcurementSection() {
       });
       setIsReceiptOpen(true);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     }
   }
 
@@ -787,7 +758,7 @@ export function ProcurementSection() {
         })),
       };
       await postPurchaseReceipt(receiptOrderId, payload);
-      toast({ title: "Receipt posted" });
+      toast.success("Receipt posted");
       setIsReceiptOpen(false);
       setReceiptOrderId(null);
       setReceiptPoSnapshot(null);
@@ -796,11 +767,7 @@ export function ProcurementSection() {
       setReceiptPage(1);
       await invalidateProcurementQueries();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     } finally {
       setSubmitting(false);
     }

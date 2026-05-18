@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import {
   useAllInventory,
@@ -31,7 +31,6 @@ export function LevelMaterialsPicker({
   levelId: number;
   disabled?: boolean;
 }) {
-  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
 
@@ -52,14 +51,10 @@ export function LevelMaterialsPicker({
   const handleRemove = async (inventoryId: number) => {
     try {
       await unassignInventoryFromLevel(levelId, inventoryId);
-      toast({ title: "Removed from level" });
+      toast.success("Removed from level");
       await refetchAssigned();
     } catch (e) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(e),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(e));
     }
   };
 
@@ -150,14 +145,9 @@ export function LevelMaterialsPicker({
                     await invalidateLevelItems(levelId);
                     await refetchAssigned();
                     if (failed.length > 0) {
-                      toast({
-                        title: `${count} linked, ${failed.length} failed`,
-                        variant: "destructive",
-                      });
+                      toast.error(`${count} linked, ${failed.length} failed`);
                     } else {
-                      toast({
-                        title: `${items.length} item${items.length !== 1 ? "s" : ""} linked to level`,
-                      });
+                      toast.success(`${items.length} item${items.length !== 1 ? "s" : ""} linked to level`);
                     }
                   }}
                 />

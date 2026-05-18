@@ -198,14 +198,6 @@ export function getErrorMessage(
 }
 
 /**
- * Check if error is a specific error code
- */
-export function isErrorCode(error: unknown, code: string): boolean {
-  const errorCode = extractErrorCode(error);
-  return errorCode === code;
-}
-
-/**
  * Get user-friendly error message based on error code
  */
 export function getUserFriendlyMessage(error: unknown, fallback?: string): string {

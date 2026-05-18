@@ -1,9 +1,5 @@
-import axios from "axios";
-
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000",
-  withCredentials: true,
-});
+import { api } from "@/lib/axios";
+import { unwrapData } from "@/lib/unwrap-api";
 
 export interface CITrainingPackage {
   id: number;
@@ -40,7 +36,7 @@ export async function listCITrainingPackages(params: {
   const res = await api.get(
     `/catalog/ci-training-package/by-program/${params.programId}`,
   );
-  const payload = res.data?.data ?? res.data;
+  const payload = unwrapData<CITrainingPackage[]>(res);
   return Array.isArray(payload) ? payload : [];
 }
 
@@ -54,7 +50,7 @@ export async function createCITrainingPackage(input: {
   trainingLevelIds: number[];
 }): Promise<CITrainingPackage> {
   const res = await api.post("/catalog/ci-training-package", input);
-  return res.data?.data ?? res.data;
+  return unwrapData<CITrainingPackage>(res);
 }
 
 export async function updateCITrainingPackage(id: number, input: Partial<{
@@ -67,7 +63,7 @@ export async function updateCITrainingPackage(id: number, input: Partial<{
   isActive: boolean;
 }>): Promise<CITrainingPackage> {
   const res = await api.patch(`/catalog/ci-training-package/${id}`, input);
-  return res.data?.data ?? res.data;
+  return unwrapData<CITrainingPackage>(res);
 }
 
 export async function generateDefaultPackages(programId: number): Promise<CITrainingPackage[]> {
@@ -76,19 +72,19 @@ export async function generateDefaultPackages(programId: number): Promise<CITrai
     null,
     { params: { programId } },
   );
-  const payload = res.data?.data ?? res.data;
+  const payload = unwrapData<CITrainingPackage[]>(res);
   return Array.isArray(payload) ? payload : [];
 }
 
 export async function listCITrainingLevels(params?: { programId?: number }): Promise<CITrainingLevel[]> {
   if (!params?.programId) return [];
   const res = await api.get(`/catalog/ci-training-level/by-program/${params.programId}`);
-  return res.data?.data ?? res.data ?? [];
+  return unwrapData<CITrainingLevel[]>(res) ?? [];
 }
 
 export async function getStudentLevelMappings(ciTrainingLevelId: number): Promise<StudentLevelMapping[]> {
   const res = await api.get(`/catalog/ci-training-level/${ciTrainingLevelId}/student-levels`);
-  const payload = res.data?.data ?? res.data;
+  const payload = unwrapData<StudentLevelMapping[]>(res);
   if (!Array.isArray(payload)) return [];
 
   return payload

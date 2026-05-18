@@ -12,7 +12,7 @@ import type {
   PurchaseOrderLineInput,
   SupplierItemTerm,
 } from "@/services/procurement.service";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { CATALOG_PENDING_SPLIT_ROW_HEIGHT } from "@/lib/catalog-line-split-layout";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { cn } from "@/lib/utils";
@@ -118,7 +118,6 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
   const [search, setSearch] = useState("");
   const [pending, setPending] = useState<Record<number, SourcingDraft | PoDraft>>({});
   const [isSaving, setIsSaving] = useState(false);
-  const { toast } = useToast();
 
   const poSeedKey =
     mode === "purchase-order"
@@ -308,11 +307,7 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
       setPending({});
       setSearch("");
     } catch (error) {
-      toast({
-        title: "Failed to save",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     } finally {
       setIsSaving(false);
     }

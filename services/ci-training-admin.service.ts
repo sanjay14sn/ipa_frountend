@@ -1,9 +1,5 @@
-import axios from "axios";
-
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000",
-  withCredentials: true,
-});
+import { api } from "@/lib/axios";
+import { unwrapData } from "@/lib/unwrap-api";
 
 export interface CITrainingSession {
   id: number;
@@ -110,7 +106,7 @@ export async function listSessions(params?: {
   const res = await api.get("/admin/ci-training/sessions", {
     params: buildCiTrainingQueryParams(params),
   });
-  const payload = res.data?.data ?? res.data?.result ?? res.data;
+  const payload = res.data.result;
   return Array.isArray(payload) ? payload : [];
 }
 
@@ -122,12 +118,12 @@ export async function createSession(input: CreateSessionInput): Promise<CITraini
     sessionDate: input.sessionDate,
     notes: input.notes,
   });
-  return res.data;
+  return res.data.result;
 }
 
 export async function listAssignmentsBySession(sessionId: number): Promise<CITrainingAssignment[]> {
   const res = await api.get(`/admin/ci-training/sessions/${sessionId}/assignments`);
-  const payload = res.data?.data ?? res.data?.result ?? res.data;
+  const payload = res.data.result;
   return Array.isArray(payload) ? payload : [];
 }
 
@@ -139,13 +135,13 @@ export async function listWaiting(params?: {
   const res = await api.get("/admin/ci-training/waiting", {
     params: buildCiTrainingQueryParams(params),
   });
-  const payload = res.data?.data ?? res.data?.result ?? res.data;
+  const payload = res.data.result;
   return Array.isArray(payload) ? payload : [];
 }
 
 export async function getInstructorProgress(instructorId: number): Promise<InstructorProgress> {
   const res = await api.get(`/admin/ci-training/instructors/${instructorId}/progress`);
-  return res.data;
+  return res.data.result;
 }
 
 export async function reassignAssignment(
@@ -164,6 +160,5 @@ export async function completeAssignment(
 
 export async function completeSession(sessionId: number): Promise<CITrainingSession> {
   const res = await api.patch(`/admin/ci-training/session/${sessionId}/complete`);
-  const payload = res.data?.data ?? res.data;
-  return payload as CITrainingSession;
+  return unwrapData<CITrainingSession>(res);
 }

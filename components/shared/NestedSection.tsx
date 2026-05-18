@@ -53,7 +53,3 @@ export function NestedSection({
     </div>
   );
 }
-
-export function useNestedSectionRef() {
-  return useRef<HTMLDivElement>(null);
-}

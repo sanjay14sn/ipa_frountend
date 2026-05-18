@@ -17,7 +17,6 @@ import {
   getIssuedIdDetails,
   getAllRequestedCertificateDetails,
   getIssuedCertificateDetails,
-  issueCertificate,
   getEligibleStudents,
   getAllAdminCertificateRequests,
   approveCertificateRequest,
@@ -344,19 +343,6 @@ export async function issueIdCardWithRevalidation(studentId: number) {
   const result = await issueIdCard(studentId);
   try {
     invalidateStudentLists(getQueryClientBridge());
-  } catch {
-    /* ignore */
-  }
-  return result;
-}
-
-export async function issueCertificateWithRevalidation(studentId: number) {
-  const result = await issueCertificate(studentId);
-  try {
-    const qc = getQueryClientBridge();
-    void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.requestedCerts });
-    void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.issuedCerts });
-    void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.eligible });
   } catch {
     /* ignore */
   }

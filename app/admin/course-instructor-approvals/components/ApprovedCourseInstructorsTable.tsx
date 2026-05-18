@@ -15,7 +15,7 @@ import {
   resendCourseInstructorCredentialsEmail,
 } from "@/services/course-instructor.service";
 import CourseInstructorDetails from "./CourseInstructorDetails";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { FileText, RefreshCw } from "lucide-react";
 import { AdminCIAgreementDialog } from "@/components/agreements/AdminCIAgreementDialog";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
@@ -24,7 +24,6 @@ interface ApprovedCourseInstructorsTableProps {}
 
 export default function ApprovedCourseInstructorsTable({
 }: ApprovedCourseInstructorsTableProps) {
-  const { toast } = useToast();
   const isDevEnvironment = process.env.NODE_ENV !== "production";
   const [expandedChildren, setExpandedChildren] = useState<Set<string>>(new Set());
   const [resendingId, setResendingId] = useState<number | null>(null);
@@ -45,20 +44,10 @@ export default function ApprovedCourseInstructorsTable({
       await resendCourseInstructorCredentialsEmail(courseInstructorId);
     },
     onSuccess: () => {
-      toast({
-        title: "Credentials email resent",
-        description: "A new CI login email has been sent.",
-      });
+      toast.success("A new CI login email has been sent.");
     },
     onError: (error: any) => {
-      toast({
-        title: "Failed to resend email",
-        description: getUserFriendlyMessage(
-          error,
-          "Could not resend credentials email.",
-        ),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error, "Could not resend credentials email."));
     },
     onSettled: () => {
       setResendingId(null);

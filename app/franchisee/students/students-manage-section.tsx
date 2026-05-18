@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { AlertTriangle, CreditCard, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -150,7 +151,7 @@ export function StudentsManageSection() {
                   void revalidate();
                 } catch (error) {
                   console.error("Error deleting student:", error);
-                  alert("Failed to delete student");
+                  toast.error("Failed to delete student");
                 }
               }}
             >

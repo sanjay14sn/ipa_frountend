@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Award, Loader2, Users } from "lucide-react";
 import { EligibleStudent } from "@/services/student.service";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   CourseInstructorData,
   getEligibleCourseInstructorsForCertificate,
@@ -48,7 +48,6 @@ export default function BulkRequestCertificateModal({
   const [applyToAllMarks, setApplyToAllMarks] = useState<string>("");
   const [eligibleInstructors, setEligibleInstructors] = useState<CourseInstructorData[]>([]);
   const [isLoadingInstructors, setIsLoadingInstructors] = useState(false);
-  const { toast } = useToast();
   const bulkCert = useBulkRequestCertificates();
   const requestedLevelIds = useMemo(
     () => [...new Set(students.map((student) => student.levelId).filter((id) => id > 0))],
@@ -89,11 +88,7 @@ export default function BulkRequestCertificateModal({
     if (!applyToAllMarks) return;
     const marks = parseInt(applyToAllMarks);
     if (isNaN(marks) || marks < 0) {
-      toast({
-        title: "Error",
-        description: "Please enter a valid marks value",
-        variant: "destructive",
-      });
+      toast.error("Please enter a valid marks value");
       return;
     }
     const newMarksMap: Record<number, string> = {};
@@ -114,11 +109,7 @@ export default function BulkRequestCertificateModal({
     e.preventDefault();
 
     if (!courseInstructorId) {
-      toast({
-        title: "Error",
-        description: "Please select a course instructor",
-        variant: "destructive",
-      });
+      toast.error("Please select a course instructor");
       return;
     }
 
@@ -139,20 +130,12 @@ export default function BulkRequestCertificateModal({
     });
 
     if (missingMarks.length > 0) {
-      toast({
-        title: "Error",
-        description: `Please enter marks for: ${missingMarks.join(", ")}`,
-        variant: "destructive",
-      });
+      toast.error(`Please enter marks for: ${missingMarks.join(", ")}`);
       return;
     }
 
     if (invalidMarks.length > 0) {
-      toast({
-        title: "Error",
-        description: `Invalid marks for: ${invalidMarks.join(", ")}`,
-        variant: "destructive",
-      });
+      toast.error(`Invalid marks for: ${invalidMarks.join(", ")}`);
       return;
     }
 
@@ -167,10 +150,7 @@ export default function BulkRequestCertificateModal({
 
       await bulkCert.mutateAsync(requestData);
 
-      toast({
-        title: "Success",
-        description: `Certificate requests created successfully for ${students.length} student(s)`,
-      });
+      toast.success(`Certificate requests created successfully for ${students.length} student(s)`);
 
       setCourseInstructorId("");
       setMarksMap({});
@@ -189,11 +169,7 @@ export default function BulkRequestCertificateModal({
           .response?.data?.message;
         if (typeof msg === "string" && msg) description = msg;
       }
-      toast({
-        title: "Error",
-        description,
-        variant: "destructive",
-      });
+      toast.error(description);
     }
   };
 

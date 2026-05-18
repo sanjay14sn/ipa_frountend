@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -300,12 +301,12 @@ export default function AddCourseInstructorModal({
     }
 
     if (!user) {
-      alert("User not found. Please log in again.");
+      toast.error("User not found. Please log in again.");
       return;
     }
 
     if (!user.franchiseId) {
-      alert("Franchise ID not found. Please contact support.");
+      toast.error("Franchise ID not found. Please contact support.");
       return;
     }
 
@@ -335,7 +336,7 @@ export default function AddCourseInstructorModal({
       onSuccess();
     } catch (error) {
       console.error("Error registering course instructor:", error);
-      alert("Failed to register course instructor. Please try again.");
+      toast.error("Failed to register course instructor. Please try again.");
     } finally {
       setIsLoading(false);
     }

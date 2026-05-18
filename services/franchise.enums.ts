@@ -12,10 +12,6 @@ export enum FranchiseType {
   SCHOOL = "School",
 }
 
-export enum FranchisePaymentStatus {
-  PAID = "Paid",
-  UNPAID = "Unpaid",
-}
 
 export enum BloodGroup {
   A_POSITIVE = "A+",

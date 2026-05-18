@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -454,12 +455,12 @@ export default function AddStudentModal({
     }
 
     if (!user) {
-      alert("User not found. Please log in again.");
+      toast.error("User not found. Please log in again.");
       return;
     }
 
     if (!user.franchiseId) {
-      alert("Franchise ID not found. Please contact support.");
+      toast.error("Franchise ID not found. Please contact support.");
       return;
     }
 
@@ -507,7 +508,7 @@ export default function AddStudentModal({
       onSuccess();
     } catch (error) {
       console.error("Error registering student:", error);
-      alert("Failed to register student. Please try again.");
+      toast.error("Failed to register student. Please try again.");
     } finally {
       setIsLoading(false);
     }

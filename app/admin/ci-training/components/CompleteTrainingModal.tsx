@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { completeTraining } from "@/services/course-instructor.service";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 
 interface CompleteTrainingModalProps {
@@ -36,7 +36,6 @@ export function CompleteTrainingModal({
   levelName,
   onSuccess,
 }: CompleteTrainingModalProps) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     marksObtained: "",
@@ -63,21 +62,12 @@ export function CompleteTrainingModal({
 
       await completeTraining(trainingId, data);
 
-      toast({
-        title: "Training Completed",
-        description: `Successfully completed training for ${instructorName}. Graduation recorded.`,
-      });
+      toast.success(`Successfully completed training for ${instructorName}. Graduation recorded.`);
 
       onSuccess?.();
       handleClose();
     } catch (err: any) {
-      toast({
-        title: "Error",
-        description:
-          err.message ||
-          "Failed to complete training. The instructor may have already graduated from this level.",
-        variant: "destructive",
-      });
+      toast.error(err.message || "Failed to complete training. The instructor may have already graduated from this level.");
     } finally {
       setLoading(false);
     }

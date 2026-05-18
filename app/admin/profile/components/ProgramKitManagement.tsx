@@ -5,7 +5,7 @@ import { Save, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import {
   bulkAssignInventoryToProgramKit,
@@ -36,7 +36,6 @@ export function ProgramKitManagement({
   programName,
   onCountChange,
 }: ProgramKitManagementProps) {
-  const { toast } = useToast();
   const onCountChangeRef = useRef(onCountChange);
   const [draftQuantities, setDraftQuantities] = useState<
     Record<number, string>
@@ -76,11 +75,7 @@ export function ProgramKitManagement({
     const quantity = Number(rawValue);
 
     if (!isPositiveInteger(quantity)) {
-      toast({
-        title: "Error",
-        description: "Default quantity must be a positive whole number",
-        variant: "destructive",
-      });
+      toast.error("Default quantity must be a positive whole number");
       return;
     }
 
@@ -94,14 +89,10 @@ export function ProgramKitManagement({
         defaultQuantity: quantity,
       });
       await invalidateProgramKitItems(programId);
-      toast({ title: "Quantity updated" });
+      toast.success("Quantity updated");
       await programKitQuery.refetch();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     } finally {
       setPendingKey(null);
     }
@@ -112,14 +103,10 @@ export function ProgramKitManagement({
     try {
       await removeInventoryFromProgramKit(item.programId, item.programKitId);
       await invalidateProgramKitItems(programId);
-      toast({ title: "Removed from kit" });
+      toast.success("Removed from kit");
       await programKitQuery.refetch();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     } finally {
       setPendingKey(null);
     }
@@ -291,12 +278,9 @@ export function ProgramKitManagement({
             await invalidateProgramKitItems(programId);
             await programKitQuery.refetch();
             if (failed.length > 0) {
-              toast({
-                title: `${assigned} added, ${failed.length} failed`,
-                variant: "destructive",
-              });
+              toast.error(`${assigned} added, ${failed.length} failed`);
             } else {
-              toast({ title: `${items.length} item${items.length !== 1 ? "s" : ""} added to kit` });
+              toast.success(`${items.length} item${items.length !== 1 ? "s" : ""} added to kit`);
             }
           }}
         />

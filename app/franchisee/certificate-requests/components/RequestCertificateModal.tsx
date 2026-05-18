@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Award, Loader2 } from "lucide-react";
 import { EligibleStudent } from "@/services/student.service";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   CourseInstructorData,
   getEligibleCourseInstructorsForCertificate,
@@ -49,7 +49,6 @@ export default function RequestCertificateModal({
   });
   const [eligibleInstructors, setEligibleInstructors] = useState<CourseInstructorData[]>([]);
   const [isLoadingInstructors, setIsLoadingInstructors] = useState(false);
-  const { toast } = useToast();
   const requestCert = useRequestCertificateForStudent();
 
   useEffect(() => {
@@ -85,32 +84,19 @@ export default function RequestCertificateModal({
       !formData.marksObtained ||
       !formData.courseInstructorId
     ) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
+      toast.error("Please fill in all required fields");
       return;
     }
 
     const marksObtained = parseInt(formData.marksObtained, 10);
 
     if (marksObtained < 0) {
-      toast({
-        title: "Error",
-        description:
-          "Invalid marks: marks obtained must be non-negative",
-        variant: "destructive",
-      });
+      toast.error("Invalid marks: marks obtained must be non-negative");
       return;
     }
 
     if (!student.programId || !student.levelId) {
-      toast({
-        title: "Error",
-        description: "Student program or level is missing. Refresh and try again.",
-        variant: "destructive",
-      });
+      toast.error("Student program or level is missing. Refresh and try again.");
       return;
     }
 
@@ -123,10 +109,7 @@ export default function RequestCertificateModal({
         courseInstructorId: parseInt(formData.courseInstructorId, 10),
       });
 
-      toast({
-        title: "Success",
-        description: "Certificate request created successfully",
-      });
+      toast.success("Certificate request created successfully");
 
       setFormData({
         marksObtained: "",
@@ -136,11 +119,7 @@ export default function RequestCertificateModal({
       onSuccess();
     } catch (error) {
       console.error("Error creating certificate request:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create certificate request. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to create certificate request. Please try again.");
     }
   };
 

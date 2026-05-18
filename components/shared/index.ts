@@ -1,4 +1,4 @@
-export { NestedSection, useNestedSectionRef } from "./NestedSection";
+export { NestedSection } from "./NestedSection";
 export {
   TablePageShell,
   TableSectionSurface,
@@ -21,25 +21,6 @@ export type {
   DataTableProps,
 } from "./data-table";
 
-/** @deprecated Use `DataTable` */
-export { AdminTable } from "./data-table";
-export type {
-  AdminTableColumn,
-  AdminTableFilter,
-  AdminTableMultiSelectFilter,
-  AdminTableSortOption,
-  AdminTablePaginationMeta,
-  AdminTableExpandedSection,
-  AdminTableProps,
-} from "./data-table";
-
-export { SectionedDetail } from "./SectionedDetail";
-export type {
-  SectionType,
-  SectionField,
-  DetailSectionConfig,
-  SectionedDetailProps,
-} from "./SectionedDetail";
 export {
   ExpandedDetailSurface,
   ExpandedDetailSection,

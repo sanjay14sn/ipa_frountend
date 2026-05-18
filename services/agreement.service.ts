@@ -370,15 +370,6 @@ export async function submitFranchiseeSignatureImage(
   return unwrapData<AgreementRecord>(response);
 }
 
-export async function submitFranchiseeSignaturePath(
-  agreementId: number,
-  signaturePath: string,
-): Promise<AgreementRecord> {
-  const response = await api.post(`/agreement/${agreementId}/sign`, {
-    signaturePath,
-  });
-  return unwrapData<AgreementRecord>(response);
-}
 
 const DEFAULT_API_PUBLIC_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5500";

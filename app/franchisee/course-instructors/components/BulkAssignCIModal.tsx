@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   useWaitingForSession,
   useSessionAssignments,
@@ -23,7 +23,6 @@ interface BulkAssignCIModalProps {
 }
 
 export default function BulkAssignCIModal({ session, onClose }: BulkAssignCIModalProps) {
-  const { toast } = useToast();
   const sessionId = session?.id ?? null;
   const { waiting, isLoading: isLoadingWaiting } = useWaitingForSession(sessionId);
   const { assigned, isLoading: isLoadingAssigned } = useSessionAssignments(sessionId);
@@ -82,10 +81,7 @@ export default function BulkAssignCIModal({ session, onClose }: BulkAssignCIModa
                   session.id,
                   assignmentIds,
                 );
-                toast({
-                  title: "CIs assigned",
-                  description: `${result.assigned} assigned, ${result.skipped} skipped.`,
-                });
+                toast.success(`${result.assigned} assigned, ${result.skipped} skipped.`);
               }}
             />
           </div>

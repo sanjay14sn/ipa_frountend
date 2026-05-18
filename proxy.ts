@@ -1,3 +1,5 @@
+// THIS FILE IS DEAD CODE — Next.js only runs middleware.ts, not proxy.ts.
+// This file is never executed. Delete it or rename to middleware.ts with real logic.
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 

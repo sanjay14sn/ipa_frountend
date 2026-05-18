@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Truck, PackageCheck, X, Download } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { useAdminShipments } from "@/hooks/api/fulfillment.hooks";
 import type { ShipmentData } from "@/services/fulfillment.service";
@@ -36,7 +36,6 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function AdminShippingTable() {
-  const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -69,19 +68,15 @@ export default function AdminShippingTable() {
       try {
         setBusyOrderId(orderId);
         await action();
-        toast({ title: success });
+        toast.success(success);
         await shipmentsQuery.refetch();
       } catch (error) {
-        toast({
-          title: "Error",
-          description: getUserFriendlyMessage(error),
-          variant: "destructive",
-        });
+        toast.error(getUserFriendlyMessage(error));
       } finally {
         setBusyOrderId(null);
       }
     },
-    [shipmentsQuery, toast],
+    [shipmentsQuery],
   );
 
   const handleShipConfirm = useCallback(

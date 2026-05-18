@@ -1,5 +1,13 @@
 import { strict as assert } from "node:assert";
-import { normalizeCIProgressResponse } from "./ci-training.service";
+import {
+  buildCITrainingPurchasePayload,
+  normalizeCIProgressResponse,
+} from "./ci-training.service";
+
+assert.deepEqual(buildCITrainingPurchasePayload(12), { packageIds: [12] });
+assert.deepEqual(buildCITrainingPurchasePayload([12, 13]), {
+  packageIds: [12, 13],
+});
 
 const progress = normalizeCIProgressResponse({
   trainings: [

@@ -5,14 +5,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TablePageShell, TableSectionSurface } from "@/components/shared";
 import { AdminCourseInstructorData, rejectCourseInstructor } from "@/services/course-instructor.service";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import PendingCourseInstructorsTable from "./components/PendingCourseInstructorsTable";
 import ApprovedCourseInstructorsTable from "./components/ApprovedCourseInstructorsTable";
 import RejectedCourseInstructorsTable from "./components/RejectedCourseInstructorsTable";
 import ApproveCIModal from "./components/ApproveCIModal";
 
 export function CiApprovalsSection() {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [approveTarget, setApproveTarget] = useState<AdminCourseInstructorData | null>(null);
 
@@ -31,7 +30,7 @@ export function CiApprovalsSection() {
       await rejectCourseInstructor(instructor.id);
       triggerRefresh();
     } catch {
-      toast({ title: "Error", description: "Failed to reject instructor. Please try again.", variant: "destructive" });
+      toast.error("Failed to reject instructor. Please try again.");
     }
   };
 

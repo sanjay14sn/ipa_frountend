@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   getLevelsByStream,
   createLevel,
@@ -119,9 +119,6 @@ export function LevelManagement({
   const [collapsedStreams, setCollapsedStreams] = useState<
     Record<number, boolean>
   >({});
-  const { toast } = useToast();
-  const toastRef = useRef(toast);
-
   const [formData, setFormData] = useState<Omit<CreateLevelDto, "programId">>({
     name: "",
     code: "",
@@ -135,10 +132,6 @@ export function LevelManagement({
 
   const [editFormData, setEditFormData] = useState<UpdateLevelDto>({});
 
-  useEffect(() => {
-    toastRef.current = toast;
-  }, [toast]);
-
   const loadCatalog = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -151,11 +144,7 @@ export function LevelManagement({
       setStreams(nextStreams);
       setTransitions(nextTransitions);
     } catch {
-      toastRef.current({
-        title: "Error",
-        description: "Failed to load catalog",
-        variant: "destructive",
-      });
+      toast.error("Failed to load catalog");
     } finally {
       setIsLoading(false);
     }
@@ -230,11 +219,7 @@ export function LevelManagement({
         );
         return nextLevels;
       } catch {
-        toastRef.current({
-          title: "Error",
-          description: "Failed to load levels for this stream",
-          variant: "destructive",
-        });
+        toast.error("Failed to load levels for this stream");
         return streamLevels[streamId] ?? [];
       } finally {
         setLoadingStreamLevels((prev) => ({ ...prev, [streamId]: false }));
@@ -277,19 +262,11 @@ export function LevelManagement({
 
   const handleAddLevel = async () => {
     if (!formData.name.trim() || !formData.code.trim()) {
-      toast({
-        title: "Error",
-        description: "Name and code are required",
-        variant: "destructive",
-      });
+      toast.error("Name and code are required");
       return;
     }
     if (!formData.streamId || formData.streamId === 0) {
-      toast({
-        title: "Error",
-        description: "Select a stream (create one in Streams & transitions first)",
-        variant: "destructive",
-      });
+      toast.error("Select a stream (create one in Streams & transitions first)");
       return;
     }
 
@@ -302,14 +279,10 @@ export function LevelManagement({
         queryKey: queryKeys.levels.byStream(created.streamId),
       });
       await loadLevelsForStream(created.streamId, true);
-      toast({ title: "Success", description: "Level created" });
+      toast.success("Level created");
       setIsAddDialogOpen(false);
     } catch {
-      toast({
-        title: "Error",
-        description: "Failed to create level",
-        variant: "destructive",
-      });
+      toast.error("Failed to create level");
     }
   };
 
@@ -335,16 +308,12 @@ export function LevelManagement({
           ? loadLevelsForStream(updated.streamId, true)
           : Promise.resolve([] as Level[]),
       ]);
-      toast({ title: "Success", description: "Level updated" });
+      toast.success("Level updated");
       setIsEditDialogOpen(false);
       setEditingLevel(null);
       setEditFormData({});
     } catch {
-      toast({
-        title: "Error",
-        description: "Failed to update level",
-        variant: "destructive",
-      });
+      toast.error("Failed to update level");
     }
   };
 
@@ -357,15 +326,11 @@ export function LevelManagement({
         queryKey: queryKeys.levels.byStream(deletingLevel.streamId),
       });
       await loadLevelsForStream(deletingLevel.streamId, true);
-      toast({ title: "Success", description: "Level deleted" });
+      toast.success("Level deleted");
       setIsDeleteDialogOpen(false);
       setDeletingLevel(null);
     } catch {
-      toast({
-        title: "Error",
-        description: "Failed to delete level (students may be enrolled)",
-        variant: "destructive",
-      });
+      toast.error("Failed to delete level (students may be enrolled)");
     }
   };
 

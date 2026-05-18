@@ -1,9 +1,5 @@
-import axios from "axios";
-
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000",
-  withCredentials: true,
-});
+import { api } from "@/lib/axios";
+import { unwrapData } from "@/lib/unwrap-api";
 
 export interface FranchiseeTrainingSession {
   id: number;
@@ -51,13 +47,13 @@ export async function listFranchiseeTrainingSessions(params?: {
   const res = await api.get("/course-instructor/ci-training/sessions", {
     params: query,
   });
-  const payload = res.data?.data ?? res.data?.result ?? res.data;
+  const payload = unwrapData<FranchiseeTrainingSession[]>(res);
   return Array.isArray(payload) ? payload : [];
 }
 
 export async function listWaitingForSession(sessionId: number): Promise<WaitingCI[]> {
   const res = await api.get(`/course-instructor/ci-training/sessions/${sessionId}/waiting`);
-  const payload = res.data?.data ?? res.data?.result ?? res.data;
+  const payload = unwrapData<WaitingCI[]>(res);
   return Array.isArray(payload) ? payload : [];
 }
 
@@ -67,7 +63,7 @@ export async function listSessionAssignments(
   const res = await api.get(
     `/course-instructor/ci-training/sessions/${sessionId}/assignments`,
   );
-  const payload = res.data?.data ?? res.data?.result ?? res.data;
+  const payload = unwrapData<SessionAssignedCI[]>(res);
   return Array.isArray(payload) ? payload : [];
 }
 
@@ -79,6 +75,6 @@ export async function bulkAssignToSession(
     `/course-instructor/ci-training/sessions/${sessionId}/bulk-assign`,
     { assignmentIds },
   );
-  const payload = res.data?.data ?? res.data;
+  const payload = unwrapData<BulkAssignResult>(res);
   return { assigned: payload?.assigned ?? 0, skipped: payload?.skipped ?? 0 };
 }

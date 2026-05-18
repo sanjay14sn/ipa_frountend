@@ -1,9 +1,4 @@
-import axios from "axios";
-
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000",
-  withCredentials: true,
-});
+import { api } from "@/lib/axios";
 
 export interface CITrainingPackageItem {
   id: number;
@@ -27,6 +22,12 @@ export interface CITrainingPurchaseInitiateResponse {
   orderId: string;
   purchaseId: number;
   paymentId?: number;
+}
+
+export function buildCITrainingPurchasePayload(packageIds: number | number[]) {
+  return {
+    packageIds: Array.isArray(packageIds) ? packageIds : [packageIds],
+  };
 }
 
 export interface CIProgressItem {
@@ -58,15 +59,18 @@ export interface CIUpcomingSession {
 
 export async function listCIPackages(): Promise<CITrainingPackageItem[]> {
   const res = await api.get("/ci/training/packages");
-  const payload = res.data?.data ?? res.data;
+  const payload = res.data.result;
   return Array.isArray(payload) ? payload : [];
 }
 
 export async function initiateCITrainingPurchase(
-  packageId: number,
+  packageIds: number | number[],
 ): Promise<CITrainingPurchaseInitiateResponse> {
-  const res = await api.post("/ci/training/purchase/initiate", { packageId });
-  const payload = res.data?.data ?? res.data;
+  const res = await api.post(
+    "/ci/training/purchase/initiate",
+    buildCITrainingPurchasePayload(packageIds),
+  );
+  const payload = res.data.result;
   const payment = payload?.payment ?? {};
   return {
     key: payload?.key ?? payment.key ?? payment.keyId,
@@ -98,7 +102,7 @@ export async function abandonCIPayment(data: {
 
 export async function getCIProgress(): Promise<CIProgressItem[]> {
   const res = await api.get("/ci/training/progress");
-  const payload = res.data?.data ?? res.data;
+  const payload = res.data.result;
   return normalizeCIProgressResponse(payload);
 }
 
@@ -175,7 +179,7 @@ export function normalizeCIProgressResponse(payload: unknown): CIProgressItem[] 
 
 export async function getCIUpcomingSessions(): Promise<CIUpcomingSession[]> {
   const res = await api.get("/ci/training/upcoming");
-  const payload = res.data?.data ?? res.data;
+  const payload = res.data.result;
   return Array.isArray(payload) ? payload : [];
 }
 
@@ -205,8 +209,7 @@ export interface CIAgreementRecord {
 
 export async function getCIAgreement(): Promise<CIAgreementRecord | null> {
   const res = await api.get("/ci/agreement");
-  // Backend wraps all responses in { success, data } via ResponseInterceptor
-  return res.data?.data ?? res.data ?? null;
+  return res.data.result ?? null;
 }
 
 export async function signCIAgreement(agreementId: number, signaturePath: string): Promise<void> {

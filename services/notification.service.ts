@@ -88,10 +88,3 @@ export async function deleteNotification(
   await api.delete(`${basePath}/${notificationId}`);
 }
 
-export async function deleteAllNotifications(
-  userType: UserType,
-): Promise<number> {
-  const basePath = getNotificationBasePath(userType);
-  const response = await api.delete<NotificationResponse>(basePath);
-  return (response.data.result as { count: number }).count;
-}

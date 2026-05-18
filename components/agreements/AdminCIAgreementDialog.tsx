@@ -22,7 +22,7 @@ import {
 } from "@/services/course-instructor.service";
 import { getTrainingLevelsByProgram, type TrainingLevel } from "@/services/training-level.service";
 import type { CIAgreementRecord } from "@/services/ci-training.service";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 
@@ -217,7 +217,6 @@ export function AdminCIAgreementDialog({
   onClose,
 }: AdminCIAgreementDialogProps) {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [isEditingPackages, setIsEditingPackages] = useState(false);
   const [packageEditorView, setPackageEditorView] = useState<"matrix" | "preview">(
     "matrix",
@@ -287,21 +286,11 @@ export function AdminCIAgreementDialog({
       await queryClient.invalidateQueries({
         queryKey: ["admin-ci-agreement", instructor?.id],
       });
-      toast({
-        title: "Training packages saved",
-        description: "CI training packages were updated successfully.",
-      });
+      toast.success("CI training packages were updated successfully.");
       setIsEditingPackages(false);
     },
     onError: (error: any) => {
-      toast({
-        title: "Failed to save packages",
-        description: getUserFriendlyMessage(
-          error,
-          "Could not update CI training packages.",
-        ),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error, "Could not update CI training packages."));
     },
   });
 
@@ -355,21 +344,13 @@ export function AdminCIAgreementDialog({
   const handleSavePackages = () => {
     if (!instructor) return;
     if (!programId) {
-      toast({
-        title: "Missing program",
-        description: "Program information is required to manage CI packages.",
-        variant: "destructive",
-      });
+      toast.error("Program information is required to manage CI packages.");
       return;
     }
 
     const validationError = validatePackages(packages, sortedTrainingLevels);
     if (validationError) {
-      toast({
-        title: "Validation error",
-        description: validationError,
-        variant: "destructive",
-      });
+      toast.error(validationError);
       return;
     }
 

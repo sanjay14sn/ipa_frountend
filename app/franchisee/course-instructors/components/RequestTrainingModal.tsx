@@ -26,7 +26,7 @@ import {
   getAvailableTrainingLevelsForCI,
   type AvailableNextTrainingLevelCounts,
 } from "@/services/course-instructor.service";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 interface RequestTrainingModalProps {
@@ -55,8 +55,6 @@ export function RequestTrainingModal({
   const [loading, setLoading] = useState(false);
   const [loadingLevels, setLoadingLevels] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
-
   useEffect(() => {
     if (isOpen) {
       loadData();
@@ -101,10 +99,7 @@ export function RequestTrainingModal({
 
       await requestAdditionalTraining(instructorId, requestData);
 
-      toast({
-        title: "Success",
-        description: "Training request submitted successfully",
-      });
+      toast.success("Training request submitted successfully");
 
       onSuccess?.();
       onClose();

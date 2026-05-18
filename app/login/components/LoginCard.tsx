@@ -177,10 +177,12 @@ export function LoginCard({
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="username">Email</Label>
             <Input
               id="username"
-              type="username"
+              type="text"
+              name="username"
+              autoComplete="username"
               placeholder="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -190,17 +192,13 @@ export function LoginCard({
           <div className="space-y-2">
             <div className="flex items-center">
               <Label htmlFor="password">Password</Label>
-              <Link
-                href="#"
-                className="ml-auto text-sm text-primary underline underline-offset-4"
-              >
-                Forgot password?
-              </Link>
             </div>
             <div className="relative">
               <Input
                 id="password"
                 type={show ? "text" : "password"}
+                name="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

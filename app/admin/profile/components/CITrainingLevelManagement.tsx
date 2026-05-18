@@ -51,7 +51,7 @@ import {
 import { TrainingLevelMaterialsPicker } from "@/app/admin/training-levels/TrainingLevelMaterialsPicker";
 import { useLevelsByProgram } from "@/hooks/api/level.hooks";
 import { useStreamsByProgram } from "@/hooks/api/stream.hooks";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { CATALOG_PENDING_SPLIT_ROW_HEIGHT } from "@/lib/catalog-line-split-layout";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { cn } from "@/lib/utils";
@@ -143,7 +143,6 @@ function CIStudentLevelsPicker({
   programId: number;
   disabled?: boolean;
 }) {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
@@ -221,13 +220,9 @@ function CIStudentLevelsPicker({
       await setStudentLevelMappings(trainingLevelId, nextLevelIds, programId);
       await queryClient.invalidateQueries({ queryKey: mappingQueryKey });
       await refetchAssigned();
-      toast({ title: "Student level removed" });
+      toast.success("Student level removed");
     } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     }
   }
 
@@ -242,13 +237,9 @@ function CIStudentLevelsPicker({
       await refetchAssigned();
       setPendingIds(new Set());
       setSearch("");
-      toast({ title: `${count} level${count !== 1 ? "s" : ""} linked` });
+      toast.success(`${count} level${count !== 1 ? "s" : ""} linked`);
     } catch (error) {
-      toast({
-        title: "Failed to save",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -492,7 +483,6 @@ export function CITrainingLevelManagement({
   programId: number;
   programName: string;
 }) {
-  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingLevel, setEditingLevel] = useState<TrainingLevel | null>(null);
@@ -529,11 +519,7 @@ export function CITrainingLevelManagement({
 
   const handleSubmit = async () => {
     if (!form.name.trim() || !form.code.trim()) {
-      toast({
-        title: "Error",
-        description: "Name and code are required",
-        variant: "destructive",
-      });
+      toast.error("Name and code are required");
       return;
     }
     try {
@@ -549,18 +535,9 @@ export function CITrainingLevelManagement({
       await invalidateTrainingLevelsForProgram(programId);
       await trainingLevelsQuery.refetch();
       closeDialog();
-      toast({
-        title: "Success",
-        description: editingLevel
-          ? "CI training level updated"
-          : "CI training level created",
-      });
+      toast.success(editingLevel ? "CI training level updated" : "CI training level created");
     } catch (e) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(e),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(e));
     }
   };
 
@@ -572,13 +549,9 @@ export function CITrainingLevelManagement({
       setIsDeleteDialogOpen(false);
       await invalidateTrainingLevelsForProgram(programId);
       await trainingLevelsQuery.refetch();
-      toast({ title: "Success", description: "CI training level deleted" });
+      toast.success("CI training level deleted");
     } catch (e) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(e),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(e));
     }
   };
 

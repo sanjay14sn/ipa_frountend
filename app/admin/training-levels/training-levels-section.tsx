@@ -58,7 +58,7 @@ import {
 import { getAllPrograms, type Program } from "@/services/program.service";
 import { TrainingLevelMaterialsPicker } from "./TrainingLevelMaterialsPicker";
 import { TrainingLevelStudentLevelsPicker } from "./TrainingLevelStudentLevelsPicker";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 type FormState = {
@@ -131,7 +131,6 @@ function buildPayload(
 }
 
 export function TrainingLevelsSection() {
-  const { toast } = useToast();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedProgramId, setSelectedProgramId] = useState<number | null>(null);
   const [trainingLevels, setTrainingLevels] = useState<TrainingLevel[]>([]);
@@ -151,17 +150,13 @@ export function TrainingLevelsSection() {
         setPrograms(programRows);
         setSelectedProgramId((current) => current ?? programRows[0]?.id ?? null);
       } catch (e) {
-        toast({
-          title: "Error",
-          description: getUserFriendlyMessage(e),
-          variant: "destructive",
-        });
+        toast.error(getUserFriendlyMessage(e));
       } finally {
         setIsLoadingPrograms(false);
       }
     };
     void loadPrograms();
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     if (selectedProgramId == null) {
@@ -181,17 +176,13 @@ export function TrainingLevelsSection() {
           ),
         );
       } catch (e) {
-        toast({
-          title: "Error",
-          description: getUserFriendlyMessage(e),
-          variant: "destructive",
-        });
+        toast.error(getUserFriendlyMessage(e));
       } finally {
         setIsLoadingLevels(false);
       }
     };
     void loadTrainingLevels();
-  }, [selectedProgramId, toast]);
+  }, [selectedProgramId]);
 
   const openCreateDialog = () => {
     const nextOrder =
@@ -227,19 +218,11 @@ export function TrainingLevelsSection() {
 
   const handleSubmit = async () => {
     if (selectedProgramId == null) {
-      toast({
-        title: "Error",
-        description: "Select a program first",
-        variant: "destructive",
-      });
+      toast.error("Select a program first");
       return;
     }
     if (!form.name.trim() || !form.code.trim()) {
-      toast({
-        title: "Error",
-        description: "Name and code are required",
-        variant: "destructive",
-      });
+      toast.error("Name and code are required");
       return;
     }
 
@@ -258,18 +241,9 @@ export function TrainingLevelsSection() {
       }
       await refreshLevels();
       closeDialog();
-      toast({
-        title: "Success",
-        description: editingLevel
-          ? "Training level updated"
-          : "Training level created",
-      });
+      toast.success(editingLevel ? "Training level updated" : "Training level created");
     } catch (e) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(e),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(e));
     }
   };
 
@@ -280,13 +254,9 @@ export function TrainingLevelsSection() {
       setIsDeleteDialogOpen(false);
       setDeletingLevel(null);
       await refreshLevels();
-      toast({ title: "Success", description: "Training level deleted" });
+      toast.success("Training level deleted");
     } catch (e) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(e),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(e));
     }
   };
 

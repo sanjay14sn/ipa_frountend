@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,7 @@ import {
   initiateMultiLevelCITrainingPayment,
   verifyMultiLevelCITrainingPayment,
 } from "@/services/payment.service";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { abandonOrderPayment } from "@/services/order.service";
 
 interface MultiLevelTrainingPaymentModalProps {
@@ -37,13 +37,13 @@ export function MultiLevelTrainingPaymentModal({
   instructorName,
   onPaymentSuccess,
 }: MultiLevelTrainingPaymentModalProps) {
-  const { toast } = useToast();
   const [trainingProgress, setTrainingProgress] = useState<CITrainingProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [isSettled, setIsSettled] = useState(false);
+  const isSettledRef = useRef(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -112,6 +112,7 @@ export function MultiLevelTrainingPaymentModal({
         },
         handler: async function (response: any) {
           try {
+            isSettledRef.current = true;
             setIsSettled(true);
             await verifyMultiLevelCITrainingPayment({
               paymentId: response.razorpay_payment_id,
@@ -119,28 +120,22 @@ export function MultiLevelTrainingPaymentModal({
               signature: response.razorpay_signature,
             });
 
-            toast({
-              title: "Payment Successful",
-              description: "Training payment completed. First level started, others marked paid.",
-            });
+            toast.success("Training payment completed. First level started, others marked paid.");
 
             onPaymentSuccess?.();
             onClose();
           } catch (err: any) {
-            toast({
-              title: "Payment Verification Failed",
-              description: err.message || "Failed to verify payment",
-              variant: "destructive",
-            });
+            toast.error(err.message || "Failed to verify payment");
           }
         },
         modal: {
           ondismiss: async function () {
-            if (!isSettled) {
+            if (!isSettledRef.current) {
               await abandonOrderPayment({
                 razorpayOrderId: paymentOrder.orderId,
                 note: "dismissed",
               }).catch(() => {});
+              isSettledRef.current = true;
               setIsSettled(true);
             }
             setProcessing(false);
@@ -157,29 +152,27 @@ export function MultiLevelTrainingPaymentModal({
       onClose(); // Close dialog before opening Razorpay so its overlay doesn't trap focus
       rzp.open();
     } catch (err: any) {
-      if (activeOrderId && !isSettled) {
+      if (activeOrderId && !isSettledRef.current) {
         await abandonOrderPayment({
           razorpayOrderId: activeOrderId,
           note: "payment_failed",
         }).catch(() => {});
+        isSettledRef.current = true;
         setIsSettled(true);
       }
-      toast({
-        title: "Payment Failed",
-        description: err.message || "Failed to initiate payment",
-        variant: "destructive",
-      });
+      toast.error(err.message || "Failed to initiate payment");
       setProcessing(false);
     }
   };
 
   useEffect(() => {
     const handleWindowClose = () => {
-      if (!activeOrderId || isSettled) return;
+      if (!activeOrderId || isSettledRef.current) return;
       void abandonOrderPayment({
         razorpayOrderId: activeOrderId,
         note: "page_unload",
       }).catch(() => {});
+      isSettledRef.current = true;
       setIsSettled(true);
     };
     window.addEventListener("beforeunload", handleWindowClose);
@@ -187,9 +180,9 @@ export function MultiLevelTrainingPaymentModal({
     return () => {
       window.removeEventListener("beforeunload", handleWindowClose);
       window.removeEventListener("pagehide", handleWindowClose);
-      handleWindowClose();
+      // Do NOT call handleWindowClose() here — it fires on every dep change
     };
-  }, [activeOrderId, isSettled]);
+  }, [activeOrderId]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

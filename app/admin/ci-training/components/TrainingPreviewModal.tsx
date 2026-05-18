@@ -18,6 +18,7 @@ import {
   Calendar,
   CheckCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { CITrainingData } from "@/services/course-instructor.service";
 import { completeTrainingWithRevalidation } from "@/hooks/api/course-instructor.hooks";
 
@@ -45,7 +46,7 @@ export default function TrainingPreviewModal({
       onSuccess();
     } catch (error) {
       console.error("Error completing training:", error);
-      alert("Failed to complete training. Please try again.");
+      toast.error("Failed to complete training. Please try again.");
     } finally {
       setIsApproving(false);
     }

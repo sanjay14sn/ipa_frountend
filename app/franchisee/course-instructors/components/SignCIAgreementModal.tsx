@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   CIAgreementData,
   listCIAgreementsForFranchisee,
@@ -44,7 +44,6 @@ function phaseBadgeVariant(phase: CIAgreementData["phase"]): "default" | "second
 }
 
 export default function SignCIAgreementModal({ open, onOpenChange }: SignCIAgreementModalProps) {
-  const { toast } = useToast();
   const [signingId, setSigningId] = useState<number | null>(null);
   const [signaturePath, setSignaturePath] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -63,12 +62,12 @@ export default function SignCIAgreementModal({ open, onOpenChange }: SignCIAgree
     setSubmitting(true);
     try {
       await signCIAgreementAsFranchisee(signingId, signaturePath.trim());
-      toast({ title: "Agreement signed" });
+      toast.success("Agreement signed");
       setSigningId(null);
       setSignaturePath("");
       void refetch();
     } catch (err: any) {
-      toast({ title: "Error", description: err?.response?.data?.message ?? "Failed to sign.", variant: "destructive" });
+      toast.error(err?.response?.data?.message ?? "Failed to sign.");
     } finally {
       setSubmitting(false);
     }

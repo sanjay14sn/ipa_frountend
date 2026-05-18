@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { TableLoadingState, TablePageShell } from "@/components/shared";
 import {
   abandonCIPayment,
@@ -36,7 +36,6 @@ function packageCoverage(pkg: {
 }
 
 export default function CITrainingPackagesPage() {
-  const { toast } = useToast();
   const [purchasingId, setPurchasingId] = useState<number | null>(null);
   const pendingPurchaseRef = useRef<{ orderId: string; purchaseId: number; paymentId?: number } | null>(null);
   const isPaymentSettledRef = useRef(false);
@@ -122,11 +121,7 @@ export default function CITrainingPackagesPage() {
   const handlePurchase = async (packageId: number) => {
     if (purchasingId != null) return;
     if (!isAgreementValid) {
-      toast({
-        title: "Agreement required",
-        description: "Sign a valid CI agreement before purchasing training packages.",
-        variant: "destructive",
-      });
+      toast.error("Sign a valid CI agreement before purchasing training packages.");
       return;
     }
     setPurchasingId(packageId);
@@ -169,7 +164,7 @@ export default function CITrainingPackagesPage() {
                 purchaseId: purchaseResponse!.purchaseId,
               });
               isPaymentSettledRef.current = true;
-              toast({ title: "Payment successful" });
+              toast.success("Payment successful");
               void refetch();
               resolve();
             } catch (error: any) {
@@ -200,13 +195,9 @@ export default function CITrainingPackagesPage() {
           typeof apiMessage === "string" &&
           apiMessage.toLowerCase().includes("ci agreement must be signed and valid");
         abandonPendingPayment();
-        toast({
-          title: isAgreementError ? "Agreement required" : "Payment failed",
-          description: isAgreementError
-            ? "Sign the CI agreement first, then retry purchase from this page."
-            : apiMessage,
-          variant: "destructive",
-        });
+        toast.error(isAgreementError
+          ? "Sign the CI agreement first, then retry purchase from this page."
+          : apiMessage);
         if (pendingPurchaseRef.current && checkoutOpenedRef.current) {
           void abandonCIPayment({
             paymentId: pendingPurchaseRef.current.paymentId,

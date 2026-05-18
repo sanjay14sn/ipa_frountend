@@ -32,7 +32,7 @@ import {
   approveTraining,
   ApproveTrainingRequest,
 } from "@/services/course-instructor.service";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface ApproveTrainingModalProps {
   isOpen: boolean;
@@ -49,7 +49,6 @@ export default function ApproveTrainingModal({
   instructorName,
   onSuccess,
 }: ApproveTrainingModalProps) {
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     dateOfTraining: new Date(),
@@ -109,10 +108,7 @@ export default function ApproveTrainingModal({
 
       await approveTraining(Number(instructorId), trainingData);
 
-      toast({
-        title: "Training Approved",
-        description: `Training has been successfully approved for ${instructorName}`,
-      });
+      toast.success(`Training has been successfully approved for ${instructorName}`);
 
       onSuccess?.();
       onClose();
@@ -127,11 +123,7 @@ export default function ApproveTrainingModal({
       });
     } catch (error) {
       console.error("Error approving training:", error);
-      toast({
-        title: "Error",
-        description: "Failed to approve training. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to approve training. Please try again.");
     } finally {
       setIsLoading(false);
     }

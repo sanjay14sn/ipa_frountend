@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -69,7 +70,7 @@ export default function RequestIdModal({
       onSuccess();
     } catch (error) {
       console.error("Error requesting IDs:", error);
-      alert("Failed to request IDs. Please try again.");
+      toast.error("Failed to request IDs. Please try again.");
     } finally {
       setIsLoading(false);
     }

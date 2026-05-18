@@ -21,12 +21,8 @@ export type AdminDashboardStats = {
 };
 
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
-  try {
-    const response = await api.get("/admin/dashboard");
-    return unwrapData<AdminDashboardStats>(response);
-  } catch {
-    return {};
-  }
+  const response = await api.get("/admin/dashboard");
+  return unwrapData<AdminDashboardStats>(response);
 }
 
 export interface FranchiseeDashboardStatBucket {
@@ -45,10 +41,6 @@ export interface FranchiseeDashboardStats {
 export type FranchiseeDashboardApi = Partial<FranchiseeDashboardStats>;
 
 export async function getFranchiseeDashboardStats(): Promise<FranchiseeDashboardApi> {
-  try {
-    const response = await api.get("/franchisee/dashboard");
-    return unwrapData<FranchiseeDashboardApi>(response);
-  } catch {
-    return {};
-  }
+  const response = await api.get("/franchisee/dashboard");
+  return unwrapData<FranchiseeDashboardApi>(response);
 }

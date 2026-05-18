@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Edit2, FileText, Edit, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   createProgram,
   updateProgram,
@@ -169,7 +169,6 @@ export function ProgramManagement() {
   }); // Default PDF dimensions (8.5" x 11" at 72 DPI)
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { toast } = useToast();
 
   const itemsPerPage = 10;
 
@@ -185,58 +184,36 @@ export function ProgramManagement() {
 
   const handleAddProgram = async () => {
     if (!newProgramName.trim()) {
-      toast({
-        title: "Error",
-        description: "Program name cannot be empty",
-        variant: "destructive",
-      });
+      toast.error("Program name cannot be empty");
       return;
     }
 
     try {
       await createProgram(newProgramName.trim());
-      toast({
-        title: "Success",
-        description: "Program created successfully",
-      });
+      toast.success("Program created successfully");
       setNewProgramName("");
       setIsAddDialogOpen(false);
       void invalidatePrograms();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create program",
-        variant: "destructive",
-      });
+      toast.error("Failed to create program");
     }
   };
 
   const handleEditProgram = async () => {
     if (!editingProgram || !editProgramName.trim()) {
-      toast({
-        title: "Error",
-        description: "Program name cannot be empty",
-        variant: "destructive",
-      });
+      toast.error("Program name cannot be empty");
       return;
     }
 
     try {
       await updateProgram(editingProgram.id, editProgramName.trim());
-      toast({
-        title: "Success",
-        description: "Program updated successfully",
-      });
+      toast.success("Program updated successfully");
       setIsEditDialogOpen(false);
       setEditingProgram(null);
       setEditProgramName("");
       void invalidatePrograms();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update program",
-        variant: "destructive",
-      });
+      toast.error("Failed to update program");
     }
   };
 
@@ -245,19 +222,12 @@ export function ProgramManagement() {
 
     try {
       await deleteProgram(deletingProgram.id);
-      toast({
-        title: "Success",
-        description: "Program deleted successfully",
-      });
+      toast.success("Program deleted successfully");
       setIsDeleteDialogOpen(false);
       setDeletingProgram(null);
       void invalidatePrograms();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete program. It may have associated levels.",
-        variant: "destructive",
-      });
+      toast.error("Failed to delete program. It may have associated levels.");
     }
   };
 
@@ -342,11 +312,7 @@ export function ProgramManagement() {
         });
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load certificate template",
-        variant: "destructive",
-      });
+      toast.error("Failed to load certificate template");
     } finally {
       setIsLoadingTemplate(false);
     }
@@ -396,10 +362,7 @@ export function ProgramManagement() {
         });
       }
 
-      toast({
-        title: "Success",
-        description: "Certificate template saved successfully",
-      });
+      toast.success("Certificate template saved successfully");
 
       setIsEditMode(false);
 
@@ -420,14 +383,7 @@ export function ProgramManagement() {
         setFieldCoordinates(updatedTemplate.fieldCoordinates);
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(
-          error,
-          "Failed to save certificate template",
-        ),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error, "Failed to save certificate template"));
     } finally {
       setIsSavingTemplate(false);
     }
@@ -439,11 +395,7 @@ export function ProgramManagement() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.type !== "application/pdf") {
-        toast({
-          title: "Error",
-          description: "Only PDF files are allowed",
-          variant: "destructive",
-        });
+        toast.error("Only PDF files are allowed");
         return;
       }
       setTemplateFile(file);
@@ -667,16 +619,12 @@ export function ProgramManagement() {
         });
       } catch (error) {
         console.error("Error loading PDF:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load PDF preview",
-          variant: "destructive",
-        });
+        toast.error("Failed to load PDF preview");
       }
     };
 
     loadPdfAsImage();
-  }, [templatePreviewUrl, toast]);
+  }, [templatePreviewUrl]);
 
   // Update scale when window resizes
   useEffect(() => {

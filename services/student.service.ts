@@ -233,13 +233,6 @@ export async function deleteStudent(_studentId: number): Promise<void> {
   throw new Error("Student delete not available in ipa-new");
 }
 
-export async function activateStudent(_studentId: number): Promise<StudentData> {
-  throw new Error("Not available in ipa-new");
-}
-
-export async function deactivateStudent(_studentId: number): Promise<StudentData> {
-  throw new Error("Not available in ipa-new");
-}
 
 export async function issueStudentId(_studentId: number): Promise<StudentData> {
   const row = await issueIdCard(_studentId);
@@ -388,9 +381,6 @@ export async function getIssuedCertificateDetails(): Promise<RequestedCertificat
   return {};
 }
 
-export async function issueCertificate(_studentId: number): Promise<unknown> {
-  throw new Error("Use admin certification approve in ipa-new");
-}
 
 export interface EligibleStudent {
   id: number;

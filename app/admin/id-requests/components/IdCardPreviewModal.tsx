@@ -18,6 +18,7 @@ import {
   Phone,
   CheckCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { RequestedIdDetail } from "@/services/student.service";
 import { issueIdCardWithRevalidation } from "@/hooks/api/student.hooks";
 
@@ -49,7 +50,7 @@ export default function IdCardPreviewModal({
 
   const handleIssueId = async () => {
     if (!student.id) {
-      alert("Student ID is missing. Please refresh and try again.");
+      toast.error("Student ID is missing. Please refresh and try again.");
       return;
     }
 
@@ -60,7 +61,7 @@ export default function IdCardPreviewModal({
       onSuccess();
     } catch (error) {
       console.error("Error issuing ID:", error);
-      alert("Failed to issue ID card. Please try again.");
+      toast.error("Failed to issue ID card. Please try again.");
     } finally {
       setIsIssuing(false);
     }

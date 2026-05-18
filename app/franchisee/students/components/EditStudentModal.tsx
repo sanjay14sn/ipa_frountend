@@ -28,6 +28,7 @@ import {
   CheckCircle,
   Edit2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { StudentData, StudentStream, StudentIdStatus } from "@/services/student.service";
 import { updateStudentWithRevalidation } from "@/hooks/api/student.hooks";
 import { getAllPrograms, Program } from "@/services/program.service";
@@ -402,7 +403,7 @@ export default function EditStudentModal({
     }
 
     if (!student) {
-      alert("Student not found. Please try again.");
+      toast.error("Student not found. Please try again.");
       return;
     }
 
@@ -452,7 +453,7 @@ export default function EditStudentModal({
       }, 1500);
     } catch (error) {
       console.error("Error updating student:", error);
-      alert("Failed to update student. Please try again.");
+      toast.error("Failed to update student. Please try again.");
     } finally {
       setIsLoading(false);
     }

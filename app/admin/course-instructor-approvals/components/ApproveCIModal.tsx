@@ -22,7 +22,7 @@ import {
   getTrainingLevelsByProgram,
   type TrainingLevel,
 } from "@/services/training-level.service";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 
@@ -155,7 +155,6 @@ export default function ApproveCIModal({
   onClose,
   onSuccess,
 }: ApproveCIModalProps) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
   const { today, oneYearLater } = useMemo(() => {
@@ -258,17 +257,17 @@ export default function ApproveCIModal({
     if (!instructor) return;
 
     if (!validFrom || !validUntil) {
-      toast({ title: "Validation error", description: "Both dates are required.", variant: "destructive" });
+      toast.error("Both dates are required.");
       return;
     }
     if (validUntil <= validFrom) {
-      toast({ title: "Validation error", description: "Valid until must be after valid from.", variant: "destructive" });
+      toast.error("Valid until must be after valid from.");
       return;
     }
 
     const packageError = validatePackages(packages, sortedTrainingLevels);
     if (packageError) {
-      toast({ title: "Validation error", description: packageError, variant: "destructive" });
+      toast.error(packageError);
       return;
     }
 
@@ -286,18 +285,11 @@ export default function ApproveCIModal({
           trainingLevelIds: pkg.trainingLevelIds,
         })),
       });
-      toast({ title: "Instructor approved", description: `${instructor.name} has been approved.` });
+      toast.success(`${instructor.name} has been approved.`);
       onSuccess();
       onClose();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(
-          error,
-          "Failed to approve instructor. Please try again.",
-        ),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error, "Failed to approve instructor. Please try again."));
     } finally {
       setLoading(false);
     }

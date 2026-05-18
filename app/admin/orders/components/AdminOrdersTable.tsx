@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, Eye, ShieldCheck, X, Download, Loader2, RefreshCw } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import {
   cancelOrderAdmin,
@@ -76,7 +76,6 @@ interface AdminOrdersTableProps {
 export default function AdminOrdersTable({
   franchiseId,
 }: AdminOrdersTableProps) {
-  const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -104,19 +103,15 @@ export default function AdminOrdersTable({
       try {
         setBusyOrderId(orderId);
         await markOrderPaidAdmin(orderId);
-        toast({ title: "Order marked as paid" });
+        toast.success("Order marked as paid");
         await ordersQuery.refetch();
       } catch (error) {
-        toast({
-          title: "Error",
-          description: getUserFriendlyMessage(error),
-          variant: "destructive",
-        });
+        toast.error(getUserFriendlyMessage(error));
       } finally {
         setBusyOrderId(null);
       }
     },
-    [ordersQuery, toast],
+    [ordersQuery],
   );
 
   const handleOpenCancelDialog = useCallback((order: OrderData) => {
@@ -130,25 +125,19 @@ export default function AdminOrdersTable({
       setBusyOrderId(cancelDialogOrder.id);
       await cancelOrderAdmin(cancelDialogOrder.id, { refund: refundOnCancel });
       const paid = cancelDialogOrder.paymentStatus === "PAID";
-      toast({
-        title: "Order cancelled",
-        description:
-          refundOnCancel && paid
-            ? "A refund has been submitted for this order."
-            : undefined,
-      });
+      if (refundOnCancel && paid) {
+        toast.success("Order cancelled. A refund has been submitted for this order.");
+      } else {
+        toast.success("Order cancelled");
+      }
       await ordersQuery.refetch();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(error));
     } finally {
       setBusyOrderId(null);
       setCancelDialogOrder(null);
     }
-  }, [cancelDialogOrder, refundOnCancel, ordersQuery, toast]);
+  }, [cancelDialogOrder, refundOnCancel, ordersQuery]);
 
   const handleVerifyConfirm = useCallback(
     async (data: VerifyShipmentDto) => {
@@ -157,20 +146,16 @@ export default function AdminOrdersTable({
       try {
         setBusyOrderId(id);
         await verifyShipment(id, data);
-        toast({ title: "Shipment verified" });
+        toast.success("Shipment verified");
         await ordersQuery.refetch();
       } catch (error) {
-        toast({
-          title: "Error",
-          description: getUserFriendlyMessage(error),
-          variant: "destructive",
-        });
+        toast.error(getUserFriendlyMessage(error));
       } finally {
         setBusyOrderId(null);
         setVerifyDialogOrderId(null);
       }
     },
-    [verifyDialogOrderId, ordersQuery, toast],
+    [verifyDialogOrderId, ordersQuery],
   );
 
   const handleRegenerateDc = useCallback(
@@ -178,21 +163,17 @@ export default function AdminOrdersTable({
       try {
         setBusyOrderId(orderId);
         const result = await regenerateDc(orderId);
-        toast({ title: "Delivery challan regenerated" });
+        toast.success("Delivery challan regenerated");
         await ordersQuery.refetch();
         // Auto-download the freshly generated PDF
         void downloadChallan(result.dcPdfPath);
       } catch (error) {
-        toast({
-          title: "Error",
-          description: getUserFriendlyMessage(error),
-          variant: "destructive",
-        });
+        toast.error(getUserFriendlyMessage(error));
       } finally {
         setBusyOrderId(null);
       }
     },
-    [ordersQuery, toast],
+    [ordersQuery],
   );
 
   const filters: DataTableFilter[] = [

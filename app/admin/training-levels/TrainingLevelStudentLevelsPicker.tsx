@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { CATALOG_PENDING_SPLIT_ROW_HEIGHT } from "@/lib/catalog-line-split-layout";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,6 @@ export function TrainingLevelStudentLevelsPicker({
   programId: number;
   disabled?: boolean;
 }) {
-  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
   const [pendingIds, setPendingIds] = useState<Set<number>>(new Set());
@@ -86,13 +85,9 @@ export function TrainingLevelStudentLevelsPicker({
     try {
       await setStudentLevelsForTrainingLevel(trainingLevelId, remaining, programId);
       await refetch();
-      toast({ title: "Level unlinked" });
+      toast.success("Level unlinked");
     } catch (e) {
-      toast({
-        title: "Error",
-        description: getUserFriendlyMessage(e),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(e));
     }
   }
 
@@ -105,15 +100,9 @@ export function TrainingLevelStudentLevelsPicker({
       await refetch();
       setPendingIds(new Set());
       setSearch("");
-      toast({
-        title: `${pendingIds.size} level${pendingIds.size !== 1 ? "s" : ""} linked`,
-      });
+      toast.success(`${pendingIds.size} level${pendingIds.size !== 1 ? "s" : ""} linked`);
     } catch (e) {
-      toast({
-        title: "Failed to save",
-        description: getUserFriendlyMessage(e),
-        variant: "destructive",
-      });
+      toast.error(getUserFriendlyMessage(e));
     } finally {
       setIsSaving(false);
     }

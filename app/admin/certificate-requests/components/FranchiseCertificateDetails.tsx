@@ -34,7 +34,7 @@ import {
   AdminCertificateRequest,
   getAdminCertificatePdfUrl,
 } from "@/services/student.service";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   approveCertificateRequestWithRevalidation,
   rejectCertificateRequestWithRevalidation,
@@ -73,7 +73,7 @@ export default function FranchiseCertificateDetails({
     useState<AdminCertificateRequest | null>(null);
   const [dateFilter, setDateFilter] = useState("");
   const [dispatchOpen, setDispatchOpen] = useState(false);
-  const { toast } = useToast();
+
 
   useEffect(() => {
     const timer = setTimeout(() => setSearchTerm(searchInput), 500);
@@ -145,34 +145,20 @@ export default function FranchiseCertificateDetails({
   const handleApprove = async (requestId: number) => {
     try {
       await approveCertificateRequestWithRevalidation(requestId);
-      toast({
-        title: "Success",
-        description: "Certificate request approved successfully",
-      });
+      toast.success("Certificate request approved successfully");
       void detailsQuery.refetch();
     } catch {
-      toast({
-        title: "Error",
-        description: "Failed to approve certificate request",
-        variant: "destructive",
-      });
+      toast.error("Failed to approve certificate request");
     }
   };
 
   const handleReject = async (requestId: number) => {
     try {
       await rejectCertificateRequestWithRevalidation(requestId);
-      toast({
-        title: "Success",
-        description: "Certificate request rejected successfully",
-      });
+      toast.success("Certificate request rejected successfully");
       void detailsQuery.refetch();
     } catch {
-      toast({
-        title: "Error",
-        description: "Failed to reject certificate request",
-        variant: "destructive",
-      });
+      toast.error("Failed to reject certificate request");
     }
   };
 

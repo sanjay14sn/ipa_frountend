@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,7 @@ import {
   getFranchiseeCertificatePdfUrl,
   StudentCertificate,
 } from "@/services/student.service";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface StudentCertificatesModalProps {
   open: boolean;
@@ -36,9 +36,6 @@ export default function StudentCertificatesModal({
 }: StudentCertificatesModalProps) {
   const [certificates, setCertificates] = useState<StudentCertificate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-  const toastRef = useRef(toast);
-  toastRef.current = toast;
 
   useEffect(() => {
     if (!open || !studentId) return;
@@ -58,11 +55,7 @@ export default function StudentCertificatesModal({
       .catch((error) => {
         if (cancelled) return;
         console.error("Error loading certificates:", error);
-        toastRef.current({
-          title: "Error",
-          description: "Failed to load certificates",
-          variant: "destructive",
-        });
+        toast.error("Failed to load certificates");
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);

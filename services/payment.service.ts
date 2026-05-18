@@ -229,10 +229,6 @@ export async function getAdminFranchisePayments(
   return { data: rows, meta: { total, totalPages } };
 }
 
-export async function getPaymentDetails(_orderId: number): Promise<PaymentData> {
-  throw new Error("Not available in ipa-new");
-}
-
 /** Razorpay checkout bootstrap (legacy franchisee CI flows) */
 export interface CITrainingPaymentOrderResponse {
   key: string;
@@ -242,6 +238,7 @@ export interface CITrainingPaymentOrderResponse {
   message?: string;
 }
 
+// TODO: initiateCITrainingPayment is still imported by MultiLevelTrainingPaymentModal and PaymentCourseInstructorsTable — remove those callers before deleting this stub.
 export async function initiateCITrainingPayment(
   _ciId: number,
 ): Promise<CITrainingPaymentOrderResponse> {
@@ -257,6 +254,7 @@ export async function verifyCITrainingPayment(data: VerifyPaymentDto) {
   return unwrapData(response);
 }
 
+// TODO: initiateMultiLevelCITrainingPayment is still imported by MultiLevelTrainingPaymentModal — remove that caller before deleting this stub.
 export async function initiateMultiLevelCITrainingPayment(
   _ciId: number,
   _body: { trainingLevelIds: number[] },

@@ -390,13 +390,6 @@ export async function deleteCourseInstructor(_id: number): Promise<void> {
   throw new Error("Not supported in ipa-new");
 }
 
-export async function activateCourseInstructor(_id: number): Promise<void> {
-  throw new Error("Not supported in ipa-new");
-}
-
-export async function deactivateCourseInstructor(_id: number): Promise<void> {
-  throw new Error("Not supported in ipa-new");
-}
 
 export async function getAllAdminCourseInstructors(
   params?: CourseInstructorListParams,
@@ -537,12 +530,6 @@ export async function resendCourseInstructorCredentialsEmail(
   );
 }
 
-export async function approveTraining(
-  _instructorId: number,
-  _body: unknown,
-): Promise<void> {
-  throw new Error("Not supported in ipa-new");
-}
 
 export async function completeTraining(
   trainingId: number,
@@ -551,6 +538,17 @@ export async function completeTraining(
   const response = await api.patch(
     `/admin/course-instructor/training/${trainingId}/complete`,
     { marks: data?.marksObtained },
+  );
+  return unwrapData(response);
+}
+
+export async function approveTraining(
+  courseInstructorId: number,
+  data: ApproveTrainingRequest,
+) {
+  const response = await api.post(
+    `/admin/course-instructor/approve-training/${courseInstructorId}`,
+    data,
   );
   return unwrapData(response);
 }
@@ -790,11 +788,16 @@ export async function getAvailableTrainingLevelsForCI(
 }
 
 export async function requestAdditionalTraining(
-  _instructorId: number,
-  _body: unknown,
+  instructorId: number,
+  requestData: RequestAdditionalTrainingRequest,
 ): Promise<void> {
-  throw new Error("Not supported in ipa-new");
+  const response = await api.post(
+    `/franchisee/course-instructor/${instructorId}/request-training`,
+    requestData,
+  );
+  return unwrapData(response);
 }
+
 
 export async function scheduleTrainingAdmin(ciId: number) {
   const response = await api.post(
