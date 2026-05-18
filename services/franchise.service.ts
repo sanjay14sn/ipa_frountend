@@ -2,6 +2,7 @@ import { api } from "@/lib/axios";
 import { unwrapData } from "@/lib/unwrap-api";
 import type { PaymentOrderResponse } from "./franchisee.service";
 import { requestPrograms, approveProgramRequestAdmin, rejectProgramRequestAdmin } from "./program-request.service";
+import type { ApproveProgramRequestPayload } from "./program-request.service";
 
 /** Apply for a new franchise (franchisee JWT). */
 export interface ApplyForFranchisePayload {
@@ -75,30 +76,7 @@ export interface ProgramRequestRow {
   createdAt?: string;
 }
 
-export interface ProgramRequestPayroll {
-  programId?: number;
-  franchiseFee: number;
-  kitCost: number;
-  materialCost: number;
-  monthlyFee: number;
-  ciShare: number;
-  franchiseShare: number;
-  royalty: number;
-  installment: number;
-  tenure?: number;
-  totalAmount: number;
-  gstFranchiseFee: boolean;
-  gstRoyalty: boolean;
-  gstMaterialCost: boolean;
-  freeload: boolean;
-}
-
-export interface ApproveProgramRequestPayload {
-  payroll: ProgramRequestPayroll;
-  dateOfPayment?: string;
-  dateOfJoining?: string;
-  kitItems?: { inventoryId: number; quantity: number }[];
-}
+export type { ProgramRequestPayroll, ApproveProgramRequestPayload } from "./program-request.service";
 
 export async function getProgramRequests(_params?: {
   status?: string;

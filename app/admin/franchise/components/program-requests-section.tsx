@@ -59,6 +59,7 @@ interface ProgramPayrollState {
   franchiseShare: number;
   royalty: number;
   installment: number;
+  tenure: number;
   totalAmount: number;
   gstFranchiseFee: boolean;
   gstRoyalty: boolean;
@@ -77,6 +78,7 @@ const defaultPayroll = (programId: number, programName: string): ProgramPayrollS
   franchiseShare: 0,
   royalty: 0,
   installment: 0,
+  tenure: 36,
   totalAmount: 0,
   gstFranchiseFee: false,
   gstRoyalty: false,
@@ -195,6 +197,7 @@ export function ProgramRequestsSection() {
           franchiseShare: Number(payroll.franchiseShare) || 0,
           royalty: Number(payroll.royalty) || 0,
           installment: Number(payroll.installment) || 0,
+          tenure: Number(payroll.tenure) || 36,
           totalAmount: Number(payroll.totalAmount) || 0,
           gstFranchiseFee: payroll.gstFranchiseFee,
           gstRoyalty: payroll.gstRoyalty,
@@ -552,6 +555,26 @@ export function ProgramRequestsSection() {
                       />
                     </div>
                   </div>
+
+                  {/* Tenure */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">
+                      Tenure (months)
+                    </Label>
+                    <Input
+                      type="number"
+                      value={payroll.tenure || ""}
+                      onChange={(e) =>
+                        handlePayrollChange(
+                          "tenure",
+                          e.target.value === "" ? 36 : Number(e.target.value)
+                        )
+                      }
+                      className="h-10"
+                      placeholder="36"
+                      min={1}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -567,13 +590,7 @@ export function ProgramRequestsSection() {
                     </p>
                   </div>
                   <p className="text-3xl font-bold text-primary">
-                    ₹
-                    {(() => {
-                      const fee = Number(payroll.franchiseFee || 0);
-                      return (
-                        payroll.gstFranchiseFee ? fee : fee + fee * 0.18
-                      ).toLocaleString();
-                    })()}
+                    ₹{Number(payroll.totalAmount || 0).toLocaleString()}
                   </p>
                 </div>
                 <div className="mt-5 pt-5 border-t-2 border-primary space-y-3">

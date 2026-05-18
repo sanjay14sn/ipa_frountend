@@ -3,6 +3,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle, XCircle } from "lucide-react";
 import { DataTable } from "@/components/shared";
 import type {
@@ -33,10 +43,15 @@ export default function ProgramRequestsTable({
   const [totalPages, setTotalPages] = useState(0);
   const [total, setTotal] = useState(0);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [rejectDialog, setRejectDialog] = useState<{
+    open: boolean;
+    request: ProgramRequestRow | null;
+    reason: string;
+  }>({ open: false, request: null, reason: "" });
 
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Pending");
+  const [statusFilter, setStatusFilter] = useState("Requested");
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC");
   const itemsPerPage = 10;
@@ -74,8 +89,8 @@ export default function ProgramRequestsTable({
         : rows;
       // Client-side sort
       const sorted = [...searched].sort((a, b) => {
-        const aVal = a.createdAt ?? "";
-        const bVal = b.createdAt ?? "";
+        const aVal = String((a as unknown as Record<string, unknown>)[sortBy] ?? "");
+        const bVal = String((b as unknown as Record<string, unknown>)[sortBy] ?? "");
         return sortOrder === "ASC"
           ? aVal.localeCompare(bVal)
           : bVal.localeCompare(aVal);
@@ -118,12 +133,21 @@ export default function ProgramRequestsTable({
     onApprove?.(request);
   };
 
-  const handleReject = async (request: ProgramRequestRow) => {
-    if (!confirm(`Reject program request for "${request.program?.name}"?`))
+  const handleReject = (request: ProgramRequestRow) => {
+    setRejectDialog({ open: true, request, reason: "" });
+  };
+
+  const confirmReject = async () => {
+    const { request, reason } = rejectDialog;
+    if (!request) return;
+    if (!reason.trim()) {
+      toast.error("Please enter a rejection reason");
       return;
+    }
+    setRejectDialog((prev) => ({ ...prev, open: false }));
     setRejectingId(request.id);
     try {
-      await rejectProgramRequestAdmin(request.id, '');
+      await rejectProgramRequestAdmin(request.id, reason.trim());
       toast.success("Program request rejected");
       fetchData();
     } catch (error) {
@@ -183,7 +207,7 @@ export default function ProgramRequestsTable({
       className: "text-center",
       render: (r) => (
         <div className="flex items-center justify-center gap-1">
-          {r.status === "Pending" && (
+          {r.status === "Requested" && (
             <>
               <Button
                 variant="ghost"
@@ -214,11 +238,14 @@ export default function ProgramRequestsTable({
       key: "status",
       label: "Status",
       options: [
-        { value: "Pending", label: "Pending" },
-        { value: "Approved", label: "Approved" },
+        { value: "Requested", label: "Requested" },
+        { value: "TermsSet", label: "Terms Set" },
+        { value: "PendingSignature", label: "Pending Signature" },
+        { value: "Active", label: "Active" },
         { value: "Rejected", label: "Rejected" },
+        { value: "Cancelled", label: "Cancelled" },
       ],
-      defaultValue: "Pending",
+      defaultValue: "Requested",
     },
   ];
 
@@ -227,6 +254,7 @@ export default function ProgramRequestsTable({
   ];
 
   return (
+    <>
     <DataTable
       data={requests}
       loading={loading}
@@ -271,5 +299,47 @@ export default function ProgramRequestsTable({
         `Showing ${count} of ${tot} program requests`
       }
     />
+
+    <Dialog
+      open={rejectDialog.open}
+      onOpenChange={(open) => setRejectDialog((prev) => ({ ...prev, open }))}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Reject Program Request</DialogTitle>
+          <DialogDescription>
+            Rejecting request for &ldquo;{rejectDialog.request?.program?.name}&rdquo;. Please provide a reason.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 py-2">
+          <Label htmlFor="reject-reason">Reason</Label>
+          <Textarea
+            id="reject-reason"
+            placeholder="Enter rejection reason..."
+            value={rejectDialog.reason}
+            onChange={(e) =>
+              setRejectDialog((prev) => ({ ...prev, reason: e.target.value }))
+            }
+            rows={3}
+          />
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setRejectDialog((prev) => ({ ...prev, open: false }))}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={confirmReject}
+            disabled={!rejectDialog.reason.trim()}
+          >
+            Reject
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

@@ -1,6 +1,30 @@
 import { api } from "@/lib/axios";
 import { unwrapData } from "@/lib/unwrap-api";
-import type { ApproveProgramRequestPayload } from "./franchise.service";
+
+export interface ProgramRequestPayroll {
+  programId?: number;
+  franchiseFee: number;
+  kitCost: number;
+  materialCost: number;
+  monthlyFee: number;
+  ciShare: number;
+  franchiseShare: number;
+  royalty: number;
+  installment: number;
+  tenure?: number;
+  totalAmount: number;
+  gstFranchiseFee: boolean;
+  gstRoyalty: boolean;
+  gstMaterialCost: boolean;
+  freeload: boolean;
+}
+
+export interface ApproveProgramRequestPayload {
+  payroll: ProgramRequestPayroll;
+  dateOfPayment?: string;
+  dateOfJoining?: string;
+  kitItems?: { inventoryId: number; quantity: number }[];
+}
 
 export interface ProgramRequestItem {
   id: number;
