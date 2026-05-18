@@ -38,10 +38,6 @@ export async function cancelProgramRequest(id: number): Promise<void> {
   await api.post(`/franchisee/program-requests/${id}/cancel`);
 }
 
-/** Sign a program-request agreement. Calls POST /franchisee/program-requests/:id/sign */
-export async function signProgramRequest(id: number): Promise<void> {
-  await api.post(`/franchisee/program-requests/${id}/sign`);
-}
 
 export async function listProgramRequestsForAdmin(params?: {
   status?: string;

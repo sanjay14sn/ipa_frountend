@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, PenLine } from "lucide-react";
+import { Plus, X, PenLine, Upload, Loader2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -20,9 +20,9 @@ import {
 import {
   listProgramRequests,
   cancelProgramRequest,
-  signProgramRequest,
   type ProgramRequestItem,
 } from "@/services/program-request.service";
+import { submitFranchiseeSignatureImage } from "@/services/agreement.service";
 import {
   initiateAgreementFeePayment,
   verifyFranchiseFeePayment,
@@ -66,6 +66,9 @@ interface SignAgreementSheetProps {
   onSigned: () => void;
 }
 
+const SIGNATURE_ACCEPT = "image/png,image/jpeg,image/jpg,image/webp";
+const MAX_SIGNATURE_BYTES = 5 * 1024 * 1024;
+
 function SignAgreementSheet({
   request,
   open,
@@ -81,6 +84,9 @@ function SignAgreementSheet({
     new Set(["basic-terms", "financial-terms"])
   );
   const [isProcessing, setIsProcessing] = useState(false);
+  const [signatureFile, setSignatureFile] = useState<File | null>(null);
+  const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [paymentDetails, setPaymentDetails] = useState<{
     orderId: string;
     amount: number;
@@ -120,6 +126,8 @@ function SignAgreementSheet({
     setAgreementContent(getProcessedAgreementContent(franchiseData));
     setExpandedSections(new Set(["basic-terms", "financial-terms"]));
     setAgreementAccepted(false);
+    setSignatureFile(null);
+    setSignaturePreview(null);
   }, [request, user]);
 
   const toggleSection = (id: string) => {
@@ -139,41 +147,59 @@ function SignAgreementSheet({
     document.body.removeChild(link);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > MAX_SIGNATURE_BYTES) {
+      toast.error("Signature image must be 5MB or smaller.");
+      return;
+    }
+    if (!SIGNATURE_ACCEPT.split(",").some((t) => file.type === t.trim())) {
+      toast.error("Use a PNG, JPEG, or WebP image.");
+      return;
+    }
+    setSignatureFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setSignaturePreview(objectUrl);
+  };
+
   const handleSignAndPay = async () => {
     if (!agreementAccepted || !request) return;
+    if (!signatureFile) {
+      toast.error("Please upload your signature before signing.");
+      return;
+    }
+    if (!request.agreementId) {
+      toast.error("No agreement linked to this program request. Please contact support.");
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
-      // Step 1: Sign the request
-      await signProgramRequest(request.id);
+      // Step 1: Sign via the agreement endpoint using the linked agreementId
+      await submitFranchiseeSignatureImage(request.agreementId, signatureFile);
 
-      // Step 2: If there's an agreementId, initiate payment via agreement fee flow
-      if (request.agreementId) {
-        const order = await initiateAgreementFeePayment(request.agreementId);
+      // Step 2: Initiate payment via agreement fee flow
+      const order = await initiateAgreementFeePayment(request.agreementId);
 
-        if (order.isZeroAmount || order.amount === 0) {
-          toast.success("Agreement signed and activated!");
-          setIsProcessing(false);
-          onSigned();
-          onOpenChange(false);
-          return;
-        }
-
-        setPaymentDetails({
-          orderId: order.orderId,
-          amount: order.amount,
-          currency: order.currency,
-          franchiseName: order.franchiseName,
-          key: order.key,
-          isZeroAmount: order.isZeroAmount,
-        });
-      } else {
-        // No payment needed — signing alone activates it
-        toast.success("Agreement signed successfully!");
+      if (order.isZeroAmount || order.amount === 0) {
+        toast.success("Agreement signed and activated!");
         setIsProcessing(false);
         onSigned();
         onOpenChange(false);
+        return;
       }
+
+      setPaymentDetails({
+        orderId: order.orderId,
+        amount: order.amount,
+        currency: order.currency,
+        franchiseName: order.franchiseName,
+        key: order.key,
+        isZeroAmount: order.isZeroAmount,
+      });
     } catch (err) {
       toast.error(getErrorMessage(err, "Failed to sign agreement"));
       setIsProcessing(false);
@@ -264,6 +290,59 @@ function SignAgreementSheet({
                 onAgreementChange={(v) => setAgreementAccepted(v === true)}
               />
 
+              {/* Signature upload */}
+              <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary">
+                    <PenLine className="h-4 w-4" />
+                  </span>
+                  <h3 className="text-base font-medium text-card-foreground">
+                    Your signature
+                  </h3>
+                </div>
+                <p className="mb-4 text-sm text-muted-foreground">
+                  Sign on paper and photograph/scan it, or use a clear digital signature image (PNG, JPEG, or WebP, max 5MB).
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={SIGNATURE_ACCEPT}
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                {signaturePreview ? (
+                  <div className="space-y-3">
+                    <div className="overflow-hidden rounded-lg border border-border bg-muted/30 p-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={signaturePreview}
+                        alt="Signature preview"
+                        className="mx-auto max-h-32 w-auto max-w-full object-contain"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      Replace signature
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full rounded-lg sm:w-auto"
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload signature image
+                  </Button>
+                )}
+              </div>
+
               <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
                 <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                   <div className="flex-1">
@@ -278,16 +357,21 @@ function SignAgreementSheet({
                         Please accept the terms and conditions to proceed
                       </p>
                     )}
+                    {agreementAccepted && !signatureFile && (
+                      <p className="mt-1 text-xs font-medium text-destructive">
+                        Please upload your signature to proceed
+                      </p>
+                    )}
                   </div>
                   <Button
                     onClick={handleSignAndPay}
-                    disabled={!agreementAccepted || isProcessing}
+                    disabled={!agreementAccepted || !signatureFile || isProcessing}
                     size="lg"
                     className="shrink-0 rounded-lg px-6"
                   >
                     {isProcessing ? (
                       <>
-                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Processing...
                       </>
                     ) : (
