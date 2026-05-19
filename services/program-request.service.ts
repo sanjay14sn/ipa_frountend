@@ -1,5 +1,5 @@
 import { api } from "@/lib/axios";
-import { unwrapData } from "@/lib/unwrap-api";
+import { compactRequestParams, normalizePaginatedResult, unwrapData } from "@/lib/unwrap-api";
 
 export interface ProgramRequestPayroll {
   programId?: number;
@@ -64,6 +64,41 @@ export async function cancelProgramRequest(id: number): Promise<void> {
 }
 
 
+export interface PaginatedProgramRequestsMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface PaginatedProgramRequestsResponse {
+  data: ProgramRequestItem[];
+  meta: PaginatedProgramRequestsMeta;
+}
+
+export async function getPaginatedProgramRequestsAdmin(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  franchiseId?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}): Promise<PaginatedProgramRequestsResponse> {
+  const res = await api.get('/admin/program-requests', {
+    params: compactRequestParams(params as Record<string, string | number | boolean | undefined | null>),
+  });
+  const result = unwrapData<unknown>(res);
+  const { rows: raw, total, page, limit } = normalizePaginatedResult<ProgramRequestItem>(result);
+  const lim = limit || 10;
+  const totalPages = Math.ceil(total / lim) || 1;
+  return {
+    data: raw,
+    meta: { total, page: page || 1, limit: lim, totalPages },
+  };
+}
+
+/** @deprecated Use getPaginatedProgramRequestsAdmin */
 export async function listProgramRequestsForAdmin(params?: {
   status?: string;
   franchiseId?: string;

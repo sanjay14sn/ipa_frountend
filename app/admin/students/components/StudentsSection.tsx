@@ -12,17 +12,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
+  DataTable,
   DetailField,
   DetailFieldsGrid,
-  RawTableSurface,
+  type DataTableColumn,
 } from "@/components/shared";
 import { RequestedIdDetail } from "@/services/student.service";
 import { formatEntityCodeForDisplay } from "@/lib/format-entity-code";
@@ -165,63 +158,72 @@ export default function StudentsSection({
     null,
   );
 
+  const columns: DataTableColumn<RequestedIdDetail>[] = [
+    {
+      key: "rollNumber",
+      header: "Roll number",
+      className: "text-center",
+      render: (student) => (
+        <Badge variant="outline" title={student.rollNo}>
+          {formatEntityCodeForDisplay(student.rollNo)}
+        </Badge>
+      ),
+    },
+    {
+      key: "dob",
+      header: "DOB",
+      className: "text-center",
+      render: (student) => (
+        <span className="text-sm text-gray-600">
+          {student.dateOfBirth
+            ? new Date(student.dateOfBirth).toLocaleDateString()
+            : "N/A"}
+        </span>
+      ),
+    },
+    {
+      key: "issueDate",
+      header: "Issue date",
+      className: "text-center",
+      render: (student) => (
+        <span className="text-sm text-gray-600">{formatIssueDate(student)}</span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "text-center",
+      render: (student) => (
+        <div className="flex items-center justify-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            title="View student details"
+            onClick={() => setDetailStudent(student)}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <>
-      <RawTableSurface className="shadow-none">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-secondary hover:bg-secondary">
-              <TableHead>Name</TableHead>
-              <TableHead className="text-center">Roll number</TableHead>
-              <TableHead className="text-center">DOB</TableHead>
-              <TableHead className="text-center">Issue date</TableHead>
-              <TableHead className="text-center">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {students.map((student) => (
-              <TableRow
-                key={
-                  student.id != null
-                    ? `id-${student.id}`
-                    : `${student.name}-${student.rollNo}-${student.dateOfBirth ?? ""}`
-                }
-                className="hover:bg-gray-50"
-              >
-                <TableCell>
-                  <div className="font-medium text-gray-900">{student.name}</div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge variant="outline" title={student.rollNo}>
-                    {formatEntityCodeForDisplay(student.rollNo)}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center text-sm text-gray-600">
-                  {student.dateOfBirth
-                    ? new Date(student.dateOfBirth).toLocaleDateString()
-                    : "N/A"}
-                </TableCell>
-                <TableCell className="text-center text-sm text-gray-600">
-                  {formatIssueDate(student)}
-                </TableCell>
-                <TableCell className="text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      title="View student details"
-                      onClick={() => setDetailStudent(student)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </RawTableSurface>
+      <DataTable
+        data={students}
+        columns={columns}
+        getRowId={(student) =>
+          student.id != null
+            ? `id-${student.id}`
+            : `${student.name}-${student.rollNo}-${student.dateOfBirth ?? ""}`
+        }
+        renderMainCell={(student) => (
+          <div className="font-medium text-gray-900">{student.name}</div>
+        )}
+        emptyMessage="No students found"
+      />
 
       <Dialog
         open={detailStudent != null}

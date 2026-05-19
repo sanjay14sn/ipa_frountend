@@ -1,70 +1,119 @@
 "use client";
 
-import { ProgramRequestRow } from "@/services/franchise.service";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  DetailCard,
+  DetailField,
+  DetailFieldsGrid,
+  ExpandedDetailSection,
+  ExpandedDetailSurface,
+} from "@/components/shared";
+import type { ProgramRequestRow } from "@/services/franchise.service";
 
 interface ProgramRequestDetailsProps {
   request: ProgramRequestRow;
 }
 
+function statusTone(status: string): string {
+  switch (status?.toLowerCase()) {
+    case "active":
+      return "bg-green-100 text-green-800 border-green-200";
+    case "requested":
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    case "termset":
+    case "termsset":
+    case "pendingsignature":
+      return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    case "rejected":
+      return "bg-red-100 text-red-800 border-red-200";
+    case "cancelled":
+      return "bg-gray-100 text-gray-600 border-gray-200";
+    default:
+      return "bg-gray-100 text-gray-600 border-gray-200";
+  }
+}
+
+function fmt(date: string | null | undefined): string {
+  if (!date) return "—";
+  return new Date(date).toLocaleDateString();
+}
+
 export default function ProgramRequestDetails({
   request,
 }: ProgramRequestDetailsProps) {
-  const formatDate = (date: string) => new Date(date).toLocaleDateString();
+  const fe = request.franchisee;
+  const franchise = request.franchise;
+  const programName = request.program?.name ?? `Program #${request.programId}`;
 
   return (
-    <div className="bg-gray-50 border-t border-black rounded-b-lg">
-      <div className="relative">
-        <div className="pl-12 pr-6 py-6">
-          <div className="bg-white rounded-lg p-4 space-y-4 border border-primary">
-            <h3 className="font-semibold text-lg text-gray-900">
-              {request.franchise?.name ?? request.franchiseId} —{" "}
-              {request.program?.name ?? `Program #${request.programId}`}
-            </h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-500">Franchise</span>
-                <p className="text-gray-900 mt-1">
-                  {request.franchise?.name ?? request.franchiseId}
-                </p>
-              </div>
-              <div>
-                <span className="text-gray-500">Program</span>
-                <p className="text-gray-900 mt-1">
-                  {request.program?.name ?? `#${request.programId}`}
-                </p>
-              </div>
-              <div>
-                <span className="text-gray-500">Requested By</span>
-                <p className="text-gray-900 mt-1">
-                  {request.franchisee?.name ?? `#${request.requestedBy}`}
-                </p>
-              </div>
-              <div>
-                <span className="text-gray-500">Email</span>
-                <p className="text-gray-900 mt-1">
-                  {request.franchisee?.mail ?? "—"}
-                </p>
-              </div>
-              <div>
-                <span className="text-gray-500">Phone</span>
-                <p className="text-gray-900 mt-1">
-                  {request.franchisee?.phone ?? "—"}
-                </p>
-              </div>
-              <div>
-                <span className="text-gray-500">Request Date</span>
-                <p className="text-gray-900 mt-1">
-                  {formatDate(request.createdAt ?? "")}
-                </p>
-              </div>
-              <div>
-                <span className="text-gray-500">Status</span>
-                <p className="text-gray-900 mt-1">{request.status}</p>
-              </div>
+    <ExpandedDetailSurface>
+      <ExpandedDetailSection title="Franchisee information">
+        <DetailFieldsGrid columns={3}>
+          <DetailField label="Name" value={fe?.name ?? "—"} />
+          <DetailField label="Email" value={fe?.mail ?? "—"} />
+          <DetailField label="Phone" value={fe?.phone ?? "—"} />
+        </DetailFieldsGrid>
+      </ExpandedDetailSection>
+
+      <Separator />
+
+      <ExpandedDetailSection title="Request overview">
+        <DetailFieldsGrid columns={3}>
+          <DetailField label="Franchise" value={franchise?.name ?? request.franchiseId} />
+          <DetailField label="Program" value={programName} />
+          <DetailField
+            label="Status"
+            value={
+              <Badge className={`${statusTone(request.status)} border text-xs`}>
+                {request.status}
+              </Badge>
+            }
+          />
+          <DetailField
+            label="Location"
+            value={[franchise?.city, franchise?.state].filter(Boolean).join(", ") || "—"}
+          />
+          <DetailField label="Request date" value={fmt(request.createdAt)} />
+          <DetailField label="Franchise ID" value={request.franchiseId} span={2} />
+        </DetailFieldsGrid>
+      </ExpandedDetailSection>
+
+      <Separator />
+
+      <ExpandedDetailSection
+        title="Program / approval context"
+        description="Agreement terms are created during the approval flow, then sent for signature."
+      >
+        <div className="grid gap-4 lg:grid-cols-2">
+          <DetailCard title="Requested program" meta="1 selected">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary">{programName}</Badge>
             </div>
-          </div>
+          </DetailCard>
+
+          <DetailCard title="Approval note">
+            <DetailFieldsGrid columns={2}>
+              <DetailField
+                label="Program used for approval"
+                value={programName}
+              />
+              <DetailField
+                label="Agreement terms"
+                value="Created when the admin approves the request"
+              />
+              <DetailField
+                label="Signature flow"
+                value="Triggered after terms are saved"
+              />
+              <DetailField
+                label="Current request state"
+                value={request.status ?? "Requested"}
+              />
+            </DetailFieldsGrid>
+          </DetailCard>
         </div>
-      </div>
-    </div>
+      </ExpandedDetailSection>
+    </ExpandedDetailSurface>
   );
 }

@@ -70,7 +70,7 @@ export interface ProgramRequestRow {
   programId: number;
   status: string;
   program?: { id: number; name: string };
-  franchise?: { id: string; name: string; city?: string };
+  franchise?: { id: string; name: string; city?: string; state?: string };
   franchisee?: { id: number; name: string; mail?: string; phone?: string };
   requestedBy?: string;
   createdAt?: string;

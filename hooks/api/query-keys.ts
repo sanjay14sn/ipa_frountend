@@ -164,6 +164,12 @@ export const queryKeys = {
     shipments: (params?: Record<string, unknown> | null) =>
       listQueryKey("shipments", params ?? undefined),
   },
+  programRequests: {
+    admin: (params?: Record<string, unknown> | null) =>
+      listQueryKey("program-requests", { scope: "admin", ...params }),
+    franchisee: (params?: Record<string, unknown> | null) =>
+      listQueryKey("program-requests", { scope: "franchisee", ...params }),
+  },
   auth: {
     franchiseeProfile: (franchiseId?: string) =>
       ["auth", "franchisee-profile", franchiseId ?? ""] as const,

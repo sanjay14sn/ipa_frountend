@@ -9,11 +9,10 @@ import {
 } from "@/components/ui/tabs";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { StudentsManageSection } from "./students-manage-section";
-import { FranchiseeCertificateRequestsSection } from "./components/legacy-tabs/certificate-requests-section";
-import { FranchiseeContestsSection } from "./components/legacy-tabs/contests-section";
+import { FranchiseeCertificateRequestsSection } from "./components/certificate-requests-section";
 import { TablePageShell } from "@/components/shared";
 
-const TABS = ["manage", "certificates", "contests"] as const;
+const TABS = ["manage", "certificates"] as const;
 
 function FranchiseeStudentsHubInner() {
   const [tab, setTab] = useTabFromUrl("manage", TABS);
@@ -27,16 +26,12 @@ function FranchiseeStudentsHubInner() {
         <TabsList className="flex h-auto flex-wrap justify-start gap-1">
           <TabsTrigger value="manage">Manage students</TabsTrigger>
           <TabsTrigger value="certificates">Certificate requests</TabsTrigger>
-          <TabsTrigger value="contests">Contests</TabsTrigger>
         </TabsList>
         <TabsContent value="manage" className="mt-4">
           <StudentsManageSection />
         </TabsContent>
         <TabsContent value="certificates" className="mt-4">
           <FranchiseeCertificateRequestsSection />
-        </TabsContent>
-        <TabsContent value="contests" className="mt-4">
-          <FranchiseeContestsSection />
         </TabsContent>
       </Tabs>
     </TablePageShell>

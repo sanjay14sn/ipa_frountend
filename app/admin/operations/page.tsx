@@ -12,7 +12,7 @@ import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import AdminOrdersTable from "../orders/components/AdminOrdersTable";
 import AdminShippingTable from "../shipping/components/AdminShippingTable";
 import PaymentsTable from "../payments/components/PaymentsTable";
-import { InventorySection } from "./components/legacy-tabs/inventory-section";
+import { InventorySection } from "./components/inventory-section";
 import { ProcurementSection } from "./components/ProcurementSection";
 import { MonitoringSection } from "./components/MonitoringSection";
 

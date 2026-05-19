@@ -3,14 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/shared";
 import { CheckCircle } from "lucide-react";
 import { CITrainingData } from "@/services/course-instructor.service";
 
@@ -68,6 +61,74 @@ export default function InstructorDetails({
     }).format(amount);
   };
 
+  const columns: DataTableColumn<CITrainingData>[] = [
+    {
+      key: "trainingLevel",
+      header: "Training Level",
+      className: "text-center",
+      render: (instructor) => (
+        <div className="flex flex-col items-center gap-1">
+          <Badge className={getTrainingLevelColor(instructor.displayOrder ?? 1)}>
+            {instructor.trainingLevelName || "N/A"}
+          </Badge>
+          {instructor.isActive && (
+            <span className="text-xs text-green-600 font-medium">
+              Currently Active
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "levelOrder",
+      header: "Level Order",
+      className: "text-center",
+      render: (instructor) => (
+        <Badge variant="outline" className="font-mono">
+          Level {instructor.displayOrder ?? "—"}
+        </Badge>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      className: "text-center",
+      render: (instructor) => formatCurrency(instructor.amount ?? 0),
+    },
+    {
+      key: "status",
+      header: "Status",
+      className: "text-center",
+      render: () =>
+        !isCompleted ? (
+          <Badge className="bg-orange-100 text-orange-700 border-orange-200">
+            In Training
+          </Badge>
+        ) : (
+          <Badge className="bg-green-100 text-green-700 border-green-200">
+            Completed
+          </Badge>
+        ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "text-center",
+      render: (instructor) =>
+        !isCompleted && onCompleteTraining ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onCompleteTraining(instructor)}
+            className="text-xs"
+          >
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Complete Training
+          </Button>
+        ) : null,
+    },
+  ];
+
   return (
     <div
       className={`bg-gray-50 border-t border-black/20 ${
@@ -93,84 +154,22 @@ export default function InstructorDetails({
               <div className="absolute top-4 left-6 w-2 h-2 bg-primary rounded-full -translate-x-1 -translate-y-1"></div>
             </div>
 
-            <div className="bg-white rounded-lg border border-primary overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[250px]">Instructor</TableHead>
-                    <TableHead className="text-center">Training Level</TableHead>
-                    <TableHead className="text-center">Level Order</TableHead>
-                    <TableHead className="text-center">Amount</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {instructors.map((instructor) => (
-                    <TableRow key={`training-${instructor.id}`} className="hover:bg-gray-50/50">
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <div className="font-medium text-gray-900">
-                            {instructor.instructorName}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            ID: {instructor.instructorId}
-                          </div>
-                        </div>
-                      </TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex flex-col items-center gap-1">
-                              <Badge
-                                className={getTrainingLevelColor(
-                                  instructor.displayOrder ?? 1,
-                                )}
-                              >
-                                {instructor.trainingLevelName || "N/A"}
-                              </Badge>
-                              {instructor.isActive && (
-                                <span className="text-xs text-green-600 font-medium">
-                                  Currently Active
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="font-mono">
-                              Level {instructor.displayOrder ?? "—"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {formatCurrency(instructor.amount ?? 0)}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {!isCompleted ? (
-                              <Badge className="bg-orange-100 text-orange-700 border-orange-200">
-                                In Training
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-green-100 text-green-700 border-green-200">
-                                Completed
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {!isCompleted && onCompleteTraining && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => onCompleteTraining(instructor)}
-                                className="text-xs"
-                              >
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                Complete Training
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              data={instructors}
+              columns={columns}
+              getRowId={(instructor) => `training-${instructor.id}`}
+              renderMainCell={(instructor) => (
+                <div className="flex flex-col">
+                  <div className="font-medium text-gray-900">
+                    {instructor.instructorName}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    ID: {instructor.instructorId}
+                  </div>
+                </div>
+              )}
+              emptyMessage="No instructors in training"
+            />
           </div>
         </div>
       </div>
