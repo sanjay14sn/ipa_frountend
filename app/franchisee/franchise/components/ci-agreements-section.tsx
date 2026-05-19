@@ -29,6 +29,7 @@ import {
   getCIAgreementByIdForFranchisee,
 } from "@/services/contracting.service";
 import { CIAgreementDetail } from "@/components/agreements/CIAgreementDetail";
+import { useUser } from "@/context/user-context";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -240,10 +241,16 @@ function ViewDialog({
 const PAGE_LIMIT = 10;
 
 export function CIAgreementsSection() {
+  const { user } = useUser();
   const [page, setPage] = useState(1);
 
+  // Reset to page 1 whenever the active franchise changes
+  useEffect(() => {
+    setPage(1);
+  }, [user?.franchiseId]);
+
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["franchisee-ci-agreements", page],
+    queryKey: ["franchisee-ci-agreements", user?.franchiseId, page],
     queryFn: () => listCIAgreementsForFranchisee({ page, limit: PAGE_LIMIT }),
   });
 
@@ -253,8 +260,13 @@ export function CIAgreementsSection() {
 
   const [signingAgreement, setSigningAgreement] = useState<CIAgreementData | null>(null);
   const [viewingAgreementId, setViewingAgreementId] = useState<number | null>(null);
-  const rows = data?.rows ?? [];
-  const total = data?.total ?? 0;
+
+  // Client-side filter: only show rows belonging to the current franchise
+  const allRows = data?.rows ?? [];
+  const rows = user?.franchiseId
+    ? allRows.filter((r) => r.franchiseId === user.franchiseId)
+    : allRows;
+  const total = rows.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
 
   const columns: DataTableColumn<CIAgreementData>[] = [
