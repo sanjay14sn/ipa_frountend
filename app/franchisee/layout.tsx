@@ -59,7 +59,21 @@ export default function FranchiseeLayout({
   }
 
   if (isAgreementOnboarding) {
-    return <div className="min-h-screen bg-surface">{children}</div>;
+    return (
+      <div className="min-h-screen bg-surface">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-brand-white-200/50 px-4">
+          {user.franchises && user.franchises.length > 1 ? (
+            <FranchiseSwitcher />
+          ) : (
+            <span className="text-sm font-medium text-primary truncate max-w-[200px]">
+              {user.franchiseName ?? "Franchise Setup"}
+            </span>
+          )}
+          <PortalHeaderActions />
+        </header>
+        {children}
+      </div>
+    );
   }
 
   return (
