@@ -283,11 +283,8 @@ export function MyAgreementsSection() {
           columns={columns}
           getRowId={(record) => String(record.id)}
           renderMainCell={(record) => (
-            <div className="flex flex-col">
-              <span className="font-medium">Agreement #{record.id}</span>
-              <span className="max-w-[240px] truncate text-sm text-muted-foreground">
-                {record.franchise?.name ?? record.franchiseId ?? "-"}
-              </span>
+            <div className="py-1 text-base font-medium">
+              {record.program?.name ?? record.programName ?? record.title ?? `Agreement #${record.id}`}
             </div>
           )}
           emptyMessage="No agreements on file yet."
