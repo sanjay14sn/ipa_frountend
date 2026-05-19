@@ -32,15 +32,7 @@ import {
 import Link from "next/link";
 import { useUser } from "@/context/user-context";
 import { useCIAuth } from "@/context/ci-auth-context";
-import { usePathname, useRouter } from "next/navigation";
-import { toast } from "sonner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { getEffectiveFranchiseStatus } from "@/lib/auth";
 
@@ -241,9 +233,8 @@ function isNavItemActive(pathname: string, url: string): boolean {
 export function DynamicSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
-  const { user, switchFranchise } = useUser();
+  const { user } = useUser();
   const { user: ciUser, agreementPhase } = useCIAuth();
-  const router = useRouter();
   const pathname = usePathname();
   const franchiseStatus = getEffectiveFranchiseStatus(user);
   const isActiveFranchisee = franchiseStatus === "Active";
@@ -299,26 +290,6 @@ export function DynamicSidebar({
     }
   }
 
-  const handleFranchiseSelect = async (franchiseId: string) => {
-    const franchise = user?.franchises?.find((f) => f.id === franchiseId);
-    if (!franchise || !switchFranchise) return;
-    if (franchise.status === "Pending") {
-      toast.info("This franchise is pending admin approval");
-      return;
-    }
-    await switchFranchise(franchiseId);
-    if (franchise.status === "Approved") {
-      router.push(`/franchisee/agreement?franchiseId=${franchiseId}`);
-    } else if (franchise.status === "Active") {
-      router.push("/franchisee/dashboard");
-    }
-  };
-
-  const showFranchiseSwitcher =
-    user?.role === "franchisee" &&
-    user?.franchises &&
-    user.franchises.length > 1;
-
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="gap-1 p-1.5">
@@ -362,30 +333,6 @@ export function DynamicSidebar({
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-
-      {showFranchiseSwitcher && (
-        <div className="border-t border-sidebar-border px-2 py-1.5">
-          <Select
-            value={user?.franchiseId ?? ""}
-            onValueChange={handleFranchiseSelect}
-          >
-            <SelectTrigger className="w-full h-9 text-xs">
-              <SelectValue placeholder="Select franchise" />
-            </SelectTrigger>
-            <SelectContent>
-              {user?.franchises?.map((f) => (
-                <SelectItem
-                  key={f.id}
-                  value={f.id}
-                  disabled={f.status === "Pending"}
-                >
-                  {f.name} {f.status !== "Active" && `(${f.status})`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
 
       {user?.role === "franchisee" && !isActiveFranchisee && (
         <div className="border-t border-sidebar-border px-2 py-1.5">
