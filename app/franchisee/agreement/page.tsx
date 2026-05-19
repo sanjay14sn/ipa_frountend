@@ -402,7 +402,9 @@ function FranchiseAgreementContent() {
     try {
       const payableAmount = resolveAgreementPayableAmount(
         feeAgreement,
-        user?.profile?.franchise?.franchisePayrolls,
+        user?.profile?.franchise?.franchisePayroll
+          ? [user.profile.franchise.franchisePayroll]
+          : [],
       );
 
       if (payableAmount === null) {

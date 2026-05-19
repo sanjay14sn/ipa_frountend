@@ -536,17 +536,12 @@ export default function FranchiseeDashboard() {
                   ))}
               </div>
 
-              {((user.profile.franchise?.franchisePayrolls?.length ?? 0) > 0 ||
-                user.profile.franchise?.franchisePayroll) && (
+              {user.profile.franchise?.franchisePayroll && (
                 <div className="border-t border-border pt-3">
                   <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
                     Payroll
                   </p>
-                  {(
-                    user.profile.franchise?.franchisePayrolls ?? [
-                      user.profile.franchise?.franchisePayroll,
-                    ]
-                  )
+                  {[user.profile.franchise.franchisePayroll]
                     .filter(Boolean)
                     .map((p: any, i: number) => (
                       <div

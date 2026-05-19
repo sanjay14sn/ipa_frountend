@@ -74,9 +74,12 @@ export function PendingApprovalsSection() {
       const detail = await getFranchiseApplicationDetail(application.id);
       const selectedProgram =
         detail.selectedProgram ??
-        detail.franchise?.program ??
-        application.program ??
-        application.franchisePrograms?.[0]?.program;
+        (detail.agreements?.[0]?.programId != null
+          ? { id: detail.agreements[0].programId, name: detail.agreements[0].programName ?? detail.agreements[0].program?.name ?? `Program #${detail.agreements[0].programId}` }
+          : null) ??
+        (application.agreements?.[0]?.programId != null
+          ? { id: application.agreements[0].programId, name: application.agreements[0].programName ?? application.agreements[0].program?.name ?? `Program #${application.agreements[0].programId}` }
+          : null);
 
       if (!selectedProgram) {
         toast.error(

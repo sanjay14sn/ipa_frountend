@@ -79,16 +79,14 @@ function statusTone(status: string): string {
 
 function agreementProgramLabels(item: FranchiseData): string {
   const names = [
-    ...(item.agreements ?? []).map((agreement) => agreement.programName),
-    item.program?.name,
+    ...(item.agreements ?? []).map((a) => a.programName ?? a.program?.name),
   ].filter((name): name is string => Boolean(name?.trim()));
   return names.length > 0 ? [...new Set(names)].join(", ") : "—";
 }
 
 function requestedPrograms(item: FranchiseData): string[] {
   const names = [
-    ...(item.franchisePrograms ?? []).map((entry) => entry.program?.name),
-    item.program?.name,
+    ...(item.agreements ?? []).map((a) => a.programName ?? a.program?.name),
   ].filter((name): name is string => Boolean(name?.trim()));
   return [...new Set(names)];
 }

@@ -62,9 +62,9 @@ export function programNameForAgreement(
   programId: number | null | undefined,
 ): string {
   if (programId == null || programId === undefined) return "Program";
-  const programs = profile?.franchise?.franchisePrograms ?? [];
-  const hit = programs.find((x) => x.program?.id === programId);
-  return hit?.program?.name ?? `Program #${programId}`;
+  const agreements = profile?.franchise as { agreements?: Array<{ programId?: number | null; programName?: string | null; program?: { id?: number; name?: string } | null }> } | undefined;
+  const hit = (agreements?.agreements ?? []).find((a) => a.programId === programId);
+  return hit?.programName ?? hit?.program?.name ?? `Program #${programId}`;
 }
 
 /**
@@ -174,7 +174,6 @@ export function buildFranchiseDataForAgreementPage(
   const fromAgreement = agreementToPaymentBreakdownRows(feeAgreement, programName);
   const paymentDetails =
     fromAgreement ??
-    franchise.franchisePayrolls ??
     (franchise.franchisePayroll ? [franchise.franchisePayroll] : []);
 
   const programLabel =

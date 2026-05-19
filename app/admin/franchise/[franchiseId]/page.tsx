@@ -97,8 +97,7 @@ function FranchiseDetailInner() {
   const subtitle = [franchise?.city, franchise?.state].filter(Boolean).join(", ");
   const programNames = uniqueValues([
     detail?.selectedProgram?.name,
-    franchise?.program?.name,
-    ...(franchise?.franchisePrograms ?? []).map((entry) => entry.program?.name),
+    ...(franchise?.agreements ?? []).map((a) => a.programName ?? a.program?.name),
     ...(detail?.programRequests ?? []).map((entry) => entry.program?.name),
   ]);
   const agreementsCount =
