@@ -40,11 +40,17 @@ export function FranchiseSwitcher() {
 
   const handleSwitch = async (franchiseId: string) => {
     if (franchiseId === user?.franchiseId || switching) return;
+    // Find the franchise to check its status
+    const franchise = user?.franchises?.find((f) => f.id === franchiseId);
+    if (franchise?.status === "Pending") {
+      toast.info("This franchise is pending admin approval");
+      return;
+    }
 
     setSwitching(true);
     try {
       await switchFranchise(franchiseId);
-      router.refresh();
+      router.refresh();  // Layout's useEffect handles redirect for Approved → /franchisee/agreement
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to switch franchise";
@@ -81,11 +87,15 @@ export function FranchiseSwitcher() {
         <DropdownMenuSeparator />
         {user.franchises.map((franchise) => {
           const isActive = franchise.id === user.franchiseId;
+          const isPending = franchise.status === "Pending";
           return (
             <DropdownMenuItem
               key={franchise.id}
-              className="flex cursor-pointer items-center justify-between gap-2 px-2 py-2"
-              onClick={() => handleSwitch(franchise.id)}
+              className={`flex items-center justify-between gap-2 px-2 py-2 ${
+                isPending ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+              }`}
+              disabled={isPending}
+              onClick={() => !isPending && handleSwitch(franchise.id)}
             >
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <Check
