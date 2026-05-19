@@ -49,10 +49,6 @@ export function resolveAgreementPayableAmount(
     if (t != null && t > 0) return t;
     const f = parseMoney(feeAgreement.franchiseFee);
     if (f != null && f > 0) return f;
-    const fromNested = sumPayrollTotals(
-      feeAgreement.franchise?.franchisePayrolls,
-    );
-    if (fromNested != null && fromNested > 0) return fromNested;
   }
   return sumPayrollTotals(profilePayrolls);
 }
@@ -97,7 +93,7 @@ export function agreementToPaymentBreakdownRows(
       gstFranchiseFee: feeAgreement.gstFranchiseFee,
       gstRoyalty: feeAgreement.gstRoyalty,
       gstMaterialCost: feeAgreement.gstMaterialCost,
-      franchiseProgram: { program: { name: programName, id: feeAgreement.programId } },
+      program: { name: programName, id: feeAgreement.programId },
     },
   ];
 }
@@ -111,30 +107,26 @@ export function buildAgreementDetailFranchiseData(
     agreement.programs?.[0]?.name ??
     (agreement.programId != null ? `Program #${agreement.programId}` : "Program");
 
-  const paymentDetails = agreement.franchise?.franchisePayrolls?.length
-    ? agreement.franchise.franchisePayrolls
-    : [
-        {
-          franchiseFee: agreement.franchiseFee,
-          monthlyFee: agreement.monthlyFee,
-          kitCost: agreement.kitCost,
-          materialCost: agreement.materialCost,
-          royalty: agreement.royalty,
-          ciShare: agreement.ciShare,
-          franchiseShare: agreement.franchiseShare,
-          installment: agreement.installment,
-          totalAmount: agreement.totalAmount,
-          gstFranchiseFee: agreement.gstFranchiseFee,
-          gstRoyalty: agreement.gstRoyalty,
-          gstMaterialCost: agreement.gstMaterialCost,
-          franchiseProgram: {
-            program: agreement.program ?? {
-              id: agreement.programId,
-              name: programName,
-            },
-          },
-        },
-      ];
+  const paymentDetails = [
+    {
+      franchiseFee: agreement.franchiseFee,
+      monthlyFee: agreement.monthlyFee,
+      kitCost: agreement.kitCost,
+      materialCost: agreement.materialCost,
+      royalty: agreement.royalty,
+      ciShare: agreement.ciShare,
+      franchiseShare: agreement.franchiseShare,
+      installment: agreement.installment,
+      totalAmount: agreement.totalAmount,
+      gstFranchiseFee: agreement.gstFranchiseFee,
+      gstRoyalty: agreement.gstRoyalty,
+      gstMaterialCost: agreement.gstMaterialCost,
+      program: agreement.program ?? {
+        id: agreement.programId,
+        name: programName,
+      },
+    },
+  ];
 
   return {
     name: agreement.franchise?.name ?? `Franchise ${agreement.franchiseId ?? ""}`.trim(),

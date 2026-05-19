@@ -551,9 +551,9 @@ export default function FranchiseeDashboard() {
                           i > 0 && "mt-3",
                         )}
                       >
-                        {p?.franchiseProgram?.program?.name && (
+                        {p?.program?.name && (
                           <p className="mb-2 text-xs text-muted-foreground">
-                            {p.franchiseProgram.program.name}
+                            {p.program.name}
                           </p>
                         )}
                         <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm">

@@ -192,8 +192,7 @@ export default function PaymentBreakdown({
               className="rounded-xl border border-border bg-accent/30 p-3"
             >
               <h4 className="mb-3 text-sm font-medium text-card-foreground">
-                {program.franchiseProgram?.program?.name ||
-                  program.program?.name ||
+                {program.program?.name ||
                   `Program ${idx + 1}`}
               </h4>
               <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
@@ -245,8 +244,7 @@ export default function PaymentBreakdown({
           </p>
           <div className="rounded-xl border border-border bg-accent/30 p-3">
             <h4 className="mb-3 text-sm font-medium text-card-foreground">
-              {paymentDetails.franchiseProgram?.program?.name ||
-                paymentDetails.program?.name ||
+              {paymentDetails.program?.name ||
                 "Program"}
             </h4>
             <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
