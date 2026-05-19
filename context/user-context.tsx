@@ -79,8 +79,12 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       if (typeof next === "function") {
         setUserState((prev) => {
           const updated = next(prev);
-          if (typeof window !== "undefined" && updated) {
-            localStorage.setItem("user", JSON.stringify(updated));
+          if (typeof window !== "undefined") {
+            if (updated) {
+              localStorage.setItem("user", JSON.stringify(updated));
+            } else {
+              localStorage.removeItem("user");
+            }
           }
           return updated;
         });
