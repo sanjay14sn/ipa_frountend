@@ -401,6 +401,7 @@ function SignAgreementSheet({
 // ---------------------------------------------------------------------------
 export function ProgramsSection() {
   const { user } = useUser();
+  const franchiseId = user?.franchiseId;
   const [requests, setRequests] = useState<ProgramRequestItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [requestModalOpen, setRequestModalOpen] = useState(false);
@@ -413,17 +414,16 @@ export function ProgramsSection() {
     try {
       const data = await listProgramRequests();
       // Filter to current franchise
-      const filtered =
-        user?.franchiseId
-          ? data.filter((r) => r.franchiseId === user.franchiseId)
-          : data;
+      const filtered = franchiseId
+        ? data.filter((r) => r.franchiseId === franchiseId)
+        : data;
       setRequests(filtered);
     } catch (err) {
       toast.error(getErrorMessage(err, "Failed to load programs"));
     } finally {
       setLoading(false);
     }
-  }, [user?.franchiseId]);
+  }, [franchiseId]);
 
   useEffect(() => {
     load();
