@@ -123,7 +123,7 @@ function FranchiseeAgreementViewDialog({
 
 export function MyAgreementsSection() {
   const { user } = useUser();
-  const agreementsQuery = useAgreementsMine(undefined, {});
+  const agreementsQuery = useAgreementsMine(user?.franchiseId, {});
   const rows = agreementsQuery.data ?? [];
   const loading = agreementsQuery.isLoading;
   const [viewAgreementId, setViewAgreementId] = useState<number | null>(null);
