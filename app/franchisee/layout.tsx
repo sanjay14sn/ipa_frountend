@@ -81,7 +81,13 @@ export default function FranchiseeLayout({
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <FranchiseSwitcher />
+          {user.franchises && user.franchises.length > 1 ? (
+            <FranchiseSwitcher />
+          ) : user.franchiseName ? (
+            <span className="text-sm font-medium text-primary truncate max-w-[160px]">
+              {user.franchiseName}
+            </span>
+          ) : null}
           <PortalHeaderActions />
         </header>
         <div className="flex flex-1 flex-col gap-4 bg-background p-4">
