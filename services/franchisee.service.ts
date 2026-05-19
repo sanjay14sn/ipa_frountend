@@ -42,7 +42,6 @@ export interface Franchise {
   city: string;
   state?: string;
   pincode?: string;
-  programIds: number[];
   franchiseeId: number;
 }
 
@@ -52,23 +51,9 @@ export interface FranchiseResponse {
   type: string;
   status: string;
   address: string;
-  programId?: number;
-  program?: {
-    id: number;
-    name: string;
-    code?: string | null;
-    description?: string | null;
-    isActive?: boolean;
-  } | null;
   city?: string;
   state?: string;
   pincode?: string;
-  franchisePrograms?: Array<{
-    program: {
-      id: number;
-      name: string;
-    };
-  }>;
   /** ipa-new: agreements nested on franchise in admin list/detail */
   agreements?: AgreementRecord[];
   createdAt: string;
@@ -147,7 +132,6 @@ export interface PendingFranchise extends Response {
 export interface FranchiseData extends FranchiseResponse {
   franchisee: FranchiseeResponse;
   franchisePayroll?: FranchisePayrollResponse;
-  franchisePayrolls?: FranchisePayrollResponse[];
 }
 
 export interface FranchisesResponse extends Response {
@@ -321,7 +305,6 @@ export async function applyFranchisee(application: FranchiseeApplication) {
       state: f.state ?? "",
       address: f.address,
       pincode: f.pincode,
-      programIds: f.programIds ?? [],
     },
   });
   return response;
@@ -391,17 +374,13 @@ export async function getFranchiseApplicationDetail(
   const raw = unwrapData<FranchiseApplicationDetail>(response);
   const agreements = Array.isArray(raw.agreements) ? raw.agreements : [];
   const firstAgreement = agreements[0];
-  const franchiseProgram = (raw.franchise as FranchiseResponse | undefined)?.program;
   const selectedProgramId =
     firstAgreement?.programId ??
-    franchiseProgram?.id ??
-    (raw.franchise as FranchiseResponse | undefined)?.programId ??
     raw.programRequests?.[0]?.programId;
   const selectedProgramName =
     firstAgreement?.programName ??
     firstAgreement?.program?.name ??
     firstAgreement?.programs?.[0]?.name ??
-    franchiseProgram?.name ??
     raw.programRequests?.[0]?.program?.name ??
     (selectedProgramId != null ? `Program #${selectedProgramId}` : undefined);
 

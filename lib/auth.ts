@@ -32,7 +32,6 @@ export interface User {
       name: string;
       type: string;
       status: string;
-      programId: number;
       franchiseeId: number;
       approvedBy: number;
       approvedAt: string;
@@ -40,34 +39,6 @@ export interface User {
       updatedAt: string;
       city?: string;
       address?: string;
-      franchisePrograms?: Array<{
-        program: {
-          id: number;
-          name: string;
-        };
-      }>;
-      franchisePayrolls?: Array<{
-        franchiseFee: number;
-        dateOfPayment: string;
-        dateOfJoining: string;
-        monthlyFee: number;
-        ciShare: number;
-        franchiseShare: number;
-        royalty: number;
-        kitCost: number;
-        materialCost: number;
-        installment: number;
-        totalAmount: number;
-        createdBy: number;
-        updatedBy: number;
-        franchiseProgram: {
-          id: number;
-          program: {
-            id: number;
-            name: string;
-          };
-        };
-      }>;
       franchisePayroll?: {
         franchiseFee: number;
         dateOfPayment: string;
