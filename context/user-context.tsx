@@ -19,7 +19,7 @@ import { queryKeys } from "@/hooks/api/query-keys";
 interface UserContextType {
   user: User | null;
   loading: boolean;
-  setUser: (user: User) => void;
+  setUser: (user: User | ((prev: User | null) => User | null)) => void;
   switchFranchise: (franchiseId: string) => Promise<void>;
 }
 
@@ -74,12 +74,25 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     return () => window.clearTimeout(timeoutId);
   }, []);
 
-  const setUserWithStorage = useCallback((next: User) => {
-    setUserState(next);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("user", JSON.stringify(next));
-    }
-  }, []);
+  const setUserWithStorage = useCallback(
+    (next: User | ((prev: User | null) => User | null)) => {
+      if (typeof next === "function") {
+        setUserState((prev) => {
+          const updated = next(prev);
+          if (typeof window !== "undefined" && updated) {
+            localStorage.setItem("user", JSON.stringify(updated));
+          }
+          return updated;
+        });
+      } else {
+        setUserState(next);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("user", JSON.stringify(next));
+        }
+      }
+    },
+    [],
+  );
 
   const switchFranchise = async (franchiseId: string) => {
     if (!user) return;
@@ -94,21 +107,34 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     } catch {
       // Profile fetch may fail for Pending franchises
     }
-    const profile = profileData
+    const fetchedProfile = profileData
       ? normalizeFranchiseeProfile(profileData)
-      : user.profile;
-    const updated: User = {
-      ...user,
-      franchiseId: data.franchiseId,
-      franchiseName: data.franchiseName,
-      franchiseStatus: data.franchiseStatus,
-      franchises: data.franchises,
-      profile,
-    };
-    setUserWithStorage(updated);
-    await queryClient.invalidateQueries({
-      queryKey: queryKeys.auth.franchiseeProfile(franchiseId),
+      : null;
+    setUserWithStorage((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        franchiseId: data.franchiseId,
+        franchiseName: data.franchiseName,
+        franchiseStatus: data.franchiseStatus,
+        franchises: data.franchises,
+        profile: fetchedProfile ?? prev.profile,
+      };
     });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["agreements"] }),
+      queryClient.invalidateQueries({ queryKey: ["franchisee-ci-agreements"] }),
+      queryClient.invalidateQueries({ queryKey: ["franchisee-ci-agreement-detail"] }),
+      queryClient.invalidateQueries({ queryKey: ["orders"] }),
+      queryClient.invalidateQueries({ queryKey: ["orders-franchisee"] }),
+      queryClient.invalidateQueries({ queryKey: ["students"] }),
+      queryClient.invalidateQueries({ queryKey: ["certification"] }),
+      queryClient.invalidateQueries({ queryKey: ["course-instructors"] }),
+      queryClient.invalidateQueries({ queryKey: ["payments"] }),
+      queryClient.invalidateQueries({ queryKey: ["program-requests"] }),
+      queryClient.invalidateQueries({ queryKey: ["franchisee"] }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.franchiseeProfile() }),
+    ]);
   };
 
   const profileQuery = useQuery({
