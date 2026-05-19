@@ -15,7 +15,7 @@ const DEFAULT_L1_MONTHS = 4;
 const DEFAULT_L2_MONTHS = 3;
 
 function getProgramFromPayroll(payroll: any) {
-  return payroll?.franchiseProgram?.program ?? payroll?.program ?? null;
+  return payroll?.program ?? null;
 }
 
 /** Level 1 and first Level 2+ row durations from program streams (matches invoice: royalty × duration per level). */

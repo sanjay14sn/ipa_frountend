@@ -39,6 +39,11 @@ export interface User {
       updatedAt: string;
       city?: string;
       address?: string;
+      agreements?: Array<{
+        programId?: number | null;
+        programName?: string | null;
+        program?: { id?: number; name?: string } | null;
+      }>;
       franchisePayroll?: {
         franchiseFee: number;
         dateOfPayment: string;

@@ -30,28 +30,6 @@ interface FranchiseeProfileResponse {
       approvedAt: string;
       createdAt: string;
       updatedAt: string;
-      franchisePayrolls?: Array<{
-        franchiseFee: number;
-        dateOfPayment: string;
-        dateOfJoining: string;
-        monthlyFee: number;
-        ciShare: number;
-        franchiseShare: number;
-        royalty: number;
-        kitCost: number;
-        materialCost: number;
-        installment: number;
-        totalAmount: number;
-        createdBy: number;
-        updatedBy: number;
-        franchiseProgram: {
-          id: number;
-          program: {
-            id: number;
-            name: string;
-          };
-        };
-      }>;
       franchisePayroll?: {
         franchiseFee: number;
         dateOfPayment: string;
