@@ -137,6 +137,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       queryClient.invalidateQueries({ queryKey: ["payments"] }),
       queryClient.invalidateQueries({ queryKey: ["program-requests"] }),
       queryClient.invalidateQueries({ queryKey: ["franchisee"] }),
+      queryClient.invalidateQueries({ queryKey: ["franchises"] }),
+      queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+      queryClient.invalidateQueries({ queryKey: ["streams"] }),
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.franchiseeProfile() }),
     ]);
   };
