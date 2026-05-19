@@ -680,7 +680,7 @@ export function FranchiseApplicationModal({
                           <Checkbox
                             id={`program-${program.id}`}
                             checked={
-                              formData.franchise.programIds[0] === program.id
+                              (formData.franchise.programIds ?? [])[0] === program.id
                             }
                             onCheckedChange={() => handleProgramSelect(program.id)}
                           />

@@ -43,6 +43,8 @@ export interface Franchise {
   state?: string;
   pincode?: string;
   franchiseeId: number;
+  /** Single-select program chosen during application. */
+  programIds?: number[];
 }
 
 export interface FranchiseResponse {
@@ -306,6 +308,7 @@ export async function applyFranchisee(application: FranchiseeApplication) {
       address: f.address,
       pincode: f.pincode,
     },
+    programId: f.programIds?.[0],
   });
   return response;
 }
