@@ -115,8 +115,13 @@ export default function CITrainingPackagesPage() {
 
   const firstUnpaidOrder = useMemo(() => {
     const sorted = [...packages].sort((a, b) => a.packageOrder - b.packageOrder);
-    return sorted.find((pkg) => pkg.purchaseStatus === "UNPAID")?.packageOrder ?? null;
+    return sorted.find((pkg) => pkg.purchaseStatus !== "PAID")?.packageOrder ?? null;
   }, [packages]);
+
+  const firstBlockingPackage = useMemo(() => {
+    if (firstUnpaidOrder == null) return null;
+    return packages.find((pkg) => pkg.packageOrder === firstUnpaidOrder) ?? null;
+  }, [packages, firstUnpaidOrder]);
 
   const handlePurchase = async (packageId: number) => {
     if (purchasingId != null) return;
@@ -150,6 +155,17 @@ export default function CITrainingPackagesPage() {
 
       const Razorpay = window.Razorpay;
       await new Promise<void>((resolve, reject) => {
+        const settleAndAbandon = async (note: string) => {
+          if (isPaymentSettledRef.current || !purchaseResponse) return;
+          isPaymentSettledRef.current = true;
+          await abandonCIPayment({
+            paymentId: purchaseResponse.paymentId,
+            razorpayOrderId: purchaseResponse.orderId,
+            purchaseId: purchaseResponse.purchaseId,
+            note,
+          }).catch(() => {});
+        };
+
         const rzp = new Razorpay({
           key: purchaseResponse!.key,
           amount: Math.round(Number(purchaseResponse!.amount) * 100),
@@ -173,23 +189,27 @@ export default function CITrainingPackagesPage() {
           },
           modal: {
             ondismiss: async () => {
-              if (!purchaseResponse) return reject(new Error("dismissed"));
-              isPaymentSettledRef.current = true;
-              await abandonCIPayment({
-                paymentId: purchaseResponse.paymentId,
-                razorpayOrderId: purchaseResponse.orderId,
-                purchaseId: purchaseResponse.purchaseId,
-                note: "dismissed",
-              }).catch(() => {});
+              await settleAndAbandon("dismissed");
               reject(new Error("dismissed"));
             },
           },
         });
+
+        rzp.on("payment.failed", async (response: any) => {
+          const code = response?.error?.code ?? "unknown";
+          const description = response?.error?.description ?? "Payment failed";
+          await settleAndAbandon(`failed:${code}`);
+          void refetch();
+          toast.error(description);
+          reject(new Error("payment_failed"));
+        });
+
         checkoutOpenedRef.current = true;
         rzp.open();
       });
     } catch (error: any) {
-      if (error?.message !== "dismissed") {
+      const message = error?.message;
+      if (message !== "dismissed" && message !== "payment_failed") {
         const apiMessage = getUserFriendlyMessage(error, "Unable to complete payment.");
         const isAgreementError =
           typeof apiMessage === "string" &&
@@ -338,7 +358,9 @@ export default function CITrainingPackagesPage() {
 
             {isLockedBySequence ? (
               <p className="mt-3 text-xs text-muted-foreground">
-                Buy Package {firstUnpaidOrder} first to unlock this.
+                {firstBlockingPackage?.purchaseStatus === "PENDING"
+                  ? `Package ${firstUnpaidOrder} payment is pending. This unlocks once it is paid.`
+                  : `Buy Package ${firstUnpaidOrder} first to unlock this.`}
               </p>
             ) : null}
           </div>
