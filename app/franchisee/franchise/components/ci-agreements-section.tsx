@@ -252,6 +252,7 @@ export function CIAgreementsSection() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["franchisee-ci-agreements", user?.franchiseId, page],
     queryFn: () => listCIAgreementsForFranchisee({ page, limit: PAGE_LIMIT }),
+    enabled: !!user,
   });
 
   useEffect(() => {
@@ -261,12 +262,8 @@ export function CIAgreementsSection() {
   const [signingAgreement, setSigningAgreement] = useState<CIAgreementData | null>(null);
   const [viewingAgreementId, setViewingAgreementId] = useState<number | null>(null);
 
-  // Client-side filter: only show rows belonging to the current franchise
-  const allRows = data?.rows ?? [];
-  const rows = user?.franchiseId
-    ? allRows.filter((r) => r.franchiseId === user.franchiseId)
-    : allRows;
-  const total = rows.length;
+  const rows = data?.rows ?? [];
+  const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
 
   const columns: DataTableColumn<CIAgreementData>[] = [
