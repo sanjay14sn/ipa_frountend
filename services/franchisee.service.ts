@@ -307,8 +307,8 @@ export async function applyFranchisee(application: FranchiseeApplication) {
       state: f.state ?? "",
       address: f.address,
       pincode: f.pincode,
+      programIds: f.programIds?.[0] != null ? [f.programIds[0]] : [],
     },
-    programId: f.programIds?.[0],
   });
   return response;
 }

@@ -183,24 +183,6 @@ export interface AgreementFranchisePayrollRow {
   dateOfPayment?: string;
   dateOfJoining?: string;
   status?: string;
-  franchiseProgram?: {
-    id: number;
-    programId?: number;
-    program?: {
-      id: number;
-      name: string;
-      streams?: Array<{
-        id: number;
-        name: string;
-        levels?: Array<{
-          displayOrder: number;
-          durationInMonths: number;
-          name?: string;
-          code?: string;
-        }>;
-      }>;
-    } | null;
-  } | null;
 }
 
 /** Financial & program fields returned on each agreement (ipa-new — terms live on the agreement row). */
@@ -250,7 +232,6 @@ export interface AgreementRecord extends AgreementTermsSnapshot {
     address?: string;
     pincode?: string | null;
     type?: string | null;
-    franchisePayrolls?: AgreementFranchisePayrollRow[] | null;
   } | null;
   franchisee?: {
     id: number;
