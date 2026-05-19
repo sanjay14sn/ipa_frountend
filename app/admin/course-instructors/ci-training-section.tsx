@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ import {
   createSession,
   completeAssignment,
   reassignAssignment,
+  rescheduleSession,
 } from "@/services/ci-training-admin.service";
 import { getAllPrograms, Program } from "@/services/program.service";
 import {
@@ -43,7 +44,7 @@ import {
   TablePageShell,
   type DataTableColumn,
 } from "@/components/shared";
-import { Plus, ClipboardList, CheckCircle2 } from "lucide-react";
+import { Plus, ClipboardList, CheckCircle2, CalendarDays } from "lucide-react";
 import statesCities from "@/data/indian-states-cities.json";
 // import { CITrainingPackagesManager } from "../catalog/ci-training-packages/page";
 
@@ -810,6 +811,70 @@ function SessionAssignmentsPanel({
   );
 }
 
+function RescheduleSessionModal({
+  session,
+  onClose,
+  onSuccess,
+}: {
+  session: CITrainingSession | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [newDate, setNewDate] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (session) setNewDate(session.sessionDate);
+  }, [session]);
+
+  async function handleSubmit() {
+    if (!session || !newDate) return;
+    setLoading(true);
+    try {
+      await rescheduleSession(session.id, newDate);
+      toast.success("Session rescheduled successfully");
+      onSuccess();
+      onClose();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to reschedule session"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={!!session} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Reschedule Session</DialogTitle>
+          <DialogDescription>
+            Session #{session?.id} &mdash;{" "}
+            {formatStateLabel(session?.region)} /{" "}
+            {session?.trainingLevelName ?? `Level ${session?.trainingLevelId}`}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="reschedule-date">New Session Date</Label>
+          <Input
+            id="reschedule-date"
+            type="date"
+            value={newDate}
+            onChange={(e) => setNewDate(e.target.value)}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={loading || !newDate}>
+            {loading ? "Rescheduling..." : "Reschedule"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function SessionsTab() {
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -820,6 +885,8 @@ function SessionsTab() {
   const [reassignTarget, setReassignTarget] =
     useState<CITrainingAssignment | null>(null);
   const [completeSessionTarget, setCompleteSessionTarget] =
+    useState<CITrainingSession | null>(null);
+  const [rescheduleTarget, setRescheduleTarget] =
     useState<CITrainingSession | null>(null);
   const [regionFilter, setRegionFilter] = useState("");
 
@@ -861,17 +928,32 @@ function SessionsTab() {
         key: "actions",
         header: "Actions",
         render: (s) => (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={(event) => {
-              event.stopPropagation();
-              setCompleteSessionTarget(s);
-            }}
-          >
-            <CheckCircle2 className="mr-2 h-4 w-4" />
-            Complete Session
-          </Button>
+          <div className="flex items-center gap-2">
+            {s.status === "OPEN" && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setRescheduleTarget(s);
+                }}
+              >
+                <CalendarDays className="mr-2 h-4 w-4" />
+                Reschedule
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(event) => {
+                event.stopPropagation();
+                setCompleteSessionTarget(s);
+              }}
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              Complete Session
+            </Button>
+          </div>
         ),
       },
     ],
@@ -935,6 +1017,15 @@ function SessionsTab() {
       <CreateSessionModal
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
+        onSuccess={() => {
+          void queryClient.invalidateQueries({
+            queryKey: ["ci-training-sessions"],
+          });
+        }}
+      />
+      <RescheduleSessionModal
+        session={rescheduleTarget}
+        onClose={() => setRescheduleTarget(null)}
         onSuccess={() => {
           void queryClient.invalidateQueries({
             queryKey: ["ci-training-sessions"],

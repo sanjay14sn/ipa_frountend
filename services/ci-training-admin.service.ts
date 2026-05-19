@@ -162,3 +162,8 @@ export async function completeSession(sessionId: number): Promise<CITrainingSess
   const res = await api.patch(`/admin/ci-training/session/${sessionId}/complete`);
   return unwrapData<CITrainingSession>(res);
 }
+
+export async function rescheduleSession(sessionId: number, sessionDate: string): Promise<CITrainingSession> {
+  const res = await api.patch(`/admin/ci-training/session/${sessionId}`, { sessionDate });
+  return res.data.result;
+}
