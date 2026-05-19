@@ -84,7 +84,7 @@ interface FranchiseeProfileResponse {
 // }
 
 import { api } from "@/lib/axios";
-import { unwrapData } from "@/lib/unwrap-api";
+import { unwrapData, normalizePaginatedResult } from "@/lib/unwrap-api";
 
 export async function login(
   name: string,
@@ -146,9 +146,8 @@ export async function switchFranchise(franchiseId: string): Promise<{
 }> {
   await api.post("/franchisee/auth/switch", { franchiseId });
   const listRes = await api.get("/franchise");
-  const franchisesRaw =
-    (listRes.data as { result?: Array<{ id: string; name: string; status: string }> })
-      .result ?? [];
+  const listData = unwrapData<unknown>(listRes);
+  const { rows: franchisesRaw } = normalizePaginatedResult<{ id: string; name: string; status: string }>(listData);
   const franchises = franchisesRaw.map((f) => ({
     id: f.id,
     name: f.name,

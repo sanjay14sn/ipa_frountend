@@ -1,5 +1,5 @@
 import { api } from "@/lib/axios";
-import { unwrapData } from "@/lib/unwrap-api";
+import { unwrapData, normalizePaginatedResult } from "@/lib/unwrap-api";
 import type { PaymentOrderResponse } from "./franchisee.service";
 import { requestPrograms, approveProgramRequestAdmin, rejectProgramRequestAdmin } from "./program-request.service";
 import type { ApproveProgramRequestPayload } from "./program-request.service";
@@ -31,26 +31,16 @@ export interface FranchiseListItem {
 
 export async function getFranchiseList(): Promise<FranchiseListItem[]> {
   const response = await api.get("/franchise");
-  const rows = unwrapData<unknown[]>(response);
-  return (Array.isArray(rows) ? rows : []).map((r) => {
-    const x = r as Record<string, unknown>;
-    const plain =
-      x?.get &&
-      typeof (x as { get: (opts?: { plain?: boolean }) => unknown }).get ===
-        "function"
-        ? (x as { get: (opts?: { plain?: boolean }) => FranchiseListItem }).get({
-            plain: true,
-          })
-        : (x as unknown as FranchiseListItem);
-    return {
-      id: String(plain.id),
-      name: String(plain.name ?? ""),
-      type: String(plain.type ?? ""),
-      status: String(plain.status ?? ""),
-      city: plain.city as string | undefined,
-      state: plain.state as string | undefined,
-    };
-  });
+  const data = unwrapData<unknown>(response);
+  const { rows } = normalizePaginatedResult<Record<string, unknown>>(data);
+  return rows.map((r) => ({
+    id: String(r.id ?? ""),
+    name: String(r.name ?? ""),
+    type: String(r.type ?? ""),
+    status: String(r.status ?? ""),
+    city: r.city as string | undefined,
+    state: r.state as string | undefined,
+  }));
 }
 
 export async function hasPendingRequest(): Promise<boolean> {
