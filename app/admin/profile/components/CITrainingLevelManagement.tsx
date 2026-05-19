@@ -27,19 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import {
-  RawTableSurface,
-  TableEmptyState,
-  TableLoadingState,
-} from "@/components/shared";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/shared";
 import {
   createTrainingLevel,
   deleteTrainingLevel,
@@ -555,6 +543,103 @@ export function CITrainingLevelManagement({
     }
   };
 
+  const columns: DataTableColumn<TrainingLevel>[] = [
+    {
+      key: "duration",
+      header: "Duration",
+      render: (level) => `${level.durationInDays} day(s)`,
+    },
+    {
+      key: "theory",
+      header: "Theory",
+      render: (level) => `${level.theoryPassMark}/${level.theoryTotalMarks}`,
+    },
+    {
+      key: "practical",
+      header: "Practical",
+      render: (level) =>
+        level.practicalTotalMarks != null && level.practicalPassMark != null ? (
+          <div className="space-y-1">
+            <div>
+              {level.practicalPassMark}/{level.practicalTotalMarks}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {level.practicalMarksRequired ? "Required" : "Situational"}
+            </div>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">None</span>
+        ),
+    },
+    {
+      key: "fee",
+      header: "Fee",
+      render: (level) =>
+        level.fee.toLocaleString("en-IN", {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        }),
+    },
+    {
+      key: "studentLevels",
+      header: "Student Levels",
+      className: "max-w-[240px]",
+      render: (level) => (
+        <CIStudentLevelsPicker
+          trainingLevelId={level.id}
+          programId={programId}
+          disabled={trainingLevelsQuery.isLoading}
+        />
+      ),
+    },
+    {
+      key: "materials",
+      header: "Materials",
+      className: "max-w-[220px]",
+      render: (level) => (
+        <TrainingLevelMaterialsPicker
+          trainingLevelId={level.id}
+          disabled={trainingLevelsQuery.isLoading}
+        />
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (level) => (
+        <Badge variant={level.isActive ? "default" : "secondary"}>
+          {level.isActive ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "text-right",
+      render: (level) => (
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => openEditDialog(level)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setDeletingLevel(level);
+              setIsDeleteDialogOpen(true);
+            }}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -574,105 +659,25 @@ export function CITrainingLevelManagement({
         marks are optional or required per level.
       </p>
 
-      {trainingLevelsQuery.isLoading ? (
-        <TableLoadingState message="Loading CI training levels..." />
-      ) : trainingLevels.length === 0 ? (
-        <TableEmptyState message="No CI training levels found for this program." />
-      ) : (
-        <RawTableSurface>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order</TableHead>
-                <TableHead>Level</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Theory</TableHead>
-                <TableHead>Practical</TableHead>
-                <TableHead>Fee</TableHead>
-                <TableHead>Student Levels</TableHead>
-                <TableHead>Materials</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {trainingLevels.map((level) => (
-                <TableRow key={level.id}>
-                  <TableCell className="font-medium">{level.displayOrder}</TableCell>
-                  <TableCell>
-                    <div className="font-medium">{level.name}</div>
-                    <div className="text-xs text-muted-foreground">{level.code}</div>
-                  </TableCell>
-                  <TableCell>{level.durationInDays} day(s)</TableCell>
-                  <TableCell>
-                    {level.theoryPassMark}/{level.theoryTotalMarks}
-                  </TableCell>
-                  <TableCell>
-                    {level.practicalTotalMarks != null &&
-                    level.practicalPassMark != null ? (
-                      <div className="space-y-1">
-                        <div>
-                          {level.practicalPassMark}/{level.practicalTotalMarks}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {level.practicalMarksRequired ? "Required" : "Situational"}
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">None</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {level.fee.toLocaleString("en-IN", {
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 2,
-                    })}
-                  </TableCell>
-                  <TableCell className="max-w-[240px]">
-                    <CIStudentLevelsPicker
-                      trainingLevelId={level.id}
-                      programId={programId}
-                      disabled={trainingLevelsQuery.isLoading}
-                    />
-                  </TableCell>
-                  <TableCell className="max-w-[220px]">
-                    <TrainingLevelMaterialsPicker
-                      trainingLevelId={level.id}
-                      disabled={trainingLevelsQuery.isLoading}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={level.isActive ? "default" : "secondary"}>
-                      {level.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditDialog(level)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setDeletingLevel(level);
-                          setIsDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </RawTableSurface>
-      )}
+      <DataTable
+        data={trainingLevels}
+        loading={trainingLevelsQuery.isLoading}
+        columns={columns}
+        getRowId={(level) => String(level.id)}
+        renderMainCell={(level) => (
+          <div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="font-mono">
+                #{level.displayOrder}
+              </Badge>
+              <span className="font-medium">{level.name}</span>
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">{level.code}</div>
+          </div>
+        )}
+        emptyMessage="No CI training levels found for this program."
+      />
+
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-3xl">

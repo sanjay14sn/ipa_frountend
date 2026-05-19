@@ -57,7 +57,7 @@ export default function AdminLayout({
               <BreadcrumbItem>
                 <BreadcrumbLink
                   href="/admin/dashboard"
-                  className="text-primary hover:text-accent"
+                  className="text-primary hover:text-primary hover:underline"
                 >
                   Admin Dashboard
                 </BreadcrumbLink>

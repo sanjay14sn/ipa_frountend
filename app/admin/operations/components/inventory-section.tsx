@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
+import { DataTable, type DataTableColumn } from "@/components/shared";
 import { getAllPrograms, type Program } from "@/services/program.service";
 import type { Level } from "@/services/level.service";
 import type { Stream } from "@/services/stream.service";
@@ -128,8 +129,7 @@ export function InventorySection() {
   const initialProgramFilter = searchParams.get("programId");
   const initialLevelFilter = searchParams.get("levelId");
   const [currentPage, setCurrentPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [searchDebounced, setSearchDebounced] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [programFilter, setProgramFilter] = useState<number | "">(
     initialProgramFilter ? Number(initialProgramFilter) : "",
   );
@@ -173,7 +173,7 @@ export function InventorySection() {
   const inventoryQuery = useInventoryPaginatedQuery({
     page: currentPage,
     limit: ITEMS_PER_PAGE,
-    search: searchDebounced || undefined,
+    search: searchTerm || undefined,
     programId: programIdNum,
     levelId: levelIdNum,
     sortBy: "name",
@@ -186,9 +186,8 @@ export function InventorySection() {
   const loading = inventoryQuery.isPending;
 
   useEffect(() => {
-    const timer = setTimeout(() => setSearchDebounced(search.trim()), 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+    setCurrentPage(1);
+  }, [searchTerm, programFilter, levelFilter]);
 
   function resetAddForm() {
     setFormData(EMPTY_FORM);
@@ -307,6 +306,173 @@ export function InventorySection() {
     setIsEditOpen(true);
   }
 
+  const columns: DataTableColumn<InventoryItemSummary>[] = [
+    {
+      key: "category",
+      header: "Category",
+      render: (item) => (
+        <div>
+          <div>{item.category?.name ?? "Uncategorized"}</div>
+          <div className="text-xs text-muted-foreground">
+            {item.unitOfMeasurement || "No unit"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "balances",
+      header: "Balances",
+      render: (item) => (
+        <div>
+          <div>On hand {item.onHandQty}</div>
+          <div className="text-xs text-muted-foreground">
+            Reserved {item.reservedQty} · Available {item.availableQty}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            On order {item.onOrderQty} · Avg cost ₹
+            {item.weightedAverageCost.toFixed(2)}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "reorder",
+      header: "Reorder",
+      render: (item) => (
+        <div>
+          <div>Reorder point {item.reorderPoint}</div>
+          <div className="text-xs text-muted-foreground">
+            Safety {item.safetyStock} · Cycle {item.reorderCycleDays}d
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (item) => (
+        <div>
+          <Badge
+            className={
+              item.isActive
+                ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                : "bg-slate-100 text-slate-700 border-slate-200"
+            }
+          >
+            {item.isActive ? "Active" : "Inactive"}
+          </Badge>
+          {item.availableQty <= item.reorderPoint ? (
+            <div className="mt-2">
+              <Badge className="bg-amber-100 text-amber-800 border-amber-200">
+                Low stock
+              </Badge>
+            </div>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "text-right",
+      render: (item) => (
+        <div className="flex justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => openProcurement(item.id)}
+            title="Manage sourcing in procurement"
+          >
+            <ArrowRightLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => openEdit(item)}
+            title="Edit item"
+          >
+            <Edit2 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive"
+            onClick={() => {
+              setDeletingItem(item);
+              setIsDeleteOpen(true);
+            }}
+            title="Delete item"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const toolbarActions = (
+    <div className="flex flex-wrap items-end gap-2">
+      <div className="w-44 space-y-1">
+        <Label className="text-xs text-muted-foreground">Program</Label>
+        <Select
+          value={programFilter === "" ? "all" : String(programFilter)}
+          onValueChange={(value) => {
+            setProgramFilter(value === "all" ? "" : Number(value));
+            setLevelFilter("");
+          }}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder="All programs" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All programs</SelectItem>
+            {programs.map((program) => (
+              <SelectItem key={program.id} value={String(program.id)}>
+                {program.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="w-44 space-y-1">
+        <Label className="text-xs text-muted-foreground">Level</Label>
+        <Select
+          value={levelFilter === "" ? "all" : String(levelFilter)}
+          onValueChange={(value) => {
+            setLevelFilter(value === "all" ? "" : Number(value));
+          }}
+          disabled={programFilter === ""}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue
+              placeholder={
+                programFilter === "" ? "Select program first" : "All levels"
+              }
+            />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All levels</SelectItem>
+            {levels.map((level) => (
+              <SelectItem key={level.id} value={String(level.id)}>
+                {levelFilterLabel(level, streamsForFilter)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <Button
+        className="h-9"
+        onClick={() => {
+          resetAddForm();
+          setIsAddOpen(true);
+        }}
+      >
+        <Plus className="mr-2 h-4 w-4" />
+        Add item
+      </Button>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       <Card>
@@ -317,79 +483,6 @@ export function InventorySection() {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col gap-3 xl:flex-row xl:flex-wrap xl:items-end">
-            <div className="min-w-[220px] flex-1 space-y-2">
-              <Label>Search</Label>
-              <Input
-                placeholder="Name, SKU, legacy code..."
-                value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-            </div>
-            <div className="w-full space-y-2 sm:w-56">
-              <Label>Program filter</Label>
-              <Select
-                value={programFilter === "" ? "all" : String(programFilter)}
-                onValueChange={(value) => {
-                  setProgramFilter(value === "all" ? "" : Number(value));
-                  setLevelFilter("");
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All programs" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All programs</SelectItem>
-                  {programs.map((program) => (
-                    <SelectItem key={program.id} value={String(program.id)}>
-                      {program.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="w-full space-y-2 sm:w-56">
-              <Label>Level filter</Label>
-              <Select
-                value={levelFilter === "" ? "all" : String(levelFilter)}
-                onValueChange={(value) => {
-                  setLevelFilter(value === "all" ? "" : Number(value));
-                  setCurrentPage(1);
-                }}
-                disabled={programFilter === ""}
-              >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={
-                      programFilter === "" ? "Select program first" : "All levels"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All levels</SelectItem>
-                  {levels.map((level) => (
-                    <SelectItem key={level.id} value={String(level.id)}>
-                      {levelFilterLabel(level, streamsForFilter)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              onClick={() => {
-                resetAddForm();
-                setIsAddOpen(true);
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add item
-            </Button>
-          </div>
-
           {levelIdNum ? (
             <Card className="border-dashed">
               <CardHeader className="pb-3">
@@ -451,152 +544,36 @@ export function InventorySection() {
             </Card>
           ) : null}
 
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="min-w-full text-sm">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="px-3 py-2 text-left">Item</th>
-                  <th className="px-3 py-2 text-left">Category</th>
-                  <th className="px-3 py-2 text-left">Balances</th>
-                  <th className="px-3 py-2 text-left">Reorder</th>
-                  <th className="px-3 py-2 text-left">Status</th>
-                  <th className="px-3 py-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="px-3 py-8 text-center text-muted-foreground">
-                      Loading inventory...
-                    </td>
-                  </tr>
-                ) : inventory.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-3 py-8 text-center text-muted-foreground">
-                      No inventory items match the current filters.
-                    </td>
-                  </tr>
-                ) : (
-                  inventory.map((item) => (
-                    <tr key={item.id} className="border-t align-top">
-                      <td className="px-3 py-3">
-                        <div className="font-medium">{item.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {item.sku}
-                          {item.legacyItemCode ? ` · ${item.legacyItemCode}` : ""}
-                          {item.legacyIsoCode ? ` · ${item.legacyIsoCode}` : ""}
-                        </div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {item.inventoryType} · {item.lifecycleStatus}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div>{item.category?.name ?? "Uncategorized"}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {item.unitOfMeasurement || "No unit"}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div>On hand {item.onHandQty}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Reserved {item.reservedQty} · Available {item.availableQty}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          On order {item.onOrderQty} · Avg cost ₹
-                          {item.weightedAverageCost.toFixed(2)}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div>Reorder point {item.reorderPoint}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Safety {item.safetyStock} · Cycle {item.reorderCycleDays}d
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <Badge
-                          className={
-                            item.isActive
-                              ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                              : "bg-slate-100 text-slate-700 border-slate-200"
-                          }
-                        >
-                          {item.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                        {item.availableQty <= item.reorderPoint ? (
-                          <div className="mt-2">
-                            <Badge className="bg-amber-100 text-amber-800 border-amber-200">
-                              Low stock
-                            </Badge>
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="px-3 py-3 text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openProcurement(item.id)}
-                            title="Manage sourcing in procurement"
-                          >
-                            <ArrowRightLeft className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEdit(item)}
-                            title="Edit item"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => {
-                              setDeletingItem(item);
-                              setIsDeleteOpen(true);
-                            }}
-                            title="Delete item"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">
-              Showing {inventory.length} of {total} item{total !== 1 ? "s" : ""}.
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage <= 1}
-                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage >= totalPages}
-                onClick={() =>
-                  setCurrentPage((page) => Math.min(totalPages, page + 1))
-                }
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          <DataTable
+            data={inventory}
+            loading={loading}
+            columns={columns}
+            getRowId={(item) => String(item.id)}
+            renderMainCell={(item) => (
+              <div>
+                <div className="font-medium">{item.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {item.sku}
+                  {item.legacyItemCode ? ` · ${item.legacyItemCode}` : ""}
+                  {item.legacyIsoCode ? ` · ${item.legacyIsoCode}` : ""}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {item.inventoryType} · {item.lifecycleStatus}
+                </div>
+              </div>
+            )}
+            searchPlaceholder="Name, SKU, legacy code..."
+            onSearchChange={setSearchTerm}
+            toolbarActions={toolbarActions}
+            pagination={{ total, totalPages }}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            itemsPerPage={ITEMS_PER_PAGE}
+            emptyMessage="No inventory items match the current filters."
+            resultsText={(count, totalCount) =>
+              `Showing ${count} of ${totalCount} item${totalCount !== 1 ? "s" : ""}.`
+            }
+          />
         </CardContent>
       </Card>
 

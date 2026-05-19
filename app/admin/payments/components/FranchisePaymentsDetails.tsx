@@ -1,20 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Eye, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Eye } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -23,12 +13,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  DataTable,
   DetailField,
   DetailFieldsGrid,
   ExpandedDetailSection,
   ExpandedDetailSurface,
+  type DataTableColumn,
+  type DataTableFilter,
 } from "@/components/shared";
-import { PaymentData, PaymentStatus } from "@/services/payment.service";
+import { PaymentData } from "@/services/payment.service";
 import { useAdminFranchisePayments } from "@/hooks/api/payment.hooks";
 import {
   formatPaymentDateTime,
@@ -56,15 +49,11 @@ export default function FranchisePaymentsDetails({
   const [paymentsPage, setPaymentsPage] = useState(1);
   const paymentsLimit = 10;
   const [statusFilter, setStatusFilter] = useState("all");
-  const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    const timer = setTimeout(() => setSearchTerm(searchInput), 500);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-
-  const [selectedPayment, setSelectedPayment] = useState<PaymentData | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<PaymentData | null>(
+    null,
+  );
   const selectedPaymentMethodFields = selectedPayment
     ? getMethodSpecificFields(selectedPayment)
     : [];
@@ -79,10 +68,87 @@ export default function FranchisePaymentsDetails({
     [paymentsPage, searchTerm, statusFilter],
   );
 
-  const paymentsQuery = useAdminFranchisePayments(franchiseId || null, queryParams);
+  const paymentsQuery = useAdminFranchisePayments(
+    franchiseId || null,
+    queryParams,
+  );
   const payments = paymentsQuery.data?.data ?? [];
   const totalPaymentsCount = paymentsQuery.data?.meta.total ?? 0;
   const totalPages = paymentsQuery.data?.meta.totalPages ?? 1;
+  const loading = paymentsQuery.isLoading && !paymentsQuery.data;
+
+  const columns: DataTableColumn<PaymentData>[] = [
+    {
+      key: "type",
+      header: "Type",
+      render: (payment) => payment.type || "Payment",
+    },
+    {
+      key: "method",
+      header: "Method",
+      render: (payment) =>
+        payment.method ? (
+          <Badge
+            variant="outline"
+            className={methodBadgeClass(payment.method)}
+          >
+            {methodLabel(payment.method)}
+          </Badge>
+        ) : (
+          <span className="text-sm text-muted-foreground">-</span>
+        ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (payment) => <Badge variant="outline">{payment.status}</Badge>,
+    },
+    {
+      key: "date",
+      header: "Date",
+      render: (payment) =>
+        payment.createdAt
+          ? new Date(payment.createdAt).toLocaleDateString("en-IN")
+          : "N/A",
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      className: "text-right",
+      render: (payment) => `Rs. ${payment.amount.toLocaleString("en-IN")}`,
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "text-right",
+      render: (payment) => (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setSelectedPayment(payment)}
+          className="h-8"
+        >
+          <Eye className="mr-1 h-4 w-4" />
+          View
+        </Button>
+      ),
+    },
+  ];
+
+  const filters: DataTableFilter[] = [
+    {
+      key: "status",
+      label: "Status",
+      options: [
+        { value: "all", label: "All" },
+        { value: "Completed", label: "Completed" },
+        { value: "Pending", label: "Pending" },
+        { value: "Failed", label: "Failed" },
+      ],
+      defaultValue: "all",
+    },
+  ];
 
   return (
     <ExpandedDetailSurface className="border-t border-border/60">
@@ -102,159 +168,49 @@ export default function FranchisePaymentsDetails({
             label="Completed payments"
             value={totalCompleted ?? "N/A"}
           />
-          <DetailField
-            label="Pending payments"
-            value={totalPending ?? "N/A"}
-          />
+          <DetailField label="Pending payments" value={totalPending ?? "N/A"} />
         </DetailFieldsGrid>
       </ExpandedDetailSection>
 
       <Separator />
 
       <ExpandedDetailSection title="Payments">
-        <div className="flex items-center gap-3 mb-3 flex-wrap">
-          <div className="relative flex-1 min-w-[200px] max-w-xs">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Search by order or payment ID..."
-              value={searchInput}
-              onChange={(e) => {
-                setSearchInput(e.target.value);
-                setPaymentsPage(1);
-              }}
-              className="pl-8 h-8 text-sm"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Status:</span>
-            {["all", "Completed", "Pending", "Failed"].map((s) => (
-              <Button
-                key={s}
-                variant={statusFilter === s ? "default" : "outline"}
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => {
-                  setStatusFilter(s);
-                  setPaymentsPage(1);
-                }}
-              >
-                {s === "all" ? "All" : s}
-              </Button>
-            ))}
-          </div>
-        </div>
-
         {!franchiseId ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
             Payments not scoped to a specific franchise.
           </p>
         ) : (
-          <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Payment</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Method</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paymentsQuery.isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell colSpan={7}>
-                        <Skeleton className="h-6 w-full" />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : payments.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">
-                      No payments found.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  payments.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell className="font-medium">
-                        {payment.razorpayPaymentId ||
-                          payment.razorpayOrderId ||
-                          `#${payment.id}`}
-                      </TableCell>
-                      <TableCell>{payment.type || "Payment"}</TableCell>
-                      <TableCell>
-                        {payment.method ? (
-                          <Badge
-                            variant="outline"
-                            className={methodBadgeClass(payment.method)}
-                          >
-                            {methodLabel(payment.method)}
-                          </Badge>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{payment.status}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {payment.createdAt
-                          ? new Date(payment.createdAt).toLocaleDateString("en-IN")
-                          : "N/A"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        Rs. {payment.amount.toLocaleString("en-IN")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedPayment(payment)}
-                          className="h-8"
-                        >
-                          <Eye className="mr-1 h-4 w-4" />
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-2 py-3 border-t">
-                <span className="text-sm text-muted-foreground">
-                  Page {paymentsPage} of {totalPages} ({totalPaymentsCount} total)
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPaymentsPage((p) => Math.max(1, p - 1))}
-                    disabled={paymentsPage <= 1}
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPaymentsPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={paymentsPage >= totalPages}
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </div>
+          <DataTable
+            data={payments}
+            loading={loading}
+            columns={columns}
+            getRowId={(payment) => String(payment.id)}
+            renderMainCell={(payment) => (
+              <div className="font-medium text-gray-900">
+                {payment.razorpayPaymentId ||
+                  payment.razorpayOrderId ||
+                  `#${payment.id}`}
               </div>
             )}
-          </>
+            searchPlaceholder="Search by order or payment ID..."
+            onSearchChange={(value) => {
+              setSearchTerm(value);
+              setPaymentsPage(1);
+            }}
+            filters={filters}
+            onFilterChange={(key, value) => {
+              if (key === "status") setStatusFilter(value as string);
+              setPaymentsPage(1);
+            }}
+            pagination={{ total: totalPaymentsCount, totalPages }}
+            currentPage={paymentsPage}
+            onPageChange={setPaymentsPage}
+            itemsPerPage={paymentsLimit}
+            emptyMessage="No payments found"
+            resultsText={(count, total) =>
+              `Showing ${count} of ${total} payments`
+            }
+          />
         )}
       </ExpandedDetailSection>
 
@@ -291,7 +247,9 @@ export default function FranchisePaymentsDetails({
                 />
                 <DetailField
                   label="Status"
-                  value={<Badge variant="outline">{selectedPayment.status}</Badge>}
+                  value={
+                    <Badge variant="outline">{selectedPayment.status}</Badge>
+                  }
                 />
                 <DetailField
                   label="Method"

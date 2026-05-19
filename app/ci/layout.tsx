@@ -81,7 +81,7 @@ function CIShell({ children }: { children: React.ReactNode }) {
               <BreadcrumbItem>
                 <BreadcrumbLink
                   href={ciHomeHref}
-                  className="text-primary hover:text-accent"
+                  className="text-primary hover:text-primary hover:underline"
                 >
                   CI Portal
                 </BreadcrumbLink>

@@ -1,27 +1,28 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { useMemo, useState } from "react";
+import { Eye } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
+  DataTable,
   DetailField,
   DetailFieldsGrid,
   ExpandedDetailSection,
   ExpandedDetailSurface,
+  type DataTableColumn,
+  type DataTableFilter,
 } from "@/components/shared";
 import { RequestedIdDetail } from "@/services/student.service";
-import StudentsSection from "@/app/admin/students/components/StudentsSection";
+import { formatEntityCodeForDisplay } from "@/lib/format-entity-code";
 import IdCardPreviewModal from "./IdCardPreviewModal";
 import {
   useAdminIdCardDetails,
@@ -41,6 +42,115 @@ interface FranchiseIdDetailsProps {
   onIssueSuccess?: () => void;
 }
 
+function showIssueButton(student: RequestedIdDetail, statusFilter: string) {
+  if (statusFilter === "Requested") return true;
+  if (statusFilter === "all") return student.idIssued === "Requested";
+  return false;
+}
+
+function formatIssueDate(student: RequestedIdDetail) {
+  if (student.idIssueDate) {
+    return new Date(student.idIssueDate).toLocaleDateString();
+  }
+  return "—";
+}
+
+function StudentIdRequestDetailContent({
+  student,
+  statusFilter,
+  onIssueId,
+  onClose,
+}: {
+  student: RequestedIdDetail;
+  statusFilter: string;
+  onIssueId?: (student: RequestedIdDetail) => void;
+  onClose: () => void;
+}) {
+  const canIssue = showIssueButton(student, statusFilter) && onIssueId;
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="text-left">Student details</DialogTitle>
+        <DialogDescription className="text-left">
+          Full information for this ID request
+        </DialogDescription>
+      </DialogHeader>
+      <div className="space-y-4 py-2">
+        <DetailFieldsGrid columns={2}>
+          <DetailField label="Student name" value={student.name || "N/A"} />
+          <DetailField label="Roll number" value={student.rollNo || "N/A"} />
+          <DetailField
+            label="Date of birth"
+            value={
+              student.dateOfBirth
+                ? new Date(student.dateOfBirth).toLocaleDateString()
+                : "N/A"
+            }
+          />
+          <DetailField
+            label="ID status"
+            value={student.idIssued?.trim() ? student.idIssued : "N/A"}
+          />
+          <DetailField
+            label="Issue date"
+            value={
+              student.idIssueDate
+                ? new Date(student.idIssueDate).toLocaleDateString()
+                : "N/A"
+            }
+          />
+          <DetailField
+            label="Franchise"
+            value={student.franchise?.name || student.franchiseName || "N/A"}
+          />
+          <DetailField
+            span={2}
+            label="Residential address"
+            value={student.residentialAddress || "N/A"}
+          />
+          <DetailField
+            label="Franchise address"
+            value={
+              student.franchise?.address || student.franchiseeAddress || "N/A"
+            }
+          />
+          <DetailField
+            label="Father contact"
+            value={student.fatherContactNo || "N/A"}
+          />
+          <DetailField
+            label="Mother contact"
+            value={student.motherContactNo || "N/A"}
+          />
+        </DetailFieldsGrid>
+        {canIssue ? (
+          <div className="flex justify-end gap-2 border-t pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Close
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                onIssueId(student);
+                onClose();
+              }}
+            >
+              Issue ID
+            </Button>
+          </div>
+        ) : (
+          <div className="flex justify-end border-t pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Close
+            </Button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 export default function FranchiseIdDetails({
   franchiseId,
   franchiseName,
@@ -50,47 +160,33 @@ export default function FranchiseIdDetails({
 }: FranchiseIdDetailsProps) {
   const [page, setPage] = useState(1);
   const limit = 10;
-  const [statusFilter, setStatusFilter] = useState<"all" | "Requested" | "Issued">(
-    "all",
-  );
-  const [searchInput, setSearchInput] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStudent, setSelectedStudent] = useState<RequestedIdDetail | null>(
-    null,
-  );
+  const [selectedStudent, setSelectedStudent] =
+    useState<RequestedIdDetail | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [expandedChildren, setExpandedChildren] = useState<Set<string>>(
-    new Set(),
-  );
+  const [detailStudent, setDetailStudent] =
+    useState<RequestedIdDetail | null>(null);
   const [dateFilter, setDateFilter] = useState("");
   const [dispatchOpen, setDispatchOpen] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setSearchTerm(searchInput), 500);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-
-  const apiStatus = useMemo(() => {
-    if (statusFilter === "all") return "all";
-    return statusFilter;
-  }, [statusFilter]);
 
   const queryParams = useMemo(
     () => ({
       page,
       limit,
       search: searchTerm || undefined,
-      status: apiStatus,
+      status: statusFilter,
       sortBy: "id",
       sortOrder: "DESC" as const,
     }),
-    [page, searchTerm, apiStatus],
+    [page, searchTerm, statusFilter],
   );
 
   const detailsQuery = useAdminIdCardDetails(franchiseId, queryParams);
   const bulkDispatchIds = useBulkDispatchIdCards();
   const eligibleQuery = useDispatchEligibleOrders(franchiseId, dispatchOpen);
   const students = detailsQuery.data?.data ?? [];
+
   const pendingIdDispatchItems: DispatchPickerItem[] = useMemo(() => {
     return students
       .filter((s) => {
@@ -108,21 +204,103 @@ export default function FranchiseIdDetails({
         requestDate: (s.idRequestedAt ?? "").slice(0, 10) || "—",
       }));
   }, [students, dateFilter, statusFilter]);
+
   const totalStudents = detailsQuery.data?.meta.total ?? 0;
   const totalPages = detailsQuery.data?.meta.totalPages ?? 1;
   const loading = detailsQuery.isLoading && !detailsQuery.data;
-
-  const toggleRow = (id: string) => {
-    const next = new Set(expandedChildren);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setExpandedChildren(next);
-  };
 
   const handleIssueId = (student: RequestedIdDetail) => {
     setSelectedStudent(student);
     setPreviewOpen(true);
   };
+
+  const columns: DataTableColumn<RequestedIdDetail>[] = [
+    {
+      key: "rollNumber",
+      header: "Roll number",
+      className: "text-center",
+      render: (student) => (
+        <Badge variant="outline" title={student.rollNo}>
+          {formatEntityCodeForDisplay(student.rollNo)}
+        </Badge>
+      ),
+    },
+    {
+      key: "dob",
+      header: "DOB",
+      className: "text-center",
+      render: (student) => (
+        <span className="text-sm text-gray-600">
+          {student.dateOfBirth
+            ? new Date(student.dateOfBirth).toLocaleDateString()
+            : "N/A"}
+        </span>
+      ),
+    },
+    {
+      key: "issueDate",
+      header: "Issue date",
+      className: "text-center",
+      render: (student) => (
+        <span className="text-sm text-gray-600">{formatIssueDate(student)}</span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "text-center",
+      render: (student) => (
+        <div className="flex items-center justify-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            title="View student details"
+            onClick={() => setDetailStudent(student)}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const filters: DataTableFilter[] = [
+    {
+      key: "status",
+      label: "Status",
+      options: [
+        { value: "all", label: "All" },
+        { value: "Requested", label: "Requested" },
+        { value: "Issued", label: "Issued" },
+      ],
+      defaultValue: "all",
+    },
+  ];
+
+  const toolbarActions = (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-sm text-muted-foreground">Request date:</span>
+      <input
+        type="date"
+        value={dateFilter}
+        onChange={(e) => {
+          setDateFilter(e.target.value);
+          setPage(1);
+        }}
+        className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+      />
+      <Button
+        size="sm"
+        variant="default"
+        className="h-9 shrink-0"
+        onClick={() => setDispatchOpen(true)}
+        disabled={pendingIdDispatchItems.length === 0}
+      >
+        Dispatch ID cards
+      </Button>
+    </div>
+  );
 
   return (
     <ExpandedDetailSurface className="border-t border-border/60">
@@ -138,119 +316,43 @@ export default function FranchiseIdDetails({
       <Separator />
 
       <ExpandedDetailSection title="Students">
-        <div className="mb-3 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
-            <div className="relative min-w-[200px] max-w-xs flex-1">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, roll number, or franchise..."
-                value={searchInput}
-                onChange={(e) => {
-                  setSearchInput(e.target.value);
-                  setPage(1);
-                }}
-                className="h-8 pl-8 text-sm"
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted-foreground">Status:</span>
-              {(["all", "Requested", "Issued"] as const).map((s) => (
-                <Button
-                  key={s}
-                  variant={statusFilter === s ? "default" : "outline"}
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => {
-                    setStatusFilter(s);
-                    setPage(1);
-                  }}
-                >
-                  {s === "all" ? "All" : s}
-                </Button>
-              ))}
-            </div>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 self-end sm:self-center">
-            <span className="text-sm text-muted-foreground">Request date:</span>
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => {
-                setDateFilter(e.target.value);
-                setPage(1);
-              }}
-              className="h-8 rounded-md border border-input bg-background px-2 text-sm"
-            />
-            <Button
-              size="sm"
-              variant="default"
-              className="h-8 shrink-0"
-              onClick={() => setDispatchOpen(true)}
-              disabled={pendingIdDispatchItems.length === 0}
-            >
-              Dispatch ID cards
-            </Button>
-          </div>
-        </div>
-
         {!franchiseId?.trim() ? (
           <p className="py-4 text-center text-sm text-muted-foreground">
             No franchise selected.
           </p>
-        ) : loading ? (
-          <Table>
-            <TableBody>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell colSpan={5}>
-                    <Skeleton className="h-6 w-full" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : students.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            No students found for this filter.
-          </p>
         ) : (
-          <StudentsSection
-            students={students}
-            franchiseName={franchiseName}
-            isExpanded
-            onToggle={toggleRow}
-            onIssueId={handleIssueId}
-            statusFilter={statusFilter}
-            expandedRows={expandedChildren}
+          <DataTable
+            data={students}
+            loading={loading}
+            columns={columns}
+            getRowId={(student) =>
+              student.id != null
+                ? `id-${student.id}`
+                : `${student.name}-${student.rollNo}-${student.dateOfBirth ?? ""}`
+            }
+            renderMainCell={(student) => (
+              <div className="font-medium text-gray-900">{student.name}</div>
+            )}
+            searchPlaceholder="Search by name, roll number, or franchise..."
+            onSearchChange={(value) => {
+              setSearchTerm(value);
+              setPage(1);
+            }}
+            filters={filters}
+            onFilterChange={(key, value) => {
+              if (key === "status") setStatusFilter(value as string);
+              setPage(1);
+            }}
+            toolbarActions={toolbarActions}
+            pagination={{ total: totalStudents, totalPages }}
+            currentPage={page}
+            onPageChange={setPage}
+            itemsPerPage={limit}
+            emptyMessage="No students found for this filter"
+            resultsText={(count, total) =>
+              `Showing ${count} of ${total} students`
+            }
           />
-        )}
-
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t px-2 py-3">
-            <span className="text-sm text-muted-foreground">
-              Page {page} of {totalPages} ({totalStudents} total)
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="mr-1 h-4 w-4" />
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-              >
-                Next
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </div>
-          </div>
         )}
       </ExpandedDetailSection>
 
@@ -270,6 +372,24 @@ export default function FranchiseIdDetails({
           }}
         />
       )}
+
+      <Dialog
+        open={detailStudent != null}
+        onOpenChange={(open) => {
+          if (!open) setDetailStudent(null);
+        }}
+      >
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto sm:max-w-xl">
+          {detailStudent ? (
+            <StudentIdRequestDetailContent
+              student={detailStudent}
+              statusFilter={statusFilter}
+              onIssueId={handleIssueId}
+              onClose={() => setDetailStudent(null)}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <BulkDispatchPickerModal
         open={dispatchOpen}

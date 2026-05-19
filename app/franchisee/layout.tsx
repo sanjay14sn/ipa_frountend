@@ -88,7 +88,7 @@ export default function FranchiseeLayout({
               <BreadcrumbItem>
                 <BreadcrumbLink
                   href="/franchisee/dashboard"
-                  className="text-primary hover:text-accent"
+                  className="text-primary hover:text-primary hover:underline"
                 >
                   Franchise Dashboard
                 </BreadcrumbLink>
