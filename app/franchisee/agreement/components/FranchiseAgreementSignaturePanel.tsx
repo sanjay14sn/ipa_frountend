@@ -1,73 +1,47 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import {
   agreementSignatureSrc,
-  submitFranchiseeSignatureImage,
+  franchiseeProfileSignatureSrc,
   type AgreementRecord,
 } from "@/services/agreement.service";
-import { getErrorMessage } from "@/lib/error-utils";
-import { toast } from "sonner";
-import { ExternalLink, Loader2, PenLine, Upload } from "lucide-react";
-import { queryKeys } from "@/hooks/api/query-keys";
-
-const MAX_SIGNATURE_BYTES = 5 * 1024 * 1024;
-const ACCEPT = "image/png,image/jpeg,image/jpg,image/webp";
+import { CheckCircle, ExternalLink, Loader2, PenLine } from "lucide-react";
+import { useUser } from "@/context/user-context";
 
 interface FranchiseAgreementSignaturePanelProps {
   agreement: AgreementRecord | null;
   loading: boolean;
-  onAgreementUpdated: (row: AgreementRecord) => void;
 }
 
+/**
+ * Step 3 display — read-only. Shows whichever applies:
+ *
+ *   - "Loading…" while the agreement record is in flight
+ *   - "Already signed" confirmation + the applied signature image
+ *   - On-file signature preview with a hint that the franchisee will sign
+ *     with it (button lives in the page footer beside Next)
+ *   - A "no signature yet — upload one" hint (button lives in the page
+ *     footer beside Next)
+ *   - A status hint when the agreement isn't in a signable state
+ *
+ * The two action paths (Sign-with-existing / Upload-and-sign) are owned by
+ * the parent so they can sit beside the navigation buttons. This component
+ * is intentionally button-free.
+ */
 export function FranchiseAgreementSignaturePanel({
   agreement,
   loading,
-  onAgreementUpdated,
 }: FranchiseAgreementSignaturePanelProps) {
-  const queryClient = useQueryClient();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
+  const { user } = useUser();
 
-  const sigSrc = agreement ? agreementSignatureSrc(agreement) : null;
-  const canUpload = agreement?.status === "PendingSignature";
+  const profileSignatureSrc = franchiseeProfileSignatureSrc(
+    user?.profile?.franchiseeSignature,
+  );
+  const onAgreementSrc = agreement ? agreementSignatureSrc(agreement) : null;
+  const previewSrc = onAgreementSrc ?? profileSignatureSrc;
 
-  const pickFile = () => inputRef.current?.click();
-
-  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !agreement) return;
-    if (file.size > MAX_SIGNATURE_BYTES) {
-      toast.error("Signature image must be 5MB or smaller.");
-      return;
-    }
-    if (!ACCEPT.split(",").some((t) => file.type === t.trim())) {
-      toast.error("Use a PNG, JPEG, or WebP image.");
-      return;
-    }
-    setUploading(true);
-    try {
-      const updated = await submitFranchiseeSignatureImage(agreement.id, file);
-      onAgreementUpdated(updated);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["agreements", "list"] }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.agreements.detail(agreement.id),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["auth", "franchisee-profile"],
-        }),
-      ]);
-      toast.success("Signature saved");
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Could not upload signature"));
-    } finally {
-      setUploading(false);
-    }
-  };
+  const alreadySigned = Boolean(agreement?.signed);
+  const canSign = agreement?.status === "Approved" && !alreadySigned;
 
   if (loading) {
     return (
@@ -97,82 +71,71 @@ export function FranchiseAgreementSignaturePanel({
           Your signature
         </h3>
       </div>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Sign on paper and photograph/scan it, or use a clear digital signature
-        image (PNG, JPEG, or WebP). Payment unlocks only after the agreement is
-        in pending-signature status and your signature is saved.
-      </p>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept={ACCEPT}
-        className="hidden"
-        onChange={onFileChange}
-      />
-
-      {sigSrc ? (
+      {alreadySigned ? (
         <div className="space-y-3">
+          <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+            <CheckCircle className="h-4 w-4" />
+            Agreement signed — continue to payment to activate this program.
+          </div>
+          {previewSrc ? (
+            <div className="overflow-hidden rounded-lg border border-border bg-muted/30 p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewSrc}
+                alt="Your signature on this agreement"
+                className="mx-auto max-h-40 w-auto max-w-full object-contain"
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : canSign && profileSignatureSrc ? (
+        // On-file signature — the franchisee will reuse it via the
+        // "Sign with this signature" button in the footer.
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            We have your signature on file from your franchise profile. Use{" "}
+            <strong>Sign with this signature</strong> below to apply it to this
+            program agreement, or <strong>Upload a different signature</strong>{" "}
+            to replace it.
+          </p>
           <div className="overflow-hidden rounded-lg border border-border bg-muted/30 p-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={sigSrc}
+              src={profileSignatureSrc}
               alt="Your signature on file"
               className="mx-auto max-h-40 w-auto max-w-full object-contain"
             />
           </div>
-          <div className="flex flex-wrap gap-2">
-            {canUpload ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={uploading}
-                onClick={pickFile}
-              >
-                {uploading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="mr-2 h-4 w-4" />
-                )}
-                Replace signature
-              </Button>
-            ) : null}
-            <a
-              href={sigSrc}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-primary hover:underline"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Open file
-            </a>
-          </div>
+          <a
+            href={profileSignatureSrc}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Open file
+          </a>
         </div>
+      ) : canSign ? (
+        // No on-file signature — upload-and-sign flow (button in footer).
+        <p className="text-sm text-muted-foreground">
+          Sign on paper and photograph/scan it, or use a clear digital signature
+          image (PNG, JPEG, or WebP). Use <strong>Upload and sign</strong> below
+          to attach it. The image will be saved to your profile for future
+          agreements.
+        </p>
       ) : (
-        <>
-          {canUpload ? (
-            <Button
-              type="button"
-              disabled={uploading}
-              onClick={pickFile}
-              className="w-full rounded-lg sm:w-auto"
-            >
-              {uploading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="mr-2 h-4 w-4" />
-              )}
-              Upload signature image
-            </Button>
-          ) : (
-            <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-              {agreement.status === "Signed"
-                ? "Your agreement is already signed."
-                : "Your agreement is not ready for signature yet. Please wait for the signature request."}
-            </div>
-          )}
-        </>
+        // Status hint for not-signable states.
+        <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          {agreement.status === "Valid"
+            ? "Your agreement is already in force."
+            : agreement.status === "Suspended"
+              ? "This agreement is currently suspended."
+              : agreement.status === "Void"
+                ? "This agreement has been voided."
+                : "Your agreement is not yet approved by the admin. Signing unlocks once admin issues the agreement."}
+        </div>
       )}
     </div>
   );

@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -18,13 +17,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle, Clock } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import {
   requestProgram,
-  hasPendingRequest,
   getFranchiseList,
   RequestProgramDto,
 } from "@/services/franchise.service";
+import { listProgramRequests } from "@/services/program-request.service";
+import type { ProgramRequestItem } from "@/services/program-request.service";
 import { getEffectiveFranchiseStatus, type User } from "@/lib/auth";
 import { getAllPrograms, Program } from "@/services/program.service";
 import { getErrorMessage } from "@/lib/error-utils";
@@ -36,11 +36,29 @@ interface RequestProgramsModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * Statuses that block re-requesting the same program on the same franchise.
+ * Mixes ProgramRequest historical states with Agreement lifecycle states
+ * (since both shapes flow through the same switcher feed):
+ *
+ *   - "Pending"   ProgramRequest awaiting admin
+ *   - "Approved"  Agreement created but not yet Valid (signed + paid)
+ *   - "Valid"     Agreement in force (post-refactor "active" state)
+ *   - "Suspended" Agreement paused but still binding
+ *
+ * Terminal statuses ("Rejected", "Void", "Draft") allow a fresh request.
+ */
+const BLOCKED_STATUSES = new Set([
+  "Pending",
+  "Approved",
+  "Valid",
+  "Suspended",
+]);
+
 function isActiveFranchiseStatus(status: string | undefined): boolean {
   return (status ?? "").trim().toLowerCase() === "active";
 }
 
-/** Dropdown options when API list is missing, empty, or uses non-exact status casing. */
 function activeFranchiseChoices(
   user: User | null | undefined,
 ): Array<{ id: string; name: string; status: string }> {
@@ -71,16 +89,17 @@ export function RequestProgramsModal({
   onOpenChange,
 }: RequestProgramsModalProps) {
   const { user } = useUser();
-  const [formData, setFormData] = useState<RequestProgramDto>({
-    franchiseId: "",
-    programIds: [],
-  });
+
+  const [franchiseId, setFranchiseId] = useState("");
+  const [programId, setProgramId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [pendingCheck, setPendingCheck] = useState<
-    "loading" | "pending" | "ok"
-  >("loading");
+  const [existingRequests, setExistingRequests] = useState<
+    ProgramRequestItem[]
+  >([]);
   const [franchiseOptions, setFranchiseOptions] = useState<
     Array<{ id: string; name: string; status: string }>
   >([]);
@@ -91,53 +110,74 @@ export function RequestProgramsModal({
       return;
     }
 
-    setPendingCheck("loading");
-    Promise.all([getAllPrograms(), hasPendingRequest(), getFranchiseList()])
-      .then(([programData, isPending, franchiseList]) => {
+    setLoadingData(true);
+    Promise.all([getAllPrograms(), listProgramRequests(), getFranchiseList()])
+      .then(([programData, requestData, franchiseList]) => {
         setPrograms(Array.isArray(programData) ? programData : []);
+        setExistingRequests(Array.isArray(requestData) ? requestData : []);
+
         const rows = Array.isArray(franchiseList) ? franchiseList : [];
         const activeFromApi = rows
           .filter((f) => isActiveFranchiseStatus(f.status))
-          .map((f) => ({
-            id: String(f.id),
-            name: f.name,
-            status: f.status,
-          }));
+          .map((f) => ({ id: String(f.id), name: f.name, status: f.status }));
         setFranchiseOptions(
-          activeFromApi.length > 0 ? activeFromApi : activeFranchiseChoices(user),
+          activeFromApi.length > 0
+            ? activeFromApi
+            : activeFranchiseChoices(user),
         );
-        setPendingCheck(isPending ? "pending" : "ok");
       })
       .catch(() => {
         setPrograms([]);
+        setExistingRequests([]);
         setFranchiseOptions(activeFranchiseChoices(user));
-        setPendingCheck("ok");
-      });
+      })
+      .finally(() => setLoadingData(false));
   }, [open, user]);
 
-  const handleProgramToggle = (programId: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      programIds: prev.programIds.includes(programId)
-        ? prev.programIds.filter((id) => id !== programId)
-        : [...prev.programIds, programId],
-    }));
-  };
+  /** Program IDs already active/pending for the selected franchise — cannot be re-requested. */
+  const blockedProgramIds = useMemo(() => {
+    if (!franchiseId) return new Set<number>();
+    return new Set(
+      existingRequests
+        .filter(
+          (r) =>
+            r.franchiseId === franchiseId && BLOCKED_STATUSES.has(r.status),
+        )
+        .map((r) => r.programId),
+    );
+  }, [existingRequests, franchiseId]);
+
+  /** Programs the franchisee can still request for the selected franchise. */
+  const availablePrograms = useMemo(
+    () => programs.filter((p) => !blockedProgramIds.has(p.id)),
+    [programs, blockedProgramIds],
+  );
+
+  // Reset program selection when franchise changes
+  useEffect(() => {
+    setProgramId("");
+  }, [franchiseId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.franchiseId) {
+    if (!franchiseId) {
       toast.error("Select a franchise");
       return;
     }
-    if (formData.programIds.length === 0) {
-      toast.error("Select at least one program");
+    if (!programId) {
+      toast.error("Select a program");
       return;
     }
+
+    const dto: RequestProgramDto = {
+      franchiseId,
+      programIds: [Number(programId)],
+    };
+
     setIsLoading(true);
     try {
-      await requestProgram(formData);
-      toast.success("Program request(s) submitted successfully");
+      await requestProgram(dto);
+      toast.success("Program request submitted successfully");
       setSubmitted(true);
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to submit program request"));
@@ -148,7 +188,8 @@ export function RequestProgramsModal({
 
   const handleClose = () => {
     if (submitted) {
-      setFormData({ franchiseId: "", programIds: [] });
+      setFranchiseId("");
+      setProgramId("");
       setSubmitted(false);
     }
     onOpenChange(false);
@@ -168,8 +209,8 @@ export function RequestProgramsModal({
               Request Submitted!
             </DialogTitle>
             <DialogDescription className="text-center text-muted-foreground">
-              Your program request(s) have been submitted. Admin will review and
-              approve each program individually.
+              Your program request has been submitted. Admin will review and
+              approve it shortly.
             </DialogDescription>
           </DialogHeader>
           <Button onClick={handleClose} className="w-full rounded-lg">
@@ -180,45 +221,14 @@ export function RequestProgramsModal({
     );
   }
 
-  if (pendingCheck === "loading") {
+  if (loadingData) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="mx-4 w-full max-w-md rounded-2xl border-border">
-          <DialogTitle className="sr-only">Loading program requests</DialogTitle>
+          <DialogTitle className="sr-only">Loading</DialogTitle>
           <div className="flex items-center justify-center py-10">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  if (pendingCheck === "pending") {
-    return (
-      <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="mx-4 w-full max-w-md rounded-2xl border-border">
-          <DialogHeader className="text-center">
-            <div className="mb-4 flex justify-center">
-              <div className="rounded-full bg-amber-50 p-3">
-                <Clock className="h-10 w-10 text-amber-600" />
-              </div>
-            </div>
-            <DialogTitle className="text-xl font-semibold text-card-foreground">
-              Request Already Pending
-            </DialogTitle>
-            <DialogDescription className="text-center text-muted-foreground">
-              You cannot submit a new request while any franchise is not Active,
-              a program request is awaiting admin review, or a program agreement
-              and payment is still pending. Resolve those first.
-            </DialogDescription>
-          </DialogHeader>
-          <Button
-            onClick={handleClose}
-            variant="outline"
-            className="w-full rounded-lg border-border"
-          >
-            Close
-          </Button>
         </DialogContent>
       </Dialog>
     );
@@ -229,21 +239,21 @@ export function RequestProgramsModal({
       <DialogContent className="max-w-lg overflow-hidden rounded-2xl border-border p-0">
         <DialogHeader className="border-b border-border bg-surface-green/40 px-6 pb-4 pt-6">
           <DialogTitle className="text-lg font-semibold text-card-foreground">
-            Request Programs
+            Request a Program
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Request new programs for an existing franchise. Admin will review
-            and approve each program separately.
+            Request one new program for an existing franchise. Admin will review
+            and approve it.
           </DialogDescription>
         </DialogHeader>
+
         <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
+          {/* Franchise select */}
           <div className="space-y-2">
             <Label htmlFor="franchise">Franchise *</Label>
             <Select
-              value={formData.franchiseId}
-              onValueChange={(v) =>
-                setFormData((prev) => ({ ...prev, franchiseId: v }))
-              }
+              value={franchiseId}
+              onValueChange={setFranchiseId}
               disabled={franchiseOptions.length === 0}
             >
               <SelectTrigger className="rounded-lg border-border">
@@ -257,37 +267,52 @@ export function RequestProgramsModal({
                 ))}
               </SelectContent>
             </Select>
-            {franchiseOptions.length === 0 ? (
+            {franchiseOptions.length === 0 && (
               <p className="text-sm text-muted-foreground">
                 No active franchises found. If you just became active, refresh
                 the page or sign in again.
               </p>
-            ) : null}
+            )}
           </div>
+
+          {/* Program select */}
           <div className="space-y-2">
-            <Label>Programs * (Select at least one)</Label>
-            <div className="max-h-32 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
-              {programs.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No programs</p>
-              ) : (
-                programs.map((p) => (
-                  <div key={p.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`p-${p.id}`}
-                      checked={formData.programIds.includes(p.id)}
-                      onCheckedChange={() => handleProgramToggle(p.id)}
-                    />
-                    <label
-                      htmlFor={`p-${p.id}`}
-                      className="text-sm cursor-pointer"
-                    >
+            <Label htmlFor="program">Program *</Label>
+            {!franchiseId ? (
+              <p className="text-sm text-muted-foreground">
+                Select a franchise first.
+              </p>
+            ) : availablePrograms.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                All programs have already been requested or are active for this
+                franchise.
+              </p>
+            ) : (
+              <Select
+                value={programId}
+                onValueChange={setProgramId}
+              >
+                <SelectTrigger className="rounded-lg border-border">
+                  <SelectValue placeholder="Select program" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availablePrograms.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
                       {p.name}
-                    </label>
-                  </div>
-                ))
-              )}
-            </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {franchiseId && blockedProgramIds.size > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {blockedProgramIds.size} program
+                {blockedProgramIds.size === 1 ? "" : "s"} already
+                requested or active for this franchise.
+              </p>
+            )}
           </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <Button
               type="button"
@@ -297,7 +322,16 @@ export function RequestProgramsModal({
             >
               Cancel
             </Button>
-            <Button type="submit" className="rounded-lg" disabled={isLoading}>
+            <Button
+              type="submit"
+              className="rounded-lg"
+              disabled={
+                isLoading ||
+                !franchiseId ||
+                !programId ||
+                availablePrograms.length === 0
+              }
+            >
               {isLoading ? "Submitting..." : "Submit Request"}
             </Button>
           </div>

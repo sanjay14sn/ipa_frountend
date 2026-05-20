@@ -207,9 +207,45 @@ export interface AgreementTermsSnapshot {
   totalAmount?: number | null;
 }
 
+/**
+ * Agreement lifecycle status (post-refactor).
+ *
+ * The agreement is the SOLE determiner of UI state. ProgramRequest.status is
+ * historical record only.
+ *
+ * - `Draft`     — reserved (not used in standard request approval flow)
+ * - `Approved`  — admin approved with all terms filled; awaiting signature + payment
+ * - `Valid`     — agreement is fully in force (signed=true AND payment linked)
+ * - `Suspended` — admin paused a Valid agreement
+ * - `Void`      — permanently cancelled
+ *
+ * Legacy values still present in older data until migration runs:
+ * - `Signed`    — equivalent to `Valid`
+ * - `PendingSignature` — equivalent to `Approved`
+ * - `Expired`   — collapsed into `Void`
+ */
+export type AgreementStatus =
+  | "Draft"
+  | "Approved"
+  | "Valid"
+  | "Suspended"
+  | "Void"
+  // legacy values – treated identically to their new equivalents during the
+  // migration window; UI code should map these on read
+  | "Signed"
+  | "PendingSignature"
+  | "Expired";
+
 export interface AgreementRecord extends AgreementTermsSnapshot {
   id: number;
   type: string;
+  /**
+   * True once the franchisee has applied a signature (either via the
+   * "Use existing signature" button or by uploading a new one). Independent
+   * of `status`: an agreement can be `signed=true, status=Approved` while
+   * awaiting payment, and only becomes `Valid` once payment is also linked.
+   */
+  signed?: boolean;
   dateOfSigning: string | null;
   franchiseId: string | null;
   franchiseeId: number | null;
@@ -351,6 +387,58 @@ export async function submitFranchiseeSignatureImage(
   return unwrapData<AgreementRecord>(response);
 }
 
+/**
+ * Sign without re-uploading: the backend reuses the franchisee's stored
+ * signature (`franchisee.franchiseeSignature`). Sends `useExisting=true` so
+ * the controller takes the "no upload required" branch.
+ */
+export async function submitFranchiseeSignatureWithStored(
+  agreementId: number,
+): Promise<AgreementRecord> {
+  const formData = new FormData();
+  formData.append("useExisting", "true");
+  const response = await api.post(`/agreement/${agreementId}/sign`, formData);
+  return unwrapData<AgreementRecord>(response);
+}
+
+// -----------------------------------------------------------------------------
+// Admin agreement lifecycle endpoints (post-refactor):
+//   - POST /admin/agreement/:id/suspend     Valid → Suspended
+//   - POST /admin/agreement/:id/reactivate  Suspended → Valid
+//   - POST /admin/agreement/:id/void        any non-terminal → Void
+// All three return the updated `AgreementRecord`.
+// -----------------------------------------------------------------------------
+
+export async function suspendAgreementAdmin(
+  agreementId: number,
+  reason?: string,
+): Promise<AgreementRecord> {
+  const response = await api.post(`/admin/agreement/${agreementId}/suspend`, {
+    reason,
+  });
+  return unwrapData<AgreementRecord>(response);
+}
+
+export async function reactivateAgreementAdmin(
+  agreementId: number,
+): Promise<AgreementRecord> {
+  const response = await api.post(
+    `/admin/agreement/${agreementId}/reactivate`,
+    {},
+  );
+  return unwrapData<AgreementRecord>(response);
+}
+
+export async function voidAgreementAdmin(
+  agreementId: number,
+  reason?: string,
+): Promise<AgreementRecord> {
+  const response = await api.post(`/admin/agreement/${agreementId}/void`, {
+    reason,
+  });
+  return unwrapData<AgreementRecord>(response);
+}
+
 
 const DEFAULT_API_PUBLIC_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5500";
@@ -365,6 +453,20 @@ function storedSignatureToPublicPath(
   const rel = s.replace(/^\/+/, "");
   if (!rel) return null;
   return `/uploads/${rel}`;
+}
+
+/**
+ * Resolve a renderable URL from a franchisee's `franchiseeSignature` field
+ * (raw stored path on the profile). Returns null when no signature exists.
+ */
+export function franchiseeProfileSignatureSrc(
+  storedPath: string | null | undefined,
+): string | null {
+  const path = storedSignatureToPublicPath(storedPath);
+  if (!path) return null;
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  const base = DEFAULT_API_PUBLIC_BASE.replace(/\/$/, "");
+  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 /** ipa-new: no schedule PDF endpoint yet — noop for type compatibility */
@@ -411,6 +513,57 @@ export async function downloadScheduleBPdfMine(
   agreementId: number,
 ): Promise<void> {
   await downloadScheduleBPdf(`/agreement/${agreementId}/schedule-b-pdf`);
+}
+
+/**
+ * Switcher row lifecycle status. Post-refactor, the agreement IS the
+ * lifecycle, so this is mostly a pass-through over `AgreementStatus`. The
+ * extra `"Pending"` value represents a Pending program request that doesn't
+ * yet have an agreement attached (admin hasn't acted).
+ */
+export type AgreementLifecycleStatus =
+  | "Pending"
+  | "Draft"
+  | "Approved"
+  | "Valid"
+  | "Suspended"
+  | "Void"
+  | "Rejected";
+
+/** One row in the agreement switcher feed (mirrors backend `AgreementSwitcherItem`). */
+export interface AgreementSwitcherItem {
+  kind: "agreement" | "request";
+  agreementId: number | null;
+  programRequestId: number | null;
+  franchiseId: string;
+  programId: number | null;
+  programName: string | null;
+  programCode: string | null;
+  agreementType: "NEW_FRANCHISE" | "NEW_PROGRAM" | "RENEWAL" | null;
+  lifecycleStatus: AgreementLifecycleStatus;
+  /** True once franchisee has signed (independent of `lifecycleStatus`). */
+  signed?: boolean;
+  title: string | null;
+  tenureMonths: number | null;
+  expiresAt: string | null;
+  signedAt: string | null;
+  createdAt: string | null;
+}
+
+/** GET /agreement/switcher — switcher feed for the active franchise. */
+export async function getAgreementSwitcherMine(): Promise<AgreementSwitcherItem[]> {
+  const response = await api.get("/agreement/switcher");
+  return unwrapData<AgreementSwitcherItem[]>(response);
+}
+
+/** GET /admin/agreement/franchise/:franchiseId/switcher — admin switcher feed. */
+export async function getAgreementSwitcherAdmin(
+  franchiseId: string,
+): Promise<AgreementSwitcherItem[]> {
+  const response = await api.get(
+    `/admin/agreement/franchise/${encodeURIComponent(franchiseId)}/switcher`,
+  );
+  return unwrapData<AgreementSwitcherItem[]>(response);
 }
 
 export function agreementSignatureSrc(

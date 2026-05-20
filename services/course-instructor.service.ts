@@ -235,6 +235,8 @@ export interface CourseInstructorPaginationParams {
   status?: string;
   sortBy?: string;
   sortOrder?: string;
+  /** Franchisee list: scope to the active agreement's program. Resolved server-side. */
+  agreementId?: number;
 }
 
 export interface PaginatedCourseInstructorsResponse {
@@ -288,6 +290,8 @@ export interface CourseInstructorListParams {
   sortOrder?: string;
   status?: string;
   franchiseId?: string;
+  /** Franchisee list: scope to the active agreement's program. Resolved server-side. */
+  agreementId?: number;
 }
 
 export async function getAllCourseInstructors(
@@ -603,7 +607,7 @@ export async function getPaginatedCourseInstructors(
 export async function getPaginatedFranchiseeCourseInstructors(
   params: CourseInstructorPaginationParams,
 ): Promise<PaginatedCourseInstructorsResponse> {
-  const all = await getAllCourseInstructors();
+  const all = await getAllCourseInstructors({ agreementId: params.agreementId });
   let rows = all.result ?? [];
   if (params.search) {
     const q = params.search.toLowerCase();

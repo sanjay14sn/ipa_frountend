@@ -21,6 +21,14 @@ interface UserContextType {
   loading: boolean;
   setUser: (user: User | ((prev: User | null) => User | null)) => void;
   switchFranchise: (franchiseId: string) => Promise<void>;
+  /**
+   * Switch the currently active program scope (agreementId) for the active
+   * franchise. Mirrors `switchFranchise`:
+   *   - Updates the persisted `user` blob in localStorage
+   *   - Invalidates program-scoped queries so dependent lists refetch
+   * Pass `null` to clear the selection (e.g. franchise was switched).
+   */
+  switchAgreement: (agreementId: number | null) => Promise<void>;
 }
 
 export const UserContext = createContext<UserContextType | null>(null);
@@ -122,6 +130,10 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         franchiseName: data.franchiseName,
         franchiseStatus: data.franchiseStatus,
         franchises: data.franchises,
+        // Program scope is franchise-specific — clear the previous selection
+        // on every franchise switch. The AgreementProvider auto-hydrates the
+        // newest agreement for the new franchise once its feed loads.
+        activeAgreementId: null,
         profile: fetchedProfile ?? prev.profile,
       };
     });
@@ -143,6 +155,40 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.franchiseeProfile() }),
     ]);
   };
+
+  /**
+   * Program-scope switch — pure client-side state change (no backend session
+   * call, unlike `switchFranchise`). Persists the new selection in the user
+   * blob and invalidates every program-scoped query so list pages refetch.
+   *
+   * This is the ONLY supported mechanism for changing the active program;
+   * the AgreementSwitcher delegates here so the user blob in localStorage
+   * always reflects the current selection.
+   */
+  const switchAgreement = useCallback(
+    async (agreementId: number | null) => {
+      setUserState((prev) => {
+        if (!prev) return prev;
+        if ((prev.activeAgreementId ?? null) === agreementId) return prev;
+        const next = { ...prev, activeAgreementId: agreementId };
+        if (typeof window !== "undefined") {
+          localStorage.setItem("user", JSON.stringify(next));
+        }
+        return next;
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["students"] }),
+        queryClient.invalidateQueries({ queryKey: ["course-instructors"] }),
+        queryClient.invalidateQueries({ queryKey: ["orders-franchisee"] }),
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["payments"] }),
+        queryClient.invalidateQueries({ queryKey: ["certification"] }),
+        queryClient.invalidateQueries({ queryKey: ["agreements"] }),
+        queryClient.invalidateQueries({ queryKey: ["program-requests"] }),
+      ]);
+    },
+    [queryClient],
+  );
 
   const profileQuery = useQuery({
     queryKey: queryKeys.auth.franchiseeProfile(user?.franchiseId),
@@ -191,11 +237,37 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           prev.profile?.franchise?.updatedAt === profile.franchise?.updatedAt;
         const sameStatus = prev.franchiseStatus === franchiseStatus;
         const sameName = prev.franchiseName === franchiseName;
+        // Also gate on franchiseeSignature: without this, a stale localStorage
+        // snapshot from before the signature was uploaded would survive the
+        // refresh, and downstream sheets keep prompting for re-upload.
+        const sameSignature =
+          (prev.profile?.franchiseeSignature ?? null) ===
+          (profile.franchiseeSignature ?? null);
+        // Also gate on the agreement-switcher feed: when admin approves a
+        // new program (or the franchisee signs/pays), `activePrograms`
+        // changes but `franchise.updatedAt` doesn't, and the skip path
+        // would silently keep stale state in localStorage — the switcher
+        // would never see the new program until logout/login.
+        const prevPrograms = prev.profile?.franchise?.activePrograms ?? [];
+        const nextPrograms = profile.franchise?.activePrograms ?? [];
+        const sameActivePrograms =
+          prevPrograms.length === nextPrograms.length &&
+          prevPrograms.every((row, i) => {
+            const other = nextPrograms[i];
+            if (!other) return false;
+            return (
+              row.id === other.id &&
+              row.status === other.status &&
+              row.signed === other.signed
+            );
+          });
         if (
           sameId &&
           sameFranchiseUpdated &&
           sameStatus &&
           sameName &&
+          sameSignature &&
+          sameActivePrograms &&
           prev.profile != null
         ) {
           return prev;
@@ -221,7 +293,13 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <UserContext.Provider
-      value={{ user, loading, setUser: setUserWithStorage, switchFranchise }}
+      value={{
+        user,
+        loading,
+        setUser: setUserWithStorage,
+        switchFranchise,
+        switchAgreement,
+      }}
     >
       {children}
     </UserContext.Provider>

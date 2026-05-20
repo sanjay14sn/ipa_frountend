@@ -50,7 +50,7 @@ const TRAINING_COURSE_INSTRUCTORS_KEY = queryKeys.courseInstructors.trainingList
 export function useCourseInstructors(
   listParams?: Pick<
     CourseInstructorListParams,
-    "search" | "page" | "limit" | "sortBy" | "sortOrder"
+    "search" | "page" | "limit" | "sortBy" | "sortOrder" | "agreementId"
   >,
   options?: { enabled?: boolean },
 ) {
@@ -65,6 +65,7 @@ export function useCourseInstructors(
         search: listParams?.search,
         sortBy: listParams?.sortBy,
         sortOrder: listParams?.sortOrder,
+        agreementId: listParams?.agreementId,
       })).result ?? [],
     placeholderData: (prev) => prev,
     enabled: options?.enabled ?? true,

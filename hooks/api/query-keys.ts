@@ -68,6 +68,12 @@ export const queryKeys = {
     admin: (params?: Record<string, unknown> | null) =>
       listQueryKey("agreements", { scope: "admin", ...params }),
     detail: (id: number) => ["agreements", "detail", id] as const,
+    /** Franchisee switcher feed, scoped by the active franchiseId. */
+    switcherMine: (franchiseId?: string | null) =>
+      ["agreements", "switcher", "mine", franchiseId ?? null] as const,
+    /** Admin switcher feed for a specific franchise. */
+    switcherAdmin: (franchiseId: string) =>
+      ["agreements", "switcher", "admin", franchiseId] as const,
   },
   orders: {
     /** Invalidate all franchisee order lists: `["orders-franchisee", "list"]`. */

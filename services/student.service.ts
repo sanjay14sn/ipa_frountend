@@ -639,6 +639,8 @@ export interface StudentPaginationParams {
   franchiseId?: string;
   levelId?: number;   // NEW
   idStatus?: string;  // NEW — "Not Issued" | "Requested" | "Issued"
+  /** Franchisee list: scope to the active agreement's program. Resolved server-side. */
+  agreementId?: number;
 }
 
 export type StudentLifecycleStatus =
@@ -698,6 +700,7 @@ export async function getPaginatedStudents(
       sortOrder: params.sortOrder,
       levelId: params.levelId,    // ADD
       idStatus: params.idStatus,  // ADD
+      agreementId: params.agreementId,
     } as Record<string, string | number | boolean | undefined | null>),
   });
   const result = unwrapData<unknown>(response);

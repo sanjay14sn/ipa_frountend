@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, CheckCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle, Loader2, PenLine, Upload } from "lucide-react";
 import { useUser } from "@/context/user-context";
 import {
   AgreementContent,
@@ -35,7 +35,10 @@ import {
 import {
   agreementSignatureSrc,
   downloadScheduleBPdfMine,
+  franchiseeProfileSignatureSrc,
   getReceivablePlanMine,
+  submitFranchiseeSignatureImage,
+  submitFranchiseeSignatureWithStored,
   type AgreementRecord,
   type ReceivableInstallmentSummary,
 } from "@/services/agreement.service";
@@ -89,6 +92,16 @@ function FranchiseAgreementContent() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const franchiseIdParam = searchParams.get("franchiseId");
+  // When set, the page renders for an explicit agreement (typically a
+  // NEW_PROGRAM picked via the header agreement switcher). When absent, the
+  // page behaves as the franchise onboarding flow — auto-picking the latest
+  // NEW_FRANCHISE agreement.
+  const agreementIdParamRaw = searchParams.get("agreementId");
+  const explicitAgreementId = agreementIdParamRaw
+    ? Number(agreementIdParamRaw)
+    : undefined;
+  const hasExplicitAgreementId =
+    explicitAgreementId != null && Number.isFinite(explicitAgreementId);
   const { user, setUser, switchFranchise } = useUser();
   const [currentStep, setCurrentStep] = useState<AgreementStepIndex>(1);
   const [pageLoading, setPageLoading] = useState(true);
@@ -112,6 +125,11 @@ function FranchiseAgreementContent() {
     null,
   );
   const [feeAgreementLoading, setFeeAgreementLoading] = useState(true);
+  // Step 3 signing controls — the action buttons live next to the footer Next
+  // button (see the JSX below). The hidden file input is owned here so the
+  // "Upload and sign" path can trigger it on click.
+  const [signing, setSigning] = useState(false);
+  const signatureInputRef = useRef<HTMLInputElement>(null);
   const [fullReceivablePlan, setFullReceivablePlan] =
     useState<ReceivableInstallmentSummary | null>(null);
   const [fullReceivablePlanLoading, setFullReceivablePlanLoading] =
@@ -122,6 +140,9 @@ function FranchiseAgreementContent() {
   const paymentSettledRef = useRef(false);
   const agreementsQuery = useAgreementsMine(undefined, undefined);
   const latestAgreementId = useMemo(() => {
+    // Explicit ?agreementId=<id> wins: that's the agreement the user landed
+    // here to sign/pay (typically a NEW_PROGRAM picked from the switcher).
+    if (hasExplicitAgreementId) return explicitAgreementId;
     if (!effectiveFranchiseId) return undefined;
     const matches = (agreementsQuery.data ?? []).filter(
       (agreement) =>
@@ -130,20 +151,39 @@ function FranchiseAgreementContent() {
     );
     if (matches.length === 0) return undefined;
     return matches.reduce((left, right) => (left.id > right.id ? left : right)).id;
-  }, [agreementsQuery.data, effectiveFranchiseId]);
+  }, [
+    agreementsQuery.data,
+    effectiveFranchiseId,
+    hasExplicitAgreementId,
+    explicitAgreementId,
+  ]);
   const agreementDetailQuery = useAgreementMine(latestAgreementId);
+  // True when the loaded agreement is a program-level (NEW_PROGRAM) one —
+  // completion semantics differ from franchise onboarding (no franchise
+  // activation expected; we just close and refresh program-scope queries).
+  const isProgramAgreement = feeAgreement?.type === "NEW_PROGRAM";
   const installmentSummary =
     fullReceivablePlan ??
     feeAgreement?.receivables?.installmentSummary ??
     feeAgreement?.receivables?.paymentSummary ??
     null;
 
+  // Step 4 (Payment) unlocks once `agreement.signed === true`. Post-refactor,
+  // signing flips the `signed` boolean while the agreement stays in `Approved`
+  // status until payment lands — so the legacy `agreementSignatureSrc(...)`
+  // check (which read the snapshotted signature URL on the agreement row)
+  // is no longer the right gate. Fall back to it for pre-refactor data that
+  // hasn't been migrated yet.
+  const isSigned = Boolean(
+    feeAgreement?.signed || (feeAgreement && agreementSignatureSrc(feeAgreement)),
+  );
+
   const getMaxReachableStep = useCallback((): AgreementStepIndex => {
     if (!agreementAccepted) return 2;
     if (feeAgreementLoading || !feeAgreement) return 3;
-    if (!agreementSignatureSrc(feeAgreement)) return 3;
+    if (!isSigned) return 3;
     return 4;
-  }, [agreementAccepted, feeAgreementLoading, feeAgreement]);
+  }, [agreementAccepted, feeAgreementLoading, feeAgreement, isSigned]);
 
   const canProceedFromStep = useCallback(
     (step: AgreementStepIndex): boolean => {
@@ -154,12 +194,12 @@ function FranchiseAgreementContent() {
           return agreementAccepted;
         case 3:
           if (feeAgreementLoading || !feeAgreement) return false;
-          return Boolean(agreementSignatureSrc(feeAgreement));
+          return isSigned;
         default:
           return true;
       }
     },
-    [agreementAccepted, feeAgreementLoading, feeAgreement],
+    [agreementAccepted, feeAgreementLoading, feeAgreement, isSigned],
   );
 
   const syncStepToUrl = useCallback(
@@ -252,7 +292,9 @@ function FranchiseAgreementContent() {
       return;
     }
 
-    if (franchiseStatus === "Active") {
+    // Active franchises can still need to sign a NEW_PROGRAM agreement — only
+    // redirect to the dashboard when the URL doesn't pin a specific agreement.
+    if (franchiseStatus === "Active" && !hasExplicitAgreementId) {
       router.push("/franchisee/dashboard");
       return;
     }
@@ -263,7 +305,39 @@ function FranchiseAgreementContent() {
         setPageLoading(false);
       });
     }
-  }, [franchiseIdParam, franchiseStatus, router, switchFranchise, user]);
+  }, [
+    franchiseIdParam,
+    franchiseStatus,
+    hasExplicitAgreementId,
+    router,
+    switchFranchise,
+    user,
+  ]);
+
+  // Bug 1 fix: when a specific agreementId is pinned and that agreement has
+  // already reached a terminal/active state (Valid, Suspended, Void) — or the
+  // legacy equivalents `Signed`/`Expired` from pre-refactor data — there's
+  // nothing for the franchisee to do here. Send them to the dashboard.
+  useEffect(() => {
+    if (!hasExplicitAgreementId) return;
+    if (feeAgreementLoading) return;
+    if (!feeAgreement) return;
+    const terminalOrActiveStatuses = new Set<string>([
+      "Valid",
+      "Signed", // legacy alias for Valid prior to status refactor
+      "Suspended",
+      "Void",
+      "Expired", // legacy alias collapsed into Void
+    ]);
+    if (terminalOrActiveStatuses.has(feeAgreement.status ?? "")) {
+      router.replace("/franchisee/dashboard");
+    }
+  }, [
+    feeAgreement,
+    feeAgreementLoading,
+    hasExplicitAgreementId,
+    router,
+  ]);
 
   useEffect(() => {
     setFullReceivablePlan(null);
@@ -308,7 +382,10 @@ function FranchiseAgreementContent() {
   }, [agreementContent, getMaxReachableStep, pageLoading, searchParams]);
 
   useEffect(() => {
-    if (user?.role === "admin" || franchiseStatus === "Active") return;
+    if (user?.role === "admin") return;
+    // Active franchises can still need to sign a NEW_PROGRAM agreement — only
+    // bail when there's no explicit agreementId pinning us here.
+    if (franchiseStatus === "Active" && !hasExplicitAgreementId) return;
 
     const effectiveFranchiseId = franchiseIdParam || user?.franchiseId;
 
@@ -341,10 +418,89 @@ function FranchiseAgreementContent() {
     } finally {
       setPageLoading(false);
     }
-  }, [feeAgreement, franchiseIdParam, franchiseStatus, switchFranchise, user]);
+  }, [
+    feeAgreement,
+    franchiseIdParam,
+    franchiseStatus,
+    hasExplicitAgreementId,
+    switchFranchise,
+    user,
+  ]);
 
   const handleCheckboxChange = (checked: boolean | "indeterminate") => {
     setAgreementAccepted(checked === true);
+  };
+
+  // -- Step 3 signing actions (rendered in the footer beside Next) ----------
+  // Plain functions — the file's convention. React Compiler memoizes for us.
+
+  /** Run the same query-invalidation set after either sign path. */
+  const invalidateAfterSign = async (agreementId: number) => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["agreements", "list"] }),
+      queryClient.invalidateQueries({ queryKey: ["agreements"] }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.agreements.detail(agreementId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["auth", "franchisee-profile"],
+      }),
+    ]);
+  };
+
+  /** Apply the on-file signature to this agreement — one POST, no upload. */
+  const handleSignWithStored = async () => {
+    if (!feeAgreement || signing) return;
+    setSigning(true);
+    try {
+      const updated = await submitFranchiseeSignatureWithStored(feeAgreement.id);
+      setFeeAgreement(updated);
+      await invalidateAfterSign(feeAgreement.id);
+      toast.success("Signature applied — proceed to payment");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Could not apply signature"));
+    } finally {
+      setSigning(false);
+    }
+  };
+
+  /** Picker entry point — actual upload happens in onSignatureFileChange. */
+  const triggerSignatureUpload = () => {
+    signatureInputRef.current?.click();
+  };
+
+  /**
+   * Upload + sign in one go. The backend persists the file to
+   * `franchisee.franchiseeSignature` AND flips `agreement.signed=true`, so the
+   * next time this franchisee signs anything they'll see the on-file branch.
+   */
+  const onSignatureFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !feeAgreement) return;
+    const MAX_BYTES = 5 * 1024 * 1024;
+    const ALLOWED = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    if (file.size > MAX_BYTES) {
+      toast.error("Signature image must be 5MB or smaller.");
+      return;
+    }
+    if (!ALLOWED.includes(file.type)) {
+      toast.error("Use a PNG, JPEG, or WebP image.");
+      return;
+    }
+    setSigning(true);
+    try {
+      const updated = await submitFranchiseeSignatureImage(feeAgreement.id, file);
+      setFeeAgreement(updated);
+      await invalidateAfterSign(feeAgreement.id);
+      toast.success("Signature saved — proceed to payment");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Could not upload signature"));
+    } finally {
+      setSigning(false);
+    }
   };
 
   const toggleSection = (sectionId: string) => {
@@ -390,7 +546,7 @@ function FranchiseAgreementContent() {
       return;
     }
 
-    if (!agreementSignatureSrc(feeAgreement)) {
+    if (!isSigned) {
       toast.error("Please sign the agreement before starting payment.");
       return;
     }
@@ -473,12 +629,32 @@ function FranchiseAgreementContent() {
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["agreements", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["agreements"] }),
+        queryClient.invalidateQueries({ queryKey: ["program-requests"] }),
+        // The switcher reads agreements from `profile.franchise.activePrograms`,
+        // so the profile MUST be refetched after payment — otherwise the
+        // freshly-activated program stays "Approved" in the switcher even
+        // though the backend flipped it to Valid.
+        queryClient.invalidateQueries({
+          queryKey: ["auth", "franchisee-profile"],
+        }),
         feeAgreement?.id
           ? queryClient.invalidateQueries({
               queryKey: queryKeys.agreements.detail(feeAgreement.id),
             })
           : Promise.resolve(),
       ]);
+
+      // For a NEW_PROGRAM agreement the franchise is already Active — there's
+      // no activation poll to do. Show the success card briefly, then route
+      // back to the dashboard. Franchise onboarding still polls below.
+      if (isProgramAgreement) {
+        setShowPaymentSuccess(true);
+        setTimeout(() => {
+          router.push("/franchisee/dashboard");
+        }, 2000);
+        return;
+      }
 
       const activated = await waitForActivation();
       if (!activated) {
@@ -609,13 +785,16 @@ function FranchiseAgreementContent() {
               </div>
             </div>
             <CardTitle className="text-2xl font-normal text-card-foreground">
-              Welcome to Abacus Family!
+              {isProgramAgreement
+                ? "Program activated!"
+                : "Welcome to Abacus Family!"}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-5 py-5">
             <p className="mb-4 text-sm text-muted-foreground">
-              Your agreement and payment are complete, and your franchise has been
-              activated. You now have full access to your franchise dashboard.
+              {isProgramAgreement
+                ? "Your program agreement is signed and the payment is verified. The program scope is now active for your franchise."
+                : "Your agreement and payment are complete, and your franchise has been activated. You now have full access to your franchise dashboard."}
             </p>
             <p className="text-sm text-muted-foreground">
               Redirecting to your dashboard in a few seconds...
@@ -632,8 +811,8 @@ function FranchiseAgreementContent() {
       ? "Loading your agreement record..."
       : !feeAgreement
         ? "Your agreement is still being prepared."
-        : !agreementSignatureSrc(feeAgreement)
-          ? "Please upload your signature before starting payment."
+        : !isSigned
+          ? "Please sign the agreement before starting payment."
           : null;
 
   return (
@@ -664,15 +843,16 @@ function FranchiseAgreementContent() {
           <div className="border-b border-border px-4 py-5 sm:px-5">
             <div className="mb-3">
               <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-                Franchisee onboarding
+                {isProgramAgreement ? "Program agreement" : "Franchisee onboarding"}
               </span>
             </div>
             <h1 className="text-2xl font-normal tracking-tight text-card-foreground">
-              Franchisee Agreement
+              {isProgramAgreement ? "Program Agreement" : "Franchisee Agreement"}
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Complete each step in order: review your details, accept the terms,
-              sign the agreement, then pay to activate your franchise.
+              {isProgramAgreement
+                ? "Complete each step in order: review the program terms, accept them, sign the agreement, then pay to activate this program."
+                : "Complete each step in order: review your details, accept the terms, sign the agreement, then pay to activate your franchise."}
             </p>
           </div>
 
@@ -737,13 +917,26 @@ function FranchiseAgreementContent() {
                   Your signature
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Upload your signature when the agreement reaches pending-signature
-                  status. Payment will unlock only after signing.
+                  {isSigned
+                    ? "Your signature is on this agreement. Continue to payment to activate."
+                    : franchiseeProfileSignatureSrc(
+                          user?.profile?.franchiseeSignature,
+                        )
+                      ? "Apply your on-file signature to this agreement, or upload a new one."
+                      : "Upload your signature to sign this agreement. Payment unlocks after signing."}
                 </p>
                 <FranchiseAgreementSignaturePanel
                   agreement={feeAgreement}
                   loading={feeAgreementLoading}
-                  onAgreementUpdated={setFeeAgreement}
+                />
+                {/* Hidden file input owned by the page so the footer's
+                    "Upload and sign" button can trigger it directly. */}
+                <input
+                  ref={signatureInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  className="hidden"
+                  onChange={onSignatureFileChange}
                 />
               </div>
             ) : null}
@@ -794,14 +987,63 @@ function FranchiseAgreementContent() {
               </Button>
 
               {currentStep < 4 ? (
-                <Button
-                  type="button"
-                  className="rounded-lg sm:order-2"
-                  onClick={goNext}
-                >
-                  Next
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+                <div className="flex flex-col gap-2 sm:order-2 sm:flex-row sm:items-center">
+                  {/*
+                    Step 3 sign action sits BESIDE Next (per UX spec). Which
+                    button shows is data-driven, mutually exclusive:
+                      - signed already → no sign button (Next is live)
+                      - has on-file signature → "Sign with this signature"
+                      - no on-file signature → "Upload and sign"
+                    The Next button stays visible throughout so the user has a
+                    consistent forward affordance; it goes live as soon as
+                    signing completes (isSigned flips true via setFeeAgreement).
+                  */}
+                  {currentStep === 3 &&
+                  !isSigned &&
+                  feeAgreement?.status === "Approved" ? (
+                    franchiseeProfileSignatureSrc(
+                      user?.profile?.franchiseeSignature,
+                    ) ? (
+                      <Button
+                        type="button"
+                        className="rounded-lg"
+                        onClick={() => void handleSignWithStored()}
+                        disabled={signing || feeAgreementLoading}
+                      >
+                        {signing ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <PenLine className="mr-2 h-4 w-4" />
+                        )}
+                        Sign
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        className="rounded-lg"
+                        onClick={triggerSignatureUpload}
+                        disabled={signing || feeAgreementLoading}
+                      >
+                        {signing ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Upload className="mr-2 h-4 w-4" />
+                        )}
+                        Upload and sign
+                      </Button>
+                    )
+                  ) : null}
+
+                  <Button
+                    type="button"
+                    className="rounded-lg"
+                    onClick={goNext}
+                    disabled={signing}
+                  >
+                    Next
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
               ) : null}
             </div>
           </div>

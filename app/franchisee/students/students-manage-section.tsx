@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useUser } from "@/context/user-context";
+import { useAgreementContext } from "@/context/agreement-context";
 import type { StudentData } from "@/services/student.service";
 import { StudentIdStatus } from "@/services/student.service";
 import {
@@ -25,6 +26,7 @@ import StudentsTable from "./components/StudentsTable";
 
 export function StudentsManageSection() {
   const { user } = useUser();
+  const { activeAgreementId } = useAgreementContext();
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -44,6 +46,7 @@ export function StudentsManageSection() {
     idStatus: idStatus === "all" || !idStatus ? undefined : idStatus,
     sortBy,
     sortOrder,
+    agreementId: activeAgreementId ?? undefined,
   });
 
   const [editStudent, setEditStudent] = useState<StudentData | null>(null);

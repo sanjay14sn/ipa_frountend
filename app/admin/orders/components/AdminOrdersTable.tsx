@@ -3,12 +3,13 @@
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Eye, ShieldCheck, X, Download, Loader2, RefreshCw } from "lucide-react";
+import { CreditCard, Eye, ShieldCheck, X, Download, Loader2, RefreshCw, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import {
   cancelOrderAdmin,
   markOrderPaidAdmin,
+  refreshOrderAllocationAdmin,
   type OrderData,
   type OrderItemData,
 } from "@/services/order.service";
@@ -176,6 +177,26 @@ export default function AdminOrdersTable({
     [ordersQuery],
   );
 
+  const handleRefreshAllocation = useCallback(
+    async (orderId: number) => {
+      try {
+        setBusyOrderId(orderId);
+        const result = await refreshOrderAllocationAdmin(orderId);
+        if (result.linesUpdated > 0) {
+          toast.success(result.message);
+        } else {
+          toast.info(result.message);
+        }
+        await ordersQuery.refetch();
+      } catch (error) {
+        toast.error(getUserFriendlyMessage(error));
+      } finally {
+        setBusyOrderId(null);
+      }
+    },
+    [ordersQuery],
+  );
+
   const filters: DataTableFilter[] = [
     {
       key: "status",
@@ -280,6 +301,11 @@ export default function AdminOrdersTable({
           const isReadyToShip =
             order.adminStatus === "Ready to ship" ||
             order.fulfillmentStatus === "READY_TO_SHIP";
+          const isBackordered =
+            order.allocationStatus === "BACKORDERED" ||
+            (order.lineItems ?? []).some(
+              (line) => (line.backorderedQty ?? 0) > 0,
+            );
           return (
             <div className="flex items-center justify-end gap-1">
               <Button
@@ -291,6 +317,22 @@ export default function AdminOrdersTable({
               >
                 <Eye className="h-4 w-4" />
               </Button>
+              {isBackordered && !isFinal ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 p-0"
+                  title="Refresh allocation (reconcile backordered items against current inventory)"
+                  disabled={busyOrderId === order.id}
+                  onClick={() => void handleRefreshAllocation(order.id)}
+                >
+                  {busyOrderId === order.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RotateCw className="h-4 w-4" />
+                  )}
+                </Button>
+              ) : null}
               {order.paymentStatus === "PENDING" ? (
                 <Button
                   variant="ghost"
@@ -359,7 +401,7 @@ export default function AdminOrdersTable({
         },
       },
     ],
-    [busyOrderId, handleMarkPaid, handleOpenCancelDialog, handleRegenerateDc, setVerifyDialogOrderId],
+    [busyOrderId, handleMarkPaid, handleOpenCancelDialog, handleRegenerateDc, handleRefreshAllocation, setVerifyDialogOrderId],
   );
 
   return (

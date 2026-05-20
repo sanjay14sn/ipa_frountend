@@ -161,7 +161,10 @@ export function buildFranchiseDataForAgreementPage(
     throw new Error("Missing franchise on profile");
   }
 
-  const programName = programNameForAgreement(profile, feeAgreement?.programId);
+  const programName =
+    feeAgreement?.program?.name ??
+    feeAgreement?.programName ??
+    programNameForAgreement(profile, feeAgreement?.programId);
   const fromAgreement = agreementToPaymentBreakdownRows(feeAgreement, programName);
   const paymentDetails =
     fromAgreement ??

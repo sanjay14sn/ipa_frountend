@@ -47,6 +47,8 @@ const friendlyMessages: Record<string, string> = {
   INVALID_ORDER_STATUS: "This order cannot be moved to the requested status.",
   INVALID_STATE: "This item cannot be changed from its current state.",
   CONFLICT: "This action conflicts with an existing record.",
+  PROGRAM_REQUEST_EXISTS: "You already have a pending or active request for this program. Please wait for it to be reviewed.",
+  PROGRAM_AGREEMENT_EXISTS: "This program is already active for your franchise — no new request is needed.",
   PAYMENT_REQUIRED: "Payment is required before this action can continue.",
 };
 

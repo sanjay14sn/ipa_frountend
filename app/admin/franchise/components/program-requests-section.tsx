@@ -59,6 +59,18 @@ export function ProgramRequestsSection() {
 
   const handleSubmit = async () => {
     if (!selectedRequest) return;
+    // Mirror the franchise approval validation: installment plans require a
+    // positive installmentMonths so the backend can build the receivable
+    // template. Catch this client-side for a friendlier error.
+    if (program.installment) {
+      const months = Number(program.installmentMonths) || 0;
+      if (months < 1) {
+        toast.error(
+          "Enter a positive Installment Months value before approving an installment plan",
+        );
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       await approveProgramRequestAdmin(selectedRequest.id, {
@@ -72,6 +84,12 @@ export function ProgramRequestsSection() {
           franchiseShare: Number(program.franchiseShare) || 0,
           royalty: Number(program.royalty) || 0,
           installment: program.installment,
+          installmentMonths: program.installment
+            ? Number(program.installmentMonths) || undefined
+            : undefined,
+          downPaymentAmount: program.installment
+            ? Number(program.downPaymentAmount) || 0
+            : undefined,
           tenure: Number(program.tenure) || 36,
           totalAmount: 0,
           gstFranchiseFee: program.gstFranchiseFee,

@@ -11,6 +11,10 @@ export interface ProgramRequestPayroll {
   franchiseShare: number;
   royalty: number;
   installment: boolean;
+  /** Required when `installment` is true. Number of monthly installments after the optional down payment. */
+  installmentMonths?: number;
+  /** Optional down payment collected up-front before installments begin. */
+  downPaymentAmount?: number | null;
   tenure?: number;
   totalAmount: number;
   gstFranchiseFee: boolean;
@@ -26,12 +30,21 @@ export interface ApproveProgramRequestPayload {
   kitItems?: { inventoryId: number; quantity: number }[];
 }
 
+/**
+ * Program request status. Post-refactor collapsed to 3 values:
+ *   - `Pending`  awaiting admin decision
+ *   - `Approved` admin approved (an Agreement was spawned in the same tx)
+ *   - `Rejected` admin rejected (no Agreement created)
+ *
+ */
+export type ProgramRequestStatus = 'Pending' | 'Approved' | 'Rejected';
+
 export interface ProgramRequestItem {
   id: number;
   franchiseId: string;
   programId: number;
   franchiseeId: number;
-  status: 'Requested' | 'TermsSet' | 'PendingSignature' | 'Active' | 'Rejected' | 'Cancelled';
+  status: ProgramRequestStatus;
   agreementId: number | null;
   requestedAt: string;
   approvedAt: string | null;

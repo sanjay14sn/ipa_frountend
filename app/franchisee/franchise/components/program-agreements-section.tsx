@@ -22,8 +22,8 @@ export function ProgramAgreementsSection() {
         </CardHeader>
         <CardContent className="text-center">
           <p className="text-gray-600 text-sm">
-            Program agreements with status "PendingSignature" can now be signed
-            directly from the <strong>Programs</strong> tab using the Sign button.
+            Approved program requests can now be signed and paid for directly
+            from the <strong>Programs</strong> tab using the Sign &amp; Pay button.
           </p>
         </CardContent>
       </Card>

@@ -314,6 +314,8 @@ export interface FranchiseeOrderListParams {
   status?: string;
   orderType?: string;
   paymentStatus?: string;
+  /** Franchisee list: scope to the active agreement's program. Resolved server-side. */
+  agreementId?: number;
 }
 
 export interface AdminOrderListParams {
@@ -788,6 +790,21 @@ export async function cancelOrderAdmin(
     refund: options?.refund === true,
   });
   return getOrderByIdAdmin(orderId);
+}
+
+export interface RefreshOrderAllocationResult {
+  orderId: number;
+  allocationStatus: OrderAllocationStatus | string;
+  linesUpdated: number;
+  totalReservedDelta: number;
+  message: string;
+}
+
+export async function refreshOrderAllocationAdmin(
+  orderId: number,
+): Promise<RefreshOrderAllocationResult> {
+  const response = await api.post(`/admin/order/${orderId}/refresh-allocation`);
+  return unwrapData<RefreshOrderAllocationResult>(response);
 }
 
 export function getDcPdfUrl(dcPdfPath: string): string {

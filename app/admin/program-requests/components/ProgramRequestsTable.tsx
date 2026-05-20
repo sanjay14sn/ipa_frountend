@@ -76,7 +76,9 @@ export default function ProgramRequestsTable({
 
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Requested");
+  // Post-refactor program-request lifecycle is Pending → Approved | Rejected.
+  // Default the filter to Pending so the admin sees actionable rows first.
+  const [statusFilter, setStatusFilter] = useState("Pending");
   const [sortBy, setSortBy] = useState("requestedAt");
   const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC");
   const itemsPerPage = 10;
@@ -182,7 +184,7 @@ export default function ProgramRequestsTable({
       className: "text-center",
       render: (r) => (
         <div className="flex items-center justify-center gap-1">
-          {r.status === "Requested" && (
+          {r.status === "Pending" && (
             <>
               <Button
                 variant="ghost"
@@ -214,14 +216,11 @@ export default function ProgramRequestsTable({
       label: "Status",
       options: [
         { value: "all", label: "All statuses" },
-        { value: "Requested", label: "Requested" },
-        { value: "TermsSet", label: "Terms Set" },
-        { value: "PendingSignature", label: "Pending Signature" },
-        { value: "Active", label: "Active" },
+        { value: "Pending", label: "Pending" },
+        { value: "Approved", label: "Approved" },
         { value: "Rejected", label: "Rejected" },
-        { value: "Cancelled", label: "Cancelled" },
       ],
-      defaultValue: "Requested",
+      defaultValue: "Pending",
     },
   ];
 

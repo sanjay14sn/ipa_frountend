@@ -65,7 +65,8 @@ function wantsStudentPagination(params?: StudentPaginationParams): boolean {
     (params.search != null && params.search !== "") ||
     (params.status != null && params.status !== "") ||
     params.sortBy != null ||
-    params.sortOrder != null
+    params.sortOrder != null ||
+    params.agreementId != null
   );
 }
 

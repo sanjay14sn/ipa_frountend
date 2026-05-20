@@ -108,7 +108,7 @@ export default function ProgramRequestDetails({
               />
               <DetailField
                 label="Current request state"
-                value={request.status ?? "Requested"}
+                value={request.status ?? "Pending"}
               />
             </DetailFieldsGrid>
           </DetailCard>

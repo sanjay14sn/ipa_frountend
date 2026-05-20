@@ -7,6 +7,14 @@ export interface User {
   franchiseId?: string;
   franchiseName?: string;
   franchiseStatus?: string;
+  /**
+   * Currently selected program scope inside the active franchise. Mirrors the
+   * franchise-selection model: persisted in the localStorage `user` blob,
+   * mutated ONLY through the program switcher (`UserContext.switchAgreement`).
+   * Null means "no program selected yet" — the AgreementProvider auto-picks
+   * the newest agreement for the franchise the first time it's loaded.
+   */
+  activeAgreementId?: number | null;
   mail?: string;
   phone?: string;
   adminRole?: "super" | "staff";
@@ -27,6 +35,8 @@ export interface User {
     education: string;
     occupation: string;
     reference: string;
+    /** Raw stored signature path on the franchisee row (relative to /uploads). */
+    franchiseeSignature?: string | null;
     franchise?: {
       id: string;
       name: string;
@@ -44,6 +54,31 @@ export interface User {
         programName?: string | null;
         program?: { id?: number; name?: string } | null;
       }>;
+      /**
+       * All non-terminal agreements (Valid + Approved) for this franchise.
+       * Post-refactor the agreement switcher is sourced from here instead
+       * of a dedicated endpoint — one round-trip via the profile fetch.
+       */
+      activePrograms?: Array<{
+        id: number;
+        type: string;
+        status: string;
+        signed: boolean;
+        franchiseId: string;
+        franchiseeId: number;
+        programId: number | null;
+        title: string | null;
+        tenure: number | null;
+        expiresAt: string | null;
+        franchiseeSignedAt: string | null;
+        createdAt: string;
+        program?: { id: number; name: string } | null;
+      }>;
+      operationalStanding?: {
+        standing: string | null;
+        holdReason: string | null;
+        restrictedToPaymentPortal: boolean;
+      };
       franchisePayroll?: {
         franchiseFee: number;
         dateOfPayment: string;
