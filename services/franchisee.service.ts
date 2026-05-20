@@ -313,13 +313,127 @@ export async function applyFranchisee(application: FranchiseeApplication) {
   return response;
 }
 
-/** Not available in ipa-new — use franchise onboarding flow in admin UI. */
+/* ============================================================
+   Admin one-shot "Setup Existing Franchise"
+   Backed by POST /admin/franchise/setup-existing in ipa-new.
+   ============================================================ */
+
+export type PaymentMode =
+  | "cash"
+  | "upi"
+  | "bank-transfer"
+  | "razorpay"
+  | "cheque"
+  | "other";
+
+export interface SetupPriorPaymentMatch {
+  kind: "down-payment" | "installment" | "agreement-fee";
+  sequenceNumber?: number;
+}
+
+export interface SetupPriorPayment {
+  amount: number;
+  paidAt: string; // ISO date
+  mode: PaymentMode;
+  reference?: string;
+  matches: SetupPriorPaymentMatch;
+}
+
+export interface SetupProgramTerms {
+  franchiseFee: number;
+  kitCost: number;
+  materialCost: number;
+  monthlyFee: number;
+  ciShare: number;
+  franchiseShare: number;
+  royalty: number;
+  totalAmount: number;
+  gstFranchiseFee: boolean;
+  gstRoyalty: boolean;
+  gstMaterialCost: boolean;
+  tenure: number;
+}
+
+export interface SetupProgram {
+  programId: number;
+  terms: SetupProgramTerms;
+  signedAt?: string;
+  installmentEnabled: boolean;
+  /** Present when installmentEnabled === false. */
+  lumpSum?: { enabled: false; lumpSumPayment?: SetupPriorPayment };
+  /** Present when installmentEnabled === true. */
+  emi?: {
+    enabled: true;
+    downPaymentAmount: number;
+    installmentMonths: number;
+    priorPayments: SetupPriorPayment[];
+  };
+}
+
+export interface SetupExistingFranchisePayload {
+  franchisee:
+    | { mode: "existing"; franchiseeId: number }
+    | {
+        mode: "new";
+        newFranchisee: {
+          name: string;
+          dob: string;
+          bloodGroup?: string;
+          communicationAddress: string;
+          city: string;
+          state: string;
+          pincode: string;
+          phone: string;
+          email: string;
+          education?: string;
+          occupation?: string;
+          reference?: string;
+        };
+      };
+  franchise: {
+    name: string;
+    type: string;
+    city: string;
+    state: string;
+    address?: string;
+    pincode?: string;
+  };
+  programs: SetupProgram[];
+}
+
+export interface SetupExistingFranchiseResponse {
+  franchiseeId: number;
+  franchiseId: string;
+  agreementIds: number[];
+  receivablePlanIds: number[];
+}
+
+/** Admin one-shot: create franchise + agreements + EMI + prior payments. */
+export async function setupExistingFranchise(
+  payload: SetupExistingFranchisePayload,
+): Promise<SetupExistingFranchiseResponse> {
+  const response = await api.post("/admin/franchise-setup/existing", payload);
+  return unwrapData<SetupExistingFranchiseResponse>(response);
+}
+
+/**
+ * Legacy entry point preserved for the existing CreateFranchiseDialog.
+ * Maps the old single-step "create + then set payroll" call shape onto the
+ * new one-shot endpoint by composing a SetupExistingFranchisePayload from
+ * the franchisee + franchise inputs. Per-program terms are NOT included
+ * here — callers should call `setupExistingFranchise` directly.
+ */
 export async function createFranchiseeByAdmin(
-  _franchisee: FranchiseeApplication,
+  application: FranchiseeApplication,
 ): Promise<{
   result: { franchise: FranchiseResponse; franchisee: FranchiseeResponse };
 }> {
-  throw new Error("createFranchiseeByAdmin is not supported in ipa-new");
+  throw new Error(
+    "createFranchiseeByAdmin is deprecated — call setupExistingFranchise() with full payload (franchisee + franchise + per-program terms).",
+  );
+  // Intentionally throws: callers should migrate to setupExistingFranchise.
+  // Keeping the symbol so existing imports don't break at compile time.
+  void application;
 }
 
 /** Admin: pending applications only (used by dashboard cards). */
@@ -422,6 +536,20 @@ export async function getFranchiseStartingKits(
   );
   const data = unwrapData<unknown>(response);
   return Array.isArray(data) ? (data as FranchiseStartingKitRow[]) : [];
+}
+
+/** Lightweight type used for dropdown pickers. */
+export interface FranchiseeOption {
+  id: number;
+  name: string;
+  mail: string;
+}
+
+/** Fetch all franchisees (id + name + email only) for dropdown pickers. */
+export async function listAllFranchisees(): Promise<FranchiseeOption[]> {
+  const response = await api.get("/admin/franchise-setup/franchisees");
+  const rows = unwrapData<{ id: number; name: string; email: string }[]>(response);
+  return rows.map((r) => ({ id: r.id, name: r.name, mail: r.email }));
 }
 
 /** Admin: franchisees with nested franchises and agreements (ipa-new). */

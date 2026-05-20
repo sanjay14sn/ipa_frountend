@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,20 +21,39 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   FranchiseType,
   FranchiseStatus,
   BloodGroup,
 } from "@/services/franchise.enums";
 import { StateCitySelect } from "@/components/StateCitySelect";
 import { Program } from "@/services/program.service";
-import { Eye, EyeOff, ArrowRight, CheckCircle, UserPlus } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  ArrowRight,
+  CheckCircle,
+  UserPlus,
+  IndianRupee,
+  Percent,
+  CreditCard,
+} from "lucide-react";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/error-utils";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 import {
-  createFranchiseeByAdmin,
-  createPayrollDetails,
-  type ProgramPayrollRequest,
+  setupExistingFranchise,
+  listAllFranchisees,
+  type SetupExistingFranchisePayload,
+  type SetupPriorPayment,
+  type SetupProgram,
+  type PaymentMode,
+  type FranchiseeOption,
 } from "@/services/franchisee.service";
 import { Checkbox } from "@/components/ui/checkbox";
 import React from "react";
@@ -64,10 +83,10 @@ const Stepper = ({
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-all duration-200 ${
                   currentStep === step.id
-                    ? "bg-green-600 text-white border-green-600 shadow-md"
+                    ? "bg-primary text-primary-foreground border-primary shadow-md"
                     : currentStep > step.id
-                      ? "bg-green-600 text-white border-green-600"
-                      : "bg-white text-gray-400 border-gray-300"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border"
                 }`}
               >
                 {currentStep > step.id ? "✓" : step.id}
@@ -75,7 +94,9 @@ const Stepper = ({
               <div className="mt-2 text-center max-w-[80px]">
                 <p
                   className={`text-xs font-medium leading-tight ${
-                    currentStep >= step.id ? "text-gray-900" : "text-gray-400"
+                    currentStep >= step.id
+                      ? "text-card-foreground"
+                      : "text-muted-foreground"
                   }`}
                 >
                   {step.title}
@@ -86,7 +107,7 @@ const Stepper = ({
               <div className="flex items-center justify-center flex-1 max-w-[60px] px-2">
                 <div
                   className={`h-0.5 w-full transition-all duration-200 ${
-                    currentStep > step.id ? "bg-green-600" : "bg-gray-300"
+                    currentStep > step.id ? "bg-primary" : "bg-border"
                   }`}
                 />
               </div>
@@ -105,6 +126,15 @@ interface CreateFranchiseDialogProps {
   onSuccess: () => void;
 }
 
+interface PriorPaymentRow {
+  amount: number;
+  paidAt: string;
+  mode: PaymentMode;
+  reference: string;
+  matchKind: "down-payment" | "installment" | "agreement-fee";
+  matchSequence: number;
+}
+
 interface ProgramPayroll {
   programId: number;
   franchiseFee: number;
@@ -114,12 +144,18 @@ interface ProgramPayroll {
   ciShare: number;
   franchiseShare: number;
   royalty: number;
+  /** Number of EMI installments. 0 means lump-sum (no EMI). */
   installment: number;
   totalAmount: number;
   gstFranchiseFee: boolean;
   gstRoyalty: boolean;
   gstMaterialCost: boolean;
   freeload: boolean;
+  /** EMI configuration (when installment > 0). */
+  downPayment: number;
+  priorPayments: PriorPaymentRow[];
+  /** Lump-sum optional single payment (when installment === 0). */
+  lumpSumPayment: PriorPaymentRow | null;
 }
 
 export function CreateFranchiseDialog({
@@ -134,6 +170,13 @@ export function CreateFranchiseDialog({
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const [franchiseeMode, setFranchiseeMode] = useState<"new" | "existing">(
+    "new",
+  );
+  const [existingFranchiseeId, setExistingFranchiseeId] = useState<string>("");
+  const [franchiseeOptions, setFranchiseeOptions] = useState<FranchiseeOption[]>([]);
+  const [franchiseeOptionsLoading, setFranchiseeOptionsLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -160,11 +203,30 @@ export function CreateFranchiseDialog({
     Record<number, ProgramPayroll>
   >({});
 
+  // Load franchisees for the picker the first time the user switches to "existing" mode.
+  useEffect(() => {
+    if (franchiseeMode !== "existing" || franchiseeOptions.length > 0) return;
+    setFranchiseeOptionsLoading(true);
+    listAllFranchisees()
+      .then(setFranchiseeOptions)
+      .catch(() => {/* silently ignore; user can still type search */})
+      .finally(() => setFranchiseeOptionsLoading(false));
+  }, [franchiseeMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const validateCurrentStep = () => {
     const newErrors: Record<string, string> = {};
 
     switch (currentStep) {
       case 1: // Personal Info
+        if (franchiseeMode === "existing") {
+          if (!existingFranchiseeId.trim() || Number.isNaN(Number(existingFranchiseeId))) {
+            newErrors.existingFranchiseeId =
+              "Please select a franchisee from the dropdown";
+          }
+          if (!formData.state.trim()) newErrors.city = "State is required";
+          else if (!formData.city.trim()) newErrors.city = "City is required";
+          break;
+        }
         if (!formData.name.trim()) newErrors.name = "Name is required";
         if (!formData.email.trim()) {
           newErrors.email = "Email is required";
@@ -195,15 +257,10 @@ export function CreateFranchiseDialog({
       case 3: // Payroll - no validation needed, defaults are OK
         break;
 
-      case 4: // Security
-        if (!formData.password) {
-          newErrors.password = "Password is required";
-        } else if (formData.password.length < 8) {
-          newErrors.password = "Password must be at least 8 characters";
-        }
-        if (formData.password !== formData.confirmPassword) {
-          newErrors.confirmPassword = "Passwords do not match";
-        }
+      case 4: // Security (only for new franchisee; password is auto-emailed)
+        if (franchiseeMode === "existing") break;
+        // Password field is informational only — backend auto-generates and
+        // emails the credentials. Skip strict validation.
         break;
     }
 
@@ -256,6 +313,9 @@ export function CreateFranchiseDialog({
           gstRoyalty: false,
           gstMaterialCost: false,
           freeload: false,
+          downPayment: 0,
+          priorPayments: [],
+          lumpSumPayment: null,
         },
       });
     }
@@ -284,59 +344,90 @@ export function CreateFranchiseDialog({
 
     setLoading(true);
     try {
-      const response = await createFranchiseeByAdmin({
-        franchisee: {
-          name: formData.name,
-          mail: formData.email,
-          phone: formData.phone,
-          dob: new Date(formData.dob),
-          bloodGroup: formData.bloodGroup,
-          communicationAddress: formData.communicationAddress,
-          city: formData.city,
-          state: formData.state,
-          pincode: formData.pincode,
-          education: formData.education,
-          occupation: formData.occupation,
-          reference: formData.reference,
-          refreshToken: "",
-          password: formData.password,
+      const programs: SetupProgram[] = formData.selectedPrograms.map(
+        (programId) => {
+          const p = programPayrolls[programId];
+          const installmentEnabled = Number(p.installment) > 0;
+          const base: SetupProgram = {
+            programId: p.programId,
+            terms: {
+              franchiseFee: Number(p.franchiseFee) || 0,
+              kitCost: Number(p.kitCost) || 0,
+              materialCost: Number(p.materialCost) || 0,
+              monthlyFee: Number(p.monthlyFee) || 0,
+              ciShare: Number(p.ciShare) || 0,
+              franchiseShare: Number(p.franchiseShare) || 0,
+              royalty: Number(p.royalty) || 0,
+              totalAmount: Number(p.totalAmount) || 0,
+              gstFranchiseFee: !!p.gstFranchiseFee,
+              gstRoyalty: !!p.gstRoyalty,
+              gstMaterialCost: !!p.gstMaterialCost,
+              tenure: 12,
+            },
+            installmentEnabled,
+          };
+
+          if (installmentEnabled) {
+            base.emi = {
+              enabled: true,
+              downPaymentAmount: Number(p.downPayment) || 0,
+              installmentMonths: Number(p.installment),
+              priorPayments: p.priorPayments.map((row) =>
+                priorRowToPayload(row),
+              ),
+            };
+          } else {
+            base.lumpSum = {
+              enabled: false,
+              lumpSumPayment: p.lumpSumPayment
+                ? priorRowToPayload({
+                    ...p.lumpSumPayment,
+                    matchKind: "agreement-fee",
+                  })
+                : undefined,
+            };
+          }
+
+          return base;
         },
+      );
+
+      const payload: SetupExistingFranchisePayload = {
+        franchisee:
+          franchiseeMode === "existing"
+            ? {
+                mode: "existing",
+                franchiseeId: Number(existingFranchiseeId),
+              }
+            : {
+                mode: "new",
+                newFranchisee: {
+                  name: formData.name,
+                  dob: formData.dob,
+                  bloodGroup: formData.bloodGroup,
+                  communicationAddress: formData.communicationAddress,
+                  city: formData.city,
+                  state: formData.state,
+                  pincode: formData.pincode,
+                  phone: formData.phone,
+                  email: formData.email,
+                  education: formData.education || undefined,
+                  occupation: formData.occupation || undefined,
+                  reference: formData.reference || undefined,
+                },
+              },
         franchise: {
           name: formData.franchiseName,
           type: formData.franchiseType,
-          status: FranchiseStatus.ACTIVE,
-          address: formData.franchiseAddress,
           city: formData.city,
           state: formData.state,
-          programIds: formData.selectedPrograms,
-          franchiseeId: 0,
+          address: formData.franchiseAddress || undefined,
+          pincode: formData.pincode || undefined,
         },
-      });
+        programs,
+      };
 
-      const franchiseId = response.result.franchise.id;
-      const payrollRequests: ProgramPayrollRequest[] =
-        formData.selectedPrograms.map((programId) => {
-          const p = programPayrolls[programId];
-          return {
-            programId: p.programId,
-            franchiseFee: Number(p.franchiseFee) || 0,
-            kitCost: Number(p.kitCost) || 0,
-            materialCost: Number(p.materialCost) || 0,
-            monthlyFee: Number(p.monthlyFee) || 0,
-            ciShare: Number(p.ciShare) || 0,
-            franchiseShare: Number(p.franchiseShare) || 0,
-            royalty: Number(p.royalty) || 0,
-            gstFranchiseFee: !!p.gstFranchiseFee,
-            gstRoyalty: !!p.gstRoyalty,
-            gstMaterialCost: !!p.gstMaterialCost,
-            installment: Boolean(Number(p.installment) > 0),
-            tenure: 12,
-          };
-        });
-
-      await createPayrollDetails(franchiseId, {
-        programPayrolls: payrollRequests,
-      });
+      await setupExistingFranchise(payload);
 
       setSubmitted(true);
       setTimeout(() => {
@@ -350,6 +441,22 @@ export function CreateFranchiseDialog({
       setLoading(false);
     }
   };
+
+  function priorRowToPayload(row: PriorPaymentRow): SetupPriorPayment {
+    return {
+      amount: Number(row.amount) || 0,
+      paidAt: row.paidAt,
+      mode: row.mode,
+      reference: row.reference || undefined,
+      matches:
+        row.matchKind === "installment"
+          ? {
+              kind: "installment",
+              sequenceNumber: Number(row.matchSequence) || 1,
+            }
+          : { kind: row.matchKind },
+    };
+  }
 
   const handleClose = () => {
     setCurrentStep(1);
@@ -377,6 +484,9 @@ export function CreateFranchiseDialog({
     setErrors({});
     setSubmitted(false);
     setLoading(false);
+    setFranchiseeMode("new");
+    setExistingFranchiseeId("");
+    setFranchiseeOptions([]);
     onOpenChange(false);
   };
 
@@ -393,6 +503,78 @@ export function CreateFranchiseDialog({
       case 1: // Personal Info
         return (
           <div className="space-y-4">
+            <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+              <Switch
+                id="franchiseeMode"
+                checked={franchiseeMode === "existing"}
+                onCheckedChange={(checked) =>
+                  setFranchiseeMode(checked ? "existing" : "new")
+                }
+              />
+              <Label htmlFor="franchiseeMode" className="text-sm text-card-foreground">
+                Attach to existing franchisee (skip creating a new one)
+              </Label>
+            </div>
+            {franchiseeMode === "existing" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="existingFranchiseeId">
+                    Existing Franchisee *
+                  </Label>
+                  <Select
+                    value={existingFranchiseeId}
+                    onValueChange={(value) => {
+                      setExistingFranchiseeId(value);
+                      if (errors.existingFranchiseeId)
+                        setErrors({ ...errors, existingFranchiseeId: "" });
+                    }}
+                  >
+                    <SelectTrigger
+                      className={
+                        errors.existingFranchiseeId ? "border-red-500" : ""
+                      }
+                    >
+                      <SelectValue
+                        placeholder={
+                          franchiseeOptionsLoading
+                            ? "Loading…"
+                            : "Select franchisee"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {franchiseeOptions.map((f) => (
+                        <SelectItem key={f.id} value={String(f.id)}>
+                          {f.name} ({f.mail})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.existingFranchiseeId && (
+                    <p className="text-red-500 text-sm">
+                      {errors.existingFranchiseeId}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <StateCitySelect
+                    stateValue={formData.state}
+                    value={formData.city}
+                    onStateChange={(state) => {
+                      setFormData({ ...formData, state, city: "" });
+                      if (errors.city) setErrors({ ...errors, city: "" });
+                    }}
+                    onChange={(city: string) => {
+                      setFormData({ ...formData, city });
+                      if (errors.city) setErrors({ ...errors, city: "" });
+                    }}
+                    error={errors.city}
+                  />
+                </div>
+              </div>
+            )}
+            {franchiseeMode === "new" && (
+            <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name *</Label>
@@ -569,6 +751,8 @@ export function CreateFranchiseDialog({
                 }
               />
             </div>
+            </>
+            )}
           </div>
         );
 
@@ -644,7 +828,7 @@ export function CreateFranchiseDialog({
               <Label>Programs * (Select one or more)</Label>
               <div
                 className={`border rounded-md p-4 space-y-3 ${
-                  errors.selectedPrograms ? "border-red-500" : "border-gray-200"
+                  errors.selectedPrograms ? "border-red-500" : "border-border"
                 }`}
               >
                 {programs.map((program) => (
@@ -675,330 +859,398 @@ export function CreateFranchiseDialog({
       case 3: // Payroll Setup
         return (
           <div className="space-y-4">
+            <h3 className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+              <IndianRupee className="h-4 w-4" />
+              Selected program agreement terms
+            </h3>
             {formData.selectedPrograms.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
-                Please select programs in the previous step
+              <p className="rounded-xl border border-dashed border-border bg-accent/20 px-4 py-10 text-center text-sm text-muted-foreground">
+                Please select programs in the previous step.
               </p>
             ) : (
               formData.selectedPrograms.map((programId) => {
                 const program = programs.find((p) => p.id === programId);
                 const payroll = programPayrolls[programId];
+                const installmentEnabled = Number(payroll?.installment ?? 0) > 0;
 
                 return (
-                  <div
+                  <Card
                     key={programId}
-                    className="border rounded-lg p-4 space-y-3 bg-gray-50"
+                    className="overflow-hidden rounded-xl border-border shadow-sm"
                   >
-                    <h4 className="font-medium text-sm text-gray-800">
-                      {program?.name}
-                    </h4>
+                    <CardHeader className="border-b border-border bg-accent/30 px-4 py-4">
+                      <CardTitle className="text-base font-medium text-card-foreground">
+                        {program?.name}
+                      </CardTitle>
+                      <p className="mt-1 text-sm font-normal text-muted-foreground">
+                        Fixed agreement terms and recorded payments for this program.
+                      </p>
+                    </CardHeader>
 
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Label className="text-xs">Franchise Fee (₹)</Label>
-                          <label className="flex items-center gap-1 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={payroll?.gstFranchiseFee || false}
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        {/* Franchise Fee */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-sm font-medium text-card-foreground">
+                              Franchise Fee
+                            </Label>
+                            <label className="flex cursor-pointer items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5">
+                              <input
+                                type="checkbox"
+                                checked={payroll?.gstFranchiseFee || false}
+                                onChange={(e) =>
+                                  updateProgramPayroll(
+                                    programId,
+                                    "gstFranchiseFee",
+                                    e.target.checked,
+                                  )
+                                }
+                              />
+                              <span className="text-xs text-primary">GST Inc.</span>
+                            </label>
+                          </div>
+                          <div className="relative">
+                            <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="number"
+                              min="0"
+                              value={payroll?.franchiseFee || ""}
                               onChange={(e) =>
                                 updateProgramPayroll(
                                   programId,
-                                  "gstFranchiseFee",
-                                  e.target.checked,
+                                  "franchiseFee",
+                                  e.target.value === "" ? 0 : Number(e.target.value),
                                 )
                               }
+                              onFocus={selectInputValueOnFocus}
+                              className="h-10 pl-10"
+                              placeholder="0"
                             />
-                            <span
-                              className="text-xs text-gray-500"
-                              title="Check if amount includes GST; uncheck to add GST on checkout"
-                            >
-                              GST Inc.
-                            </span>
-                          </label>
+                          </div>
                         </div>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={
-                            payroll?.franchiseFee === 0 ||
-                            payroll?.franchiseFee === undefined ||
-                            payroll?.franchiseFee === null
-                              ? ""
-                              : payroll?.franchiseFee
-                          }
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            updateProgramPayroll(
-                              programId,
-                              "franchiseFee",
-                              val === "" ? 0 : Number(val),
-                            );
-                          }}
-                          onFocus={selectInputValueOnFocus}
-                        />
-                      </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-xs">Kit Cost (₹)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={
-                            payroll?.kitCost === 0 ||
-                            payroll?.kitCost === undefined ||
-                            payroll?.kitCost === null
-                              ? ""
-                              : payroll?.kitCost
-                          }
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            updateProgramPayroll(
-                              programId,
-                              "kitCost",
-                              val === "" ? 0 : Number(val),
-                            );
-                          }}
-                          onFocus={selectInputValueOnFocus}
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Label className="text-xs">Material Cost (₹)</Label>
-                          <label className="flex items-center gap-1 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={payroll?.gstMaterialCost || false}
+                        {/* Kit Cost */}
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-card-foreground">
+                            Kit Cost
+                          </Label>
+                          <div className="relative">
+                            <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="number"
+                              min="0"
+                              value={payroll?.kitCost || ""}
                               onChange={(e) =>
                                 updateProgramPayroll(
                                   programId,
-                                  "gstMaterialCost",
-                                  e.target.checked,
+                                  "kitCost",
+                                  e.target.value === "" ? 0 : Number(e.target.value),
                                 )
                               }
+                              onFocus={selectInputValueOnFocus}
+                              className="h-10 pl-10"
+                              placeholder="0"
                             />
-                            <span
-                              className="text-xs text-gray-500"
-                              title="Check if amount includes GST; uncheck to add GST on checkout"
-                            >
-                              GST Inc.
-                            </span>
-                          </label>
+                          </div>
                         </div>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={
-                            payroll?.materialCost === 0 ||
-                            payroll?.materialCost === undefined ||
-                            payroll?.materialCost === null
-                              ? ""
-                              : payroll?.materialCost
-                          }
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            updateProgramPayroll(
-                              programId,
-                              "materialCost",
-                              val === "" ? 0 : Number(val),
-                            );
-                          }}
-                          onFocus={selectInputValueOnFocus}
-                        />
-                      </div>
-                    </div>
 
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Monthly Fee (₹)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={
-                            payroll?.monthlyFee === 0 ||
-                            payroll?.monthlyFee === undefined ||
-                            payroll?.monthlyFee === null
-                              ? ""
-                              : payroll?.monthlyFee
-                          }
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            updateProgramPayroll(
-                              programId,
-                              "monthlyFee",
-                              val === "" ? 0 : Number(val),
-                            );
-                          }}
-                          onFocus={selectInputValueOnFocus}
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label className="text-xs">CI Share (%)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={
-                            payroll?.ciShare === 0 ||
-                            payroll?.ciShare === undefined ||
-                            payroll?.ciShare === null
-                              ? ""
-                              : payroll?.ciShare
-                          }
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            updateProgramPayroll(
-                              programId,
-                              "ciShare",
-                              val === "" ? 0 : Number(val),
-                            );
-                          }}
-                          onFocus={selectInputValueOnFocus}
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label className="text-xs">Franchise Share (%)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={
-                            payroll?.franchiseShare === 0 ||
-                            payroll?.franchiseShare === undefined ||
-                            payroll?.franchiseShare === null
-                              ? ""
-                              : payroll?.franchiseShare
-                          }
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            updateProgramPayroll(
-                              programId,
-                              "franchiseShare",
-                              val === "" ? 0 : Number(val),
-                            );
-                          }}
-                          onFocus={selectInputValueOnFocus}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Label className="text-xs">Royalty (%)</Label>
-                          <label className="flex items-center gap-1 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={payroll?.gstRoyalty || false}
+                        {/* Material Cost */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-sm font-medium text-card-foreground">
+                              Material Cost
+                            </Label>
+                            <label className="flex cursor-pointer items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5">
+                              <input
+                                type="checkbox"
+                                checked={payroll?.gstMaterialCost || false}
+                                onChange={(e) =>
+                                  updateProgramPayroll(
+                                    programId,
+                                    "gstMaterialCost",
+                                    e.target.checked,
+                                  )
+                                }
+                              />
+                              <span className="text-xs text-primary">GST Inc.</span>
+                            </label>
+                          </div>
+                          <div className="relative">
+                            <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="number"
+                              min="0"
+                              value={payroll?.materialCost || ""}
                               onChange={(e) =>
                                 updateProgramPayroll(
                                   programId,
-                                  "gstRoyalty",
-                                  e.target.checked,
+                                  "materialCost",
+                                  e.target.value === "" ? 0 : Number(e.target.value),
+                                )
+                              }
+                              onFocus={selectInputValueOnFocus}
+                              className="h-10 pl-10"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Monthly Fee */}
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-card-foreground">
+                            Monthly Fee
+                          </Label>
+                          <div className="relative">
+                            <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="number"
+                              min="0"
+                              value={payroll?.monthlyFee || ""}
+                              onChange={(e) =>
+                                updateProgramPayroll(
+                                  programId,
+                                  "monthlyFee",
+                                  e.target.value === "" ? 0 : Number(e.target.value),
+                                )
+                              }
+                              onFocus={selectInputValueOnFocus}
+                              className="h-10 pl-10"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Royalty */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-sm font-medium text-card-foreground">
+                              Royalty
+                            </Label>
+                            <label className="flex cursor-pointer items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5">
+                              <input
+                                type="checkbox"
+                                checked={payroll?.gstRoyalty || false}
+                                onChange={(e) =>
+                                  updateProgramPayroll(
+                                    programId,
+                                    "gstRoyalty",
+                                    e.target.checked,
+                                  )
+                                }
+                              />
+                              <span className="text-xs text-primary">GST Inc.</span>
+                            </label>
+                          </div>
+                          <div className="relative">
+                            <Percent className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={payroll?.royalty || ""}
+                              onChange={(e) =>
+                                updateProgramPayroll(
+                                  programId,
+                                  "royalty",
+                                  e.target.value === "" ? 0 : Number(e.target.value),
+                                )
+                              }
+                              onFocus={selectInputValueOnFocus}
+                              className="h-10 pl-10"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+
+                        {/* CI Share */}
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-card-foreground">
+                            CI Share
+                          </Label>
+                          <div className="relative">
+                            <Percent className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={payroll?.ciShare || ""}
+                              onChange={(e) =>
+                                updateProgramPayroll(
+                                  programId,
+                                  "ciShare",
+                                  e.target.value === "" ? 0 : Number(e.target.value),
+                                )
+                              }
+                              onFocus={selectInputValueOnFocus}
+                              className="h-10 pl-10"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Franchise Share */}
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-card-foreground">
+                            Franchise Share
+                          </Label>
+                          <div className="relative">
+                            <Percent className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={payroll?.franchiseShare || ""}
+                              onChange={(e) =>
+                                updateProgramPayroll(
+                                  programId,
+                                  "franchiseShare",
+                                  e.target.value === "" ? 0 : Number(e.target.value),
+                                )
+                              }
+                              onFocus={selectInputValueOnFocus}
+                              className="h-10 pl-10"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Total Amount */}
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-card-foreground">
+                            Total Amount
+                          </Label>
+                          <div className="relative">
+                            <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="number"
+                              min="0"
+                              value={payroll?.totalAmount || ""}
+                              onChange={(e) =>
+                                updateProgramPayroll(
+                                  programId,
+                                  "totalAmount",
+                                  e.target.value === "" ? 0 : Number(e.target.value),
+                                )
+                              }
+                              onFocus={selectInputValueOnFocus}
+                              className="h-10 pl-10"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Freeload */}
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-card-foreground">
+                            Freeload
+                          </Label>
+                          <div className="flex h-10 items-center gap-3 rounded-md border border-input bg-background px-3">
+                            <Switch
+                              id={`freeload-${programId}`}
+                              checked={payroll?.freeload || false}
+                              onCheckedChange={(checked) =>
+                                updateProgramPayroll(
+                                  programId,
+                                  "freeload",
+                                  checked,
                                 )
                               }
                             />
-                            <span
-                              className="text-xs text-gray-500"
-                              title="Check if amount includes GST; uncheck to add GST on checkout"
+                            <Label
+                              htmlFor={`freeload-${programId}`}
+                              className="cursor-pointer text-xs text-muted-foreground"
                             >
-                              GST Inc.
-                            </span>
-                          </label>
+                              Enable freeload
+                            </Label>
+                          </div>
                         </div>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={
-                            payroll?.royalty === 0 ||
-                            payroll?.royalty === undefined ||
-                            payroll?.royalty === null
-                              ? ""
-                              : payroll?.royalty
-                          }
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            updateProgramPayroll(
-                              programId,
-                              "royalty",
-                              val === "" ? 0 : Number(val),
-                            );
-                          }}
-                          onFocus={selectInputValueOnFocus}
-                        />
+
+                        {/* Installment plan (full-width subcard) */}
+                        <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/10 p-4 md:col-span-2 lg:col-span-3">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id={`installment-plan-${programId}`}
+                              checked={installmentEnabled}
+                              onCheckedChange={(checked) =>
+                                updateProgramPayroll(
+                                  programId,
+                                  "installment",
+                                  checked === true
+                                    ? Math.max(1, Number(payroll?.installment) || 12)
+                                    : 0,
+                                )
+                              }
+                            />
+                            <Label
+                              htmlFor={`installment-plan-${programId}`}
+                              className="cursor-pointer text-sm font-medium text-card-foreground"
+                            >
+                              Installment plan
+                            </Label>
+                          </div>
+                          <div className="grid max-w-lg grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-card-foreground">
+                                Installment Months
+                              </Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                value={installmentEnabled ? (payroll?.installment || "") : ""}
+                                disabled={!installmentEnabled}
+                                onChange={(e) =>
+                                  updateProgramPayroll(
+                                    programId,
+                                    "installment",
+                                    e.target.value === ""
+                                      ? 0
+                                      : Math.max(
+                                          1,
+                                          Math.floor(Number(e.target.value)) || 1,
+                                        ),
+                                  )
+                                }
+                                className="h-10"
+                                placeholder="0"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-card-foreground">
+                                Down Payment Amount
+                              </Label>
+                              <div className="relative">
+                                <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={payroll?.downPayment || ""}
+                                  disabled={!installmentEnabled}
+                                  onChange={(e) =>
+                                    updateProgramPayroll(
+                                      programId,
+                                      "downPayment",
+                                      e.target.value === ""
+                                        ? 0
+                                        : Number(e.target.value),
+                                    )
+                                  }
+                                  className="h-10 pl-10"
+                                  placeholder="0"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-xs">Installment</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={
-                            payroll?.installment === 0 ||
-                            payroll?.installment === undefined ||
-                            payroll?.installment === null
-                              ? ""
-                              : payroll?.installment
-                          }
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            updateProgramPayroll(
-                              programId,
-                              "installment",
-                              val === "" ? 0 : Number(val),
-                            );
-                          }}
-                          onFocus={selectInputValueOnFocus}
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label className="text-xs">Total Amount (₹)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={
-                            payroll?.totalAmount === 0 ||
-                            payroll?.totalAmount === undefined ||
-                            payroll?.totalAmount === null
-                              ? ""
-                              : payroll?.totalAmount
-                          }
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            updateProgramPayroll(
-                              programId,
-                              "totalAmount",
-                              val === "" ? 0 : Number(val),
-                            );
-                          }}
-                          onFocus={selectInputValueOnFocus}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex gap-6">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id={`freeload-${programId}`}
-                          checked={payroll?.freeload || false}
-                          onCheckedChange={(checked) =>
-                            updateProgramPayroll(programId, "freeload", checked)
-                          }
-                        />
-                        <Label
-                          htmlFor={`freeload-${programId}`}
-                          className="text-xs"
-                        >
-                          Freeload
-                        </Label>
-                      </div>
-                    </div>
-                  </div>
+                      <PaymentsAndEmiSection
+                        programId={programId}
+                        payroll={payroll}
+                        onUpdate={updateProgramPayroll}
+                      />
+                    </CardContent>
+                  </Card>
                 );
               })
             )}
@@ -1008,6 +1260,11 @@ export function CreateFranchiseDialog({
       case 4: // Security
         return (
           <div className="space-y-4">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm text-card-foreground">
+              {franchiseeMode === "existing"
+                ? "The selected existing franchisee keeps their current credentials. Skip this step."
+                : "A temporary password is auto-generated and emailed to the new franchisee. The values entered below are informational only."}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="password">Password *</Label>
@@ -1027,7 +1284,7 @@ export function CreateFranchiseDialog({
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-card-foreground"
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -1058,7 +1315,7 @@ export function CreateFranchiseDialog({
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-card-foreground"
                   >
                     {showConfirmPassword ? (
                       <EyeOff size={16} />
@@ -1085,12 +1342,14 @@ export function CreateFranchiseDialog({
   if (submitted) {
     return (
       <Dialog open={open} onOpenChange={handleModalOpenChange}>
-        <DialogContent className="max-w-md w-full mx-4">
+        <DialogContent className="max-w-md w-full mx-4 rounded-2xl">
           <DialogHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <CheckCircle className="h-12 w-12 text-green-600" />
+              <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <CheckCircle className="h-7 w-7" />
+              </span>
             </div>
-            <DialogTitle className="text-2xl font-bold text-gray-900">
+            <DialogTitle className="text-2xl font-normal tracking-tight text-card-foreground">
               Franchise Created!
             </DialogTitle>
             <DialogDescription className="text-center">
@@ -1105,91 +1364,312 @@ export function CreateFranchiseDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleModalOpenChange}>
-      <DialogContent className="max-w-4xl w-full mx-4 max-h-[95vh] overflow-hidden flex flex-col">
-        <DialogHeader className="text-center border-b border-gray-200 pb-4 flex-shrink-0">
-          <div className="flex justify-center mb-4">
-            <UserPlus className="h-8 w-8 text-green-700" />
+      <DialogContent className="flex max-h-[95vh] max-w-4xl flex-col gap-0 overflow-hidden p-0 rounded-2xl">
+        <DialogHeader className="shrink-0 border-b border-border px-4 py-5 sm:px-5">
+          <div className="mb-3 flex">
+            <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+              Admin onboarding
+            </span>
           </div>
-          <DialogTitle className="text-xl font-bold text-gray-900">
+          <DialogTitle className="flex items-center gap-2 text-2xl font-normal tracking-tight text-card-foreground">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary">
+              <UserPlus className="h-4 w-4" />
+            </span>
             Setup Existing Franchise
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="max-w-3xl text-sm text-muted-foreground">
             Complete all sections to setup the franchise with payroll
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
+          <div className="space-y-4">
             {/* Progress Stepper */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-              <Stepper currentStep={currentStep} steps={FORM_STEPS} />
-            </div>
+            <Card className="overflow-hidden rounded-xl border-border shadow-sm">
+              <CardContent className="bg-accent/30 p-4">
+                <Stepper currentStep={currentStep} steps={FORM_STEPS} />
+              </CardContent>
+            </Card>
 
             {/* Form Content */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">
-                    {FORM_STEPS[currentStep - 1].title}
-                  </h3>
-                  <div className="space-y-4">{renderStepContent()}</div>
-                </div>
+            <Card className="overflow-hidden rounded-xl border-border shadow-sm">
+              <CardHeader className="border-b border-border bg-accent/30 px-4 py-4">
+                <CardTitle className="text-base font-medium text-card-foreground">
+                  {FORM_STEPS[currentStep - 1].title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-5">
+                <div className="space-y-4">{renderStepContent()}</div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
-                {/* Navigation Buttons */}
-                {currentStep < FORM_STEPS.length ? (
-                  <div className="flex gap-4 pt-6">
-                    <div className="flex gap-2">
-                      {currentStep > 1 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handlePrevious}
-                        >
-                          Previous
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="flex-1" />
-
-                    <Button
-                      type="button"
-                      onClick={handleNext}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      Next
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex gap-4 pt-6">
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handlePrevious}
-                      >
-                        Previous
-                      </Button>
-                    </div>
-
-                    <div className="flex-1" />
-
-                    <Button
-                      type="button"
-                      onClick={handleSubmit}
-                      className="bg-green-600 hover:bg-green-700"
-                      disabled={loading}
-                    >
-                      {loading ? "Setting up..." : "Setup Franchise"}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
+        {/* Navigation Footer */}
+        <div className="shrink-0 border-t border-border bg-card px-4 py-4 sm:px-5">
+          <div className="flex items-center gap-2">
+            {currentStep > 1 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrevious}
+              >
+                Previous
+              </Button>
+            )}
+            <div className="flex-1" />
+            {currentStep < FORM_STEPS.length ? (
+              <Button
+                type="button"
+                onClick={handleNext}
+                className="h-10 rounded-lg text-sm font-medium"
+              >
+                Next
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className="h-10 rounded-lg text-sm font-medium sm:min-w-[220px]"
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                {loading ? "Setting up..." : "Setup Franchise"}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface PaymentsAndEmiSectionProps {
+  programId: number;
+  payroll: ProgramPayroll | undefined;
+  onUpdate: (
+    programId: number,
+    field: keyof ProgramPayroll,
+    value: any,
+  ) => void;
+}
+
+function emptyPriorPaymentRow(
+  matchKind: PriorPaymentRow["matchKind"] = "down-payment",
+): PriorPaymentRow {
+  return {
+    amount: 0,
+    paidAt: new Date().toISOString().slice(0, 10),
+    mode: "cash",
+    reference: "",
+    matchKind,
+    matchSequence: 1,
+  };
+}
+
+function PaymentsAndEmiSection({
+  programId,
+  payroll,
+  onUpdate,
+}: PaymentsAndEmiSectionProps) {
+  if (!payroll) return null;
+  const installmentsEnabled = Number(payroll.installment) > 0;
+
+  return (
+    <div className="mt-4 space-y-3 border-t border-border pt-4">
+      <h3 className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+        <CreditCard className="h-4 w-4" />
+        Already received payments
+      </h3>
+
+      {installmentsEnabled ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">
+              Record installments or down-payment already collected from the
+              franchisee. These will be linked to the corresponding receivable
+              items.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() =>
+                onUpdate(programId, "priorPayments", [
+                  ...payroll.priorPayments,
+                  emptyPriorPaymentRow(
+                    Number(payroll.downPayment) > 0
+                      ? "down-payment"
+                      : "installment",
+                  ),
+                ])
+              }
+            >
+              + Add payment
+            </Button>
+          </div>
+          {payroll.priorPayments.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border bg-accent/20 px-4 py-6 text-center text-sm text-muted-foreground">
+              No prior payments recorded yet.
+            </p>
+          ) : (
+            payroll.priorPayments.map((row, idx) => (
+              <PriorPaymentEditor
+                key={idx}
+                row={row}
+                emiMode
+                onChange={(next) => {
+                  const copy = [...payroll.priorPayments];
+                  copy[idx] = next;
+                  onUpdate(programId, "priorPayments", copy);
+                }}
+                onRemove={() => {
+                  const copy = payroll.priorPayments.filter((_, i) => i !== idx);
+                  onUpdate(programId, "priorPayments", copy);
+                }}
+              />
+            ))
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+          <div className="flex items-center gap-3">
+            <Switch
+              id={`lumpsum-${programId}`}
+              checked={!!payroll.lumpSumPayment}
+              onCheckedChange={(checked) =>
+                onUpdate(
+                  programId,
+                  "lumpSumPayment",
+                  checked ? emptyPriorPaymentRow("agreement-fee") : null,
+                )
+              }
+            />
+            <Label
+              htmlFor={`lumpsum-${programId}`}
+              className="cursor-pointer text-sm text-card-foreground"
+            >
+              Record one-time agreement-fee payment already collected
+            </Label>
+          </div>
+          {payroll.lumpSumPayment && (
+            <PriorPaymentEditor
+              row={payroll.lumpSumPayment}
+              emiMode={false}
+              onChange={(next) => onUpdate(programId, "lumpSumPayment", next)}
+              onRemove={() => onUpdate(programId, "lumpSumPayment", null)}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PriorPaymentEditor({
+  row,
+  emiMode,
+  onChange,
+  onRemove,
+}: {
+  row: PriorPaymentRow;
+  emiMode: boolean;
+  onChange: (next: PriorPaymentRow) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="grid grid-cols-12 gap-2 items-end rounded-xl border border-border bg-card p-3">
+      <div className="col-span-2 space-y-1">
+        <Label className="text-xs">Amount (₹)</Label>
+        <Input
+          type="number"
+          min="0"
+          value={row.amount === 0 ? "" : row.amount}
+          onChange={(e) =>
+            onChange({
+              ...row,
+              amount: e.target.value === "" ? 0 : Number(e.target.value),
+            })
+          }
+        />
+      </div>
+      <div className="col-span-2 space-y-1">
+        <Label className="text-xs">Paid On</Label>
+        <Input
+          type="date"
+          value={row.paidAt}
+          onChange={(e) => onChange({ ...row, paidAt: e.target.value })}
+        />
+      </div>
+      <div className="col-span-2 space-y-1">
+        <Label className="text-xs">Mode</Label>
+        <select
+          className="w-full rounded-md border border-input bg-background h-9 text-sm px-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          value={row.mode}
+          onChange={(e) =>
+            onChange({ ...row, mode: e.target.value as PaymentMode })
+          }
+        >
+          <option value="cash">Cash</option>
+          <option value="upi">UPI</option>
+          <option value="bank-transfer">Bank Transfer</option>
+          <option value="razorpay">Razorpay</option>
+          <option value="cheque">Cheque</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div className="col-span-2 space-y-1">
+        <Label className="text-xs">Reference #</Label>
+        <Input
+          value={row.reference}
+          onChange={(e) => onChange({ ...row, reference: e.target.value })}
+        />
+      </div>
+      {emiMode && (
+        <>
+          <div className="col-span-1 space-y-1">
+            <Label className="text-xs">Pays</Label>
+            <select
+              className="w-full rounded-md border border-input bg-background h-9 text-sm px-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={row.matchKind}
+              onChange={(e) =>
+                onChange({
+                  ...row,
+                  matchKind: e.target.value as PriorPaymentRow["matchKind"],
+                })
+              }
+            >
+              <option value="down-payment">Down</option>
+              <option value="installment">EMI</option>
+            </select>
+          </div>
+          <div className="col-span-1 space-y-1">
+            <Label className="text-xs">EMI #</Label>
+            <Input
+              type="number"
+              min="1"
+              disabled={row.matchKind !== "installment"}
+              value={row.matchSequence}
+              onChange={(e) =>
+                onChange({ ...row, matchSequence: Number(e.target.value) || 1 })
+              }
+            />
+          </div>
+        </>
+      )}
+      <div className={emiMode ? "col-span-2" : "col-span-4"}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onRemove}
+          className="text-destructive hover:text-destructive"
+        >
+          Remove
+        </Button>
+      </div>
+    </div>
   );
 }
