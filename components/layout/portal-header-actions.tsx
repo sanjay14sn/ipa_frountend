@@ -1,6 +1,7 @@
 "use client";
 
 import { LogOut, User } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,6 +15,7 @@ import { NotificationBell } from "@/components/shared/notification-bell";
 import { useUser } from "@/context/user-context";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { getUserFromStorage } from "@/lib/auth";
+import { useScopeStore } from "@/lib/stores/scope-store";
 import { usePathname, useRouter } from "next/navigation";
 import { franchiseeLogout, logout } from "@/services/auth.service";
 import { logoutCI } from "@/services/ci-auth.service";
@@ -32,6 +34,7 @@ export function PortalHeaderActions() {
   const { user: ciUser, clear: clearCI } = useCIAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const storedUser = getUserFromStorage();
   const currentUser = user ?? storedUser;
   const isCiPortal = pathname.startsWith("/ci");
@@ -53,6 +56,11 @@ export function PortalHeaderActions() {
       console.error(e);
     }
     localStorage.removeItem("user");
+    // Drop the previous user's scope so a different franchisee logging in
+    // on the same browser tab doesn't inherit their programId / cached
+    // responses keyed by that programId.
+    useScopeStore.getState().clear();
+    queryClient.clear();
     if (isCiPortal) {
       router.push("/ci/login");
     } else if (isAdminPortal) {

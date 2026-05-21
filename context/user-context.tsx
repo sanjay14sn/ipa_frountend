@@ -63,6 +63,10 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUserState] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
+  // Subscribing here so the auto-pin effect below re-runs when the scope
+  // store changes (e.g. the user just logged in, the persisted store cleared,
+  // or another tab cleared it).
+  const scopeAgreementId = useScopeStore((s) => s.agreementId);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -90,6 +94,35 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
   const setUserWithStorage = useCallback(
     (next: User | ((prev: User | null) => User | null)) => {
+      const applyScopeFromUser = (u: User | null) => {
+        // Keep the scope store in lockstep with the user blob — call sites
+        // like LoginCard.setUser(nextUser) need programId set in the same
+        // synchronous batch as the user state so the first React Query
+        // refetch already carries it.
+        if (!u) {
+          useScopeStore.getState().clear();
+          return;
+        }
+        const candidates = (u.profile?.franchise?.activePrograms ?? []).filter(
+          (row) => row.type !== "CI_AGREEMENT" && row.id != null,
+        );
+        if (candidates.length === 0) {
+          useScopeStore.getState().setFranchise(u.franchiseId ?? null);
+          return;
+        }
+        const stored = useScopeStore.getState();
+        const existing =
+          stored.agreementId != null
+            ? candidates.find((row) => row.id === stored.agreementId)
+            : undefined;
+        const picked = existing ?? candidates[0];
+        useScopeStore.setState({
+          franchiseId: u.franchiseId ?? null,
+          agreementId: picked.id,
+          programId: picked.programId ?? null,
+        });
+      };
+
       if (typeof next === "function") {
         setUserState((prev) => {
           const updated = next(prev);
@@ -100,6 +133,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
               localStorage.removeItem("user");
             }
           }
+          applyScopeFromUser(updated);
           return updated;
         });
       } else {
@@ -107,6 +141,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         if (typeof window !== "undefined") {
           localStorage.setItem("user", JSON.stringify(next));
         }
+        applyScopeFromUser(next);
       }
     },
     [],
@@ -137,33 +172,18 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         franchiseStatus: data.franchiseStatus,
         franchises: data.franchises,
         // Program scope is franchise-specific — clear the previous selection
-        // on every franchise switch. The AgreementProvider auto-hydrates the
-        // newest agreement for the new franchise once its feed loads.
+        // here so applyScopeFromUser (called inside setUserWithStorage) picks
+        // the first agreement of the NEW franchise rather than re-using the
+        // stale selection.
         activeAgreementId: null,
         profile: fetchedProfile ?? prev.profile,
       };
     });
-    // Mirror into the scope store so service calls re-pick up the new
-    // franchise immediately (and clear programId — useScopeAgreements
-    // auto-pins the newest one on the next render).
-    useScopeStore.getState().setFranchise(data.franchiseId ?? null);
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["agreements"] }),
-      queryClient.invalidateQueries({ queryKey: ["franchisee-ci-agreements"] }),
-      queryClient.invalidateQueries({ queryKey: ["franchisee-ci-agreement-detail"] }),
-      queryClient.invalidateQueries({ queryKey: ["orders"] }),
-      queryClient.invalidateQueries({ queryKey: ["orders-franchisee"] }),
-      queryClient.invalidateQueries({ queryKey: ["students"] }),
-      queryClient.invalidateQueries({ queryKey: ["certification"] }),
-      queryClient.invalidateQueries({ queryKey: ["course-instructors"] }),
-      queryClient.invalidateQueries({ queryKey: ["payments"] }),
-      queryClient.invalidateQueries({ queryKey: ["program-requests"] }),
-      queryClient.invalidateQueries({ queryKey: ["franchisee"] }),
-      queryClient.invalidateQueries({ queryKey: ["franchises"] }),
-      queryClient.invalidateQueries({ queryKey: ["notifications"] }),
-      queryClient.invalidateQueries({ queryKey: ["streams"] }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.auth.franchiseeProfile() }),
-    ]);
+    // Cache from the previous franchise is stale (different programId
+    // namespace, different franchise rows). Drop the whole cache so React
+    // Query doesn't hand stale data back to the new scope on the first
+    // render — replaces the per-key invalidation that used to live here.
+    queryClient.clear();
   };
 
   /**
@@ -198,21 +218,12 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         return next;
       });
       // Mirror to the scope store so franchise services pick up programId
-      // without going through props/context.
+      // without going through props/context. Query keys now include
+      // programId — the change triggers refetches automatically; no manual
+      // invalidation block needed.
       useScopeStore.getState().setAgreement(agreementId, resolvedProgramId);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["students"] }),
-        queryClient.invalidateQueries({ queryKey: ["course-instructors"] }),
-        queryClient.invalidateQueries({ queryKey: ["orders-franchisee"] }),
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["payments"] }),
-        queryClient.invalidateQueries({ queryKey: ["certification"] }),
-        queryClient.invalidateQueries({ queryKey: ["agreements"] }),
-        queryClient.invalidateQueries({ queryKey: ["program-requests"] }),
-        queryClient.invalidateQueries({ queryKey: ["streams"] }),
-      ]);
     },
-    [queryClient],
+    [],
   );
 
   const profileQuery = useQuery({
@@ -234,6 +245,33 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       !!user.franchiseId,
     staleTime: 60_000,
   });
+
+  // Global auto-pin: ensure the scope store always reflects a valid agreement
+  // for the active franchisee, even when the AgreementSwitcher (which has its
+  // own copy of this effect via useScopeAgreements) isn't rendered. This is
+  // critical for single-agreement franchisees — the switcher hides for them,
+  // so without this effect their programId would stay null and the backend
+  // would return all data unscoped.
+  useEffect(() => {
+    if (!user || user.role !== "franchisee" || !user.franchiseId) return;
+    if (user.franchiseStatus !== "Active") return;
+    const activePrograms = user.profile?.franchise?.activePrograms ?? [];
+    const candidates = activePrograms.filter(
+      (row) => row.type !== "CI_AGREEMENT" && row.id != null,
+    );
+    if (candidates.length === 0) return;
+    const stillValid =
+      scopeAgreementId != null &&
+      candidates.some((row) => row.id === scopeAgreementId);
+    if (stillValid) return;
+    const pick = candidates[0];
+    useScopeStore
+      .getState()
+      .setAgreement(pick.id, pick.programId ?? null);
+  }, [
+    user,
+    scopeAgreementId,
+  ]);
 
   useEffect(() => {
     if (!profileQuery.isSuccess || !profileQuery.data) return;

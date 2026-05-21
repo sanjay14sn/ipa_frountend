@@ -226,6 +226,14 @@ api.interceptors.response.use(
           } catch {
             /* ignore */
           }
+          try {
+            const { getQueryClientBridge } = await import(
+              "@/hooks/api/query-client-bridge"
+            );
+            getQueryClientBridge().clear();
+          } catch {
+            /* bridge not mounted yet — nothing to clear */
+          }
           const loginPath = loginPathForSession(role);
           const already = loginPath === "/ci/login" && window.location.pathname.startsWith("/ci");
           if (!already) {

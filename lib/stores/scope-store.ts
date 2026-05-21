@@ -53,17 +53,31 @@ export const useScopeStore = create<ScopeState & ScopeActions>()(
         const legacyAgreementId = user.activeAgreementId ?? null;
         const activePrograms = user.profile?.franchise?.activePrograms ?? [];
 
+        const candidates = activePrograms.filter(
+          (row) => row.type !== "CI_AGREEMENT" && row.id != null,
+        );
+
+        // Prefer the legacy persisted selection; fall back to the newest
+        // candidate so a freshly-logged-in user always has a valid scope
+        // before any data query fires. This is what was previously delegated
+        // to AgreementContext / useScopeAgreements, but those only run when
+        // the switcher renders (>1 agreement) — single-agreement franchisees
+        // would otherwise sit with programId=null and the backend would
+        // return all data unscoped.
         const matchingProgram =
           legacyAgreementId != null
-            ? activePrograms.find((row) => row.id === legacyAgreementId)
+            ? candidates.find((row) => row.id === legacyAgreementId)
             : undefined;
+        const fallbackProgram = candidates[0];
+        const picked = matchingProgram ?? fallbackProgram ?? null;
 
-        const nextProgramId = matchingProgram?.programId ?? null;
+        const nextAgreementId = picked?.id ?? null;
+        const nextProgramId = picked?.programId ?? null;
         const current = get();
 
         if (
           current.franchiseId === nextFranchiseId &&
-          current.agreementId === legacyAgreementId &&
+          current.agreementId === nextAgreementId &&
           current.programId === nextProgramId
         ) {
           return;
@@ -71,7 +85,7 @@ export const useScopeStore = create<ScopeState & ScopeActions>()(
 
         set({
           franchiseId: nextFranchiseId,
-          agreementId: legacyAgreementId,
+          agreementId: nextAgreementId,
           programId: nextProgramId,
         });
       },
