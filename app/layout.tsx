@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { UserProvider } from "@/context/user-context";
-import { AgreementProvider } from "@/context/agreement-context";
 import { NotificationProvider } from "@/context/notification-context";
 import QueryProvider from "@/components/providers/query-provider";
 import { ClientTelemetryProvider } from "@/components/providers/client-telemetry-provider";
@@ -34,24 +33,22 @@ export default function RootLayout({
         <ClientTelemetryProvider>
           <QueryProvider>
             <UserProvider>
-              <AgreementProvider>
-                <NotificationProvider>
-                  {children}
-                  <Toaster
-                    position="top-right"
-                    toastOptions={{
-                      classNames: {
-                        toast:
-                          "rounded-xl border border-border bg-card text-card-foreground shadow-xl",
-                        title: "text-sm font-medium text-card-foreground",
-                        description: "text-sm text-muted-foreground",
-                        actionButton: "rounded-lg bg-primary text-primary-foreground",
-                        cancelButton: "rounded-lg bg-secondary text-secondary-foreground",
-                      },
-                    }}
-                  />
-                </NotificationProvider>
-              </AgreementProvider>
+              <NotificationProvider>
+                {children}
+                <Toaster
+                  position="top-right"
+                  toastOptions={{
+                    classNames: {
+                      toast:
+                        "rounded-xl border border-border bg-card text-card-foreground shadow-xl",
+                      title: "text-sm font-medium text-card-foreground",
+                      description: "text-sm text-muted-foreground",
+                      actionButton: "rounded-lg bg-primary text-primary-foreground",
+                      cancelButton: "rounded-lg bg-secondary text-secondary-foreground",
+                    },
+                  }}
+                />
+              </NotificationProvider>
             </UserProvider>
           </QueryProvider>
         </ClientTelemetryProvider>

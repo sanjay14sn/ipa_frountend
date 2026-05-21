@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Plus, Search, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,9 +15,18 @@ import {
   initiateOrderPayment,
 } from "@/services/order.service";
 import { useUnifiedInvoicePreview } from "@/hooks/use-unified-invoice-preview";
-import { getAllStreams, type Stream } from "@/services/stream.service";
+import { useTshirtInventory } from "@/hooks/use-tshirt-inventory";
+import { useStreamsByProgram } from "@/hooks/api/stream.hooks";
+import { useProgramId } from "@/hooks/use-scope";
 import { useCourseInstructors } from "@/hooks/api/course-instructor.hooks";
 import type { CourseInstructorData } from "@/services/course-instructor.service";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import UnifiedInvoiceGroupedSummary, {
   studentLineItems,
 } from "./UnifiedInvoiceGroupedSummary";
@@ -80,29 +88,47 @@ export default function UnifiedMaterialRequestDialog({
   const [selectedInstructorIds, setSelectedInstructorIds] = useState<
     number[]
   >([]);
-  const [startingKitQuantities, setStartingKitQuantities] = useState<
-    Record<number, number>
-  >({});
+  type KitRow = {
+    streamId: number;
+    tshirtItemId: number | null;
+    count: number;
+  };
+  const [kitRows, setKitRows] = useState<KitRow[]>([]);
 
   const [stuQuery, setStuQuery] = useState("");
   const [ciQuery, setCiQuery] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const streamsQuery = useQuery<Stream[]>({
-    queryKey: ["streams"],
-    queryFn: getAllStreams,
-    staleTime: 5 * 60 * 1000,
-    enabled: open,
-  });
+  const programId = useProgramId();
+  const streamsQuery = useStreamsByProgram(
+    open && programId != null ? programId : undefined,
+  );
 
-  const startingKitItems = (streamsQuery.data ?? [])
-    .filter((s) => (startingKitQuantities[s.id] ?? 0) > 0)
-    .map((s) => ({
-      streamId: s.id,
-      streamName: s.name,
-      quantity: startingKitQuantities[s.id],
-    }));
+  const tshirtQuery = useTshirtInventory(open);
+  const tshirts = tshirtQuery.data ?? [];
+
+  // Aggregate kitRows into API payload: merge duplicate (streamId, tshirtItemId) pairs
+  // and drop count===0 rows (which only exist as in-progress UI rows).
+  const startingKitItems = useMemo(() => {
+    const map = new Map<
+      string,
+      { streamId: number; tshirtItemId: number | null; quantity: number }
+    >();
+    for (const r of kitRows) {
+      if (r.count <= 0) continue;
+      const key = `${r.streamId}:${r.tshirtItemId ?? "none"}`;
+      const existing = map.get(key);
+      if (existing) existing.quantity += r.count;
+      else
+        map.set(key, {
+          streamId: r.streamId,
+          tshirtItemId: r.tshirtItemId,
+          quantity: r.count,
+        });
+    }
+    return [...map.values()];
+  }, [kitRows]);
 
   const hasSelection =
     selectedStudentIds.length > 0 ||
@@ -114,18 +140,25 @@ export default function UnifiedMaterialRequestDialog({
     hasSelection,
     selectedStudentIds,
     selectedInstructorIds,
-    startingKitItems: startingKitItems.map((i) => ({
-      streamId: i.streamId,
-      quantity: i.quantity,
-    })),
+    startingKitItems,
   });
 
   const preview = invoicePreview.preview;
 
-  const streamUnitByStreamId = useMemo(() => {
-    const m = new Map<number, number>();
+  const tshirtNameById = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const t of tshirts) m.set(t.id, t.name);
+    return m;
+  }, [tshirts]);
+
+  // Per-stream metrics derived from the live preview.
+  const streamMetricsByStreamId = useMemo(() => {
+    const m = new Map<number, { quantity: number; total: number }>();
     for (const g of preview?.startingKitGroups ?? []) {
-      m.set(g.streamId, g.materialUnit + g.kitUnit + g.royaltyUnit);
+      m.set(g.streamId, {
+        quantity: g.quantity,
+        total: (g.kitUnit + g.royaltyUnit) * g.quantity,
+      });
     }
     return m;
   }, [preview?.startingKitGroups]);
@@ -150,10 +183,7 @@ export default function UnifiedMaterialRequestDialog({
     });
   }, [orderableInstructors, ciQuery]);
 
-  const selectedKitsTotalQty = startingKitItems.reduce(
-    (s, i) => s + i.quantity,
-    0,
-  );
+  const selectedKitsTotalQty = kitRows.reduce((s, r) => s + r.count, 0);
 
   const toggleStudent = useCallback((id: number) => {
     setSelectedStudentIds((prev) =>
@@ -167,13 +197,28 @@ export default function UnifiedMaterialRequestDialog({
     );
   }, []);
 
-  const setKitQty = useCallback((streamId: number, n: number) => {
-    setStartingKitQuantities((m) => {
-      const next = { ...m };
-      if (n <= 0) delete next[streamId];
-      else next[streamId] = n;
-      return next;
-    });
+  const addKitRow = useCallback((streamId: number) => {
+    setKitRows((prev) => [
+      ...prev,
+      { streamId, tshirtItemId: null, count: 0 },
+    ]);
+  }, []);
+
+  const updateKitRowAt = useCallback(
+    (index: number, patch: Partial<KitRow>) => {
+      setKitRows((prev) =>
+        prev.map((r, i) => (i === index ? { ...r, ...patch } : r)),
+      );
+    },
+    [],
+  );
+
+  const removeKitRowAt = useCallback((index: number) => {
+    setKitRows((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const removeKitStream = useCallback((streamId: number) => {
+    setKitRows((prev) => prev.filter((r) => r.streamId !== streamId));
   }, []);
 
   const toggleAllStudents = useCallback(() => {
@@ -209,10 +254,13 @@ export default function UnifiedMaterialRequestDialog({
       const result = await initiateOrderPayment({
         studentIds: selectedStudentIds,
         instructorIds: selectedInstructorIds,
-        startingKitItems: startingKitItems.map((i) => ({
-          streamId: i.streamId,
-          quantity: i.quantity,
-        })),
+        startingKitItems: kitRows
+          .filter((r) => r.count > 0)
+          .map((r) => ({
+            streamId: r.streamId,
+            tshirtItemId: r.tshirtItemId,
+            quantity: r.count,
+          })),
         notes: undefined,
         paymentRecordId: undefined,
         totalAmount,
@@ -250,92 +298,206 @@ export default function UnifiedMaterialRequestDialog({
           {/* Left — selection */}
           <div className="flex min-h-0 w-full flex-col border-border lg:w-[min(420px,42%)] lg:border-r">
             <div className="shrink-0 border-b border-border px-4 py-3">
-              <div className="flex items-baseline justify-between gap-2">
+              <div className="flex items-center justify-between gap-2">
                 <h3 className="text-base font-semibold text-card-foreground">
                   Selection
                 </h3>
-                <span className="text-xs text-muted-foreground tabular-nums">
-                  {selectedKitsTotalQty +
+                {(() => {
+                  const totalSelected =
+                    selectedKitsTotalQty +
                     selectedStudentIds.length +
-                    selectedInstructorIds.length}
-                </span>
+                    selectedInstructorIds.length;
+                  return totalSelected > 0 ? (
+                    <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground tabular-nums">
+                      {totalSelected}
+                    </span>
+                  ) : null;
+                })()}
               </div>
             </div>
 
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
               {/* Kits */}
               <section>
-                <div className="mb-2 flex items-center gap-2">
-                  <h4 className="text-sm font-semibold text-card-foreground">
-                    Kits
-                  </h4>
-                  <span
-                    className={
-                      selectedKitsTotalQty === 0
-                        ? "rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
-                        : "rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-card-foreground"
-                    }
-                  >
-                    {selectedKitsTotalQty}
-                  </span>
-                </div>
+                <h4 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Kits
+                </h4>
                 {streamsQuery.isLoading ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Loading…
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {(streamsQuery.data ?? []).map((stream) => {
-                      const qty = startingKitQuantities[stream.id] ?? 0;
-                      const unit = streamUnitByStreamId.get(stream.id);
+                      const rowEntries = kitRows
+                        .map((row, index) => ({ row, index }))
+                        .filter((e) => e.row.streamId === stream.id);
+                      const isActive = rowEntries.length > 0;
+                      const metrics = streamMetricsByStreamId.get(stream.id);
+                      const headerQty = metrics?.quantity ?? 0;
+                      const headerTotal = metrics?.total ?? 0;
+
+                      if (!isActive) {
+                        return (
+                          <div
+                            key={stream.id}
+                            className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3"
+                          >
+                            <h5 className="truncate text-sm font-semibold text-card-foreground">
+                              {stream.name}
+                            </h5>
+                            <button
+                              type="button"
+                              onClick={() => addKitRow(stream.id)}
+                              className="shrink-0 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-card-foreground hover:bg-muted"
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        );
+                      }
+
                       return (
                         <div
                           key={stream.id}
-                          className={
-                            "flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 " +
-                            (qty > 0
-                              ? "border-border bg-muted/50"
-                              : "border-border bg-card")
-                          }
+                          className="rounded-xl border border-primary/50 bg-primary/5 px-4 py-3"
                         >
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-semibold text-card-foreground">
-                              {stream.name}
+                          {/* Card header */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <h5 className="truncate text-sm font-semibold text-card-foreground">
+                                {stream.name}
+                              </h5>
+                              {headerQty > 0 ? (
+                                <span className="rounded-md bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                                  {headerQty} {headerQty === 1 ? "kit" : "kits"}
+                                </span>
+                              ) : null}
                             </div>
-                            {unit != null && unit > 0 ? (
-                              <div className="text-xs tabular-nums text-muted-foreground">
-                                {currencyFormatter.format(unit)}
+                            <div className="flex items-center gap-2">
+                              {headerTotal > 0 ? (
+                                <span className="text-sm font-semibold tabular-nums text-card-foreground">
+                                  {currencyFormatter.format(headerTotal)}
+                                </span>
+                              ) : null}
+                              <button
+                                type="button"
+                                onClick={() => removeKitStream(stream.id)}
+                                aria-label={`Remove ${stream.name} from selection`}
+                                className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-card-foreground"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Column labels */}
+                          <div className="mt-3 grid grid-cols-[8rem_1fr_auto] gap-3 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                            <span>Qty</span>
+                            <span>T-shirt size</span>
+                            <span aria-hidden />
+                          </div>
+
+                          {/* Rows */}
+                          <div className="mt-1 space-y-2">
+                            {rowEntries.map(({ row, index }) => (
+                              <div
+                                key={index}
+                                className="grid grid-cols-[8rem_1fr_auto] items-center gap-3"
+                              >
+                                <div className="flex h-9 items-center justify-between rounded-lg border border-border bg-background">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateKitRowAt(index, {
+                                        count: Math.max(0, row.count - 1),
+                                      })
+                                    }
+                                    disabled={row.count === 0}
+                                    aria-label={`Decrease kit quantity for ${stream.name}`}
+                                    className="px-2.5 text-base leading-none text-muted-foreground hover:bg-muted disabled:opacity-40"
+                                  >
+                                    −
+                                  </button>
+                                  <span className="min-w-[1.5rem] text-center text-sm font-semibold tabular-nums">
+                                    {row.count}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateKitRowAt(index, {
+                                        count: row.count + 1,
+                                      })
+                                    }
+                                    aria-label={`Increase kit quantity for ${stream.name}`}
+                                    className="px-2.5 text-base leading-none text-muted-foreground hover:bg-muted"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                                <Select
+                                  value={
+                                    row.tshirtItemId == null
+                                      ? "none"
+                                      : String(row.tshirtItemId)
+                                  }
+                                  onValueChange={(v) =>
+                                    updateKitRowAt(index, {
+                                      tshirtItemId:
+                                        v === "none" ? null : Number(v),
+                                    })
+                                  }
+                                  disabled={tshirtQuery.isLoading}
+                                >
+                                  <SelectTrigger className="h-9 text-xs">
+                                    <SelectValue placeholder="Select t-shirt" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">
+                                      No t-shirt
+                                    </SelectItem>
+                                    {tshirts.map((t) => (
+                                      <SelectItem
+                                        key={t.id}
+                                        value={String(t.id)}
+                                      >
+                                        {t.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <button
+                                  type="button"
+                                  onClick={() => removeKitRowAt(index)}
+                                  aria-label="Remove this t-shirt row"
+                                  className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-destructive"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
                               </div>
-                            ) : null}
+                            ))}
                           </div>
-                          <div className="flex shrink-0 items-center rounded-lg border border-border bg-background">
-                            <button
-                              type="button"
-                              className="px-2.5 py-1.5 text-lg leading-none text-muted-foreground hover:bg-muted disabled:opacity-40"
-                              aria-label={`Decrease starting kit quantity for ${stream.name}`}
-                              disabled={qty === 0}
-                              onClick={() =>
-                                setKitQty(stream.id, Math.max(0, qty - 1))
-                              }
-                            >
-                              −
-                            </button>
-                            <div className="min-w-[2rem] px-1 text-center text-sm font-semibold tabular-nums">
-                              {qty}
-                            </div>
-                            <button
-                              type="button"
-                              className="px-2.5 py-1.5 text-lg leading-none text-muted-foreground hover:bg-muted"
-                              aria-label={`Increase starting kit quantity for ${stream.name}`}
-                              onClick={() => setKitQty(stream.id, qty + 1)}
-                            >
-                              +
-                            </button>
-                          </div>
+
+                          {/* Add another t-shirt size */}
+                          <button
+                            type="button"
+                            onClick={() => addKitRow(stream.id)}
+                            className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Add another t-shirt size
+                          </button>
                         </div>
                       );
                     })}
+
+                    {kitRows.length > 0 ? (
+                      <p className="pt-1 text-[11px] italic text-muted-foreground">
+                        Each t-shirt size you add counts as separate kits towards
+                        the total.
+                      </p>
+                    ) : null}
                   </div>
                 )}
               </section>
@@ -547,7 +709,7 @@ export default function UnifiedMaterialRequestDialog({
                 <span className="shrink-0">Invoice</span>
                 <span className="min-w-0 font-normal text-muted-foreground">
                   <span aria-hidden className="text-muted-foreground/80">
-                    -
+                    —
                   </span>{" "}
                   <span className="font-medium tabular-nums text-card-foreground">
                     {selectedKitsTotalQty}
@@ -603,7 +765,7 @@ export default function UnifiedMaterialRequestDialog({
                       ? { name: c.name, instructorId: c.instructorId }
                       : undefined;
                   }}
-                  onRemoveKit={(streamId) => setKitQty(streamId, 0)}
+                  onRemoveKit={(streamId) => removeKitStream(streamId)}
                   onRemoveStudent={(sid) => toggleStudent(sid)}
                   onRemoveInstructor={(iid) => toggleInstructor(iid)}
                 />
@@ -612,22 +774,25 @@ export default function UnifiedMaterialRequestDialog({
           </div>
         </div>
 
-        <footer className="shrink-0 border-t border-border bg-card px-4 py-4">
-          <div className="ml-auto flex w-full max-w-md flex-col items-end gap-2 text-right">
-            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Estimated total
+        <footer className="shrink-0 border-t border-border bg-card px-6 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                Estimated total
+              </span>
+              <span className="text-lg font-semibold tabular-nums text-card-foreground">
+                {currencyFormatter.format(preview?.totalAmount ?? 0)}
+              </span>
             </div>
-            <div className="flex w-full shrink-0 flex-nowrap justify-end gap-2 sm:w-auto">
+            <div className="flex shrink-0 flex-nowrap justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="min-w-0 flex-1 sm:flex-initial"
               >
                 Cancel
               </Button>
               <Button
-                className="min-w-0 flex-1 sm:flex-initial"
                 onClick={handleContinue}
                 disabled={
                   !hasSelection ||

@@ -208,7 +208,7 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
       (item) =>
         item.name.toLowerCase().includes(q) ||
         (item.sku ?? "").toLowerCase().includes(q) ||
-        (item.category?.name ?? "").toLowerCase().includes(q),
+        (item.category ?? "").toLowerCase().includes(q),
     );
   }, [availableCatalog, search]);
 
@@ -702,7 +702,7 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                   </div>
                   <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-gray-500">
                     {item.sku ? <span>{item.sku}</span> : null}
-                    {item.category?.name ? <span>{item.category.name}</span> : null}
+                    {item.category ? <span>{item.category}</span> : null}
                   </div>
                 </div>
                 {!checked ? (

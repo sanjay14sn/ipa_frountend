@@ -11,6 +11,7 @@ import {
   type GroupedOrdersResponse,
   type FranchiseeOrderListParams,
 } from "@/services/order.service";
+import { useProgramId } from "@/hooks/use-scope";
 import { queryKeys } from "./query-keys";
 import { getQueryClientBridge } from "./query-client-bridge";
 
@@ -18,11 +19,16 @@ export function useFranchiseeOrders(
   params?: FranchiseeOrderListParams,
   enabled = true,
 ) {
+  const programId = useProgramId();
+  const scopedParams: FranchiseeOrderListParams = {
+    ...params,
+    programId: params?.programId ?? programId ?? undefined,
+  };
   const q = useQuery({
     queryKey: queryKeys.orders.franchisee(
-      params as Record<string, unknown> | undefined,
+      scopedParams as Record<string, unknown> | undefined,
     ),
-    queryFn: () => getFranchiseeOrders(params),
+    queryFn: () => getFranchiseeOrders(scopedParams),
     enabled,
     placeholderData: (prev) => prev,
   });

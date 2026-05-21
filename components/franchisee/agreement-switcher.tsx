@@ -15,7 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LifecycleStatusBadge } from "@/components/status/lifecycle-status-badge";
-import { useAgreementContext } from "@/context/agreement-context";
+import { useUser } from "@/context/user-context";
+import { useScopeAgreements } from "@/hooks/use-scope";
 
 /**
  * Second-level switcher beneath the franchise switcher. Lists every agreement
@@ -27,8 +28,12 @@ import { useAgreementContext } from "@/context/agreement-context";
  * switch between in that case.
  */
 export function AgreementSwitcher() {
-  const { agreements, activeAgreement, switchAgreement, loading } =
-    useAgreementContext();
+  const { agreements, activeAgreement, loading } = useScopeAgreements();
+  // Continue to delegate the actual scope mutation through UserContext so the
+  // legacy localStorage `user.activeAgreementId` field stays in sync during
+  // the migration window. UserContext.switchAgreement mirrors into the scope
+  // store internally.
+  const { switchAgreement } = useUser();
   const router = useRouter();
   const pathname = usePathname();
   const [switching, setSwitching] = useState(false);

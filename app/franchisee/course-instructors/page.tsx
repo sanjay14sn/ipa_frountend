@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { useUser } from "@/context/user-context";
-import { useAgreementContext } from "@/context/agreement-context";
 import { deleteCourseInstructorWithRevalidation, useCourseInstructors } from "@/hooks/api/course-instructor.hooks";
 import { TablePageShell } from "@/components/shared";
 import AddCourseInstructorModal from "./components/AddCourseInstructorModal";
@@ -23,7 +22,6 @@ import CourseInstructorTabs from "./components/CourseInstructorTabs";
 
 export default function FranchiseeCourseInstructorsPage() {
   const { user } = useUser();
-  const { activeAgreementId } = useAgreementContext();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [deleteCourseInstructorId, setDeleteCourseInstructorId] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -32,7 +30,7 @@ export default function FranchiseeCourseInstructorsPage() {
     courseInstructors: allCourseInstructors,
     isLoading,
     revalidate,
-  } = useCourseInstructors({ agreementId: activeAgreementId ?? undefined });
+  } = useCourseInstructors();
 
   const activeRows = useMemo(
     () => allCourseInstructors.filter((item) => item.status === "Active" || item.status === "Approved"),

@@ -24,6 +24,12 @@ export interface CheckoutLineItem {
   quantity: number;
 }
 
+export interface CheckoutTshirtBreakdownRow {
+  tshirtItemId: number | null;
+  tshirtName: string | null;
+  quantity: number;
+}
+
 interface InvoiceGroupCardProps {
   kind: CheckoutGroupKind;
   title: string;
@@ -31,6 +37,8 @@ interface InvoiceGroupCardProps {
   kitQty?: number;
   free?: boolean;
   costs?: CheckoutCostRow[];
+  /** T-shirt breakdown for kit groups — rendered between costs and items. */
+  tshirtBreakdown?: CheckoutTshirtBreakdownRow[];
   items: CheckoutLineItem[];
   totalAmount: number;
   /** When true, hide remove control (finalized order / row invoice). */
@@ -57,6 +65,7 @@ export default function InvoiceGroupCard({
   kitQty,
   free,
   costs,
+  tshirtBreakdown,
   items,
   totalAmount,
   readOnly = false,
@@ -136,6 +145,29 @@ export default function InvoiceGroupCard({
               </div>
             );
           })}
+        </div>
+      ) : null}
+
+      {tshirtBreakdown && tshirtBreakdown.length > 0 ? (
+        <div className="border-b border-border">
+          <div className="bg-muted/20 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            T-shirts
+          </div>
+          <div className="divide-y divide-border">
+            {tshirtBreakdown.map((t, i) => (
+              <div
+                key={`tshirt-${t.tshirtItemId ?? "none"}-${i}`}
+                className="flex items-center justify-between px-4 py-2 text-sm"
+              >
+                <span className="truncate text-card-foreground">
+                  {t.tshirtName ?? "No t-shirt selected"}
+                </span>
+                <span className="ml-2 shrink-0 tabular-nums text-muted-foreground">
+                  ×{t.quantity}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
 

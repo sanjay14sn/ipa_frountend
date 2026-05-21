@@ -4,6 +4,7 @@ import {
   normalizePaginatedResult,
   unwrapData,
 } from "@/lib/unwrap-api";
+import type { InventoryCategoryName } from "@/lib/inventory-categories";
 
 export type InventoryLifecycleStatus =
   | "ACTIVE"
@@ -15,13 +16,6 @@ export type InventoryType =
   | "MARKETING"
   | "ADMIN_CONSUMABLE";
 
-export type InventoryCategory = {
-  id: number;
-  name: string;
-  description?: string;
-  isActive?: boolean;
-};
-
 export type InventoryItemSummary = {
   id: number;
   sku: string;
@@ -29,8 +23,7 @@ export type InventoryItemSummary = {
   legacyIsoCode?: string | null;
   name: string;
   description?: string | null;
-  categoryId?: number | null;
-  category?: InventoryCategory | null;
+  category?: string | null;
   inventoryType: InventoryType;
   lifecycleStatus: InventoryLifecycleStatus;
   unitOfMeasurement?: string | null;
@@ -68,7 +61,7 @@ export type CreateInventoryDto = {
   legacyIsoCode?: string;
   name: string;
   description?: string;
-  categoryId?: number;
+  category?: InventoryCategoryName;
   inventoryType: InventoryType;
   lifecycleStatus: InventoryLifecycleStatus;
   unitOfMeasurement?: string;
@@ -93,6 +86,13 @@ export type InventoryMonitoringSummary = {
   staleStock: InventoryItemSummary[];
 };
 
+export interface InventoryByCategoryItem {
+  id: number;
+  sku: string;
+  name: string;
+  unitPrice: number;
+}
+
 function normalizeInventoryRow(raw: any): InventoryItemSummary {
   return {
     id: Number(raw?.id ?? 0),
@@ -101,15 +101,11 @@ function normalizeInventoryRow(raw: any): InventoryItemSummary {
     legacyIsoCode: raw?.legacyIsoCode ?? null,
     name: String(raw?.name ?? ""),
     description: raw?.description ?? null,
-    categoryId: raw?.categoryId ?? null,
-    category: raw?.category
-      ? {
-          id: Number(raw.category.id ?? 0),
-          name: String(raw.category.name ?? ""),
-          description: raw.category.description ?? "",
-          isActive: Boolean(raw.category.isActive ?? true),
-        }
-      : null,
+    category:
+      typeof raw?.category === "string"
+        ? raw.category
+        : // Legacy snapshots may still have a nested object — fall back to its name.
+          (raw?.category?.name ?? null),
     inventoryType: (raw?.inventoryType ?? "SALEABLE") as InventoryType,
     lifecycleStatus: (raw?.lifecycleStatus ?? "ACTIVE") as InventoryLifecycleStatus,
     unitOfMeasurement: raw?.unitOfMeasurement ?? null,
@@ -180,54 +176,8 @@ function normalizeFranchiseProgramKitRow(raw: any): FranchiseProgramKitItemSumma
   };
 }
 
-export async function getInventoryCategories(): Promise<InventoryCategory[]> {
-  const response = await api.get("/inventory-category");
-  const data = unwrapData<unknown[]>(response);
-  return Array.isArray(data)
-    ? data.map((row) => ({
-        id: Number((row as any)?.id ?? 0),
-        name: String((row as any)?.name ?? ""),
-        description: (row as any)?.description ?? "",
-        isActive: Boolean((row as any)?.isActive ?? true),
-      }))
-    : [];
-}
-
-export async function createInventoryCategory(body: {
-  name: string;
-  description?: string;
-  isActive?: boolean;
-}): Promise<InventoryCategory> {
-  const response = await api.post("/inventory-category", {
-    name: body.name.trim(),
-    description: body.description ?? "",
-    isActive: body.isActive ?? true,
-  });
-  const row = unwrapData<any>(response);
-  return {
-    id: Number(row?.id ?? 0),
-    name: String(row?.name ?? ""),
-    description: row?.description ?? "",
-    isActive: Boolean(row?.isActive ?? true),
-  };
-}
-
-export async function resolveInventoryCategoryId(rawName: string): Promise<number> {
-  const name = rawName.trim();
-  if (!name) {
-    throw new Error("Category name is required");
-  }
-  const lower = name.toLowerCase();
-  const list = await getInventoryCategories();
-  const found = list.find((c) => c.name.trim().toLowerCase() === lower);
-  if (found) return found.id;
-  const created = await createInventoryCategory({
-    name,
-    description: "",
-    isActive: true,
-  });
-  return created.id;
-}
+// Categories are now a hardcoded enum (see `@/lib/inventory-categories`).
+// Use `INVENTORY_CATEGORIES` directly for dropdowns; no server round-trip needed.
 
 export async function getAllInventory(): Promise<InventoryItemSummary[]> {
   const response = await api.get("/inventory");
@@ -295,6 +245,26 @@ export async function getKitCatalogItems(): Promise<InventoryItemSummary[]> {
   const response = await api.get("/inventory/kit-items");
   const data = unwrapData<unknown[]>(response);
   return Array.isArray(data) ? data.map(normalizeInventoryRow) : [];
+}
+
+export async function getTshirtInventory(
+  categoryName: string,
+): Promise<InventoryByCategoryItem[]> {
+  const response = await api.get("/inventory/by-category", {
+    params: { name: categoryName },
+  });
+  const data = unwrapData<unknown[]>(response);
+  return Array.isArray(data)
+    ? data.map((row) => {
+        const r = row as Record<string, unknown>;
+        return {
+          id: Number(r?.id ?? 0),
+          sku: String(r?.sku ?? ""),
+          name: String(r?.name ?? ""),
+          unitPrice: Number(r?.unitPrice ?? 0),
+        };
+      })
+    : [];
 }
 
 export async function getProgramKitItems(
@@ -420,6 +390,47 @@ export async function unassignInventoryFromTrainingLevel(
   await api.delete(
     `/inventory/training-level/${trainingLevelId}/items/${inventoryId}`,
   );
+}
+
+export type StockAdjustmentInput = {
+  inventoryItemId: number;
+  /** Positive to add stock, negative to remove. Must not be zero. */
+  deltaQty: number;
+  /** Required free-text reason (e.g. "physical recount", "damaged in storage"). */
+  reason: string;
+  /**
+   * Optional. Only honored for positive adjustments. When omitted, the
+   * weighted-average cost is preserved (pure quantity add).
+   */
+  unitCost?: number;
+  /** Optional. Defaults to location 1 on the backend. */
+  locationId?: number;
+};
+
+export type StockAdjustmentResult = {
+  stockAdjustmentId: number;
+};
+
+/**
+ * Post a manual stock adjustment. Positive deltas trigger the same FIFO
+ * backorder fulfillment that runs after a PO receipt. Negative deltas
+ * only reduce stock and never affect orders. Backend rejects negative
+ * deltas that would push onHandQty below zero.
+ */
+export async function adjustInventoryStock(
+  input: StockAdjustmentInput,
+): Promise<StockAdjustmentResult> {
+  const response = await api.post("/inventory/stock-adjustments", {
+    inventoryItemId: input.inventoryItemId,
+    deltaQty: input.deltaQty,
+    reason: input.reason.trim(),
+    ...(input.unitCost !== undefined ? { unitCost: input.unitCost } : {}),
+    ...(input.locationId !== undefined ? { locationId: input.locationId } : {}),
+  });
+  const data = unwrapData<any>(response);
+  return {
+    stockAdjustmentId: Number(data?.stockAdjustmentId ?? 0),
+  };
 }
 
 export async function getInventoryMonitoring(): Promise<InventoryMonitoringSummary> {

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRightLeft,
+  Boxes,
   Edit2,
   Plus,
   Trash2,
@@ -48,12 +49,12 @@ import { getAllPrograms, type Program } from "@/services/program.service";
 import type { Level } from "@/services/level.service";
 import type { Stream } from "@/services/stream.service";
 import {
+  adjustInventoryStock,
   bulkAssignInventoryToLevel,
   createInventory,
   deleteInventory,
   getAllInventory,
   getInventoryItemsForLevel,
-  resolveInventoryCategoryId,
   unassignInventoryFromLevel,
   updateInventory,
   type CreateInventoryDto,
@@ -63,6 +64,12 @@ import {
   type UpdateInventoryDto,
 } from "@/services/inventory.service";
 import {
+  INVENTORY_CATEGORIES,
+  isInventoryCategory,
+  type InventoryCategoryName,
+} from "@/lib/inventory-categories";
+import {
+  invalidateAfterStockAdjustment,
   invalidateInventoryAdminLists,
   invalidateLevelItems,
   useInventoryPaginatedQuery,
@@ -98,6 +105,22 @@ type InventoryFormState = {
   safetyStock: number;
   reorderCycleDays: number;
   isActive: boolean;
+};
+
+type AdjustmentDirection = "INCREASE" | "DECREASE";
+
+type AdjustmentFormState = {
+  direction: AdjustmentDirection;
+  quantity: string;
+  reason: string;
+  unitCost: string;
+};
+
+const EMPTY_ADJUSTMENT: AdjustmentFormState = {
+  direction: "INCREASE",
+  quantity: "",
+  reason: "",
+  unitCost: "",
 };
 
 const EMPTY_FORM: InventoryFormState = {
@@ -140,10 +163,16 @@ export function InventorySection() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isAdjustOpen, setIsAdjustOpen] = useState(false);
   const [formData, setFormData] = useState<InventoryFormState>(EMPTY_FORM);
   const [editingItem, setEditingItem] = useState<InventoryItemSummary | null>(null);
   const [editForm, setEditForm] = useState<InventoryFormState>(EMPTY_FORM);
   const [deletingItem, setDeletingItem] = useState<InventoryItemSummary | null>(null);
+  const [adjustingItem, setAdjustingItem] =
+    useState<InventoryItemSummary | null>(null);
+  const [adjustForm, setAdjustForm] =
+    useState<AdjustmentFormState>(EMPTY_ADJUSTMENT);
+  const [isAdjustSubmitting, setIsAdjustSubmitting] = useState(false);
 
   const programIdNum =
     programFilter === "" || programFilter === 0 ? undefined : Number(programFilter);
@@ -193,11 +222,14 @@ export function InventorySection() {
     setFormData(EMPTY_FORM);
   }
 
-  function mapFormToPayload(data: InventoryFormState, categoryId: number): CreateInventoryDto {
+  function mapFormToPayload(
+    data: InventoryFormState,
+    category: InventoryCategoryName | undefined,
+  ): CreateInventoryDto {
     return {
       name: data.name.trim(),
       description: data.description.trim() || undefined,
-      categoryId,
+      category,
       legacyItemCode: data.legacyItemCode.trim() || undefined,
       legacyIsoCode: data.legacyIsoCode.trim() || undefined,
       inventoryType: data.inventoryType,
@@ -219,14 +251,14 @@ export function InventorySection() {
   }
 
   async function handleAdd() {
-    if (!formData.name.trim() || !formData.categoryName.trim()) {
-      toast.error("Item name and category are required.");
+    const category = formData.categoryName.trim();
+    if (!formData.name.trim() || !isInventoryCategory(category)) {
+      toast.error("Item name and a valid category are required.");
       return;
     }
 
     try {
-      const categoryId = await resolveInventoryCategoryId(formData.categoryName);
-      await createInventory(mapFormToPayload(formData, categoryId));
+      await createInventory(mapFormToPayload(formData, category));
       toast.success("Inventory item created");
       setIsAddOpen(false);
       resetAddForm();
@@ -237,14 +269,14 @@ export function InventorySection() {
   }
 
   async function handleEdit() {
-    if (!editingItem || !editForm.categoryName.trim()) {
-      toast.error("Category is required.");
+    const category = editForm.categoryName.trim();
+    if (!editingItem || !isInventoryCategory(category)) {
+      toast.error("A valid category is required.");
       return;
     }
 
     try {
-      const categoryId = await resolveInventoryCategoryId(editForm.categoryName);
-      const payload = mapFormToPayload(editForm, categoryId) as UpdateInventoryDto;
+      const payload = mapFormToPayload(editForm, category) as UpdateInventoryDto;
       await updateInventory(editingItem.id, payload);
       toast.success("Inventory item updated");
       setIsEditOpen(false);
@@ -292,7 +324,7 @@ export function InventorySection() {
     setEditForm({
       name: item.name,
       description: item.description ?? "",
-      categoryName: item.category?.name ?? "",
+      categoryName: item.category ?? "",
       legacyItemCode: item.legacyItemCode ?? "",
       legacyIsoCode: item.legacyIsoCode ?? "",
       inventoryType: item.inventoryType,
@@ -306,13 +338,145 @@ export function InventorySection() {
     setIsEditOpen(true);
   }
 
+  function openAdjust(item: InventoryItemSummary) {
+    setAdjustingItem(item);
+    setAdjustForm(EMPTY_ADJUSTMENT);
+    setIsAdjustOpen(true);
+  }
+
+  function closeAdjust() {
+    if (isAdjustSubmitting) return;
+    setIsAdjustOpen(false);
+    setAdjustingItem(null);
+    setAdjustForm(EMPTY_ADJUSTMENT);
+  }
+
+  /**
+   * Parsed adjustment derived from `adjustForm` + `adjustingItem`.
+   * Centralises validation and the projected on-hand calculation so the
+   * dialog and the submit handler share the same source of truth.
+   */
+  function deriveAdjustmentPreview() {
+    if (!adjustingItem) {
+      return { error: null as string | null, deltaQty: 0, projected: 0 };
+    }
+    const trimmedQty = adjustForm.quantity.trim();
+    const trimmedReason = adjustForm.reason.trim();
+    const trimmedCost = adjustForm.unitCost.trim();
+
+    const qtyNum = trimmedQty === "" ? NaN : Number(trimmedQty);
+    if (!Number.isFinite(qtyNum) || !Number.isInteger(qtyNum) || qtyNum <= 0) {
+      return {
+        error: trimmedQty === "" ? null : "Quantity must be a positive whole number.",
+        deltaQty: 0,
+        projected: adjustingItem.onHandQty,
+      };
+    }
+
+    const deltaQty = adjustForm.direction === "INCREASE" ? qtyNum : -qtyNum;
+    const projected = adjustingItem.onHandQty + deltaQty;
+
+    if (projected < 0) {
+      return {
+        error: `Cannot remove ${qtyNum} — only ${adjustingItem.onHandQty} on hand.`,
+        deltaQty,
+        projected,
+      };
+    }
+
+    if (!trimmedReason) {
+      return { error: null, deltaQty, projected };
+    }
+
+    if (trimmedCost && adjustForm.direction === "INCREASE") {
+      const costNum = Number(trimmedCost);
+      if (!Number.isFinite(costNum) || costNum < 0) {
+        return {
+          error: "Unit cost must be zero or positive.",
+          deltaQty,
+          projected,
+        };
+      }
+    }
+
+    return { error: null, deltaQty, projected };
+  }
+
+  async function handleAdjust() {
+    if (!adjustingItem) return;
+    const trimmedQty = adjustForm.quantity.trim();
+    const trimmedReason = adjustForm.reason.trim();
+    const trimmedCost = adjustForm.unitCost.trim();
+
+    const qtyNum = Number(trimmedQty);
+    if (!Number.isFinite(qtyNum) || !Number.isInteger(qtyNum) || qtyNum <= 0) {
+      toast.error("Enter a positive whole-number quantity.");
+      return;
+    }
+    if (!trimmedReason) {
+      toast.error("A reason is required for stock adjustments.");
+      return;
+    }
+    if (trimmedReason.length > 500) {
+      toast.error("Reason must be 500 characters or fewer.");
+      return;
+    }
+
+    const deltaQty = adjustForm.direction === "INCREASE" ? qtyNum : -qtyNum;
+    if (adjustingItem.onHandQty + deltaQty < 0) {
+      toast.error(
+        `Cannot remove ${qtyNum} — only ${adjustingItem.onHandQty} on hand.`,
+      );
+      return;
+    }
+
+    let unitCost: number | undefined;
+    if (adjustForm.direction === "INCREASE" && trimmedCost) {
+      const costNum = Number(trimmedCost);
+      if (!Number.isFinite(costNum) || costNum < 0) {
+        toast.error("Unit cost must be zero or positive.");
+        return;
+      }
+      unitCost = costNum;
+    }
+
+    try {
+      setIsAdjustSubmitting(true);
+      await adjustInventoryStock({
+        inventoryItemId: adjustingItem.id,
+        deltaQty,
+        reason: trimmedReason,
+        ...(unitCost !== undefined ? { unitCost } : {}),
+      });
+      toast.success(
+        deltaQty > 0
+          ? `Added ${qtyNum} to stock. Backorders for this item are being replenished.`
+          : `Removed ${qtyNum} from stock.`,
+      );
+      setIsAdjustOpen(false);
+      setAdjustingItem(null);
+      setAdjustForm(EMPTY_ADJUSTMENT);
+      // Positive adjustments can fulfil backordered order lines (including
+      // CI-material orders), so refresh the full set of caches that show
+      // order / CI training allocation state, not just inventory.
+      if (deltaQty > 0) {
+        await invalidateAfterStockAdjustment();
+      }
+      await refreshInventoryViews();
+    } catch (error) {
+      toast.error(getUserFriendlyMessage(error));
+    } finally {
+      setIsAdjustSubmitting(false);
+    }
+  }
+
   const columns: DataTableColumn<InventoryItemSummary>[] = [
     {
       key: "category",
       header: "Category",
       render: (item) => (
         <div>
-          <div>{item.category?.name ?? "Uncategorized"}</div>
+          <div>{item.category ?? "Uncategorized"}</div>
           <div className="text-xs text-muted-foreground">
             {item.unitOfMeasurement || "No unit"}
           </div>
@@ -380,6 +544,14 @@ export function InventorySection() {
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => openAdjust(item)}
+            title="Adjust on-hand stock"
+          >
+            <Boxes className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => openProcurement(item.id)}
             title="Manage sourcing in procurement"
           >
@@ -409,6 +581,8 @@ export function InventorySection() {
       ),
     },
   ];
+
+  const adjustPreview = deriveAdjustmentPreview();
 
   const toolbarActions = (
     <div className="flex flex-wrap items-end gap-2">
@@ -479,7 +653,14 @@ export function InventorySection() {
         <CardHeader>
           <CardTitle className="text-xl">Inventory catalog</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Manage the item master, stock foundation, reorder thresholds, and level templates. Stock updates come from receipts and level-template assignment, not from raw manual overwrites.
+            Manage the item master, stock foundation, reorder thresholds, and
+            level templates. Stock typically moves through PO receipts and
+            order allocation; use{" "}
+            <span className="inline-flex items-center gap-1 font-medium">
+              <Boxes className="h-3.5 w-3.5" /> Adjust
+            </span>{" "}
+            on a row to record manual corrections (recounts, damage, found
+            stock). Positive adjustments automatically replenish backorders.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -627,6 +808,183 @@ export function InventorySection() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog
+        open={isAdjustOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeAdjust();
+          } else {
+            setIsAdjustOpen(true);
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Adjust stock</DialogTitle>
+          </DialogHeader>
+          {adjustingItem ? (
+            <div className="space-y-4">
+              <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                <div className="font-medium">{adjustingItem.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {adjustingItem.sku}
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <div className="text-muted-foreground">On hand</div>
+                    <div className="text-base font-medium text-foreground">
+                      {adjustingItem.onHandQty}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Reserved</div>
+                    <div className="text-base font-medium text-foreground">
+                      {adjustingItem.reservedQty}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Available</div>
+                    <div className="text-base font-medium text-foreground">
+                      {adjustingItem.availableQty}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Action</Label>
+                <Select
+                  value={adjustForm.direction}
+                  onValueChange={(value) =>
+                    setAdjustForm((prev) => ({
+                      ...prev,
+                      direction: value as AdjustmentDirection,
+                      // Clear cost when switching to decrease (cost only
+                      // applies to increases)
+                      unitCost: value === "INCREASE" ? prev.unitCost : "",
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="INCREASE">
+                      Increase (add stock)
+                    </SelectItem>
+                    <SelectItem value="DECREASE">
+                      Decrease (remove stock)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Quantity</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  step={1}
+                  placeholder="e.g. 5"
+                  value={adjustForm.quantity}
+                  onChange={(event) =>
+                    setAdjustForm((prev) => ({
+                      ...prev,
+                      quantity: event.target.value,
+                    }))
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Projected on-hand after this adjustment:{" "}
+                  <span
+                    className={
+                      adjustPreview.projected < 0
+                        ? "font-medium text-destructive"
+                        : "font-medium text-foreground"
+                    }
+                  >
+                    {adjustPreview.projected}
+                  </span>
+                </p>
+                {adjustPreview.error ? (
+                  <p className="text-xs text-destructive">
+                    {adjustPreview.error}
+                  </p>
+                ) : null}
+              </div>
+
+              {adjustForm.direction === "INCREASE" ? (
+                <div className="space-y-2">
+                  <Label>Unit cost (optional)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder={`Leaves WAC at ₹${adjustingItem.weightedAverageCost.toFixed(2)} when blank`}
+                    value={adjustForm.unitCost}
+                    onChange={(event) =>
+                      setAdjustForm((prev) => ({
+                        ...prev,
+                        unitCost: event.target.value,
+                      }))
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Supply a cost to blend into the weighted average; leave
+                    blank to add quantity without changing WAC.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="space-y-2">
+                <Label>Reason</Label>
+                <Textarea
+                  rows={3}
+                  placeholder="e.g. Physical recount, damaged in storage, returned by franchisee..."
+                  value={adjustForm.reason}
+                  onChange={(event) =>
+                    setAdjustForm((prev) => ({
+                      ...prev,
+                      reason: event.target.value,
+                    }))
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Stored on the audit trail. Required. Up to 500 characters.
+                </p>
+              </div>
+
+              {adjustForm.direction === "INCREASE" ? (
+                <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-900">
+                  Positive adjustments automatically replenish any
+                  backordered orders for this item, oldest first.
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={closeAdjust}
+              disabled={isAdjustSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => void handleAdjust()}
+              disabled={
+                isAdjustSubmitting ||
+                Boolean(adjustPreview.error) ||
+                !adjustForm.quantity.trim() ||
+                !adjustForm.reason.trim()
+              }
+            >
+              {isAdjustSubmitting ? "Saving..." : "Apply adjustment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -661,13 +1019,23 @@ function InventoryForm({
       </div>
       <div className="space-y-2">
         <Label>Category</Label>
-        <Input
-          placeholder="Books, Uniforms, Stationery..."
-          value={form.categoryName}
-          onChange={(event) =>
-            setForm((prev) => ({ ...prev, categoryName: event.target.value }))
+        <Select
+          value={form.categoryName || undefined}
+          onValueChange={(value) =>
+            setForm((prev) => ({ ...prev, categoryName: value }))
           }
-        />
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a category" />
+          </SelectTrigger>
+          <SelectContent>
+            {INVENTORY_CATEGORIES.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label>Unit of measurement</Label>

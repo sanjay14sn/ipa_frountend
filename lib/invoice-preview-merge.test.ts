@@ -20,9 +20,11 @@ const kitGroup = (qty: number): StartingKitGroupPreview => ({
   streamId: 9,
   streamName: "S9",
   quantity: qty,
-  materialUnit: 10,
   kitUnit: 20,
   royaltyUnit: 5,
+  tshirtBreakdown: [
+    { tshirtItemId: 101, tshirtName: "Tee-M", quantity: qty },
+  ],
   items: [
     { name: "A", quantity: 2 * qty },
     { name: "B", quantity: 4 * qty },
@@ -34,10 +36,20 @@ test("scaleStartingKitGroup preserves unit fields and stream metadata", () => {
   const scaled = scaleStartingKitGroup(g, 8);
   assert.equal(scaled.streamId, 9);
   assert.equal(scaled.streamName, "S9");
-  assert.equal(scaled.materialUnit, 10);
   assert.equal(scaled.kitUnit, 20);
   assert.equal(scaled.royaltyUnit, 5);
   assert.equal(scaled.quantity, 8);
+});
+
+test("scaleStartingKitGroup preserves tshirtBreakdown intact", () => {
+  const g = kitGroup(4);
+  const scaled = scaleStartingKitGroup(g, 8);
+  assert.deepEqual(scaled.tshirtBreakdown, [
+    { tshirtItemId: 101, tshirtName: "Tee-M", quantity: 4 },
+  ]);
+  // mutating the scaled copy must not leak into the source group
+  scaled.tshirtBreakdown[0].quantity = 999;
+  assert.equal(g.tshirtBreakdown[0].quantity, 4);
 });
 
 test("scaleStartingKitGroup scales line item quantities by newQty/oldQty", () => {
@@ -52,9 +64,9 @@ test("scaleStartingKitGroup rounds fractional item quantities", () => {
     streamId: 1,
     streamName: "X",
     quantity: 3,
-    materialUnit: 1,
     kitUnit: 1,
     royaltyUnit: 1,
+    tshirtBreakdown: [],
     items: [{ name: "odd", quantity: 5 }],
   };
   const scaled = scaleStartingKitGroup(g, 2);
@@ -154,9 +166,11 @@ test("recomputeTotalAmount matches manual sum", () => {
         streamId: 1,
         streamName: "S",
         quantity: 2,
-        materialUnit: 10,
         kitUnit: 5,
         royaltyUnit: 3,
+        tshirtBreakdown: [
+          { tshirtItemId: 42, tshirtName: "Tee", quantity: 2 },
+        ],
         items: [],
       },
     ],
@@ -164,11 +178,40 @@ test("recomputeTotalAmount matches manual sum", () => {
   const manual =
     100 +
     40 +
-    (10 + 5 + 3) * 2;
+    (5 + 3) * 2;
   assert.equal(recomputeTotalAmount(preview), manual);
   const applied = applyRecomputedTotal(preview);
   assert.equal(applied.totalAmount, manual);
   assert.notEqual(preview.totalAmount, applied.totalAmount);
+});
+
+test("recomputeTotalAmount preserves tshirtBreakdown when applied", () => {
+  const preview: InvoicePreview = {
+    franchiseId: "f",
+    programId: 1,
+    levelId: 1,
+    isFirstLevel: true,
+    students: [],
+    lines: [],
+    totalAmount: 0,
+    studentGroups: [],
+    startingKitGroups: [
+      {
+        streamId: 7,
+        streamName: "S7",
+        quantity: 3,
+        kitUnit: 4,
+        royaltyUnit: 2,
+        tshirtBreakdown: [
+          { tshirtItemId: 11, tshirtName: "L", quantity: 3 },
+        ],
+        items: [{ name: "x", quantity: 1 }],
+      },
+    ],
+  };
+  const applied = applyRecomputedTotal(preview);
+  assert.equal(applied.totalAmount, (4 + 2) * 3);
+  assert.deepEqual(applied.startingKitGroups, preview.startingKitGroups);
 });
 
 test("studentGroupsToBreakdowns empty array", () => {

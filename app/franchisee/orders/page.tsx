@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@/context/user-context";
-import { useAgreementContext } from "@/context/agreement-context";
 import { useStudents } from "@/hooks/api/student.hooks";
 import {
   useFranchiseeOrders,
@@ -35,18 +34,12 @@ import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 export default function FranchiseeOrdersPage() {
   const { user } = useUser();
-  const { activeAgreementId } = useAgreementContext();
-  const { students, isLoading: studentsLoading } = useStudents({
-    agreementId: activeAgreementId ?? undefined,
-  });
+  const { students, isLoading: studentsLoading } = useStudents();
   const {
     orders,
     isLoading: ordersLoading,
     revalidate: refetchOrders,
-  } = useFranchiseeOrders(
-    { agreementId: activeAgreementId ?? undefined },
-    Boolean(user?.franchiseId),
-  );
+  } = useFranchiseeOrders(undefined, Boolean(user?.franchiseId));
 
   // --- Unified modal state ---
   const [isUnifiedModalOpen, setIsUnifiedModalOpen] = useState(false);

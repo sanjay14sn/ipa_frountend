@@ -219,6 +219,13 @@ api.interceptors.response.use(
 
         if (typeof window !== "undefined") {
           localStorage.removeItem("user");
+          // Lazy import to avoid a load-time circular dep (axios → store → axios).
+          try {
+            const { useScopeStore } = await import("@/lib/stores/scope-store");
+            useScopeStore.getState().clear();
+          } catch {
+            /* ignore */
+          }
           const loginPath = loginPathForSession(role);
           const already = loginPath === "/ci/login" && window.location.pathname.startsWith("/ci");
           if (!already) {

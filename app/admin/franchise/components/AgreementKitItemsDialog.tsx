@@ -55,7 +55,7 @@ function toSelectedRows(rows: FranchiseProgramKitItemSummary[]): SelectedRow[] {
       sku: row.sku ?? null,
       quantity: Number(row.quantity ?? row.defaultQuantity ?? 1),
       availableQty: Number(row.availableQty ?? 0),
-      categoryName: row.category?.name ?? null,
+      categoryName: row.category ?? null,
     }));
 }
 
@@ -142,7 +142,7 @@ export function AgreementKitItemsDialog({
         sku: selectedToAdd.sku ?? null,
         quantity: qty,
         availableQty: Number(selectedToAdd.availableQty ?? 0),
-        categoryName: selectedToAdd.category?.name ?? null,
+        categoryName: selectedToAdd.category ?? null,
       },
     ]);
     setSelectedProgramKitId(null);
@@ -313,7 +313,7 @@ export function AgreementKitItemsDialog({
                           {availableRows.map((row) => (
                             <CommandItem
                               key={row.programKitId}
-                              value={`${row.name} ${row.sku ?? ""} ${row.category?.name ?? ""}`}
+                              value={`${row.name} ${row.sku ?? ""} ${row.category ?? ""}`}
                               onSelect={() =>
                                 setSelectedProgramKitId(row.programKitId)
                               }
@@ -329,7 +329,7 @@ export function AgreementKitItemsDialog({
                               <div className="min-w-0">
                                 <div className="truncate">{row.name}</div>
                                 <div className="text-xs text-muted-foreground">
-                                  {row.sku ?? "-"} | {row.category?.name ?? "-"}
+                                  {row.sku ?? "-"} | {row.category ?? "-"}
                                 </div>
                               </div>
                             </CommandItem>

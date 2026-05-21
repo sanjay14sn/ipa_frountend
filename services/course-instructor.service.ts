@@ -4,6 +4,7 @@ import {
   normalizePaginatedResult,
   unwrapData,
 } from "@/lib/unwrap-api";
+import { withProgramScope } from "./_scope";
 import type { CITrainingPackageItem } from "./ci-training.service";
 
 export interface Response {
@@ -290,18 +291,20 @@ export interface CourseInstructorListParams {
   sortOrder?: string;
   status?: string;
   franchiseId?: string;
-  /** Franchisee list: scope to the active agreement's program. Resolved server-side. */
+  /** Active program scope. Auto-injected from the scope store via withProgramScope. */
+  programId?: number;
+  /** Legacy: agreement-driven scope. Backend resolves to programId. */
   agreementId?: number;
 }
 
 export async function getAllCourseInstructors(
   params?: CourseInstructorListParams,
 ): Promise<CourseInstructorsResponse> {
-  const merged: CourseInstructorListParams = {
+  const merged: CourseInstructorListParams = withProgramScope({
     page: params?.page ?? 1,
     limit: params?.limit ?? 10_000,
     ...params,
-  };
+  });
   const response = await api.get("/course-instructor", {
     params: compactRequestParams(
       merged as Record<string, string | number | boolean | undefined | null>,

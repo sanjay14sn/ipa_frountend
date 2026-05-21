@@ -44,7 +44,7 @@ export function InventoryCheckboxLinkPanel({
         return (
           item.name.toLowerCase().includes(q) ||
           item.sku.toLowerCase().includes(q) ||
-          (item.category?.name ?? "").toLowerCase().includes(q)
+          (item.category ?? "").toLowerCase().includes(q)
         );
       })
     : available;
@@ -241,7 +241,7 @@ export function InventoryCheckboxLinkPanel({
                       </div>
                       <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-gray-500">
                         {item.sku ? <span>{item.sku}</span> : null}
-                        {item.category?.name ? <span>{item.category.name}</span> : null}
+                        {item.category ? <span>{item.category}</span> : null}
                         <span>Avail {item.availableQty}</span>
                       </div>
                     </div>

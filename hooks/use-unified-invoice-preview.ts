@@ -18,6 +18,7 @@ import {
 export interface StartingKitSelectionItem {
   streamId: number;
   quantity: number;
+  tshirtItemId: number | null;
 }
 
 function emptyPreview(seed?: Partial<InvoicePreview>): InvoicePreview {
@@ -112,7 +113,7 @@ export function useUnifiedInvoicePreview({
     () =>
       [...startingKitItems]
         .sort((a, b) => a.streamId - b.streamId)
-        .map((i) => `${i.streamId}:${i.quantity}`)
+        .map((i) => `${i.streamId}:${i.tshirtItemId ?? "none"}:${i.quantity}`)
         .join(","),
     [startingKitItems],
   );
@@ -136,9 +137,16 @@ export function useUnifiedInvoicePreview({
 
       const studentSet = new Set(selectedStudentIds);
       const instructorSet = new Set(selectedInstructorIds);
-      const kitQtyByStreamId = new Map(
-        startingKitItems.map((i) => [i.streamId, i.quantity] as const),
-      );
+      // Sum quantities per streamId — a stream may appear in multiple rows
+      // (one per t-shirt selection), and downstream filter/scale operate on
+      // the total quantity per stream group.
+      const kitQtyByStreamId = new Map<number, number>();
+      for (const i of startingKitItems) {
+        kitQtyByStreamId.set(
+          i.streamId,
+          (kitQtyByStreamId.get(i.streamId) ?? 0) + i.quantity,
+        );
+      }
 
       let working: InvoicePreview | null = mergedRef.current;
 
@@ -167,12 +175,13 @@ export function useUnifiedInvoicePreview({
         (id) => !inInstructorPreview.has(id),
       );
 
-      const pricedStreamIds = new Set(
-        (working.startingKitGroups ?? []).map((g) => g.streamId),
-      );
-      const newKitPayload = startingKitItems.filter(
-        (i) => !pricedStreamIds.has(i.streamId),
-      );
+      // Always re-request the full kit block when kits change. Each group may
+      // contain multiple t-shirt rows, and the per-(streamId, tshirtItemId)
+      // dedupe would need to inspect all of `tshirtBreakdown` — the optimization
+      // isn't worth the complexity; kit previews are cheap. (Note: the cached
+      // kit groups in `working` get overlay-replaced by streamId during merge,
+      // so freshly-fetched groups win.)
+      const newKitPayload = startingKitItems;
 
       const dtoBase =
         franchiseId != null && franchiseId !== ""
@@ -203,6 +212,7 @@ export function useUnifiedInvoicePreview({
             startingKitItems: newKitPayload.map((i) => ({
               streamId: i.streamId,
               quantity: i.quantity,
+              tshirtItemId: i.tshirtItemId,
             })),
           }),
         );

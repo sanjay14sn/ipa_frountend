@@ -5,6 +5,7 @@ import {
   normalizePaginatedResult,
   unwrapData,
 } from "@/lib/unwrap-api";
+import { withProgramScope } from "./_scope";
 
 export interface Response {
   statusCode: number;
@@ -161,11 +162,11 @@ function mapStudentRow(row: Record<string, unknown>): StudentData {
 export async function getAllStudents(
   params?: StudentPaginationParams,
 ): Promise<StudentsResponse> {
-  const merged: StudentPaginationParams = {
+  const merged: StudentPaginationParams = withProgramScope({
     page: params?.page ?? 1,
     limit: params?.limit ?? 10_000,
     ...params,
-  };
+  });
   const response = await api.get("/student", {
     params: compactRequestParams(
       merged as Record<string, string | number | boolean | undefined | null>,
@@ -639,7 +640,9 @@ export interface StudentPaginationParams {
   franchiseId?: string;
   levelId?: number;   // NEW
   idStatus?: string;  // NEW — "Not Issued" | "Requested" | "Issued"
-  /** Franchisee list: scope to the active agreement's program. Resolved server-side. */
+  /** Active program scope. Auto-injected from the scope store via withProgramScope. */
+  programId?: number;
+  /** Legacy: agreement-driven scope. Backend resolves to programId. */
   agreementId?: number;
 }
 
@@ -691,17 +694,20 @@ export async function getPaginatedStudents(
   params: StudentPaginationParams,
 ): Promise<PaginatedStudentsResponse> {
   const response = await api.get("/student", {
-    params: compactRequestParams({
-      page: params.page,
-      limit: params.limit,
-      search: params.search,
-      status: params.status,
-      sortBy: params.sortBy,
-      sortOrder: params.sortOrder,
-      levelId: params.levelId,    // ADD
-      idStatus: params.idStatus,  // ADD
-      agreementId: params.agreementId,
-    } as Record<string, string | number | boolean | undefined | null>),
+    params: compactRequestParams(
+      withProgramScope({
+        page: params.page,
+        limit: params.limit,
+        search: params.search,
+        status: params.status,
+        sortBy: params.sortBy,
+        sortOrder: params.sortOrder,
+        levelId: params.levelId,
+        idStatus: params.idStatus,
+        agreementId: params.agreementId,
+        programId: params.programId,
+      }) as Record<string, string | number | boolean | undefined | null>,
+    ),
   });
   const result = unwrapData<unknown>(response);
   const { rows: raw, total, page, limit } = normalizePaginatedResult<unknown>(result);

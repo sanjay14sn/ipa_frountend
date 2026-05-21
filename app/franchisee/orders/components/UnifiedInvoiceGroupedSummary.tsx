@@ -98,17 +98,15 @@ export default function UnifiedInvoiceGroupedSummary({
                   title={g.streamName}
                   kitQty={g.quantity}
                   costs={[
-                    { label: "Material cost", unit: g.materialUnit },
                     { label: "Kit cost", unit: g.kitUnit },
                     { label: "Royalty", unit: g.royaltyUnit },
                   ]}
+                  tshirtBreakdown={g.tshirtBreakdown}
                   items={g.items.map((it) => ({
                     name: it.name,
                     quantity: it.quantity,
                   }))}
-                  totalAmount={
-                    (g.materialUnit + g.kitUnit + g.royaltyUnit) * g.quantity
-                  }
+                  totalAmount={(g.kitUnit + g.royaltyUnit) * g.quantity}
                   readOnly={readOnly}
                   onRemove={
                     readOnly || !onRemoveKit ? undefined : () => onRemoveKit(g.streamId)

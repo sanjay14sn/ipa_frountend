@@ -214,7 +214,7 @@ export function ProgramKitManagement({
                           ) : null}
                         </td>
                         <td className="px-3 py-3 align-top text-xs text-gray-500">
-                          <div>{item.category?.name || "Uncategorized"}</div>
+                          <div>{item.category || "Uncategorized"}</div>
                           <div className="mt-1">Available {item.availableQty}</div>
                         </td>
                         <td className="px-3 py-3 align-top">

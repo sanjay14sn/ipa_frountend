@@ -43,6 +43,7 @@ import {
   type StudentLifecycleRow,
 } from "@/services/student.service";
 import { getDispatchEligibleOrders } from "@/services/order.service";
+import { useProgramId } from "@/hooks/use-scope";
 import { queryKeys } from "./query-keys";
 import { getQueryClientBridge } from "./query-client-bridge";
 
@@ -66,7 +67,8 @@ function wantsStudentPagination(params?: StudentPaginationParams): boolean {
     (params.status != null && params.status !== "") ||
     params.sortBy != null ||
     params.sortOrder != null ||
-    params.agreementId != null
+    params.agreementId != null ||
+    params.programId != null
   );
 }
 
@@ -86,14 +88,21 @@ export const FRANCHISEE_CERTIFICATES_KEY = queryKeys.studentAdmin.franchiseeCert
 export const STUDENTS_KEY = queryKeys.students.list();
 
 export function useStudents(params?: StudentPaginationParams) {
-  const paginated = wantsStudentPagination(params);
+  const programId = useProgramId();
+  const scopedParams: StudentPaginationParams = {
+    ...(params ?? {}),
+    programId: params?.programId ?? programId ?? undefined,
+  };
+  const paginated = wantsStudentPagination(scopedParams);
   const q = useQuery({
-    queryKey: queryKeys.students.list(params as Record<string, unknown>),
+    queryKey: queryKeys.students.list(
+      scopedParams as Record<string, unknown>,
+    ),
     queryFn: async () => {
       if (paginated) {
-        return getPaginatedStudents(params!);
+        return getPaginatedStudents(scopedParams);
       }
-      const r = await getAllStudents();
+      const r = await getAllStudents(scopedParams);
       return {
         data: r.result ?? [],
         meta: undefined as PaginationMeta | undefined,

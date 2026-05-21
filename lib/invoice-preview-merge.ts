@@ -44,6 +44,12 @@ function mergeOverlayByNumericId<T extends object>(
 /**
  * Scale a starting-kit group to a new stream quantity. Preserves unit prices and stream metadata.
  * Caller should omit the group when the desired quantity is 0.
+ *
+ * Note: `tshirtBreakdown` is shallow-cloned but its per-row `quantity` values are NOT scaled.
+ * Per-t-shirt counts are an authoritative selection (one row per chosen t-shirt), not derived
+ * from the group total — scaling them proportionally would silently corrupt user intent. When
+ * t-shirt selections change, the hook re-fetches the full kit block instead of relying on
+ * incremental scaling (see `hooks/use-unified-invoice-preview.ts`).
  */
 export function scaleStartingKitGroup(
   group: StartingKitGroupPreview,
@@ -64,9 +70,9 @@ export function scaleStartingKitGroup(
     streamId: group.streamId,
     streamName: group.streamName,
     quantity: newQty,
-    materialUnit: group.materialUnit,
     kitUnit: group.kitUnit,
     royaltyUnit: group.royaltyUnit,
+    tshirtBreakdown: group.tshirtBreakdown.map((t) => ({ ...t })),
     items: group.items.map((it) => ({
       ...it,
       quantity: Math.round(it.quantity * factor),
@@ -127,8 +133,7 @@ export function recomputeTotalAmount(preview: InvoicePreview): number {
     total += g.totalPrice;
   }
   for (const g of preview.startingKitGroups ?? []) {
-    total +=
-      (g.materialUnit + g.kitUnit + g.royaltyUnit) * Math.max(0, g.quantity);
+    total += (g.kitUnit + g.royaltyUnit) * Math.max(0, g.quantity);
   }
   return total;
 }

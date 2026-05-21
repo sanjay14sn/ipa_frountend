@@ -148,6 +148,39 @@ export async function invalidateInventoryAdminLists() {
   }
 }
 
+/**
+ * Invalidate the caches that can change as a side-effect of a manual
+ * stock adjustment. A positive adjustment can flip backordered order
+ * lines to ALLOCATED (which also flips CI material orders attached to
+ * CI training sessions), so we need to refresh the inventory list AND
+ * any view of orders / CI training that the user might switch to.
+ */
+export async function invalidateAfterStockAdjustment() {
+  try {
+    const qc = getQueryClientBridge();
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["inventory", "list"] }),
+      qc.invalidateQueries({ queryKey: queryKeys.inventory.monitoring }),
+      qc.invalidateQueries({ queryKey: queryKeys.inventory.all }),
+      // Admin & franchisee order lists / details — backorder fulfillment
+      // changes allocationStatus on affected orders.
+      qc.invalidateQueries({ queryKey: ["orders-admin", "list"] }),
+      qc.invalidateQueries({ queryKey: ["orders-franchisee", "list"] }),
+      qc.invalidateQueries({ queryKey: ["orders", "admin"] }),
+      qc.invalidateQueries({ queryKey: ["orders", "franchisee"] }),
+      // CI training views surface CI-material order allocation state.
+      qc.invalidateQueries({ queryKey: queryKeys.courseInstructors.ciTraining }),
+      qc.invalidateQueries({
+        queryKey: queryKeys.courseInstructors.trainingList,
+      }),
+      // Operations monitoring may show backorder counts.
+      qc.invalidateQueries({ queryKey: queryKeys.operations.monitoring }),
+    ]);
+  } catch {
+    /* ignore */
+  }
+}
+
 export async function invalidateProgramKitItems(programId: number) {
   try {
     await getQueryClientBridge().invalidateQueries({

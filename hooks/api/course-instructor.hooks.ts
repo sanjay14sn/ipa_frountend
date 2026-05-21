@@ -28,6 +28,7 @@ import {
   type ApproveCourseInstructorRequest,
   type CIFranchiseSummary,
 } from "@/services/course-instructor.service";
+import { useProgramId } from "@/hooks/use-scope";
 import { queryKeys } from "./query-keys";
 import { getQueryClientBridge } from "./query-client-bridge";
 import {
@@ -50,23 +51,25 @@ const TRAINING_COURSE_INSTRUCTORS_KEY = queryKeys.courseInstructors.trainingList
 export function useCourseInstructors(
   listParams?: Pick<
     CourseInstructorListParams,
-    "search" | "page" | "limit" | "sortBy" | "sortOrder" | "agreementId"
+    "search" | "page" | "limit" | "sortBy" | "sortOrder" | "agreementId" | "programId"
   >,
   options?: { enabled?: boolean },
 ) {
+  const programId = useProgramId();
+  const scopedParams = {
+    page: listParams?.page ?? 1,
+    limit: listParams?.limit ?? 10_000,
+    search: listParams?.search,
+    sortBy: listParams?.sortBy,
+    sortOrder: listParams?.sortOrder,
+    agreementId: listParams?.agreementId,
+    programId: listParams?.programId ?? programId ?? undefined,
+  } satisfies CourseInstructorListParams;
   const q = useQuery({
     queryKey: queryKeys.courseInstructors.franchisee(
-      listParams as Record<string, unknown> | undefined,
+      scopedParams as Record<string, unknown>,
     ),
-    queryFn: async () =>
-      (await getAllCourseInstructors({
-        page: listParams?.page ?? 1,
-        limit: listParams?.limit ?? 10_000,
-        search: listParams?.search,
-        sortBy: listParams?.sortBy,
-        sortOrder: listParams?.sortOrder,
-        agreementId: listParams?.agreementId,
-      })).result ?? [],
+    queryFn: async () => (await getAllCourseInstructors(scopedParams)).result ?? [],
     placeholderData: (prev) => prev,
     enabled: options?.enabled ?? true,
   });

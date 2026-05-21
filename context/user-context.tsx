@@ -15,6 +15,7 @@ import {
 } from "../services/auth.service";
 import { getEffectiveFranchiseStatus } from "../lib/auth";
 import { queryKeys } from "@/hooks/api/query-keys";
+import { useScopeStore } from "@/lib/stores/scope-store";
 
 interface UserContextType {
   user: User | null;
@@ -73,6 +74,11 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
       try {
         setUserState(JSON.parse(storedUser) as User);
+        // One-shot migration: if the scope store hasn't picked up the
+        // legacy `user.activeAgreementId` yet (first load after upgrade,
+        // or a different browser), pull it in so we don't lose the
+        // selection mid-rollout.
+        useScopeStore.getState().hydrateFromUserBlob();
       } catch {
         localStorage.removeItem("user");
       }
@@ -137,6 +143,10 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         profile: fetchedProfile ?? prev.profile,
       };
     });
+    // Mirror into the scope store so service calls re-pick up the new
+    // franchise immediately (and clear programId — useScopeAgreements
+    // auto-pins the newest one on the next render).
+    useScopeStore.getState().setFranchise(data.franchiseId ?? null);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["agreements"] }),
       queryClient.invalidateQueries({ queryKey: ["franchisee-ci-agreements"] }),
@@ -167,15 +177,29 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
    */
   const switchAgreement = useCallback(
     async (agreementId: number | null) => {
+      let resolvedProgramId: number | null = null;
       setUserState((prev) => {
         if (!prev) return prev;
-        if ((prev.activeAgreementId ?? null) === agreementId) return prev;
+        if ((prev.activeAgreementId ?? null) === agreementId) {
+          const matched = prev.profile?.franchise?.activePrograms?.find(
+            (row) => row.id === agreementId,
+          );
+          resolvedProgramId = matched?.programId ?? null;
+          return prev;
+        }
+        const matched = prev.profile?.franchise?.activePrograms?.find(
+          (row) => row.id === agreementId,
+        );
+        resolvedProgramId = matched?.programId ?? null;
         const next = { ...prev, activeAgreementId: agreementId };
         if (typeof window !== "undefined") {
           localStorage.setItem("user", JSON.stringify(next));
         }
         return next;
       });
+      // Mirror to the scope store so franchise services pick up programId
+      // without going through props/context.
+      useScopeStore.getState().setAgreement(agreementId, resolvedProgramId);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["students"] }),
         queryClient.invalidateQueries({ queryKey: ["course-instructors"] }),
@@ -185,6 +209,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         queryClient.invalidateQueries({ queryKey: ["certification"] }),
         queryClient.invalidateQueries({ queryKey: ["agreements"] }),
         queryClient.invalidateQueries({ queryKey: ["program-requests"] }),
+        queryClient.invalidateQueries({ queryKey: ["streams"] }),
       ]);
     },
     [queryClient],

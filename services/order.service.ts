@@ -5,6 +5,7 @@ import {
   normalizePaginatedResult,
   unwrapData,
 } from "@/lib/unwrap-api";
+import { withProgramScope } from "./_scope";
 
 export interface Response {
   statusCode: number;
@@ -172,6 +173,7 @@ export interface OrderData {
 export interface StartingKitItem {
   streamId: number;
   quantity: number;
+  tshirtItemId: number | null;
 }
 
 export interface CreateOrderDto {
@@ -208,9 +210,13 @@ export interface StartingKitGroupPreview {
   streamId: number;
   streamName: string;
   quantity: number;
-  materialUnit: number;
   kitUnit: number;
   royaltyUnit: number;
+  tshirtBreakdown: Array<{
+    tshirtItemId: number | null;
+    tshirtName: string | null;
+    quantity: number;
+  }>;
   items: InvoicePreviewLineItem[];
 }
 
@@ -314,7 +320,9 @@ export interface FranchiseeOrderListParams {
   status?: string;
   orderType?: string;
   paymentStatus?: string;
-  /** Franchisee list: scope to the active agreement's program. Resolved server-side. */
+  /** Active program scope. Auto-injected from the scope store via withProgramScope. */
+  programId?: number;
+  /** Legacy: agreement-driven scope. Backend resolves to programId. */
   agreementId?: number;
 }
 
@@ -384,12 +392,7 @@ export interface AvailableItem {
   id: number;
   name: string;
   description: string;
-  categoryId: number;
-  category?: {
-    id: number;
-    name: string;
-    description: string;
-  };
+  category: string | null;
   price: number;
   isKitItem: boolean;
   defaultQuantity?: number;
@@ -696,11 +699,11 @@ export async function createOrder(orderData: CreateOrderDto): Promise<OrderData>
 export async function getFranchiseeOrders(
   params?: FranchiseeOrderListParams,
 ): Promise<OrderData[]> {
-  const merged: FranchiseeOrderListParams = {
+  const merged: FranchiseeOrderListParams = withProgramScope({
     page: params?.page ?? 1,
     limit: params?.limit ?? 10_000,
     ...params,
-  };
+  });
   const response = await api.get("/order", {
     params: compactRequestParams(
       merged as Record<string, string | number | boolean | undefined | null>,
@@ -842,6 +845,20 @@ function normalizeInvoicePreviewLineItem(raw: unknown): InvoicePreviewLineItem {
   };
 }
 
+function normalizeTshirtBreakdownEntry(raw: unknown): {
+  tshirtItemId: number | null;
+  tshirtName: string | null;
+  quantity: number;
+} {
+  const r = raw as Record<string, unknown>;
+  return {
+    tshirtItemId:
+      r?.tshirtItemId == null ? null : Number(r.tshirtItemId),
+    tshirtName: r?.tshirtName == null ? null : String(r.tshirtName),
+    quantity: Number(r?.quantity ?? 0),
+  };
+}
+
 function normalizeStartingKitGroupPreview(raw: unknown): StartingKitGroupPreview | null {
   const r = raw as Record<string, unknown>;
   if (r == null || typeof r !== "object") return null;
@@ -850,7 +867,6 @@ function normalizeStartingKitGroupPreview(raw: unknown): StartingKitGroupPreview
     r.streamId == null ||
     r.streamName == null ||
     r.quantity == null ||
-    r.materialUnit == null ||
     r.kitUnit == null ||
     r.royaltyUnit == null
   ) {
@@ -860,9 +876,11 @@ function normalizeStartingKitGroupPreview(raw: unknown): StartingKitGroupPreview
     streamId: Number(r.streamId),
     streamName: String(r.streamName),
     quantity: Number(r.quantity),
-    materialUnit: Number(r.materialUnit),
     kitUnit: Number(r.kitUnit),
     royaltyUnit: Number(r.royaltyUnit),
+    tshirtBreakdown: Array.isArray(r.tshirtBreakdown)
+      ? (r.tshirtBreakdown as unknown[]).map(normalizeTshirtBreakdownEntry)
+      : [],
     items: (r.items as unknown[]).map(normalizeInvoicePreviewLineItem),
   };
 }
