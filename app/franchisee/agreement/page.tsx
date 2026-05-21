@@ -875,6 +875,7 @@ function FranchiseAgreementContent() {
                 <PaymentBreakdown paymentDetails={franchiseData.paymentDetails} />
                 <InstallmentSummaryCard
                   summary={installmentSummary}
+                  gstFranchiseFee={feeAgreement?.gstFranchiseFee ?? null}
                   title="Your franchise fee EMI split-up"
                   onViewFullSchedule={
                     feeAgreement?.id && !fullReceivablePlan
@@ -952,6 +953,7 @@ function FranchiseAgreementContent() {
                 </p>
                 <InstallmentSummaryCard
                   summary={installmentSummary}
+                  gstFranchiseFee={feeAgreement?.gstFranchiseFee ?? null}
                   title="Payable schedule"
                   onViewFullSchedule={
                     feeAgreement?.id && !fullReceivablePlan

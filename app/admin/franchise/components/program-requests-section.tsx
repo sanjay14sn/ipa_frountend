@@ -91,7 +91,6 @@ export function ProgramRequestsSection() {
             ? Number(program.downPaymentAmount) || 0
             : undefined,
           tenure: Number(program.tenure) || 36,
-          totalAmount: 0,
           gstFranchiseFee: program.gstFranchiseFee,
           gstRoyalty: program.gstRoyalty,
           gstMaterialCost: program.gstMaterialCost,

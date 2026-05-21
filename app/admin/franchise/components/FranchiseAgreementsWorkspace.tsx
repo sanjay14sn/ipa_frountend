@@ -12,6 +12,7 @@ import {
   InstallmentSummaryCard,
   ReceivableCompactLine,
 } from "@/components/receivables/InstallmentSummaryCard";
+import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
 import { AgreementKitItemsDialog } from "./AgreementKitItemsDialog";
 
 function formatInr(amount: number | string | null | undefined): string {
@@ -46,22 +47,38 @@ function agreementLabel(agreement: AgreementRecord) {
   return `${program} | #${agreement.id}`;
 }
 
+function formatFranchiseFeePayable(
+  franchiseFee: number | null | undefined,
+  gstFranchiseFee: boolean | null | undefined,
+): string {
+  if (franchiseFee == null) return "-";
+  const payable = getFranchiseFeePayable(franchiseFee, gstFranchiseFee);
+  if (payable.inclusive) {
+    return `${formatInr(payable.base)} (GST inclusive)`;
+  }
+  return `${formatInr(payable.base)} + ${GST_RATE_LABEL} (${formatInr(payable.payable)} payable)`;
+}
+
 function AgreementMoneyGrid({ agreement }: { agreement: AgreementRecord }) {
   const fields: { label: string; value: string }[] = [
-    { label: "Franchise fee", value: formatInr(agreement.franchiseFee) },
+    {
+      label: "Franchise fee (payable)",
+      value: formatFranchiseFeePayable(
+        agreement.franchiseFee,
+        agreement.gstFranchiseFee,
+      ),
+    },
     { label: "Monthly fee", value: formatInr(agreement.monthlyFee) },
     { label: "Kit cost", value: formatInr(agreement.kitCost) },
     { label: "Material cost", value: formatInr(agreement.materialCost) },
     { label: "Royalty", value: formatInr(agreement.royalty) },
     { label: "CI share", value: formatInr(agreement.ciShare) },
     { label: "Franchise share", value: formatInr(agreement.franchiseShare) },
-    { label: "Total amount", value: formatInr(agreement.totalAmount) },
     {
       label: "Tenure (months)",
       value: agreement.tenure != null ? String(agreement.tenure) : "-",
     },
     { label: "Expires", value: formatDate(agreement.expiresAt ?? null) },
-    { label: "GST on franchise fee", value: yesNo(agreement.gstFranchiseFee) },
     { label: "GST on royalty", value: yesNo(agreement.gstRoyalty) },
     { label: "GST on material", value: yesNo(agreement.gstMaterialCost) },
     { label: "Installment", value: yesNo(agreement.installment) },
@@ -179,6 +196,7 @@ export function FranchiseAgreementsWorkspace({
               />
               <InstallmentSummaryCard
                 summary={agreement.receivables?.installmentSummary}
+                gstFranchiseFee={agreement.gstFranchiseFee ?? null}
                 title="Franchise fee EMI split-up"
               />
             </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ArrowRight, CalendarDays, CreditCard, IndianRupee } from "lucide-react";
@@ -21,6 +22,7 @@ import type {
   ReceivableInstallmentSummary,
   ReceivableSummaryItem,
 } from "@/services/agreement.service";
+import { GST_RATE_LABEL } from "@/lib/gst";
 
 function money(value: number | null | undefined): string {
   return new Intl.NumberFormat("en-IN", {
@@ -173,7 +175,14 @@ export function ReceivableCompactProgress({
   );
 }
 
-function ItemRows({ items }: { items: ReceivableSummaryItem[] }) {
+function ItemRows({
+  items,
+  gstFranchiseFee,
+}: {
+  items: ReceivableSummaryItem[];
+  gstFranchiseFee?: boolean | null;
+}) {
+  const showGstBadge = gstFranchiseFee === false;
   return (
     <Table>
       <TableHeader>
@@ -203,7 +212,14 @@ function ItemRows({ items }: { items: ReceivableSummaryItem[] }) {
             <TableCell>{fmtDate(item.dueAt)}</TableCell>
             <TableCell>{fmtDate(item.paidAt)}</TableCell>
             <TableCell className="text-right font-medium">
-              {money(item.amount)}
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <span>{money(item.amount)}</span>
+                {showGstBadge ? (
+                  <Badge variant="outline" className="font-normal">
+                    +{GST_RATE_LABEL} at payment
+                  </Badge>
+                ) : null}
+              </div>
             </TableCell>
           </TableRow>
         ))}
@@ -214,6 +230,7 @@ function ItemRows({ items }: { items: ReceivableSummaryItem[] }) {
 
 export function InstallmentSummaryCard({
   summary,
+  gstFranchiseFee = null,
   title = "Franchise fee EMI schedule",
   emptyMessage = "No EMI plan is linked to this agreement.",
   onViewFullSchedule,
@@ -225,11 +242,24 @@ export function InstallmentSummaryCard({
     | ReceivableCompactSummary
     | null
     | undefined;
+  /**
+   * From the parent agreement. When `false` the franchise fee is NOT
+   * GST-inclusive — each receivable item (down payment + monthly installments)
+   * gets a "+18% GST at payment" badge so the franchisee knows the actual
+   * Razorpay total will be 18% higher than the row amount.
+   */
+  gstFranchiseFee?: boolean | null;
   title?: string;
   emptyMessage?: string;
   onViewFullSchedule?: () => void;
   viewFullScheduleLabel?: string;
 }) {
+  const showGstBadge = gstFranchiseFee === false;
+  const gstNote = showGstBadge ? (
+    <Badge variant="outline" className="font-normal">
+      +{GST_RATE_LABEL}
+    </Badge>
+  ) : null;
   const [showFullSchedule, setShowFullSchedule] = useState(false);
 
   if (!isFullInstallmentSummary(summary)) {
@@ -385,7 +415,13 @@ export function InstallmentSummaryCard({
         <div className="rounded-lg border bg-card p-3 text-sm">
           <div className="grid gap-3 md:grid-cols-3">
             <Info label="Initial payable" value={summary.initialPayableItem?.label ?? "-"} />
-            <Info label="Down payment" value={summary.downPayment ? money(summary.downPayment.amount) : "Not set"} />
+            <Info
+              label="Down payment"
+              value={
+                summary.downPayment ? money(summary.downPayment.amount) : "Not set"
+              }
+              trailing={summary.downPayment ? gstNote : null}
+            />
             <Info label="Monthly installments" value={String(summary.totals.installmentCount)} />
           </div>
         </div>
@@ -408,7 +444,7 @@ export function InstallmentSummaryCard({
 
         {showFullSchedule ? (
           <div className="overflow-x-auto rounded-lg border">
-            <ItemRows items={summary.items} />
+            <ItemRows items={summary.items} gstFranchiseFee={gstFranchiseFee} />
           </div>
         ) : null}
       </CardContent>
@@ -438,13 +474,24 @@ function Fact({
   );
 }
 
-function Info({ label, value }: { label: string; value: string }) {
+function Info({
+  label,
+  value,
+  trailing,
+}: {
+  label: string;
+  value: string;
+  trailing?: ReactNode;
+}) {
   return (
     <div>
       <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
         {label}
       </p>
-      <p className="mt-1 font-medium text-card-foreground">{value}</p>
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        <p className="font-medium text-card-foreground">{value}</p>
+        {trailing}
+      </div>
     </div>
   );
 }

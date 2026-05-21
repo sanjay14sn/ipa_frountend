@@ -6,6 +6,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
 
 interface PaymentBreakdownProps {
   paymentDetails: any;
@@ -159,7 +161,14 @@ export default function PaymentBreakdown({
           materialCost: (acc.materialCost || 0) + (p.materialCost || 0),
           installment:
             (acc.installment || 0) + installmentAmount(p.installment),
-          totalAmount: (acc.totalAmount || 0) + (p.totalAmount || 0),
+          // A combined payable is only meaningful when every program shares the
+          // same GST treatment; mixed inclusive/exclusive sums would mislead.
+          gstFranchiseFee:
+            acc.gstFranchiseFee === undefined
+              ? p.gstFranchiseFee ?? null
+              : acc.gstFranchiseFee === (p.gstFranchiseFee ?? null)
+                ? acc.gstFranchiseFee
+                : null,
         }),
         {
           franchiseFee: 0,
@@ -167,10 +176,15 @@ export default function PaymentBreakdown({
           kitCost: 0,
           materialCost: 0,
           installment: 0,
-          totalAmount: 0,
+          gstFranchiseFee: undefined,
         },
       )
     : paymentDetails;
+
+  const feePayable = getFranchiseFeePayable(
+    summary.franchiseFee,
+    summary.gstFranchiseFee,
+  );
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
@@ -282,14 +296,31 @@ export default function PaymentBreakdown({
         </div>
       ) : null}
 
-      {/* Total Franchise Fee to Pay */}
-      <div className="mt-4 flex flex-col gap-2 rounded-xl border border-border bg-accent/30 p-3 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-sm font-medium text-card-foreground">
-          Total Franchise Fee (Payable Now):
-        </span>
-        <span className="text-xl font-semibold text-primary">
-          ₹{fmt(summary.franchiseFee)}
-        </span>
+      {/* Franchise Fee to Pay */}
+      <div className="mt-4 flex flex-col gap-2 rounded-xl border border-border bg-accent/30 p-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-card-foreground">
+            Franchise Fee
+            {feePayable.inclusive ? (
+              <Badge variant="secondary">GST inclusive</Badge>
+            ) : (
+              <Badge variant="outline">+{GST_RATE_LABEL}</Badge>
+            )}
+          </span>
+          <span className="text-xl font-semibold text-primary">
+            ₹{fmt(feePayable.base)}
+          </span>
+        </div>
+        {!feePayable.inclusive && feePayable.base > 0 ? (
+          <div className="flex flex-col gap-1 border-t border-border/60 pt-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              +{GST_RATE_LABEL} (₹{fmt(feePayable.gst)})
+            </span>
+            <span className="font-semibold text-card-foreground">
+              Payable now: ₹{fmt(feePayable.payable)}
+            </span>
+          </div>
+        ) : null}
       </div>
     </div>
   );

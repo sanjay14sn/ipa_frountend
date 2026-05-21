@@ -19,6 +19,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { getProcessedAgreementContent } from "@/lib/agreementContent";
+import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
 import {
   agreementSignatureSrc,
   downloadScheduleBPdfAdmin,
@@ -104,6 +105,16 @@ const money = (n: number | undefined | null) =>
     currency: "INR",
     maximumFractionDigits: 2,
   }).format(Number(n ?? 0));
+
+function formatFranchiseFee(
+  data: Pick<AgreementScheduleBView, "franchiseFee" | "gstFranchiseFee">,
+): string {
+  const payable = getFranchiseFeePayable(data.franchiseFee, data.gstFranchiseFee);
+  if (payable.inclusive) {
+    return `${money(payable.base)} (GST inclusive)`;
+  }
+  return `${money(payable.base)} + ${GST_RATE_LABEL} (${money(payable.payable)} payable)`;
+}
 
 function prettifyToken(value: string | null | undefined): string {
   if (!value) return "-";
@@ -1066,11 +1077,11 @@ function ScheduleBCard({
             title="Agreement details"
             rows={[
               ["Effective date", data.effectiveDate],
-              ["Franchise fee", money(data.franchiseFee)],
+              ["Franchise fee", formatFranchiseFee(data)],
               ["Tenure", `${data.tenureMonths} months`],
               [
                 "Registration charges",
-                `${money(data.kitCost)}${data.gstFranchiseFee ? " (GST included)" : ""}`,
+                money(data.kitCost),
               ],
               [
                 "Material charges",

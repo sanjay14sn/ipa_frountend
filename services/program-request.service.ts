@@ -16,7 +16,6 @@ export interface ProgramRequestPayroll {
   /** Optional down payment collected up-front before installments begin. */
   downPaymentAmount?: number | null;
   tenure?: number;
-  totalAmount: number;
   gstFranchiseFee: boolean;
   gstRoyalty: boolean;
   gstMaterialCost: boolean;

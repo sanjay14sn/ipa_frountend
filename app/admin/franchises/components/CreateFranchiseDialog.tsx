@@ -146,7 +146,6 @@ interface ProgramPayroll {
   royalty: number;
   /** Number of EMI installments. 0 means lump-sum (no EMI). */
   installment: number;
-  totalAmount: number;
   gstFranchiseFee: boolean;
   gstRoyalty: boolean;
   gstMaterialCost: boolean;
@@ -308,7 +307,6 @@ export function CreateFranchiseDialog({
           franchiseShare: 0,
           royalty: 0,
           installment: 0,
-          totalAmount: 0,
           gstFranchiseFee: false,
           gstRoyalty: false,
           gstMaterialCost: false,
@@ -358,7 +356,6 @@ export function CreateFranchiseDialog({
               ciShare: Number(p.ciShare) || 0,
               franchiseShare: Number(p.franchiseShare) || 0,
               royalty: Number(p.royalty) || 0,
-              totalAmount: Number(p.totalAmount) || 0,
               gstFranchiseFee: !!p.gstFranchiseFee,
               gstRoyalty: !!p.gstRoyalty,
               gstMaterialCost: !!p.gstMaterialCost,
@@ -1105,31 +1102,6 @@ export function CreateFranchiseDialog({
                                 updateProgramPayroll(
                                   programId,
                                   "franchiseShare",
-                                  e.target.value === "" ? 0 : Number(e.target.value),
-                                )
-                              }
-                              onFocus={selectInputValueOnFocus}
-                              className="h-10 pl-10"
-                              placeholder="0"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Total Amount */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-card-foreground">
-                            Total Amount
-                          </Label>
-                          <div className="relative">
-                            <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              type="number"
-                              min="0"
-                              value={payroll?.totalAmount || ""}
-                              onChange={(e) =>
-                                updateProgramPayroll(
-                                  programId,
-                                  "totalAmount",
                                   e.target.value === "" ? 0 : Number(e.target.value),
                                 )
                               }

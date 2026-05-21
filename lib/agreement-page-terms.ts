@@ -1,5 +1,6 @@
 import type { User } from "@/lib/auth";
 import type { AgreementRecord } from "@/services/agreement.service";
+import { getFranchiseFeePayable } from "@/lib/gst";
 
 export function parseMoney(value: unknown): number | null {
   if (value === null || value === undefined) return null;
@@ -12,21 +13,18 @@ export function parseMoney(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function sumPayrollTotals(rows: unknown): number | null {
+function sumPayrollFranchiseFees(rows: unknown): number | null {
   if (!Array.isArray(rows) || rows.length === 0) return null;
   let sum = 0;
   let any = false;
   for (const r of rows) {
-    const row = r as { totalAmount?: unknown; franchiseFee?: unknown };
-    const t = parseMoney(row.totalAmount);
-    if (t != null && t > 0) {
-      sum += t;
-      any = true;
-      continue;
-    }
+    const row = r as {
+      franchiseFee?: unknown;
+      gstFranchiseFee?: boolean | null;
+    };
     const f = parseMoney(row.franchiseFee);
     if (f != null && f > 0) {
-      sum += f;
+      sum += getFranchiseFeePayable(f, row.gstFranchiseFee ?? null).payable;
       any = true;
     }
   }
@@ -34,7 +32,10 @@ function sumPayrollTotals(rows: unknown): number | null {
 }
 
 /**
- * Payable franchise fee for Razorpay: prefer agreement row (ipa-new), then legacy payroll array on profile.
+ * Payable amount for Razorpay = franchise fee + 18% GST when not GST-inclusive.
+ * Falls back to a linked payment row first (already includes GST), then the
+ * agreement's franchise fee, then the legacy multi-program payroll array on
+ * the profile.
  */
 export function resolveAgreementPayableAmount(
   feeAgreement: AgreementRecord | null,
@@ -45,12 +46,13 @@ export function resolveAgreementPayableAmount(
       const a = parseMoney(feeAgreement.payment.amount);
       if (a !== null && a >= 0) return a;
     }
-    const t = parseMoney(feeAgreement.totalAmount);
-    if (t != null && t > 0) return t;
     const f = parseMoney(feeAgreement.franchiseFee);
-    if (f != null && f > 0) return f;
+    if (f != null && f > 0) {
+      return getFranchiseFeePayable(f, feeAgreement.gstFranchiseFee ?? null)
+        .payable;
+    }
   }
-  return sumPayrollTotals(profilePayrolls);
+  return sumPayrollFranchiseFees(profilePayrolls);
 }
 
 export function programNameForAgreement(
@@ -72,7 +74,6 @@ export function agreementToPaymentBreakdownRows(
   if (!feeAgreement) return null;
   const hasAny =
     feeAgreement.franchiseFee != null ||
-    feeAgreement.totalAmount != null ||
     feeAgreement.monthlyFee != null ||
     feeAgreement.kitCost != null ||
     feeAgreement.materialCost != null ||
@@ -88,7 +89,6 @@ export function agreementToPaymentBreakdownRows(
       ciShare: feeAgreement.ciShare,
       franchiseShare: feeAgreement.franchiseShare,
       installment: feeAgreement.installment,
-      totalAmount: feeAgreement.totalAmount,
       gstFranchiseFee: feeAgreement.gstFranchiseFee,
       gstRoyalty: feeAgreement.gstRoyalty,
       gstMaterialCost: feeAgreement.gstMaterialCost,
@@ -116,7 +116,6 @@ export function buildAgreementDetailFranchiseData(
       ciShare: agreement.ciShare,
       franchiseShare: agreement.franchiseShare,
       installment: agreement.installment,
-      totalAmount: agreement.totalAmount,
       gstFranchiseFee: agreement.gstFranchiseFee,
       gstRoyalty: agreement.gstRoyalty,
       gstMaterialCost: agreement.gstMaterialCost,

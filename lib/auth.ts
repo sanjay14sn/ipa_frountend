@@ -90,7 +90,6 @@ export interface User {
         kitCost: number;
         materialCost: number;
         installment: number;
-        totalAmount: number;
         createdBy: number;
         updatedBy: number;
       };

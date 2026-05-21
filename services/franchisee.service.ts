@@ -111,7 +111,6 @@ export interface FranchisePayrollResponse {
   kitCost: number;
   materialCost: number;
   installment: number;
-  totalAmount: number;
   programId: number;
   gstFranchiseFee?: boolean;
   gstRoyalty?: boolean;
@@ -347,7 +346,6 @@ export interface SetupProgramTerms {
   ciShare: number;
   franchiseShare: number;
   royalty: number;
-  totalAmount: number;
   gstFranchiseFee: boolean;
   gstRoyalty: boolean;
   gstMaterialCost: boolean;

@@ -172,7 +172,6 @@ export interface AgreementFranchisePayrollRow {
   gstFranchiseFee?: boolean;
   gstRoyalty?: boolean;
   gstMaterialCost?: boolean;
-  totalAmount: number;
   kitCost?: number;
   materialCost?: number;
   monthlyFee?: number;
@@ -204,7 +203,6 @@ export interface AgreementTermsSnapshot {
   gstRoyalty?: boolean | null;
   gstMaterialCost?: boolean | null;
   installment?: boolean | null;
-  totalAmount?: number | null;
 }
 
 /**

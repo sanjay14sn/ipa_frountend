@@ -1,3 +1,5 @@
+import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
+
 export interface AgreementPoint {
   id: string;
   text: string;
@@ -421,8 +423,8 @@ ceasing operation.`,
       points: [
         {
           id: "first",
-          text: `The Franchisee shall pay the initial non-refundable Franchisee fees as specified in Section 5 of
-SCHEDULE B to Franchisor on or before the date of this Agreement.`,
+          text: `The Franchisee shall pay the initial non-refundable Franchise Fee of ₹{franchiseFee} {gstClause} as specified in Section 5 of
+SCHEDULE B to Franchisor on or before the date of this Agreement. The Franchise Fee is the sole amount payable under this Agreement; all other charges (royalty, materials, kit) are billed separately as and when they apply.`,
           dynamic: true,
         },
         {
@@ -1683,7 +1685,7 @@ document and any version of the same, the English version shall be definitive an
         },
         {
           id: "installments",
-          text: "Payment can be made in {installments} installments",
+          text: "Only the Franchise Fee may be paid in {installmentMonths} monthly installments after a down payment of ₹{downPaymentAmount}{installmentGstClause}.",
           dynamic: true,
         },
       ],
@@ -1792,12 +1794,56 @@ export const replacePlaceholders = (text: string, data: any): string => {
   });
 };
 
+function pickFranchiseFeeTerms(franchiseData: any): {
+  franchiseFee: number;
+  gstFranchiseFee: boolean | null;
+  installmentMonths: number | null;
+  downPaymentAmount: number | null;
+} {
+  const pd = Array.isArray(franchiseData?.paymentDetails)
+    ? franchiseData.paymentDetails[0]
+    : franchiseData?.paymentDetails;
+  const fee = Number(pd?.franchiseFee ?? 0);
+  const gstFlag =
+    pd?.gstFranchiseFee == null ? null : Boolean(pd.gstFranchiseFee);
+  const months =
+    pd?.installmentMonths != null ? Number(pd.installmentMonths) : null;
+  const down =
+    pd?.downPaymentAmount != null ? Number(pd.downPaymentAmount) : null;
+  return {
+    franchiseFee: fee,
+    gstFranchiseFee: gstFlag,
+    installmentMonths: months,
+    downPaymentAmount: down,
+  };
+}
+
+function buildGstClause(
+  fee: number,
+  gstFranchiseFee: boolean | null,
+): string {
+  if (fee <= 0 || gstFranchiseFee == null) return "";
+  const payable = getFranchiseFeePayable(fee, gstFranchiseFee);
+  if (payable.inclusive) return "(inclusive of 18% GST)";
+  return `plus ${GST_RATE_LABEL} (₹${payable.gst.toLocaleString()} extra, ₹${payable.payable.toLocaleString()} total payable)`;
+}
+
+function buildInstallmentGstClause(gstFranchiseFee: boolean | null): string {
+  if (gstFranchiseFee === false) {
+    return ` (each installment attracts an additional ${GST_RATE_LABEL} at the time of payment)`;
+  }
+  return "";
+}
+
 // Function to get processed agreement content with dynamic values
 export const getProcessedAgreementContent = (
   franchiseData: any,
   customContent?: AgreementContent
 ): AgreementContent => {
   const content = customContent || defaultAgreementContent;
+  const fee = pickFranchiseFeeTerms(franchiseData);
+  const gstClause = buildGstClause(fee.franchiseFee, fee.gstFranchiseFee);
+  const installmentGstClause = buildInstallmentGstClause(fee.gstFranchiseFee);
 
   return {
     ...content,
@@ -1810,6 +1856,14 @@ export const getProcessedAgreementContent = (
           text: point.dynamic
             ? replacePlaceholders(point.text, {
                 ...franchiseData,
+                franchiseFee: fee.franchiseFee,
+                gstClause,
+                installmentGstClause,
+                installmentMonths: fee.installmentMonths ?? "",
+                downPaymentAmount:
+                  fee.downPaymentAmount != null
+                    ? Number(fee.downPaymentAmount).toLocaleString()
+                    : "0",
                 royaltyGst: franchiseData.paymentDetails?.royaltyGst,
                 franchiseeShare: franchiseData.paymentDetails?.franchiseeShare,
                 installments: franchiseData.paymentDetails?.installments,
