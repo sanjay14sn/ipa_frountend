@@ -13,6 +13,24 @@ import type {
 } from "@/components/shared";
 import { EligibleStudent } from "@/services/student.service";
 
+/**
+ * Returns true when "now" is at least 15 days past the level's duration end.
+ * Anchor is `lastCertIssuedAt` (the previous certificate's issue date for the
+ * current-level clock). Returns false if either input is missing.
+ */
+function isPastDurationPlusFifteenDays(
+  lastCertIssuedAt: string | null,
+  durationInMonths: number
+): boolean {
+  if (!lastCertIssuedAt || !durationInMonths) return false;
+  const start = new Date(lastCertIssuedAt);
+  if (Number.isNaN(start.getTime())) return false;
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + durationInMonths);
+  end.setDate(end.getDate() + 15);
+  return Date.now() >= end.getTime();
+}
+
 interface EligibleStudentsTableProps {
   students?: EligibleStudent[];
   onRequestCertificate?: (student: EligibleStudent) => void;
@@ -209,19 +227,32 @@ export default function EligibleStudentsTable({
       key: "eligibility",
       header: "Eligibility",
       className: "text-center",
-      render: (student) => (
-        <Badge
-          className={
-            student.eligibilityReason === "no_certificate"
-              ? "bg-blue-50 text-blue-700 border border-blue-200"
-              : "bg-amber-50 text-amber-700 border border-amber-200"
-          }
-        >
-          {student.eligibilityReason === "no_certificate"
-            ? "First certificate"
-            : "Duration exceeded"}
-        </Badge>
-      ),
+      render: (student) => {
+        if (student.eligibilityReason === "no_certificate") {
+          return (
+            <Badge className="bg-blue-50 text-blue-700 border border-blue-200">
+              First certificate
+            </Badge>
+          );
+        }
+        // "duration_exceeded" branch — only show the strong "Duration exceeded"
+        // label once at least 15 days have elapsed past the level's duration
+        // window. Inside the duration..duration+15d window, show a softer
+        // "Eligible" label so franchisees aren't alarmed the day after duration.
+        const exceededAt15Days = isPastDurationPlusFifteenDays(
+          student.lastCertIssuedAt,
+          student.durationInMonths
+        );
+        return exceededAt15Days ? (
+          <Badge className="bg-amber-50 text-amber-700 border border-amber-200">
+            Duration exceeded
+          </Badge>
+        ) : (
+          <Badge className="bg-green-50 text-green-700 border border-green-200">
+            Eligible
+          </Badge>
+        );
+      },
     },
     {
       key: "status",

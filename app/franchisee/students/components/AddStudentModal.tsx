@@ -34,12 +34,17 @@ import {
   StudentStream,
   StudentIdStatus,
   type StudentData,
+  type CreateStudentInput,
 } from "@/services/student.service";
 import { useCreateStudentWithRevalidation } from "@/hooks/api/student.hooks";
 import { useUser } from "@/context/user-context";
 import { getAllPrograms, Program } from "@/services/program.service";
 import { getLevelsByStream, Level } from "@/services/level.service";
 import { getStreamsByProgram, Stream } from "@/services/stream.service";
+import {
+  getAllCourseInstructors,
+  type CourseInstructorData,
+} from "@/services/course-instructor.service";
 
 function calculateAge(dob: string): number {
   const birth = new Date(dob);
@@ -180,6 +185,16 @@ interface StudentFormData {
   // Status Management
   isDiscontinued: boolean;
   discontinueReason: string;
+
+  // Existing-student fields
+  previousLevelId: number;
+  previousMarks: string;
+  previousTheoryMarks: string;
+  previousTotalMarks: string;
+  previousCompletedAt: string;
+  previousInstructorId: number;
+  idCardIssued: boolean;
+  idCardIssueDate: string;
 }
 
 export default function AddStudentModal({
@@ -197,6 +212,8 @@ export default function AddStudentModal({
   const [loadingPrograms, setLoadingPrograms] = useState(false);
   const [loadingStreams, setLoadingStreams] = useState(false);
   const [loadingLevels, setLoadingLevels] = useState(false);
+  const [instructors, setInstructors] = useState<CourseInstructorData[]>([]);
+  const [loadingInstructors, setLoadingInstructors] = useState(false);
 
   const { user } = useUser();
   const createStudentMutation = useCreateStudentWithRevalidation();
@@ -231,6 +248,15 @@ export default function AddStudentModal({
 
     isDiscontinued: false,
     discontinueReason: "",
+
+    previousLevelId: 0,
+    previousMarks: "",
+    previousTheoryMarks: "",
+    previousTotalMarks: "",
+    previousCompletedAt: "",
+    previousInstructorId: 0,
+    idCardIssued: false,
+    idCardIssueDate: "",
   });
 
   useEffect(() => {
@@ -289,14 +315,17 @@ export default function AddStudentModal({
                   levelId: firstLevel.id,
                 };
               }
+              // Existing student: preserve current pick if still valid;
+              // otherwise reset to 0 so the user must choose freely.
               const currentLevelExists = fetchedLevels.some(
                 (level) => level.id === prev.levelId
               );
-              if (prev.levelId === 0 || !currentLevelExists) {
-                const firstLevel = fetchedLevels[0];
+              if (!currentLevelExists) {
                 return {
                   ...prev,
-                  levelId: firstLevel.id,
+                  levelId: 0,
+                  previousLevelId: 0,
+                  previousTotalMarks: "",
                 };
               }
               return prev;
@@ -315,6 +344,68 @@ export default function AddStudentModal({
 
     fetchLevels();
   }, [formData.streamId]);
+
+  useEffect(() => {
+    if (
+      !formData.existing ||
+      !formData.levelId ||
+      formData.levelId === 0 ||
+      levels.length === 0
+    ) {
+      return;
+    }
+    const current = levels.find((l) => l.id === formData.levelId);
+    if (!current) return;
+    const prev = levels
+      .filter((l) => l.displayOrder < current.displayOrder)
+      .sort((a, b) => b.displayOrder - a.displayOrder)[0];
+    setFormData((p) => {
+      const nextId = prev ? prev.id : 0;
+      if (
+        p.previousLevelId === nextId &&
+        (!prev?.totalMarks ||
+          p.previousTotalMarks === String(prev.totalMarks))
+      ) {
+        return p;
+      }
+      return {
+        ...p,
+        previousLevelId: nextId,
+        previousTotalMarks: prev?.totalMarks
+          ? String(prev.totalMarks)
+          : p.previousTotalMarks,
+      };
+    });
+  }, [formData.existing, formData.levelId, levels]);
+
+  useEffect(() => {
+    const fetchInstructors = async () => {
+      if (
+        !formData.existing ||
+        !formData.programId ||
+        formData.programId === 0 ||
+        !user?.franchiseId
+      ) {
+        setInstructors([]);
+        return;
+      }
+      setLoadingInstructors(true);
+      try {
+        const paginated = await getAllCourseInstructors({
+          franchiseId: user.franchiseId,
+          programId: formData.programId,
+          limit: 200,
+        });
+        setInstructors(paginated.result ?? []);
+      } catch (error) {
+        console.error("Error fetching instructors:", error);
+        setInstructors([]);
+      } finally {
+        setLoadingInstructors(false);
+      }
+    };
+    fetchInstructors();
+  }, [formData.existing, formData.programId, user?.franchiseId]);
 
   const validateCurrentStep = () => {
     const newErrors: Record<string, string> = {};
@@ -344,6 +435,54 @@ export default function AddStudentModal({
         }
         if (!formData.levelId || formData.levelId === 0) {
           newErrors.levelId = "Level is required";
+        }
+        if (formData.existing) {
+          const currentLevel = levels.find((l) => l.id === formData.levelId);
+          const previousLevel = levels.find(
+            (l) => l.id === formData.previousLevelId
+          );
+          if (!formData.previousLevelId || formData.previousLevelId === 0) {
+            newErrors.previousLevelId = "Previous level is required";
+          } else if (
+            currentLevel &&
+            previousLevel &&
+            previousLevel.displayOrder >= currentLevel.displayOrder
+          ) {
+            newErrors.previousLevelId =
+              "Previous level must come before the current level";
+          }
+          const marks = Number(formData.previousMarks);
+          const theory = Number(formData.previousTheoryMarks);
+          const total = Number(formData.previousTotalMarks);
+          if (!formData.previousMarks.trim() || Number.isNaN(marks)) {
+            newErrors.previousMarks = "Marks obtained is required";
+          }
+          if (!formData.previousTheoryMarks.trim() || Number.isNaN(theory)) {
+            newErrors.previousTheoryMarks = "Theory marks is required";
+          }
+          if (!formData.previousTotalMarks.trim() || Number.isNaN(total)) {
+            newErrors.previousTotalMarks = "Total marks is required";
+          }
+          if (!newErrors.previousMarks && !newErrors.previousTotalMarks && marks > total) {
+            newErrors.previousMarks = "Marks cannot exceed total marks";
+          }
+          if (!newErrors.previousTheoryMarks && !newErrors.previousTotalMarks && theory > total) {
+            newErrors.previousTheoryMarks = "Theory marks cannot exceed total marks";
+          }
+          if (!formData.previousCompletedAt) {
+            newErrors.previousCompletedAt = "Completion date is required";
+          } else if (new Date(formData.previousCompletedAt) > new Date()) {
+            newErrors.previousCompletedAt = "Completion date cannot be in the future";
+          }
+          if (
+            !formData.previousInstructorId ||
+            formData.previousInstructorId === 0
+          ) {
+            newErrors.previousInstructorId = "Instructor is required";
+          }
+          if (formData.idCardIssued && !formData.idCardIssueDate) {
+            newErrors.idCardIssueDate = "Issue date is required when ID card is issued";
+          }
         }
         break;
 
@@ -405,7 +544,11 @@ export default function AddStudentModal({
     let convertedValue: any = value;
 
     if (
-      (field === "programId" || field === "streamId" || field === "levelId") &&
+      (field === "programId" ||
+        field === "streamId" ||
+        field === "levelId" ||
+        field === "previousLevelId" ||
+        field === "previousInstructorId") &&
       typeof value === "string"
     ) {
       convertedValue = parseInt(value, 10) || 0;
@@ -476,12 +619,31 @@ export default function AddStudentModal({
     setIsLoading(true);
 
     try {
-      // Prepare student data for the service
-      const studentData = {
-        franchiseId: user.franchiseId, // Keep as string
+      const idIssued =
+        formData.existing && formData.idCardIssued
+          ? StudentIdStatus.ISSUED
+          : StudentIdStatus.NOT_ISSUED;
+      const idIssueDate =
+        formData.existing && formData.idCardIssued
+          ? formData.idCardIssueDate
+          : undefined;
+      const previousLevel =
+        formData.existing && formData.previousLevelId > 0
+          ? {
+              levelId: Number(formData.previousLevelId),
+              marks: Number(formData.previousMarks),
+              theoryMarks: Number(formData.previousTheoryMarks),
+              totalMarks: Number(formData.previousTotalMarks),
+              completedAt: formData.previousCompletedAt,
+              instructorId: Number(formData.previousInstructorId),
+            }
+          : undefined;
+
+      const studentData: CreateStudentInput = {
+        franchiseId: user.franchiseId,
         programId: Number(formData.programId),
         name: formData.studentName,
-        rollNo: formData.rollNo || "", // Will be auto-generated by backend
+        rollNo: formData.rollNo || "",
         dateOfBirth: new Date(formData.dob),
         dateOfJoining: new Date(formData.dateOfJoining),
         sex: formData.sex,
@@ -497,21 +659,16 @@ export default function AddStudentModal({
         mail: formData.mailId,
         standard: formData.standard,
         levelId: Number(formData.levelId),
-        stream: StudentStream.REGULAR, // Default to REGULAR enrollment type
+        level: "",
+        stream: StudentStream.REGULAR,
         isActive: formData.status === "active",
-        idIssued: StudentIdStatus.NOT_ISSUED,
+        idIssued,
+        idIssueDate,
         existing: formData.existing,
+        previousLevel,
       };
 
-      await createStudentMutation.mutateAsync(
-        {
-          ...studentData,
-          level: "",
-        } as unknown as Omit<
-          StudentData,
-          "id" | "createdAt" | "updatedAt" | "createdBy" | "updatedBy"
-        >,
-      );
+      await createStudentMutation.mutateAsync(studentData);
 
       setSubmitted(true);
       onSuccess();
@@ -555,6 +712,15 @@ export default function AddStudentModal({
 
       isDiscontinued: false,
       discontinueReason: "",
+
+      previousLevelId: 0,
+      previousMarks: "",
+      previousTheoryMarks: "",
+      previousTotalMarks: "",
+      previousCompletedAt: "",
+      previousInstructorId: 0,
+      idCardIssued: false,
+      idCardIssueDate: "",
     });
     setErrors({});
     setSubmitted(false);
@@ -590,19 +756,32 @@ export default function AddStudentModal({
                     checked={!formData.existing}
                     onChange={() => {
                       // For new students, auto-select first level if stream is selected
+                      // and clear any previously-entered existing-student data.
                       setFormData((prev) => {
+                        const clearedExistingFields = {
+                          previousLevelId: 0,
+                          previousMarks: "",
+                          previousTheoryMarks: "",
+                          previousTotalMarks: "",
+                          previousCompletedAt: "",
+                          previousInstructorId: 0,
+                          idCardIssued: false,
+                          idCardIssueDate: "",
+                        };
                         if (prev.streamId > 0 && levels.length > 0) {
                           const firstLevel = levels[0];
                           return {
                             ...prev,
                             existing: false,
                             levelId: firstLevel.id,
+                            ...clearedExistingFields,
                           };
                         }
                         return {
                           ...prev,
                           existing: false,
                           levelId: 0,
+                          ...clearedExistingFields,
                         };
                       });
                     }}
@@ -861,7 +1040,8 @@ export default function AddStudentModal({
                   disabled={
                     !formData.streamId ||
                     formData.streamId === 0 ||
-                    loadingLevels
+                    loadingLevels ||
+                    !formData.existing
                   }
                 >
                   <SelectTrigger
@@ -873,6 +1053,8 @@ export default function AddStudentModal({
                           ? "Loading levels..."
                           : formData.streamId === 0
                           ? "Select stream first"
+                          : !formData.existing
+                          ? "Auto-set to first level"
                           : "Select level"
                       }
                     />
@@ -931,6 +1113,264 @@ export default function AddStudentModal({
                 </p>
               </div>
             </div>
+
+            {formData.existing && (
+              <>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
+                  <h4 className="font-medium text-amber-900 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" />
+                    Previous Level Progression
+                  </h4>
+                  <p className="text-sm text-amber-800">
+                    Enter the level the student most recently completed. A
+                    certificate will be issued automatically for that level.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="previousLevelId">Previous Level *</Label>
+                      <Select
+                        value={formData.previousLevelId.toString()}
+                        onValueChange={() => {
+                          /* auto-derived from current level; read-only */
+                        }}
+                        disabled
+                      >
+                        <SelectTrigger
+                          className={
+                            errors.previousLevelId ? "border-red-500" : ""
+                          }
+                        >
+                          <SelectValue
+                            placeholder={
+                              !formData.levelId || formData.levelId === 0
+                                ? "Select current level first"
+                                : formData.previousLevelId === 0
+                                ? "No earlier level in this stream"
+                                : "Previous level"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {levels.map((level) => (
+                            <SelectItem
+                              key={level.id}
+                              value={level.id.toString()}
+                            >
+                              {level.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-amber-700">
+                        Auto-selected as the level one order before the current level.
+                      </p>
+                      {errors.previousLevelId && (
+                        <p className="text-red-500 text-sm flex items-center gap-1">
+                          <AlertCircle className="w-4 h-4" />
+                          {errors.previousLevelId}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="previousInstructorId">Instructor *</Label>
+                      <Select
+                        value={formData.previousInstructorId.toString()}
+                        onValueChange={(value) =>
+                          handleInputChange("previousInstructorId", value)
+                        }
+                        disabled={
+                          !formData.programId ||
+                          formData.programId === 0 ||
+                          loadingInstructors
+                        }
+                      >
+                        <SelectTrigger
+                          className={
+                            errors.previousInstructorId ? "border-red-500" : ""
+                          }
+                        >
+                          <SelectValue
+                            placeholder={
+                              loadingInstructors
+                                ? "Loading instructors..."
+                                : !formData.programId
+                                ? "Select program first"
+                                : instructors.length === 0
+                                ? "No instructors available"
+                                : "Select instructor"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {instructors.map((ci) => (
+                            <SelectItem key={ci.id} value={ci.id.toString()}>
+                              {ci.name}
+                              {ci.instructorId ? ` (${ci.instructorId})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.previousInstructorId && (
+                        <p className="text-red-500 text-sm flex items-center gap-1">
+                          <AlertCircle className="w-4 h-4" />
+                          {errors.previousInstructorId}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="previousTotalMarks">Total Marks *</Label>
+                      <Input
+                        id="previousTotalMarks"
+                        type="number"
+                        min={0}
+                        value={formData.previousTotalMarks}
+                        onChange={(e) =>
+                          handleInputChange("previousTotalMarks", e.target.value)
+                        }
+                        className={
+                          errors.previousTotalMarks ? "border-red-500" : ""
+                        }
+                        placeholder="e.g. 100"
+                      />
+                      {errors.previousTotalMarks && (
+                        <p className="text-red-500 text-sm flex items-center gap-1">
+                          <AlertCircle className="w-4 h-4" />
+                          {errors.previousTotalMarks}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="previousMarks">Marks Obtained *</Label>
+                      <Input
+                        id="previousMarks"
+                        type="number"
+                        min={0}
+                        value={formData.previousMarks}
+                        onChange={(e) =>
+                          handleInputChange("previousMarks", e.target.value)
+                        }
+                        className={errors.previousMarks ? "border-red-500" : ""}
+                        placeholder="e.g. 85"
+                      />
+                      {errors.previousMarks && (
+                        <p className="text-red-500 text-sm flex items-center gap-1">
+                          <AlertCircle className="w-4 h-4" />
+                          {errors.previousMarks}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="previousTheoryMarks">Theory Marks *</Label>
+                      <Input
+                        id="previousTheoryMarks"
+                        type="number"
+                        min={0}
+                        value={formData.previousTheoryMarks}
+                        onChange={(e) =>
+                          handleInputChange("previousTheoryMarks", e.target.value)
+                        }
+                        className={
+                          errors.previousTheoryMarks ? "border-red-500" : ""
+                        }
+                        placeholder="e.g. 40"
+                      />
+                      {errors.previousTheoryMarks && (
+                        <p className="text-red-500 text-sm flex items-center gap-1">
+                          <AlertCircle className="w-4 h-4" />
+                          {errors.previousTheoryMarks}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="previousCompletedAt">
+                        Completion Date *
+                      </Label>
+                      <Input
+                        id="previousCompletedAt"
+                        type="date"
+                        max={new Date().toISOString().slice(0, 10)}
+                        value={formData.previousCompletedAt}
+                        onChange={(e) =>
+                          handleInputChange("previousCompletedAt", e.target.value)
+                        }
+                        className={
+                          errors.previousCompletedAt ? "border-red-500" : ""
+                        }
+                      />
+                      {errors.previousCompletedAt && (
+                        <p className="text-red-500 text-sm flex items-center gap-1">
+                          <AlertCircle className="w-4 h-4" />
+                          {errors.previousCompletedAt}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-sky-50 border border-sky-200 rounded-lg p-4 space-y-3">
+                  <h4 className="font-medium text-sky-900 flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    ID Card Status
+                  </h4>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="idCardIssued"
+                      checked={formData.idCardIssued}
+                      onCheckedChange={(checked) => {
+                        const isChecked = Boolean(checked);
+                        setFormData((prev) => ({
+                          ...prev,
+                          idCardIssued: isChecked,
+                          idCardIssueDate: isChecked
+                            ? prev.idCardIssueDate
+                            : "",
+                        }));
+                        if (errors.idCardIssueDate) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            idCardIssueDate: "",
+                          }));
+                        }
+                      }}
+                    />
+                    <Label
+                      htmlFor="idCardIssued"
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      ID card already issued
+                    </Label>
+                  </div>
+                  {formData.idCardIssued && (
+                    <div className="space-y-2 max-w-xs">
+                      <Label htmlFor="idCardIssueDate">Issue Date *</Label>
+                      <Input
+                        id="idCardIssueDate"
+                        type="date"
+                        max={new Date().toISOString().slice(0, 10)}
+                        value={formData.idCardIssueDate}
+                        onChange={(e) =>
+                          handleInputChange("idCardIssueDate", e.target.value)
+                        }
+                        className={
+                          errors.idCardIssueDate ? "border-red-500" : ""
+                        }
+                      />
+                      {errors.idCardIssueDate && (
+                        <p className="text-red-500 text-sm flex items-center gap-1">
+                          <AlertCircle className="w-4 h-4" />
+                          {errors.idCardIssueDate}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         );
 

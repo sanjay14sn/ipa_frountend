@@ -295,10 +295,7 @@ function invalidateStudentLists(qc: ReturnType<typeof getQueryClientBridge>) {
 }
 
 export async function createStudentWithRevalidation(
-  studentData: Omit<
-    StudentData,
-    "id" | "createdAt" | "updatedAt" | "createdBy" | "updatedBy"
-  >,
+  studentData: Parameters<typeof createStudent>[0],
 ) {
   const result = await createStudent(studentData);
   try {

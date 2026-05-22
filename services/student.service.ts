@@ -67,6 +67,24 @@ export interface StudentsResponse {
   result: StudentData[];
 }
 
+export interface PreviousLevelProgressionInput {
+  levelId: number;
+  marks: number;
+  theoryMarks: number;
+  totalMarks: number;
+  completedAt: string;
+  instructorId: number;
+}
+
+export type CreateStudentInput = Omit<
+  StudentData,
+  "id" | "createdAt" | "updatedAt" | "createdBy" | "updatedBy"
+> & {
+  existing?: boolean;
+  idIssueDate?: string;
+  previousLevel?: PreviousLevelProgressionInput;
+};
+
 function normalizeStudentIdStatus(value: unknown): StudentIdStatus {
   const raw = String(value ?? "").trim().toLowerCase();
   if (raw === "issued") return StudentIdStatus.ISSUED;
@@ -185,10 +203,7 @@ export async function getStudentById(studentId: number): Promise<StudentData> {
 }
 
 export async function createStudent(
-  studentData: Omit<
-    StudentData,
-    "id" | "createdAt" | "updatedAt" | "createdBy" | "updatedBy"
-  >,
+  studentData: CreateStudentInput,
 ): Promise<StudentData> {
   const dob =
     studentData.dateOfBirth instanceof Date
@@ -218,6 +233,10 @@ export async function createStudent(
         : studentData.dateOfJoining
           ? String(studentData.dateOfJoining).slice(0, 10)
           : undefined,
+    existing: studentData.existing ?? false,
+    idIssued: studentData.idIssued,
+    idIssueDate: studentData.idIssueDate,
+    previousLevel: studentData.previousLevel,
   });
   const row = unwrapData<Record<string, unknown>>(response);
   return mapStudentRow(row);
@@ -394,6 +413,9 @@ export interface EligibleStudent {
   standard: string;
   stream: string;
   levelName: string;
+  /** Duration in months of the student's current level — used to compute the
+   *  15-day "duration exceeded" buffer on the eligibility badge. */
+  durationInMonths: number;
   isActive: boolean;
   lastCertIssuedAt: string | null;
   eligibilityReason: "no_certificate" | "duration_exceeded";
@@ -423,6 +445,7 @@ export async function getEligibleStudents(): Promise<EligibleStudentsResponse> {
       standard: (s.standard as string) ?? "",
       stream: String(levelStream?.name ?? (s.stream as string) ?? StudentStream.REGULAR),
       levelName: level?.name ? String(level.name) : String(s.levelId ?? ""),
+      durationInMonths: Number(level?.durationInMonths ?? 0),
       isActive: Boolean(s.isActive),
       lastCertIssuedAt: (s.lastCertIssuedAt as string | null) ?? null,
       eligibilityReason: (s.eligibilityReason as "no_certificate" | "duration_exceeded") ?? "no_certificate",
