@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { DataTable } from "@/components/shared";
+import { DataTable, StatusBadge } from "@/components/shared";
 import type { DataTableColumn } from "@/components/shared";
 import type { IdCardFranchiseSummary } from "@/services/student.service";
 import { useAdminIdCardSummaries } from "@/hooks/api/student.hooks";
@@ -62,9 +62,7 @@ export default function RequestedIdTable({
       header: "Issued",
       className: "text-center",
       render: (g) => (
-        <Badge variant="outline" className="border-green-300 text-green-700">
-          {g.totalIssued} issued
-        </Badge>
+        <StatusBadge tone="success" label={`${g.totalIssued} issued`} />
       ),
     },
   ];

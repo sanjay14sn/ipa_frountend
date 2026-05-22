@@ -1,15 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -17,7 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle } from "lucide-react";
 import {
   requestProgram,
   getFranchiseList,
@@ -30,6 +20,12 @@ import { getAllPrograms, Program } from "@/services/program.service";
 import { getErrorMessage } from "@/lib/error-utils";
 import { toast } from "sonner";
 import { useUser } from "@/context/user-context";
+import {
+  AppDialog,
+  DialogFormField,
+  FormDialog,
+  SuccessDialog,
+} from "@/components/shared/dialog";
 
 interface RequestProgramsModalProps {
   open: boolean;
@@ -134,7 +130,6 @@ export function RequestProgramsModal({
       .finally(() => setLoadingData(false));
   }, [open, user]);
 
-  /** Program IDs already active/pending for the selected franchise — cannot be re-requested. */
   const blockedProgramIds = useMemo(() => {
     if (!franchiseId) return new Set<number>();
     return new Set(
@@ -147,13 +142,11 @@ export function RequestProgramsModal({
     );
   }, [existingRequests, franchiseId]);
 
-  /** Programs the franchisee can still request for the selected franchise. */
   const availablePrograms = useMemo(
     () => programs.filter((p) => !blockedProgramIds.has(p.id)),
     [programs, blockedProgramIds],
   );
 
-  // Reset program selection when franchise changes
   useEffect(() => {
     setProgramId("");
   }, [franchiseId]);
@@ -197,146 +190,109 @@ export function RequestProgramsModal({
 
   if (submitted) {
     return (
-      <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="mx-4 w-full max-w-md rounded-2xl border-border">
-          <DialogHeader className="text-center">
-            <div className="mb-4 flex justify-center">
-              <div className="rounded-full bg-surface-green p-3">
-                <CheckCircle className="h-10 w-10 text-primary" />
-              </div>
-            </div>
-            <DialogTitle className="text-2xl font-semibold text-card-foreground">
-              Request Submitted!
-            </DialogTitle>
-            <DialogDescription className="text-center text-muted-foreground">
-              Your program request has been submitted. Admin will review and
-              approve it shortly.
-            </DialogDescription>
-          </DialogHeader>
-          <Button onClick={handleClose} className="w-full rounded-lg">
-            Close
-          </Button>
-        </DialogContent>
-      </Dialog>
+      <SuccessDialog
+        open={open}
+        onOpenChange={handleClose}
+        title="Request Submitted!"
+        description="Your program request has been submitted. Admin will review and approve it shortly."
+        actionLabel="Close"
+        onAction={handleClose}
+      />
     );
   }
 
   if (loadingData) {
     return (
-      <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="mx-4 w-full max-w-md rounded-2xl border-border">
-          <DialogTitle className="sr-only">Loading</DialogTitle>
-          <div className="flex items-center justify-center py-10">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AppDialog open={open} onOpenChange={handleClose} size="sm">
+        <div className="flex items-center justify-center py-10">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <span className="sr-only">Loading</span>
+        </div>
+      </AppDialog>
     );
   }
 
+  const canSubmit =
+    Boolean(franchiseId) &&
+    Boolean(programId) &&
+    availablePrograms.length > 0;
+
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg overflow-hidden rounded-2xl border-border p-0">
-        <DialogHeader className="border-b border-border bg-surface-green/40 px-6 pb-4 pt-6">
-          <DialogTitle className="text-lg font-semibold text-card-foreground">
-            Request a Program
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Request one new program for an existing franchise. Admin will review
-            and approve it.
-          </DialogDescription>
-        </DialogHeader>
+    <FormDialog
+      open={open}
+      onOpenChange={handleClose}
+      size="md"
+      title="Request a Program"
+      description="Request one new program for an existing franchise. Admin will review and approve it."
+      onSubmit={handleSubmit}
+      isSubmitting={isLoading}
+      canSubmit={canSubmit}
+      submitLabel="Submit Request"
+    >
+      <DialogFormField
+        id="franchise"
+        label="Franchise"
+        required
+        hint={
+          franchiseOptions.length === 0
+            ? "No active franchises found. If you just became active, refresh the page or sign in again."
+            : undefined
+        }
+      >
+        <Select
+          value={franchiseId}
+          onValueChange={setFranchiseId}
+          disabled={franchiseOptions.length === 0}
+        >
+          <SelectTrigger id="franchise" className="rounded-lg">
+            <SelectValue placeholder="Select franchise" />
+          </SelectTrigger>
+          <SelectContent>
+            {franchiseOptions.map((f) => (
+              <SelectItem key={f.id} value={f.id}>
+                {f.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </DialogFormField>
 
-        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
-          {/* Franchise select */}
-          <div className="space-y-2">
-            <Label htmlFor="franchise">Franchise *</Label>
-            <Select
-              value={franchiseId}
-              onValueChange={setFranchiseId}
-              disabled={franchiseOptions.length === 0}
-            >
-              <SelectTrigger className="rounded-lg border-border">
-                <SelectValue placeholder="Select franchise" />
-              </SelectTrigger>
-              <SelectContent>
-                {franchiseOptions.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {f.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {franchiseOptions.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                No active franchises found. If you just became active, refresh
-                the page or sign in again.
-              </p>
-            )}
-          </div>
-
-          {/* Program select */}
-          <div className="space-y-2">
-            <Label htmlFor="program">Program *</Label>
-            {!franchiseId ? (
-              <p className="text-sm text-muted-foreground">
-                Select a franchise first.
-              </p>
-            ) : availablePrograms.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                All programs have already been requested or are active for this
-                franchise.
-              </p>
-            ) : (
-              <Select
-                value={programId}
-                onValueChange={setProgramId}
-              >
-                <SelectTrigger className="rounded-lg border-border">
-                  <SelectValue placeholder="Select program" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availablePrograms.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {franchiseId && blockedProgramIds.size > 0 && (
-              <p className="text-xs text-muted-foreground">
-                {blockedProgramIds.size} program
-                {blockedProgramIds.size === 1 ? "" : "s"} already
-                requested or active for this franchise.
-              </p>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-lg border-border"
-              onClick={handleClose}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="rounded-lg"
-              disabled={
-                isLoading ||
-                !franchiseId ||
-                !programId ||
-                availablePrograms.length === 0
-              }
-            >
-              {isLoading ? "Submitting..." : "Submit Request"}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <DialogFormField
+        id="program"
+        label="Program"
+        required
+        hint={
+          franchiseId && blockedProgramIds.size > 0
+            ? `${blockedProgramIds.size} program${
+                blockedProgramIds.size === 1 ? "" : "s"
+              } already requested or active for this franchise.`
+            : undefined
+        }
+      >
+        {!franchiseId ? (
+          <p className="text-sm text-muted-foreground">
+            Select a franchise first.
+          </p>
+        ) : availablePrograms.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            All programs have already been requested or are active for this
+            franchise.
+          </p>
+        ) : (
+          <Select value={programId} onValueChange={setProgramId}>
+            <SelectTrigger id="program" className="rounded-lg">
+              <SelectValue placeholder="Select program" />
+            </SelectTrigger>
+            <SelectContent>
+              {availablePrograms.map((p) => (
+                <SelectItem key={p.id} value={String(p.id)}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </DialogFormField>
+    </FormDialog>
   );
 }

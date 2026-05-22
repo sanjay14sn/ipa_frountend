@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar, Users } from "lucide-react";
-import { DataTable } from "@/components/shared";
+import { DataTable, StatusBadge } from "@/components/shared";
 import type { DataTableColumn, DataTableSortOption } from "@/components/shared";
 import { usePrograms } from "@/hooks/api/program.hooks";
 import { useTrainingLevelsForProgram } from "@/hooks/api/training-level.hooks";
@@ -106,13 +105,9 @@ export default function CITrainingSessionsTab() {
       className: "w-[110px]",
       render: (s) =>
         s.status === "COMPLETED" ? (
-          <Badge className="bg-green-50 text-green-700 border border-green-200">
-            Completed
-          </Badge>
+          <StatusBadge label="Completed" />
         ) : (
-          <Badge className="bg-blue-50 text-blue-700 border border-blue-200">
-            Open
-          </Badge>
+          <StatusBadge label="Open" />
         ),
     },
     {

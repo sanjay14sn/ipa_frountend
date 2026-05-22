@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, BookOpen, Award } from "lucide-react";
-import { DataTable } from "@/components/shared";
+import { DataTable, StatusBadge } from "@/components/shared";
 import type {
   DataTableColumn,
   DataTableFilter,
@@ -128,12 +128,6 @@ export default function EligibleStudentsTable({
     return "bg-gray-100 text-gray-800 border-gray-200";
   };
 
-  const getStatusColor = (isActive: boolean) => {
-    return isActive
-      ? "bg-primary/10 text-primary border-primary/20"
-      : "bg-gray-50 text-gray-600 border-gray-200";
-  };
-
   const calculateAge = (dateOfBirth: string): number => {
     const today = new Date();
     const birthDate = new Date(dateOfBirth);
@@ -229,11 +223,7 @@ export default function EligibleStudentsTable({
       className: "text-center",
       render: (student) => {
         if (student.eligibilityReason === "no_certificate") {
-          return (
-            <Badge className="bg-blue-50 text-blue-700 border border-blue-200">
-              First certificate
-            </Badge>
-          );
+          return <StatusBadge tone="info" label="First certificate" />;
         }
         // "duration_exceeded" branch — only show the strong "Duration exceeded"
         // label once at least 15 days have elapsed past the level's duration
@@ -244,13 +234,9 @@ export default function EligibleStudentsTable({
           student.durationInMonths
         );
         return exceededAt15Days ? (
-          <Badge className="bg-amber-50 text-amber-700 border border-amber-200">
-            Duration exceeded
-          </Badge>
+          <StatusBadge tone="warning" label="Duration exceeded" />
         ) : (
-          <Badge className="bg-green-50 text-green-700 border border-green-200">
-            Eligible
-          </Badge>
+          <StatusBadge tone="success" label="Eligible" />
         );
       },
     },
@@ -259,9 +245,7 @@ export default function EligibleStudentsTable({
       header: "Status",
       className: "text-center",
       render: (student) => (
-        <Badge className={`${getStatusColor(student.isActive)} border`}>
-          {student.isActive ? "Active" : "Inactive"}
-        </Badge>
+        <StatusBadge label={student.isActive ? "Active" : "Inactive"} />
       ),
     },
     {

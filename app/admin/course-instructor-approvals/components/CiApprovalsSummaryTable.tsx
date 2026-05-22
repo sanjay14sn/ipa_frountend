@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { DataTable } from "@/components/shared";
+import { DataTable, StatusBadge } from "@/components/shared";
 import type { DataTableColumn } from "@/components/shared";
 import type { CIFranchiseSummary } from "@/hooks/api/course-instructor.hooks";
 import { useAdminCISummaries } from "@/hooks/api/course-instructor.hooks";
@@ -50,9 +49,7 @@ export default function CiApprovalsSummaryTable({
       header: "Pending",
       className: "text-center",
       render: (g) => (
-        <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
-          {g.totalPending} pending
-        </Badge>
+        <StatusBadge tone="warning" label={`${g.totalPending} pending`} />
       ),
     },
     {
@@ -60,9 +57,7 @@ export default function CiApprovalsSummaryTable({
       header: "Approved",
       className: "text-center",
       render: (g) => (
-        <Badge variant="outline" className="border-green-300 bg-green-50 text-green-700">
-          {g.totalApproved} approved
-        </Badge>
+        <StatusBadge tone="success" label={`${g.totalApproved} approved`} />
       ),
     },
     {
@@ -70,9 +65,7 @@ export default function CiApprovalsSummaryTable({
       header: "Rejected",
       className: "text-center",
       render: (g) => (
-        <Badge variant="destructive">
-          {g.totalRejected} rejected
-        </Badge>
+        <StatusBadge tone="destructive" label={`${g.totalRejected} rejected`} />
       ),
     },
   ];

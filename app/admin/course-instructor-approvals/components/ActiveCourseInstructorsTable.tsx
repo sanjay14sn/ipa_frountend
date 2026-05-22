@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/shared";
 import type {
@@ -93,7 +93,7 @@ export default function ActiveCourseInstructorsTable() {
       key: "status",
       header: "Status",
       className: "w-[120px]",
-      render: () => <Badge variant="default">Active</Badge>,
+      render: () => <StatusBadge label="Active" />,
     },
     {
       key: "actions",

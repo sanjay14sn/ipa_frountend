@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Truck, PackageCheck, X, Download } from "lucide-react";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
@@ -22,6 +21,8 @@ import {
   ExpandedDetailSection,
   DetailFieldsGrid,
   DetailField,
+  StatusBadge,
+  type StatusTone,
 } from "@/components/shared";
 import { Separator } from "@/components/ui/separator";
 import { ShipShipmentDialog } from "./ShipShipmentDialog";
@@ -34,6 +35,20 @@ const STATUS_LABEL: Record<string, string> = {
   DELIVERED: "Delivered",
   CANCELLED: "Cancelled",
 };
+
+function shipmentTone(status: string | null | undefined): StatusTone {
+  switch ((status ?? "").toUpperCase()) {
+    case "DELIVERED":
+      return "success";
+    case "VERIFIED":
+    case "SHIPPED":
+      return "info";
+    case "CANCELLED":
+      return "destructive";
+    default:
+      return "neutral";
+  }
+}
 
 export default function AdminShippingTable() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -135,9 +150,10 @@ export default function AdminShippingTable() {
         key: "shipment",
         header: "Shipment",
         render: (row) => (
-          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-            {STATUS_LABEL[row.status] ?? row.status}
-          </Badge>
+          <StatusBadge
+            tone={shipmentTone(row.status)}
+            label={STATUS_LABEL[row.status] ?? row.status}
+          />
         ),
       },
       {

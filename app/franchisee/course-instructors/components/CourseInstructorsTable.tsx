@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared";
 import { Edit, Trash2, BarChart2 } from "lucide-react";
 import { DataTable } from "@/components/shared";
 import type {
@@ -118,11 +119,6 @@ export default function CourseInstructorsTable({
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
-  const getStatusColor = (status: string) => {
-    if (status === "Active") return "bg-primary/10 text-primary border-primary/20";
-    if (status === "Training") return "bg-amber-50 text-amber-700 border-amber-200";
-    return "bg-muted text-muted-foreground border-border";
-  };
 
   const uniqueBloodGroups = [
     ...new Set(courseInstructors?.map((ci) => ci.bloodGroup).filter(Boolean)),
@@ -168,11 +164,7 @@ export default function CourseInstructorsTable({
       key: "status",
       header: "Status",
       className: "w-[120px]",
-      render: (ci) => (
-        <Badge className={`${getStatusColor(ci.status)} border`}>
-          {ci.status}
-        </Badge>
-      ),
+      render: (ci) => <StatusBadge label={ci.status} />,
     },
     {
       key: "actions",

@@ -3,11 +3,10 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart2, FileText, Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { DataTable } from "@/components/shared";
+import { DataTable, StatusBadge } from "@/components/shared";
 import type {
   DataTableColumn,
   DataTableFilter,
@@ -102,23 +101,15 @@ function AdminCIProgressContent({ instructorId }: { instructorId: number }) {
             </div>
             <div className="flex shrink-0 items-center gap-1">
               {training.paid ? (
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs px-1.5 py-0">
-                  Paid
-                </Badge>
+                <StatusBadge tone="success" label="Paid" className="text-xs px-1.5 py-0" />
               ) : (
-                <Badge variant="outline" className="bg-muted text-muted-foreground border-border text-xs px-1.5 py-0">
-                  Unpaid
-                </Badge>
+                <StatusBadge tone="neutral" label="Unpaid" className="text-xs px-1.5 py-0" />
               )}
               {training.isCompleted && (
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs px-1.5 py-0">
-                  Completed
-                </Badge>
+                <StatusBadge tone="success" label="Completed" className="text-xs px-1.5 py-0" />
               )}
               {training.isActive && !training.isCompleted && (
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs px-1.5 py-0">
-                  Active
-                </Badge>
+                <StatusBadge tone="warning" label="Active" className="text-xs px-1.5 py-0" />
               )}
             </div>
           </div>
@@ -201,7 +192,7 @@ export function FranchiseCiListTable({ franchiseId }: FranchiseCiListTableProps)
         key: "status",
         header: "Status",
         className: "w-[120px] text-center",
-        render: (c) => <Badge variant="secondary">{c.status}</Badge>,
+        render: (c) => <StatusBadge label={c.status} />,
       },
       {
         key: "actions",

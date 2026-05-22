@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DialogFormField } from "@/components/shared/dialog";
 import statesCities from "@/data/indian-states-cities.json";
 
 type StatesCitiesType = Record<string, string[]>;
@@ -40,6 +41,14 @@ interface StateCitySelectProps {
   placeholder?: string;
   className?: string;
   id?: string;
+  /**
+   * "wrapped" (default) — renders State + City inside its own 2-col grid wrapper with
+   * muted secondary labels. Use as a single grid cell.
+   * "flat" — renders State and City as two independent DialogFormField siblings via a
+   * Fragment, with the same label style as other form fields. The PARENT grid controls
+   * column widths, so it sits cleanly next to Pincode etc.
+   */
+  mode?: "wrapped" | "flat";
 }
 
 export function StateCitySelect({
@@ -53,6 +62,7 @@ export function StateCitySelect({
   placeholder = "Select state, then city",
   className = "",
   id = "city",
+  mode = "wrapped",
 }: StateCitySelectProps) {
   const [state, setState] = useState<string>(stateValue ?? "");
   const [city, setCity] = useState<string>(value);
@@ -83,6 +93,65 @@ export function StateCitySelect({
     onChange(newCity);
   };
 
+  const stateSelect = (
+    <Select value={state} onValueChange={handleStateChange}>
+      <SelectTrigger
+        id={`${id}-state`}
+        className={error ? "border-destructive" : ""}
+      >
+        <SelectValue placeholder="Select state" />
+      </SelectTrigger>
+      <SelectContent>
+        {stateNames.map((s) => (
+          <SelectItem key={s} value={s}>
+            {s}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  const citySelect = (
+    <Select
+      value={city}
+      onValueChange={handleCityChange}
+      disabled={!state}
+    >
+      <SelectTrigger id={id} className={error ? "border-destructive" : ""}>
+        <SelectValue
+          placeholder={state ? "Select city" : "Select state first"}
+        />
+      </SelectTrigger>
+      <SelectContent>
+        {cities.map((c) => (
+          <SelectItem key={c} value={c}>
+            {c}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  if (mode === "flat") {
+    // Two standalone fields rendered by DialogFormField for label/error parity with siblings.
+    return (
+      <Fragment>
+        <DialogFormField
+          id={`${id}-state`}
+          label="State"
+          required={required}
+          error={error}
+        >
+          {stateSelect}
+        </DialogFormField>
+        <DialogFormField id={id} label={label} required={required}>
+          {citySelect}
+        </DialogFormField>
+      </Fragment>
+    );
+  }
+
+  // Wrapped mode (legacy): keep the original internal grid + muted labels.
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -93,44 +162,13 @@ export function StateCitySelect({
           >
             State
           </Label>
-          <Select value={state} onValueChange={handleStateChange}>
-            <SelectTrigger
-              id={`${id}-state`}
-              className={error ? "border-red-500" : ""}
-            >
-              <SelectValue placeholder="Select state" />
-            </SelectTrigger>
-            <SelectContent>
-              {stateNames.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {stateSelect}
         </div>
         <div className="space-y-2">
           <Label htmlFor={id} className="text-sm text-muted-foreground">
             City
           </Label>
-          <Select
-            value={city}
-            onValueChange={handleCityChange}
-            disabled={!state}
-          >
-            <SelectTrigger id={id} className={error ? "border-red-500" : ""}>
-              <SelectValue
-                placeholder={state ? "Select city" : "Select state first"}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {cities.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {citySelect}
         </div>
       </div>
       {error && (

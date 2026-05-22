@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getAllPrograms, type Program } from "@/services/program.service";
 import { queryKeys } from "./query-keys";
@@ -15,8 +15,12 @@ export function usePrograms() {
     staleTime: Number.POSITIVE_INFINITY, // never re-fetch automatically
     gcTime: 30 * 60 * 1000,
   });
+  const programs = useMemo(
+    () => q.data ?? ([] as Program[]),
+    [q.data],
+  );
   return {
-    programs: q.data ?? ([] as Program[]),
+    programs,
     isLoading: q.isLoading,
     error: q.error,
     revalidate: q.refetch,

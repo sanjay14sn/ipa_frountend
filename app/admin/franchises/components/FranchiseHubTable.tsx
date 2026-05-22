@@ -12,6 +12,7 @@ import {
   DetailMessage,
   ExpandedDetailSection,
   ExpandedDetailSurface,
+  StatusBadge,
   type DataTableColumn,
   type DataTableFilter,
   type DataTableMultiSelectFilter,
@@ -60,22 +61,6 @@ function formatDate(value: string | Date | null | undefined): string {
   return new Date(value).toLocaleDateString();
 }
 
-function statusTone(status: string): string {
-  switch (status.toLowerCase()) {
-    case "active":
-    case "approved":
-      return "bg-green-100 text-green-800 border-green-200";
-    case "pending":
-      return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    case "inactive":
-    case "suspended":
-      return "bg-gray-100 text-gray-700 border-gray-200";
-    case "rejected":
-      return "bg-red-100 text-red-800 border-red-200";
-    default:
-      return "bg-gray-100 text-gray-600 border-gray-200";
-  }
-}
 
 function agreementProgramLabels(item: FranchiseData): string {
   const names = [
@@ -272,9 +257,7 @@ export function FranchiseHubTable({
             header: "Status",
             className: "text-center",
             render: (item) => (
-              <Badge className={`${statusTone(item.status)} border text-xs`}>
-                {item.status}
-              </Badge>
+              <StatusBadge label={item.status} />
             ),
           },
           {
@@ -332,9 +315,7 @@ export function FranchiseHubTable({
             header: "Status",
             className: "text-center",
             render: (item) => (
-              <Badge className={`${statusTone(item.status)} border text-xs`}>
-                {item.status}
-              </Badge>
+              <StatusBadge label={item.status} />
             ),
           },
           {

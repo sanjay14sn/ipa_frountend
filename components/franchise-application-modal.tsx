@@ -7,13 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -25,7 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Calculator, ArrowRight, CheckCircle, Check, ChevronsUpDown } from "lucide-react";
+import { Calculator, Check, ChevronsUpDown } from "lucide-react";
 import React from "react";
 import { applyFranchisee } from "@/services/franchisee.service";
 import { getErrorMessage } from "@/lib/error-utils";
@@ -38,73 +31,18 @@ import {
 import { useProgramsOnDemand } from "@/hooks/api/program.hooks";
 import { StateCitySelect } from "@/components/StateCitySelect";
 import { cn } from "@/lib/utils";
+import {
+  MultiStepDialog,
+  SuccessDialog,
+  type StepDef,
+} from "@/components/shared/dialog";
 
-const FORM_STEPS = [
+const FORM_STEPS: StepDef[] = [
   { id: 1, title: "Personal Information" },
   { id: 2, title: "Location & Communication" },
   { id: 3, title: "Contact & Professional" },
   { id: 4, title: "Franchise Details" },
 ];
-
-const Stepper = ({
-  currentStep,
-  steps,
-}: {
-  currentStep: number;
-  steps: typeof FORM_STEPS;
-}) => {
-  return (
-    <div className="w-full">
-      <div className="flex items-center justify-between">
-        {steps.map((step, index) => (
-          <React.Fragment key={step.id}>
-            <div className="flex flex-1 flex-col items-center">
-              <div
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-semibold transition-all duration-200",
-                  currentStep === step.id &&
-                    "border-primary bg-primary text-primary-foreground shadow-md",
-                  currentStep > step.id &&
-                    "border-primary bg-primary text-primary-foreground",
-                  currentStep < step.id &&
-                    "border-border bg-card text-muted-foreground",
-                )}
-              >
-                {currentStep > step.id ? (
-                  <Check className="h-4 w-4" strokeWidth={3} />
-                ) : (
-                  step.id
-                )}
-              </div>
-              <div className="mt-2 max-w-[80px] text-center">
-                <p
-                  className={cn(
-                    "text-xs font-medium leading-tight",
-                    currentStep >= step.id
-                      ? "text-card-foreground"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {step.title}
-                </p>
-              </div>
-            </div>
-            {index < steps.length - 1 && (
-              <div className="flex max-w-[60px] flex-1 items-center justify-center px-2">
-                <div
-                  className={cn(
-                    "h-0.5 w-full transition-all duration-200",
-                    currentStep > step.id ? "bg-primary" : "bg-border",
-                  )}
-                />
-              </div>
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 interface FranchiseApplicationModalProps {
   open: boolean;
@@ -768,121 +706,34 @@ export function FranchiseApplicationModal({
 
   if (submitted) {
     return (
-      <Dialog open={open} onOpenChange={handleModalOpenChange}>
-        <DialogContent className="mx-4 w-full max-w-md rounded-2xl border-border">
-          <DialogHeader className="text-center">
-            <div className="mb-4 flex justify-center">
-              <div className="rounded-full bg-surface-green p-3">
-                <CheckCircle className="h-10 w-10 text-primary" />
-              </div>
-            </div>
-            <DialogTitle className="text-2xl font-semibold text-card-foreground">
-              Application Submitted!
-            </DialogTitle>
-            <DialogDescription className="text-center text-muted-foreground">
-              Your franchise application has been submitted successfully. Our
-              admin team will review it first. Login credentials and agreement
-              access will be sent only after approval.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="pt-2">
-            <Button className="w-full" onClick={handleClose}>
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SuccessDialog
+        open={open}
+        onOpenChange={handleModalOpenChange}
+        title="Application Submitted!"
+        description="Your franchise application has been submitted successfully. Our admin team will review it first. Login credentials and agreement access will be sent only after approval."
+        actionLabel="Close"
+        onAction={handleClose}
+      />
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleModalOpenChange}>
-      <DialogContent className="mx-4 flex max-h-[95vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border-border p-0">
-        <DialogHeader className="flex-shrink-0 border-b border-border bg-surface-green/40 px-6 pb-4 pt-6 text-center">
-          <div className="mb-3 flex justify-center">
-            <div className="rounded-xl bg-accent p-2.5 text-primary">
-              <Calculator className="h-7 w-7" />
-            </div>
-          </div>
-          <DialogTitle className="text-xl font-semibold text-card-foreground">
-            Franchise Application Form
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Complete your franchise application step by step
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto">
-          <div className="space-y-6 p-6">
-            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-              <Stepper currentStep={currentStep} steps={FORM_STEPS} />
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="mb-4 border-b border-border pb-2 text-lg font-semibold text-[#065f46]">
-                    {FORM_STEPS[currentStep - 1].title}
-                  </h3>
-                  <div className="space-y-4">{renderStepContent()}</div>
-                </div>
-                {currentStep < FORM_STEPS.length ? (
-                  <div className="flex gap-4 pt-6">
-                    <div className="flex gap-2">
-                      {currentStep > 1 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="rounded-lg border-border"
-                          onClick={handlePrevious}
-                        >
-                          Previous
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="flex-1" />
-
-                    <Button
-                      type="button"
-                      onClick={handleNext}
-                      className="rounded-lg"
-                    >
-                      Next
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSubmit}>
-                    <div className="flex gap-4 pt-6">
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="rounded-lg border-border"
-                          onClick={handlePrevious}
-                        >
-                          Previous
-                        </Button>
-                      </div>
-
-                      <div className="flex-1" />
-
-                      <Button
-                        type="submit"
-                        className="rounded-lg"
-                        disabled={isLoading}
-                      >
-                        {isLoading ? "Submitting..." : "Submit Application"}
-                      </Button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <MultiStepDialog
+      open={open}
+      onOpenChange={handleModalOpenChange}
+      size="xl"
+      title="Franchise Application Form"
+      description="Complete your franchise application step by step"
+      headerIcon={Calculator}
+      steps={FORM_STEPS}
+      currentStep={currentStep}
+      onBack={handlePrevious}
+      onNext={handleNext}
+      onSubmit={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
+      isSubmitting={isLoading}
+      submitLabel="Submit Application"
+    >
+      <div className="space-y-4">{renderStepContent()}</div>
+    </MultiStepDialog>
   );
 }

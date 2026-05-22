@@ -3,13 +3,11 @@
 import { useState, useCallback, useMemo } from "react";
 import { Loader2, Plus, Search, X } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+  AppDialog,
+  AppDialogBody,
+  AppDialogFooter,
+  AppDialogHeader,
+} from "@/components/shared/dialog";
 import { type StudentData } from "@/services/student.service";
 import {
   initiateOrderPayment,
@@ -285,15 +283,20 @@ export default function UnifiedMaterialRequestDialog({
   }, [orderableInstructors]);
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex h-[min(58rem,92vh)] min-h-[min(58rem,92vh)] max-h-[min(58rem,92vh)] w-full max-w-6xl flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-4 text-left">
-          <DialogTitle>Request materials</DialogTitle>
-          <DialogDescription className="sr-only">
-            Select line items, review invoice, pay.
-          </DialogDescription>
-        </DialogHeader>
+    <AppDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      size="2xl"
+      padding="flush"
+      scrollBody
+      maxHeight="max-h-[min(58rem,92vh)]"
+    >
+      <AppDialogHeader
+        title="Request materials"
+        description="Select line items, review invoice, pay."
+      />
 
+      <AppDialogBody layout="fill" className="px-0 py-0">
         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
           {/* Left — selection */}
           <div className="flex min-h-0 w-full flex-col border-border lg:w-[min(420px,42%)] lg:border-r">
@@ -774,43 +777,37 @@ export default function UnifiedMaterialRequestDialog({
           </div>
         </div>
 
-        <footer className="shrink-0 border-t border-border bg-card px-6 py-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                Estimated total
-              </span>
-              <span className="text-lg font-semibold tabular-nums text-card-foreground">
-                {currencyFormatter.format(preview?.totalAmount ?? 0)}
-              </span>
-            </div>
-            <div className="flex shrink-0 flex-nowrap justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={onClose}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleContinue}
-                disabled={
-                  !hasSelection ||
-                  isSubmitting ||
-                  invoicePreview.isLoading ||
-                  invoicePreview.isFetching ||
-                  invoicePreview.isError
-                }
-              >
-                {isSubmitting && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Pay {currencyFormatter.format(preview?.totalAmount ?? 0)}
-              </Button>
-            </div>
+      </AppDialogBody>
+
+      <AppDialogFooter
+        sticky
+        leftSlot={
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              Estimated total
+            </span>
+            <span className="text-lg font-semibold tabular-nums text-card-foreground">
+              {currencyFormatter.format(preview?.totalAmount ?? 0)}
+            </span>
           </div>
-        </footer>
-      </DialogContent>
-    </Dialog>
+        }
+        secondary={{
+          label: "Cancel",
+          onClick: onClose,
+          disabled: isSubmitting,
+        }}
+        primary={{
+          label: `Pay ${currencyFormatter.format(preview?.totalAmount ?? 0)}`,
+          onClick: handleContinue,
+          loading: isSubmitting,
+          disabled:
+            !hasSelection ||
+            isSubmitting ||
+            invoicePreview.isLoading ||
+            invoicePreview.isFetching ||
+            invoicePreview.isError,
+        }}
+      />
+    </AppDialog>
   );
 }

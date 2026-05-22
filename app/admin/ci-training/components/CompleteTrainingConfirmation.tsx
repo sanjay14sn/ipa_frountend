@@ -1,23 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { CheckCircle, AlertTriangle } from "lucide-react";
+import { AlertTriangle, CheckCircle } from "lucide-react";
 import {
   CITrainingData,
   CompleteTrainingRequest,
 } from "@/services/course-instructor.service";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
+import {
+  DialogFormField,
+  DialogStateMessage,
+  FormDialog,
+} from "@/components/shared/dialog";
 
 interface CompleteTrainingConfirmationProps {
   open: boolean;
@@ -38,13 +33,14 @@ export default function CompleteTrainingConfirmation({
 
   if (!instructor) return null;
 
-  const handleConfirm = () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     const data: CompleteTrainingRequest = {};
     if (marksObtained.trim()) {
       const parsed = parseFloat(marksObtained);
       if (!isNaN(parsed)) data.marksObtained = parsed;
     }
-    onConfirm(data);
+    await onConfirm(data);
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -74,110 +70,74 @@ export default function CompleteTrainingConfirmation({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md w-full mx-4">
-        <DialogHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-              <AlertTriangle className="h-6 w-6 text-orange-600" />
-            </div>
-          </div>
-          <DialogTitle className="text-xl font-bold text-gray-900">
-            Complete Training?
-          </DialogTitle>
-          <DialogDescription className="text-center">
-            Are you sure you want to mark this training as completed? This
-            action cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
+    <FormDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      size="sm"
+      title="Complete Training?"
+      description="Are you sure you want to mark this training as completed? This action cannot be undone."
+      headerIcon={AlertTriangle}
+      onSubmit={handleSubmit}
+      isSubmitting={isCompleting}
+      submitLabel="Complete Training"
+    >
+      <DialogStateMessage tone="warning" icon={AlertTriangle} title="This action cannot be undone." />
 
-        <div className="py-4">
-          <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-600">
-                Instructor:
-              </span>
-              <span className="text-sm text-gray-900">
-                {instructor.instructorName}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-600">ID:</span>
-              <span className="text-sm text-gray-900">
-                {instructor.instructorId}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-600">
-                Training Level:
-              </span>
-              <span className="text-sm text-gray-900">
-                {instructor.trainingLevelName || "N/A"}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-600">
-                Training Start Date:
-              </span>
-              <span className="text-sm text-gray-900">
-                {formatDate(instructor.createdAt)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-600">
-                Training Duration:
-              </span>
-              <span className="text-sm text-gray-900">
-                {getDurationTillDate()}
-              </span>
-            </div>
-          </div>
+      <div className="bg-muted/40 rounded-lg p-4 space-y-2 border border-border">
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-medium text-muted-foreground">
+            Instructor:
+          </span>
+          <span className="text-sm text-card-foreground">
+            {instructor.instructorName}
+          </span>
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="marksObtained">Marks Obtained (%)</Label>
-          <Input
-            id="marksObtained"
-            type="number"
-            min="0"
-            max="100"
-            step="0.01"
-            placeholder="e.g., 95.5"
-            value={marksObtained}
-            onChange={(e) => setMarksObtained(e.target.value)}
-            onFocus={selectInputValueOnFocus}
-            disabled={isCompleting}
-          />
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-medium text-muted-foreground">ID:</span>
+          <span className="text-sm text-card-foreground">
+            {instructor.instructorId}
+          </span>
         </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-medium text-muted-foreground">
+            Training Level:
+          </span>
+          <span className="text-sm text-card-foreground">
+            {instructor.trainingLevelName || "N/A"}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-medium text-muted-foreground">
+            Training Start Date:
+          </span>
+          <span className="text-sm text-card-foreground">
+            {formatDate(instructor.createdAt)}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-medium text-muted-foreground">
+            Training Duration:
+          </span>
+          <span className="text-sm text-card-foreground">
+            {getDurationTillDate()}
+          </span>
+        </div>
+      </div>
 
-        <DialogFooter className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-            disabled={isCompleting}
-            className="flex-1"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={isCompleting}
-            className="flex-1 bg-green-600 hover:bg-green-700"
-          >
-            {isCompleting ? (
-              <div className="flex items-center space-x-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                <span>Completing...</span>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4" />
-                <span>Complete Training</span>
-              </div>
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <DialogFormField id="marksObtained" label="Marks Obtained (%)">
+        <Input
+          id="marksObtained"
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          placeholder="e.g., 95.5"
+          value={marksObtained}
+          onChange={(e) => setMarksObtained(e.target.value)}
+          onFocus={selectInputValueOnFocus}
+          disabled={isCompleting}
+        />
+      </DialogFormField>
+    </FormDialog>
   );
 }

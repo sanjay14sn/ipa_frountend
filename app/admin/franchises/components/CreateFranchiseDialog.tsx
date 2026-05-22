@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import { ToggleField } from "@/components/shared/toggle-field";
 import {
   Select,
   SelectContent,
@@ -14,18 +14,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  MultiStepDialog,
+  SuccessDialog,
+  type StepDef,
+} from "@/components/shared/dialog";
 import {
   FranchiseType,
   FranchiseStatus,
@@ -58,66 +56,12 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import React from "react";
 
-// Define the steps for the form
-const FORM_STEPS = [
+const FORM_STEPS: StepDef[] = [
   { id: 1, title: "Personal Info" },
   { id: 2, title: "Franchise Details" },
   { id: 3, title: "Payroll Setup" },
   { id: 4, title: "Security" },
 ];
-
-// Stepper Component
-const Stepper = ({
-  currentStep,
-  steps,
-}: {
-  currentStep: number;
-  steps: typeof FORM_STEPS;
-}) => {
-  return (
-    <div className="w-full">
-      <div className="flex items-center justify-between">
-        {steps.map((step, index) => (
-          <React.Fragment key={step.id}>
-            <div className="flex flex-col items-center flex-1">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-all duration-200 ${
-                  currentStep === step.id
-                    ? "bg-primary text-primary-foreground border-primary shadow-md"
-                    : currentStep > step.id
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-muted-foreground border-border"
-                }`}
-              >
-                {currentStep > step.id ? "✓" : step.id}
-              </div>
-              <div className="mt-2 text-center max-w-[80px]">
-                <p
-                  className={`text-xs font-medium leading-tight ${
-                    currentStep >= step.id
-                      ? "text-card-foreground"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  {step.title}
-                </p>
-              </div>
-            </div>
-            {index < steps.length - 1 && (
-              <div className="flex items-center justify-center flex-1 max-w-[60px] px-2">
-                <div
-                  className={`h-0.5 w-full transition-all duration-200 ${
-                    currentStep > step.id ? "bg-primary" : "bg-border"
-                  }`}
-                />
-              </div>
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 interface CreateFranchiseDialogProps {
   open: boolean;
@@ -500,18 +444,25 @@ export function CreateFranchiseDialog({
       case 1: // Personal Info
         return (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
-              <Switch
-                id="franchiseeMode"
-                checked={franchiseeMode === "existing"}
-                onCheckedChange={(checked) =>
-                  setFranchiseeMode(checked ? "existing" : "new")
-                }
-              />
-              <Label htmlFor="franchiseeMode" className="text-sm text-card-foreground">
-                Attach to existing franchisee (skip creating a new one)
-              </Label>
-            </div>
+            <ToggleField
+              tone="primary"
+              label="Franchisee"
+              value={franchiseeMode}
+              onValueChange={(v) => setFranchiseeMode(v as typeof franchiseeMode)}
+              options={[
+                {
+                  value: "new",
+                  label: "Create new franchisee",
+                  description: "Capture the franchisee's personal details below.",
+                },
+                {
+                  value: "existing",
+                  label: "Attach existing franchisee",
+                  description:
+                    "Skip personal-info capture and link this franchise to a franchisee already in the system.",
+                },
+              ]}
+            />
             {franchiseeMode === "existing" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -1117,25 +1068,22 @@ export function CreateFranchiseDialog({
                           <Label className="text-sm font-medium text-card-foreground">
                             Freeload
                           </Label>
-                          <div className="flex h-10 items-center gap-3 rounded-md border border-input bg-background px-3">
-                            <Switch
-                              id={`freeload-${programId}`}
-                              checked={payroll?.freeload || false}
-                              onCheckedChange={(checked) =>
-                                updateProgramPayroll(
-                                  programId,
-                                  "freeload",
-                                  checked,
-                                )
-                              }
-                            />
-                            <Label
-                              htmlFor={`freeload-${programId}`}
-                              className="cursor-pointer text-xs text-muted-foreground"
-                            >
-                              Enable freeload
-                            </Label>
-                          </div>
+                          <ToggleField
+                            name={`freeload-${programId}`}
+                            variant="inline"
+                            value={payroll?.freeload ? "yes" : "no"}
+                            onValueChange={(v) =>
+                              updateProgramPayroll(
+                                programId,
+                                "freeload",
+                                v === "yes",
+                              )
+                            }
+                            options={[
+                              { value: "no", label: "Standard" },
+                              { value: "yes", label: "Freeload" },
+                            ]}
+                          />
                         </div>
 
                         {/* Installment plan (full-width subcard) */}
@@ -1313,107 +1261,33 @@ export function CreateFranchiseDialog({
 
   if (submitted) {
     return (
-      <Dialog open={open} onOpenChange={handleModalOpenChange}>
-        <DialogContent className="max-w-md w-full mx-4 rounded-2xl">
-          <DialogHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary">
-                <CheckCircle className="h-7 w-7" />
-              </span>
-            </div>
-            <DialogTitle className="text-2xl font-normal tracking-tight text-card-foreground">
-              Franchise Created!
-            </DialogTitle>
-            <DialogDescription className="text-center">
-              The franchise has been successfully setup with all details and
-              payroll configuration.
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
+      <SuccessDialog
+        open={open}
+        onOpenChange={handleModalOpenChange}
+        title="Franchise Created!"
+        description="The franchise has been successfully setup with all details and payroll configuration."
+      />
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleModalOpenChange}>
-      <DialogContent className="flex max-h-[95vh] max-w-4xl flex-col gap-0 overflow-hidden p-0 rounded-2xl">
-        <DialogHeader className="shrink-0 border-b border-border px-4 py-5 sm:px-5">
-          <div className="mb-3 flex">
-            <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-              Admin onboarding
-            </span>
-          </div>
-          <DialogTitle className="flex items-center gap-2 text-2xl font-normal tracking-tight text-card-foreground">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary">
-              <UserPlus className="h-4 w-4" />
-            </span>
-            Setup Existing Franchise
-          </DialogTitle>
-          <DialogDescription className="max-w-3xl text-sm text-muted-foreground">
-            Complete all sections to setup the franchise with payroll
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
-          <div className="space-y-4">
-            {/* Progress Stepper */}
-            <Card className="overflow-hidden rounded-xl border-border shadow-sm">
-              <CardContent className="bg-accent/30 p-4">
-                <Stepper currentStep={currentStep} steps={FORM_STEPS} />
-              </CardContent>
-            </Card>
-
-            {/* Form Content */}
-            <Card className="overflow-hidden rounded-xl border-border shadow-sm">
-              <CardHeader className="border-b border-border bg-accent/30 px-4 py-4">
-                <CardTitle className="text-base font-medium text-card-foreground">
-                  {FORM_STEPS[currentStep - 1].title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5">
-                <div className="space-y-4">{renderStepContent()}</div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Navigation Footer */}
-        <div className="shrink-0 border-t border-border bg-card px-4 py-4 sm:px-5">
-          <div className="flex items-center gap-2">
-            {currentStep > 1 && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevious}
-              >
-                Previous
-              </Button>
-            )}
-            <div className="flex-1" />
-            {currentStep < FORM_STEPS.length ? (
-              <Button
-                type="button"
-                onClick={handleNext}
-                className="h-10 rounded-lg text-sm font-medium"
-              >
-                Next
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                onClick={handleSubmit}
-                disabled={loading}
-                className="h-10 rounded-lg text-sm font-medium sm:min-w-[220px]"
-              >
-                <CheckCircle className="mr-2 h-4 w-4" />
-                {loading ? "Setting up..." : "Setup Franchise"}
-              </Button>
-            )}
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <MultiStepDialog
+      open={open}
+      onOpenChange={handleModalOpenChange}
+      size="xl"
+      title="Setup Existing Franchise"
+      description="Complete all sections to setup the franchise with payroll"
+      headerIcon={UserPlus}
+      steps={FORM_STEPS}
+      currentStep={currentStep}
+      onBack={handlePrevious}
+      onNext={handleNext}
+      onSubmit={handleSubmit}
+      isSubmitting={loading}
+      submitLabel="Setup Franchise"
+    >
+      <div className="space-y-4">{renderStepContent()}</div>
+    </MultiStepDialog>
   );
 }
 
@@ -1507,25 +1381,32 @@ function PaymentsAndEmiSection({
         </div>
       ) : (
         <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
-          <div className="flex items-center gap-3">
-            <Switch
-              id={`lumpsum-${programId}`}
-              checked={!!payroll.lumpSumPayment}
-              onCheckedChange={(checked) =>
-                onUpdate(
-                  programId,
-                  "lumpSumPayment",
-                  checked ? emptyPriorPaymentRow("agreement-fee") : null,
-                )
-              }
-            />
-            <Label
-              htmlFor={`lumpsum-${programId}`}
-              className="cursor-pointer text-sm text-card-foreground"
-            >
-              Record one-time agreement-fee payment already collected
-            </Label>
-          </div>
+          <ToggleField
+            name={`lumpsum-${programId}`}
+            tone="primary"
+            label="One-time agreement-fee payment"
+            value={payroll.lumpSumPayment ? "collected" : "none"}
+            onValueChange={(v) =>
+              onUpdate(
+                programId,
+                "lumpSumPayment",
+                v === "collected" ? emptyPriorPaymentRow("agreement-fee") : null,
+              )
+            }
+            options={[
+              {
+                value: "none",
+                label: "Not collected",
+                description: "No prior agreement-fee payment to record.",
+              },
+              {
+                value: "collected",
+                label: "Record collected payment",
+                description:
+                  "Capture details of a one-time agreement-fee payment already received from the franchisee.",
+              },
+            ]}
+          />
           {payroll.lumpSumPayment && (
             <PriorPaymentEditor
               row={payroll.lumpSumPayment}

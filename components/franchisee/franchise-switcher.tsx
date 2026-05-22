@@ -14,19 +14,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared";
 import { useUser } from "@/context/user-context";
-
-function getStatusBadgeClass(status: string): string {
-  switch (status?.toLowerCase()) {
-    case "active":
-      return "border-transparent bg-green-100 text-green-800";
-    case "pending":
-      return "border-transparent bg-yellow-100 text-yellow-800";
-    default:
-      return "border-transparent bg-gray-100 text-gray-700";
-  }
-}
 
 export function FranchiseSwitcher() {
   const { user, switchFranchise } = useUser();
@@ -103,11 +92,7 @@ export function FranchiseSwitcher() {
                 />
                 <span className="truncate text-sm">{franchise.name}</span>
               </div>
-              <Badge
-                className={`shrink-0 text-xs ${getStatusBadgeClass(franchise.status)}`}
-              >
-                {franchise.status}
-              </Badge>
+              <StatusBadge className="shrink-0" label={franchise.status} />
             </DropdownMenuItem>
           );
         })}

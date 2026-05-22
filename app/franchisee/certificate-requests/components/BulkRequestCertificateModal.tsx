@@ -1,17 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -19,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Award, Loader2, Users } from "lucide-react";
+import { Award, Users } from "lucide-react";
 import { EligibleStudent } from "@/services/student.service";
 import { toast } from "sonner";
 import {
@@ -28,6 +19,11 @@ import {
 } from "@/services/course-instructor.service";
 import { useBulkRequestCertificates } from "@/hooks/api/student.hooks";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
+import {
+  DialogFormField,
+  DialogStateMessage,
+  FormDialog,
+} from "@/components/shared/dialog";
 
 interface BulkRequestCertificateModalProps {
   open: boolean;
@@ -113,7 +109,6 @@ export default function BulkRequestCertificateModal({
       return;
     }
 
-    // Validate all students have marks
     const missingMarks: string[] = [];
     const invalidMarks: string[] = [];
 
@@ -180,162 +175,114 @@ export default function BulkRequestCertificateModal({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Bulk Certificate Request
-          </DialogTitle>
-          <DialogDescription>
-            Create certificate requests for {students.length} selected student(s)
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Course Instructor Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="courseInstructor">Course Instructor *</Label>
-            <Select
-              value={courseInstructorId}
-              onValueChange={setCourseInstructorId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select course instructor" />
-              </SelectTrigger>
-              <SelectContent>
-                {isLoadingInstructors ? (
-                  <SelectItem value="loading" disabled>
-                    Loading eligible instructors...
-                  </SelectItem>
-                ) : eligibleInstructors.length === 0 ? (
-                  <SelectItem value="none" disabled>
-                    No instructor is eligible for all selected levels
-                  </SelectItem>
-                ) : eligibleInstructors.map((instructor) => (
-                  <SelectItem
-                    key={instructor.id}
-                    value={instructor.id.toString()}
-                  >
-                    {instructor.name} ({instructor.instructorId})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Apply to All Marks */}
-          <div className="space-y-2 border-b pb-4">
-            <Label htmlFor="applyToAllMarks">Apply Marks to All Students</Label>
-            <div className="flex gap-2">
-              <Input
-                id="applyToAllMarks"
-                type="number"
-                min="0"
-                value={applyToAllMarks}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setApplyToAllMarks(val);
-                }}
-                onFocus={selectInputValueOnFocus}
-                placeholder="Enter marks (e.g., 85)"
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleApplyToAll}
-                disabled={!applyToAllMarks}
-              >
-                Apply to All
-              </Button>
-            </div>
-          </div>
-
-          {/* Individual Student Marks */}
-          <div className="space-y-4">
-            <Label>Marks for Each Student *</Label>
-            <div className="space-y-3 max-h-96 overflow-y-auto border rounded-lg p-4">
-              {students.map((student) => (
-                <div
-                  key={student.id}
-                  className="flex items-center justify-between gap-4 p-3 bg-gray-50 rounded-lg"
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="lg"
+      title="Bulk Certificate Request"
+      description={`Create certificate requests for ${students.length} selected student(s)`}
+      headerIcon={Users}
+      onSubmit={handleSubmit}
+      isSubmitting={isLoading}
+      canSubmit={
+        !isLoadingInstructors &&
+        Boolean(courseInstructorId) &&
+        eligibleInstructors.length > 0
+      }
+      submitLabel={`Create ${students.length} Request${students.length !== 1 ? "s" : ""}`}
+    >
+      <DialogFormField id="courseInstructor" label="Course Instructor" required>
+        <Select value={courseInstructorId} onValueChange={setCourseInstructorId}>
+          <SelectTrigger id="courseInstructor">
+            <SelectValue placeholder="Select course instructor" />
+          </SelectTrigger>
+          <SelectContent>
+            {isLoadingInstructors ? (
+              <SelectItem value="loading" disabled>
+                Loading eligible instructors...
+              </SelectItem>
+            ) : eligibleInstructors.length === 0 ? (
+              <SelectItem value="none" disabled>
+                No instructor is eligible for all selected levels
+              </SelectItem>
+            ) : (
+              eligibleInstructors.map((instructor) => (
+                <SelectItem
+                  key={instructor.id}
+                  value={instructor.id.toString()}
                 >
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">
-                      {student.name}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {student.rollNo} • {student.levelName}
-                    </div>
-                  </div>
-                  <div className="w-32">
-                    <Input
-                      type="number"
-                      min="0"
-                      value={marksMap[student.id] ?? ""}
-                      onChange={(e) =>
-                        handleMarksChange(student.id, e.target.value)
-                      }
-                      onFocus={selectInputValueOnFocus}
-                      placeholder="Marks"
-                      required
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+                  {instructor.name} ({instructor.instructorId})
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+      </DialogFormField>
 
-          {/* Selected Instructor Info */}
-          {selectedInstructorDetails && (
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <div className="text-sm">
-                <div className="font-medium text-blue-900">
-                  Selected Instructor:
+      <DialogFormField id="applyToAllMarks" label="Apply Marks to All Students">
+        <div className="flex gap-2">
+          <Input
+            id="applyToAllMarks"
+            type="number"
+            min="0"
+            value={applyToAllMarks}
+            onChange={(e) => setApplyToAllMarks(e.target.value)}
+            onFocus={selectInputValueOnFocus}
+            placeholder="Enter marks (e.g., 85)"
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleApplyToAll}
+            disabled={!applyToAllMarks}
+            className="rounded-lg"
+          >
+            Apply to All
+          </Button>
+        </div>
+      </DialogFormField>
+
+      <DialogFormField label="Marks for Each Student" required>
+        <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-green border border-border rounded-lg p-3">
+          {students.map((student) => (
+            <div
+              key={student.id}
+              className="flex items-center justify-between gap-4 p-3 bg-muted/30 rounded-lg"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm text-card-foreground truncate">
+                  {student.name}
                 </div>
-                <div className="text-blue-700">
-                  {selectedInstructorDetails.name} ({selectedInstructorDetails.instructorId})
+                <div className="text-xs text-muted-foreground truncate">
+                  {student.rollNo} • {student.levelName}
                 </div>
               </div>
+              <div className="w-32 shrink-0">
+                <Input
+                  type="number"
+                  min="0"
+                  value={marksMap[student.id] ?? ""}
+                  onChange={(e) =>
+                    handleMarksChange(student.id, e.target.value)
+                  }
+                  onFocus={selectInputValueOnFocus}
+                  placeholder="Marks"
+                  required
+                />
+              </div>
             </div>
-          )}
+          ))}
+        </div>
+      </DialogFormField>
 
-          <DialogFooter className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isLoading || isLoadingInstructors}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={
-                isLoading ||
-                isLoadingInstructors ||
-                !courseInstructorId ||
-                eligibleInstructors.length === 0
-              }
-              className="bg-primary hover:bg-primary/90"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Award className="w-4 h-4 mr-2" />
-                  Create {students.length} Request{students.length !== 1 ? "s" : ""}
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      {selectedInstructorDetails && (
+        <DialogStateMessage
+          tone="success"
+          title="Selected Instructor"
+          description={`${selectedInstructorDetails.name} (${selectedInstructorDetails.instructorId})`}
+        />
+      )}
+    </FormDialog>
   );
 }
-

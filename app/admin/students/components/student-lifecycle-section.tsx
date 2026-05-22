@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Eye, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/shared";
+import { DataTable, StatusBadge, type StatusTone } from "@/components/shared";
 import type { DataTableColumn, DataTableFilter } from "@/components/shared";
 import { toast } from "sonner";
 import {
@@ -42,38 +42,48 @@ function formatDate(value?: string | null) {
   return new Date(value).toLocaleDateString();
 }
 
+function getLifecycleTone(status: StudentLifecycleStatus): StatusTone {
+  switch (status) {
+    case "INVALIDATED":
+      return "destructive";
+    case "AT_RISK":
+      return "warning";
+    case "EXTENDED":
+    case "REACTIVATED":
+      return "info";
+    case "ACTIVE":
+    default:
+      return "success";
+  }
+}
+
 function statusBadge(row: StudentLifecycleRow) {
   const status = row.lifecycleStatus;
-  const className =
-    status === "INVALIDATED"
-      ? "border-red-300 bg-red-50 text-red-700"
-      : status === "AT_RISK"
-        ? "border-amber-300 bg-amber-50 text-amber-700"
-        : status === "EXTENDED" || status === "REACTIVATED"
-          ? "border-blue-300 bg-blue-50 text-blue-700"
-          : "border-green-300 bg-green-50 text-green-700";
-
   return (
-    <Badge variant="outline" className={className}>
-      {statusLabels[status] ?? status}
-    </Badge>
+    <StatusBadge
+      tone={getLifecycleTone(status)}
+      label={statusLabels[status] ?? status}
+    />
   );
+}
+
+function getCertificateTone(normalized: string): StatusTone {
+  switch (normalized) {
+    case "PENDING":
+      return "neutral";
+    case "ISSUED":
+      return "success";
+    case "REJECTED":
+      return "destructive";
+    default:
+      return "neutral";
+  }
 }
 
 function certificateBadge(status: string) {
   const normalized = status.toUpperCase();
-  const className =
-    normalized === "PENDING"
-      ? "border-slate-300 bg-slate-50 text-slate-700"
-      : normalized === "ISSUED"
-        ? "border-green-300 bg-green-50 text-green-700"
-        : normalized === "REJECTED"
-          ? "border-red-300 bg-red-50 text-red-700"
-          : "border-gray-300 bg-gray-50 text-gray-700";
   return (
-    <Badge variant="outline" className={className}>
-      {normalized}
-    </Badge>
+    <StatusBadge tone={getCertificateTone(normalized)} label={normalized} />
   );
 }
 

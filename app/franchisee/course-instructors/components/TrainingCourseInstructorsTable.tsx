@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared";
 import { Edit, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/shared";
 import type {
@@ -160,9 +161,7 @@ export default function TrainingCourseInstructorsTable({
       header: "Status",
       className: "text-center",
       render: (courseInstructor) => (
-        <Badge className="bg-amber-50 text-amber-700 border-amber-200 border">
-          {courseInstructor.status}
-        </Badge>
+        <StatusBadge label={courseInstructor.status} />
       ),
     },
     {

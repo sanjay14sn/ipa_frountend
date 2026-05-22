@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { DataTable } from "@/components/shared";
+import { DataTable, StatusBadge } from "@/components/shared";
 import type { DataTableColumn } from "@/components/shared";
 import type { CertificateFranchiseSummary } from "@/services/student.service";
 import { useAdminCertificateSummaries } from "@/hooks/api/student.hooks";
@@ -48,9 +47,7 @@ export default function AdminCertificateRequestsTable({
       header: "Pending",
       className: "text-center",
       render: (g) => (
-        <Badge variant="secondary">
-          {g.totalPending} pending
-        </Badge>
+        <StatusBadge tone="warning" label={`${g.totalPending} pending`} />
       ),
     },
     {
@@ -58,9 +55,7 @@ export default function AdminCertificateRequestsTable({
       header: "Issued",
       className: "text-center",
       render: (g) => (
-        <Badge variant="outline" className="border-green-300 text-green-700">
-          {g.totalIssued} issued
-        </Badge>
+        <StatusBadge tone="success" label={`${g.totalIssued} issued`} />
       ),
     },
     {
@@ -68,9 +63,7 @@ export default function AdminCertificateRequestsTable({
       header: "Rejected",
       className: "text-center",
       render: (g) => (
-        <Badge variant="outline" className="border-red-300 text-red-700">
-          {g.totalRejected} rejected
-        </Badge>
+        <StatusBadge tone="destructive" label={`${g.totalRejected} rejected`} />
       ),
     },
   ];

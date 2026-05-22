@@ -1,16 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
@@ -28,6 +18,11 @@ import {
 } from "@/services/course-instructor.service";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
+import {
+  AppDialog,
+  DialogFormField,
+  FormDialog,
+} from "@/components/shared/dialog";
 
 interface RequestTrainingModalProps {
   isOpen: boolean;
@@ -116,93 +111,89 @@ export function RequestTrainingModal({
     counts.halfOfAvailableCount === counts.allAvailableCount;
   const selectDisabled = hasLevels && halfEqualsAll;
 
+  if (loadingLevels) {
+    return (
+      <AppDialog open={isOpen} onOpenChange={onClose} size="sm">
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppDialog>
+    );
+  }
+
+  if (error && !counts) {
+    return (
+      <AppDialog open={isOpen} onOpenChange={onClose} size="sm">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </AppDialog>
+    );
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Request additional training</DialogTitle>
-          <DialogDescription>
-            {instructorName}
-          </DialogDescription>
-        </DialogHeader>
+    <FormDialog
+      open={isOpen}
+      onOpenChange={onClose}
+      size="sm"
+      title="Request additional training"
+      description={instructorName}
+      onSubmit={handleSubmit}
+      isSubmitting={loading}
+      canSubmit={Boolean(hasLevels)}
+      submitLabel="Submit request"
+    >
+      {!hasLevels ? (
+        <p className="text-sm text-muted-foreground">
+          No further levels are available for this instructor.
+        </p>
+      ) : (
+        <DialogFormField
+          id="training-scope"
+          label={
+            <span className="flex flex-wrap items-baseline gap-x-2">
+              Levels to request
+              <span className="text-sm text-muted-foreground font-normal">
+                ({levelLabel(counts!.totalNextLevels)})
+              </span>
+            </span>
+          }
+        >
+          <Select
+            value={scope}
+            onValueChange={(v) => setScope(v as "half" | "all")}
+            disabled={selectDisabled}
+          >
+            <SelectTrigger id="training-scope" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {halfEqualsAll ? (
+                <SelectItem value="all">
+                  {levelLabel(counts!.allAvailableCount)}
+                </SelectItem>
+              ) : (
+                <>
+                  <SelectItem value="half">
+                    {levelLabel(counts!.halfOfAvailableCount)}
+                  </SelectItem>
+                  <SelectItem value="all">
+                    {levelLabel(counts!.allAvailableCount)}
+                  </SelectItem>
+                </>
+              )}
+            </SelectContent>
+          </Select>
+        </DialogFormField>
+      )}
 
-        {loadingLevels ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : error && !counts ? (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!hasLevels ? (
-              <p className="text-sm text-muted-foreground">
-                No further levels are available for this instructor.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
-                  <Label htmlFor="training-scope">Levels to request</Label>
-                  <span className="text-sm text-muted-foreground">
-                    ({levelLabel(counts!.totalNextLevels)})
-                  </span>
-                </div>
-                <Select
-                  value={scope}
-                  onValueChange={(v) => setScope(v as "half" | "all")}
-                  disabled={selectDisabled}
-                >
-                  <SelectTrigger id="training-scope" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {halfEqualsAll ? (
-                      <SelectItem value="all">
-                        {levelLabel(counts!.allAvailableCount)}
-                      </SelectItem>
-                    ) : (
-                      <>
-                        <SelectItem value="half">
-                          {levelLabel(counts!.halfOfAvailableCount)}
-                        </SelectItem>
-                        <SelectItem value="all">
-                          {levelLabel(counts!.allAvailableCount)}
-                        </SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {error && counts && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading || !hasLevels}>
-                {loading && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Submit request
-              </Button>
-            </DialogFooter>
-          </form>
-        )}
-      </DialogContent>
-    </Dialog>
+      {error && counts && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+    </FormDialog>
   );
 }

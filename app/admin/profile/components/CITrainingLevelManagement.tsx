@@ -2,32 +2,24 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Loader2, Plus, Pencil, Save, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleField } from "@/components/shared/toggle-field";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  AppDialog,
+  AppDialogBody,
+  AppDialogHeader,
+  ConfirmDialog,
+  DialogFormField,
+  DialogFormGrid,
+  FormDialog,
+  LinkPicker,
+} from "@/components/shared/dialog";
 import { Badge } from "@/components/ui/badge";
-import { DataTable, type DataTableColumn } from "@/components/shared";
+import { StatusBadge } from "@/components/shared/status-badge";
 import {
   createTrainingLevel,
   deleteTrainingLevel,
@@ -40,9 +32,7 @@ import { TrainingLevelMaterialsPicker } from "@/app/admin/training-levels/Traini
 import { useLevelsByProgram } from "@/hooks/api/level.hooks";
 import { useStreamsByProgram } from "@/hooks/api/stream.hooks";
 import { toast } from "sonner";
-import { CATALOG_PENDING_SPLIT_ROW_HEIGHT } from "@/lib/catalog-line-split-layout";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
-import { cn } from "@/lib/utils";
 import {
   invalidateTrainingLevelsForProgram,
   useTrainingLevelsForProgram,
@@ -236,15 +226,21 @@ function CIStudentLevelsPicker({
   const isLoading = isLoadingAssigned || isLoadingLevels || isLoadingStreams;
 
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-1">
+    <div className="flex min-w-0 items-center gap-1.5">
       {!hasRequested ? (
-        <span className="text-xs text-muted-foreground">Open to load</span>
+        <span className="text-xs italic text-muted-foreground">Open to load</span>
       ) : isLoading ? (
-        <span className="text-xs text-muted-foreground">Loading...</span>
+        <span className="text-xs text-muted-foreground">Loading…</span>
+      ) : assigned.length > 0 ? (
+        <Badge
+          variant="outline"
+          className="gap-1 rounded-full border-border bg-card font-normal text-card-foreground"
+        >
+          <Users className="h-3 w-3 text-muted-foreground" />
+          {assigned.length} mapped
+        </Badge>
       ) : (
-        <span className="text-xs text-muted-foreground">
-          {assigned.length} linked
-        </span>
+        <span className="text-xs italic text-muted-foreground">Open to load</span>
       )}
 
       {!disabled ? (
@@ -264,7 +260,7 @@ function CIStudentLevelsPicker({
             <Plus className="h-3.5 w-3.5" />
           </Button>
 
-          <Dialog
+          <AppDialog
             open={isOpen}
             onOpenChange={(open) => {
               setIsOpen(open);
@@ -273,191 +269,101 @@ function CIStudentLevelsPicker({
                 setSearch("");
               }
             }}
+            size="xl"
+            padding="flush"
+            scrollBody
           >
-            <DialogContent className="flex max-h-[90vh] flex-col gap-2 overflow-hidden sm:max-w-[560px]">
-              <DialogHeader className="shrink-0">
-                <DialogTitle>Student Levels</DialogTitle>
-                <DialogDescription>
-                  Add and remove student levels for this CI training level.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-                {/* Section 1: Already linked */}
-                <div className="shrink-0 rounded-lg border p-3">
-                  <div className="mb-2 text-sm font-medium">Linked levels</div>
-                  {isLoading ? (
-                    <p className="text-sm text-muted-foreground">Loading...</p>
-                  ) : assigned.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      No linked student levels.
-                    </p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {assigned.map((item, index) => (
-                        <Badge
-                          key={`${item.levelId}-${index}`}
-                          variant="secondary"
-                          className="h-7 max-w-full gap-1 py-0 pl-1.5 pr-1 font-normal"
+            <AppDialogHeader
+              title="Student Levels"
+              description="Add and remove student levels for this CI training level."
+              sticky
+            />
+            <AppDialogBody>
+              <LinkPicker
+                linked={{
+                  items: assigned,
+                  getKey: (item) => `${item.levelId}`,
+                  getLabel: (item) =>
+                    levelDisplay(item.levelId) ||
+                    item.levelName ||
+                    `L${item.levelId}`,
+                  title: "Linked levels",
+                  onUnlink: disabled
+                    ? undefined
+                    : (item) => void handleRemove(item.levelId),
+                  emptyMessage: isLoading
+                    ? "Loading…"
+                    : "No linked student levels.",
+                }}
+                addTitle="Add student levels"
+                pendingCount={pendingIds.size}
+                onSave={handleSave}
+                isSaving={isSaving}
+                search={{
+                  value: search,
+                  onChange: setSearch,
+                  placeholder: "Search by name, code, or stream…",
+                }}
+                renderPending={() => (
+                  <div className="space-y-1">
+                    {[...pendingIds].map((id) => {
+                      const level = levels.find((l) => l.id === id);
+                      if (!level) return null;
+                      return (
+                        <div
+                          key={id}
+                          className="flex items-center justify-between gap-3 rounded-md bg-card px-3 py-2"
                         >
-                          <span className="max-w-[220px] truncate">
-                            {levelDisplay(item.levelId) || item.levelName || `L${item.levelId}`}
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-card-foreground">
+                            {levelDisplay(id)}
                           </span>
                           <button
                             type="button"
-                            disabled={disabled}
-                            className="rounded-sm px-1 text-gray-500 hover:bg-muted hover:text-destructive disabled:opacity-50"
-                            aria-label={`Remove ${levelDisplay(item.levelId)}`}
-                            onClick={() => void handleRemove(item.levelId)}
+                            onClick={() => togglePending(id)}
+                            aria-label={`Remove ${levelDisplay(id)} from selection`}
+                            className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
                           >
-                            x
+                            <X className="h-3.5 w-3.5" />
                           </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Sections 2 + 3: Pending + searchable catalog */}
-                <div className="flex min-h-0 flex-1 flex-col gap-0.5 rounded-lg border border-dashed bg-slate-50/60 px-2 py-1.5 sm:px-2 sm:py-2">
-                  <div className="flex shrink-0 flex-wrap items-center justify-between gap-1">
-                    <h4 className="text-xs font-medium leading-tight text-gray-900 sm:text-sm">
-                      Add student levels
-                    </h4>
-                    {pendingIds.size > 0 ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={isSaving}
-                        onClick={() => void handleSave()}
-                        className="bg-primary hover:bg-primary/90"
-                      >
-                        {isSaving ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Save className="mr-2 h-4 w-4" />
-                        )}
-                        Save Changes ({pendingIds.size})
-                      </Button>
-                    ) : null}
+                        </div>
+                      );
+                    })}
                   </div>
-
-                  <div
-                    className={cn(
-                      "mt-1 flex min-h-0 flex-col",
-                      pendingIds.size > 0 ? "grid grid-cols-1 gap-2" : "gap-2",
-                    )}
-                    style={
-                      pendingIds.size > 0
-                        ? {
-                            gridTemplateRows: `${CATALOG_PENDING_SPLIT_ROW_HEIGHT} ${CATALOG_PENDING_SPLIT_ROW_HEIGHT}`,
-                          }
-                        : { minHeight: "min(48vh, 420px)" }
-                    }
-                  >
-                    {pendingIds.size > 0 ? (
-                      <div className="h-full min-h-0 space-y-1 overflow-y-auto rounded-md border border-emerald-200 bg-emerald-50/40 px-1 py-0.5 sm:px-1.5 sm:py-1">
-                        <p className="shrink-0 text-[11px] font-medium leading-tight text-emerald-900 sm:text-xs">
-                          {pendingIds.size} selected — not yet saved
-                        </p>
-                        {[...pendingIds].map((id) => {
-                          const level = levels.find((l) => l.id === id);
-                          if (!level) return null;
-                          return (
-                            <div
-                              key={id}
-                              className="flex w-full flex-row flex-wrap items-center justify-between gap-2 py-0.5"
-                            >
-                              <span className="min-w-0 max-w-[50%] shrink-0 truncate text-sm font-medium text-gray-900 sm:max-w-[45%]">
-                                {levelDisplay(id)}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => togglePending(id)}
-                                aria-label={`Remove ${levelDisplay(id)} from selection`}
-                                className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-red-50 hover:text-destructive"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-
-                    <div
-                      className={cn(
-                        "flex min-h-0 flex-col overflow-hidden rounded-lg border bg-white shadow-sm",
-                        pendingIds.size > 0 ? "h-full min-h-0" : "min-h-0 flex-1",
-                      )}
-                    >
-                      <div className="shrink-0 border-b border-border/80 bg-muted/25 px-1.5 py-0.5 sm:px-2 sm:py-1">
-                        <Input
-                          className="h-8 border-input/80 bg-background text-sm shadow-none"
-                          placeholder="Search by name, code, or stream..."
-                          value={search}
-                          onChange={(e) => setSearch(e.target.value)}
+                )}
+                list={{
+                  items: filtered,
+                  isLoading: isLoadingLevels || isLoadingStreams,
+                  getKey: (level) => level.id,
+                  isChecked: (level) => pendingIds.has(level.id),
+                  onToggle: (level) => togglePending(level.id),
+                  emptyMessage:
+                    available.length === 0
+                      ? "All program levels are already linked."
+                      : "No levels match your search.",
+                  renderRow: (level, checked) => {
+                    const streamName = streamNameById.get(level.streamId);
+                    return (
+                      <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => togglePending(level.id)}
                         />
-                      </div>
-                      <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
-                        {isLoadingLevels || isLoadingStreams ? (
-                          <div className="flex items-center gap-2 px-2.5 py-4 text-sm text-gray-500 sm:px-3">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Loading levels...
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium text-card-foreground">
+                            {level.name}
                           </div>
-                        ) : filtered.length === 0 ? (
-                          <div className="px-2.5 py-4 text-sm text-gray-500 sm:px-3">
-                            {available.length === 0
-                              ? "All program levels are already linked."
-                              : "No levels match your search."}
+                          <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+                            <span>{level.code}</span>
+                            {streamName ? <span>{streamName}</span> : null}
                           </div>
-                        ) : (
-                          filtered.map((level) => {
-                            const checked = pendingIds.has(level.id);
-                            const streamName = streamNameById.get(level.streamId);
-                            return (
-                              <div
-                                key={level.id}
-                                className={`flex items-center gap-1.5 border-b px-1.5 py-1 last:border-b-0 transition-colors sm:gap-2 sm:px-2 ${
-                                  checked ? "bg-emerald-50/60" : "hover:bg-gray-50"
-                                }`}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => togglePending(level.id)}
-                                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-                                    checked
-                                      ? "border-emerald-600 bg-emerald-600 text-white"
-                                      : "border-gray-300 bg-white text-transparent"
-                                  }`}
-                                  aria-label={
-                                    checked
-                                      ? `Uncheck ${levelDisplay(level.id)}`
-                                      : `Check ${levelDisplay(level.id)}`
-                                  }
-                                >
-                                  <Check className="h-3 w-3" />
-                                </button>
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate text-sm font-medium text-gray-900">
-                                    {level.name}
-                                  </div>
-                                  <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-gray-500">
-                                    <span>{level.code}</span>
-                                    {streamName ? <span>{streamName}</span> : null}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+                        </div>
+                      </label>
+                    );
+                  },
+                }}
+              />
+            </AppDialogBody>
+          </AppDialog>
         </>
       ) : null}
     </div>
@@ -510,6 +416,35 @@ export function CITrainingLevelManagement({
       toast.error("Name and code are required");
       return;
     }
+    if (form.theoryTotalMarks <= 0) {
+      toast.error("Theory total marks must be greater than 0");
+      return;
+    }
+    if (
+      form.theoryPassMark <= 0 ||
+      form.theoryPassMark > form.theoryTotalMarks
+    ) {
+      toast.error("Theory pass mark must be between 1 and theory total marks");
+      return;
+    }
+    if (!form.durationInDays || form.durationInDays <= 0) {
+      toast.error("Duration must be at least 1 day");
+      return;
+    }
+    if (form.practicalMarksRequired) {
+      const ptm = form.practicalTotalMarks;
+      const ppm = form.practicalPassMark;
+      if (ptm === "" || ptm <= 0) {
+        toast.error("Practical total marks must be greater than 0");
+        return;
+      }
+      if (ppm === "" || ppm <= 0 || ppm > ptm) {
+        toast.error(
+          "Practical pass mark must be between 1 and practical total marks",
+        );
+        return;
+      }
+    }
     try {
       const payload = buildPayload(form);
       if (editingLevel) {
@@ -543,236 +478,315 @@ export function CITrainingLevelManagement({
     }
   };
 
-  const columns: DataTableColumn<TrainingLevel>[] = [
-    {
-      key: "duration",
-      header: "Duration",
-      render: (level) => `${level.durationInDays} day(s)`,
-    },
-    {
-      key: "theory",
-      header: "Theory",
-      render: (level) => `${level.theoryPassMark}/${level.theoryTotalMarks}`,
-    },
-    {
-      key: "practical",
-      header: "Practical",
-      render: (level) =>
-        level.practicalTotalMarks != null && level.practicalPassMark != null ? (
-          <div className="space-y-1">
-            <div>
-              {level.practicalPassMark}/{level.practicalTotalMarks}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {level.practicalMarksRequired ? "Required" : "Situational"}
-            </div>
-          </div>
-        ) : (
-          <span className="text-muted-foreground">None</span>
-        ),
-    },
-    {
-      key: "fee",
-      header: "Fee",
-      render: (level) =>
-        level.fee.toLocaleString("en-IN", {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 2,
-        }),
-    },
-    {
-      key: "studentLevels",
-      header: "Student Levels",
-      className: "max-w-[240px]",
-      render: (level) => (
-        <CIStudentLevelsPicker
-          trainingLevelId={level.id}
-          programId={programId}
-          disabled={trainingLevelsQuery.isLoading}
-        />
-      ),
-    },
-    {
-      key: "materials",
-      header: "Materials",
-      className: "max-w-[220px]",
-      render: (level) => (
-        <TrainingLevelMaterialsPicker
-          trainingLevelId={level.id}
-          disabled={trainingLevelsQuery.isLoading}
-        />
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (level) => (
-        <Badge variant={level.isActive ? "default" : "secondary"}>
-          {level.isActive ? "Active" : "Inactive"}
-        </Badge>
-      ),
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      className: "text-right",
-      render: (level) => (
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => openEditDialog(level)}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setDeletingLevel(level);
-              setIsDeleteDialogOpen(true);
-            }}
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  const formatFee = (fee: number) =>
+    `₹ ${fee.toLocaleString("en-IN", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })}`;
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-gray-900">
-            CI training ladder - {programName}
-          </h3>
-          <Badge variant="secondary">{trainingLevels.length} levels</Badge>
+    <div className="rounded-2xl border bg-card shadow-sm">
+      <header className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
+        <div className="min-w-0 space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-semibold text-card-foreground">
+              CI training ladder
+            </h3>
+            <Badge
+              variant="outline"
+              className="border-primary/20 bg-primary/10 font-normal text-primary"
+            >
+              {programName} · {trainingLevels.length} levels
+            </Badge>
+          </div>
+          <p className="max-w-2xl text-xs text-muted-foreground">
+            Program-scoped CI training levels. Theory marks are default.
+            Practical marks are optional or required per level.
+          </p>
         </div>
-        <Button type="button" size="sm" onClick={openCreateDialog}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add training level
-        </Button>
-      </div>
-      <p className="text-xs text-gray-600">
-        Program-scoped CI training levels. Theory marks are default. Practical
-        marks are optional or required per level.
-      </p>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            className="rounded-lg"
+            onClick={openCreateDialog}
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add training level
+          </Button>
+        </div>
+      </header>
 
-      <DataTable
-        data={trainingLevels}
-        loading={trainingLevelsQuery.isLoading}
-        columns={columns}
-        getRowId={(level) => String(level.id)}
-        renderMainCell={(level) => (
-          <div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-mono">
-                #{level.displayOrder}
-              </Badge>
-              <span className="font-medium">{level.name}</span>
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">{level.code}</div>
+      <div className="px-4 py-4 sm:px-5">
+        {trainingLevelsQuery.isLoading ? (
+          <div className="py-6 text-sm text-muted-foreground">
+            Loading training ladder…
+          </div>
+        ) : trainingLevels.length === 0 ? (
+          <div className="rounded-lg border border-dashed px-3 py-6 text-sm text-muted-foreground">
+            No CI training levels yet. Add one to get started.
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/20">
+                  <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Level
+                  </th>
+                  <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Theory
+                  </th>
+                  <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Practical
+                  </th>
+                  <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Fee
+                  </th>
+                  <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Student Levels
+                  </th>
+                  <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Materials
+                  </th>
+                  <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Status
+                  </th>
+                  <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {trainingLevels.map((level) => {
+                  const hasPractical =
+                    level.practicalTotalMarks != null &&
+                    level.practicalPassMark != null;
+                  return (
+                    <tr
+                      key={level.id}
+                      className="border-b border-border last:border-b-0 align-middle hover:bg-muted/10"
+                    >
+                      <td className="px-3 py-2 align-middle">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex h-6 min-w-[2.25rem] items-center justify-center rounded-md bg-muted/60 px-1.5 text-[11px] font-medium text-muted-foreground">
+                            #{level.displayOrder}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium text-card-foreground">
+                              {level.name}
+                            </div>
+                            <div className="truncate text-xs text-muted-foreground">
+                              {level.code}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 align-middle">
+                        <Badge
+                          variant="outline"
+                          className="gap-1 rounded-md border-primary/20 bg-accent/40 font-normal text-card-foreground"
+                        >
+                          <Check className="h-3 w-3 text-primary" />
+                          {level.theoryPassMark}/{level.theoryTotalMarks}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2 align-middle">
+                        {hasPractical ? (
+                          <Badge
+                            variant="outline"
+                            className="gap-1 rounded-md border-primary/20 bg-accent/40 font-normal text-card-foreground"
+                          >
+                            <Check className="h-3 w-3 text-primary" />
+                            {level.practicalPassMark}/{level.practicalTotalMarks}
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="rounded-md border-border bg-muted/40 font-normal text-muted-foreground"
+                          >
+                            None
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 align-middle text-sm text-card-foreground">
+                        {formatFee(level.fee)}
+                      </td>
+                      <td className="px-3 py-2 align-middle">
+                        <CIStudentLevelsPicker
+                          trainingLevelId={level.id}
+                          programId={programId}
+                          disabled={trainingLevelsQuery.isLoading}
+                        />
+                      </td>
+                      <td className="px-3 py-2 align-middle">
+                        <TrainingLevelMaterialsPicker
+                          trainingLevelId={level.id}
+                          disabled={trainingLevelsQuery.isLoading}
+                        />
+                      </td>
+                      <td className="px-3 py-2 align-middle">
+                        <StatusBadge
+                          label={level.isActive ? "Active" : "Inactive"}
+                        />
+                      </td>
+                      <td className="px-3 py-2 align-middle">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 rounded-md p-0"
+                            onClick={() => openEditDialog(level)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 rounded-md p-0 text-destructive"
+                            onClick={() => {
+                              setDeletingLevel(level);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
-        emptyMessage="No CI training levels found for this program."
-      />
+      </div>
 
+      <FormDialog
+        open={isDialogOpen}
+        onOpenChange={(o) => (o ? setIsDialogOpen(true) : closeDialog())}
+        size="xl"
+        title={editingLevel ? "Edit CI training level" : "Add CI training level"}
+        description="Program-scoped training ladder without stream linkage."
+        headerIcon={editingLevel ? Pencil : Plus}
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSubmit();
+        }}
+        submitLabel={editingLevel ? "Save" : "Create"}
+      >
+        <DialogFormGrid cols={2}>
+          <DialogFormField label="Name" required>
+            <Input
+              value={form.name}
+              placeholder="e.g., Level 1"
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, name: e.target.value }))
+              }
+            />
+          </DialogFormField>
+          <DialogFormField label="Code" required>
+            <Input
+              value={form.code}
+              placeholder="e.g., CL1"
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, code: e.target.value }))
+              }
+            />
+          </DialogFormField>
+        </DialogFormGrid>
+        <DialogFormField label="Description">
+          <Textarea
+            rows={3}
+            value={form.description}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, description: e.target.value }))
+            }
+          />
+        </DialogFormField>
+        <DialogFormGrid cols={2}>
+          <DialogFormField label="Duration (days)" required>
+            <Input
+              type="number"
+              min={1}
+              value={form.durationInDays}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  durationInDays: Math.max(1, Number(e.target.value || 1)),
+                }))
+              }
+            />
+          </DialogFormField>
+          <DialogFormField label="Fee" required>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={form.fee}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  fee: Math.max(0, Number(e.target.value || 0)),
+                }))
+              }
+            />
+          </DialogFormField>
+          <DialogFormField label="Theory total marks" required>
+            <Input
+              type="number"
+              min={0}
+              value={form.theoryTotalMarks}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  theoryTotalMarks: Math.max(0, Number(e.target.value || 0)),
+                }))
+              }
+            />
+          </DialogFormField>
+          <DialogFormField label="Theory pass mark" required>
+            <Input
+              type="number"
+              min={0}
+              value={form.theoryPassMark}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  theoryPassMark: Math.max(0, Number(e.target.value || 0)),
+                }))
+              }
+            />
+          </DialogFormField>
+        </DialogFormGrid>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editingLevel ? "Edit CI training level" : "Add CI training level"}
-            </DialogTitle>
-            <DialogDescription>
-              Program-scoped training ladder without stream linkage.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-2 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Name</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Code</Label>
-              <Input
-                value={form.code}
-                onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>Description</Label>
-              <Textarea
-                rows={3}
-                value={form.description}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, description: e.target.value }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Duration (days)</Label>
-              <Input
-                type="number"
-                min={1}
-                value={form.durationInDays}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    durationInDays: Math.max(1, Number(e.target.value || 1)),
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Fee</Label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={form.fee}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    fee: Math.max(0, Number(e.target.value || 0)),
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Theory total marks</Label>
-              <Input
-                type="number"
-                min={0}
-                value={form.theoryTotalMarks}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    theoryTotalMarks: Math.max(0, Number(e.target.value || 0)),
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Theory pass mark</Label>
-              <Input
-                type="number"
-                min={0}
-                value={form.theoryPassMark}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    theoryPassMark: Math.max(0, Number(e.target.value || 0)),
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Practical total marks</Label>
+        <ToggleField
+          label="Practical exam"
+          value={form.practicalMarksRequired ? "required" : "not-required"}
+          onValueChange={(v) =>
+            setForm((prev) => {
+              const required = v === "required";
+              if (required) {
+                return { ...prev, practicalMarksRequired: true };
+              }
+              // Clear practical marks when no longer required so stale values aren't submitted.
+              return {
+                ...prev,
+                practicalMarksRequired: false,
+                practicalTotalMarks: "",
+                practicalPassMark: "",
+              };
+            })
+          }
+          options={[
+            { value: "required", label: "Required" },
+            { value: "not-required", label: "Not required" },
+          ]}
+        />
+
+        {form.practicalMarksRequired ? (
+          <DialogFormGrid cols={2}>
+            <DialogFormField label="Practical total marks" required>
               <Input
                 type="number"
                 min={0}
@@ -781,13 +795,14 @@ export function CITrainingLevelManagement({
                   setForm((prev) => ({
                     ...prev,
                     practicalTotalMarks:
-                      e.target.value === "" ? "" : Math.max(0, Number(e.target.value)),
+                      e.target.value === ""
+                        ? ""
+                        : Math.max(0, Number(e.target.value)),
                   }))
                 }
               />
-            </div>
-            <div className="space-y-2">
-              <Label>Practical pass mark</Label>
+            </DialogFormField>
+            <DialogFormField label="Practical pass mark" required>
               <Input
                 type="number"
                 min={0}
@@ -796,79 +811,38 @@ export function CITrainingLevelManagement({
                   setForm((prev) => ({
                     ...prev,
                     practicalPassMark:
-                      e.target.value === "" ? "" : Math.max(0, Number(e.target.value)),
+                      e.target.value === ""
+                        ? ""
+                        : Math.max(0, Number(e.target.value)),
                   }))
                 }
               />
-            </div>
-            <div className="space-y-2">
-              <Label>Display order</Label>
-              <Input
-                type="number"
-                min={1}
-                value={form.displayOrder}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    displayOrder: Math.max(1, Number(e.target.value || 1)),
-                  }))
-                }
-              />
-            </div>
-            <div className="flex items-center gap-6 pt-8">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={form.practicalMarksRequired}
-                  onCheckedChange={(checked) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      practicalMarksRequired: checked,
-                    }))
-                  }
-                />
-                <Label>Practical required</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={form.isActive}
-                  onCheckedChange={(checked) =>
-                    setForm((prev) => ({ ...prev, isActive: checked }))
-                  }
-                />
-                <Label>Active</Label>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit}>
-              {editingLevel ? "Save" : "Create"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </DialogFormField>
+          </DialogFormGrid>
+        ) : null}
 
-      <AlertDialog
+        <ToggleField
+          label="Status"
+          value={form.isActive ? "active" : "inactive"}
+          onValueChange={(v) =>
+            setForm((prev) => ({ ...prev, isActive: v === "active" }))
+          }
+          options={[
+            { value: "active", label: "Active" },
+            { value: "inactive", label: "Inactive" },
+          ]}
+        />
+      </FormDialog>
+
+      <ConfirmDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete CI training level?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Remove &quot;{deletingLevel?.name}&quot; and its inventory links.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        variant="destructive"
+        title="Delete CI training level?"
+        description={`Remove "${deletingLevel?.name}" and its inventory links.`}
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

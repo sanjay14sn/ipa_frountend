@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { CreditCard, Eye, ShieldCheck, X, Download, Loader2, RefreshCw, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
@@ -40,7 +39,56 @@ import {
   ExpandedDetailSection,
   DetailFieldsGrid,
   DetailField,
+  StatusBadge,
+  type StatusTone,
 } from "@/components/shared";
+
+function paymentTone(status: string | null | undefined): StatusTone {
+  switch ((status ?? "").toUpperCase()) {
+    case "PAID":
+      return "success";
+    case "PENDING":
+    case "PARTIAL":
+      return "warning";
+    case "FAILED":
+      return "destructive";
+    case "REFUNDED":
+      return "neutral";
+    default:
+      return "neutral";
+  }
+}
+
+function allocationTone(status: string | null | undefined): StatusTone {
+  switch ((status ?? "").toUpperCase()) {
+    case "ALLOCATED":
+      return "success";
+    case "RELEASED":
+      return "info";
+    case "BACKORDERED":
+      return "warning";
+    default:
+      return "neutral";
+  }
+}
+
+function fulfillmentTone(status: string | null | undefined): StatusTone {
+  switch ((status ?? "").toLowerCase()) {
+    case "verified":
+    case "delivered":
+      return "success";
+    case "shipped":
+    case "ready to ship":
+      return "info";
+    case "pending":
+      return "warning";
+    case "cancelled":
+    case "canceled":
+      return "destructive";
+    default:
+      return "neutral";
+  }
+}
 
 function clubOrderItems(lines: OrderItemData[]) {
   const map = new Map<
@@ -249,7 +297,10 @@ export default function AdminOrdersTable({
         key: "payment",
         header: "Payment",
         render: (order) => (
-          <Badge variant="secondary">{order.paymentStatus || "Unknown"}</Badge>
+          <StatusBadge
+            tone={paymentTone(order.paymentStatus)}
+            label={order.paymentStatus || "Unknown"}
+          />
         ),
       },
       {
@@ -257,9 +308,10 @@ export default function AdminOrdersTable({
         header: "Allocation",
         render: (order) => (
           <div>
-            <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-              {order.allocationStatus || "Unknown"}
-            </Badge>
+            <StatusBadge
+              tone={allocationTone(order.allocationStatus)}
+              label={order.allocationStatus || "Unknown"}
+            />
             {order.backorderedAt ? (
               <div className="mt-1 text-xs text-muted-foreground">
                 Backordered {new Date(order.backorderedAt).toLocaleDateString()}
@@ -271,11 +323,10 @@ export default function AdminOrdersTable({
       {
         key: "fulfillment",
         header: "Fulfillment",
-        render: (order) => (
-          <Badge className="bg-slate-100 text-slate-700 border-slate-200">
-            {order.adminStatus || order.fulfillmentStatus || "Unknown"}
-          </Badge>
-        ),
+        render: (order) => {
+          const label = order.adminStatus || order.fulfillmentStatus || "Unknown";
+          return <StatusBadge tone={fulfillmentTone(label)} label={label} />;
+        },
       },
       {
         key: "value",

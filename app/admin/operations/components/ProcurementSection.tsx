@@ -26,6 +26,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AppDialog,
+  AppDialogBody,
+  AppDialogFooter,
+  AppDialogHeader,
+  DialogFormField,
+  DialogFormGrid,
+  FormDialog,
+} from "@/components/shared/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -35,7 +44,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import { ToggleField } from "@/components/shared/toggle-field";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -1368,111 +1377,111 @@ export function ProcurementSection() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={isSupplierOpen} onOpenChange={setIsSupplierOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add supplier</DialogTitle>
-            <DialogDescription>
-              Supplier creation is tucked behind a modal so the records view stays focused.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2 md:col-span-2">
-              <Label>Supplier name</Label>
-              <Input
-                value={supplierForm.name}
-                onChange={(event) =>
-                  setSupplierForm((prev) => ({ ...prev, name: event.target.value }))
-                }
-              />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>Contact person</Label>
-              <Input
-                value={supplierForm.contactPerson}
-                onChange={(event) =>
-                  setSupplierForm((prev) => ({
-                    ...prev,
-                    contactPerson: event.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input
-                value={supplierForm.email}
-                onChange={(event) =>
-                  setSupplierForm((prev) => ({ ...prev, email: event.target.value }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Phone</Label>
-              <Input
-                value={supplierForm.phone}
-                onChange={(event) =>
-                  setSupplierForm((prev) => ({ ...prev, phone: event.target.value }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>City</Label>
-              <Input
-                value={supplierForm.city}
-                onChange={(event) =>
-                  setSupplierForm((prev) => ({ ...prev, city: event.target.value }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>GSTIN</Label>
-              <Input
-                value={supplierForm.gstin}
-                onChange={(event) =>
-                  setSupplierForm((prev) => ({ ...prev, gstin: event.target.value }))
-                }
-              />
-            </div>
-            <div className="flex items-center gap-3 md:col-span-2">
-              <Switch
-                checked={supplierForm.isActive}
-                onCheckedChange={(checked) =>
-                  setSupplierForm((prev) => ({ ...prev, isActive: checked }))
-                }
-              />
-              <Label>Active supplier</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSupplierOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => void handleCreateSupplier()} disabled={submitting}>
-              Create supplier
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FormDialog
+        open={isSupplierOpen}
+        onOpenChange={setIsSupplierOpen}
+        size="lg"
+        title="Add supplier"
+        description="Supplier creation is tucked behind a modal so the records view stays focused."
+        headerIcon={Plus}
+        onSubmit={(e) => {
+          e.preventDefault();
+          void handleCreateSupplier();
+        }}
+        isSubmitting={submitting}
+        submitLabel="Create supplier"
+      >
+        <DialogFormField label="Supplier name">
+          <Input
+            value={supplierForm.name}
+            onChange={(event) =>
+              setSupplierForm((prev) => ({ ...prev, name: event.target.value }))
+            }
+          />
+        </DialogFormField>
+        <DialogFormField label="Contact person">
+          <Input
+            value={supplierForm.contactPerson}
+            onChange={(event) =>
+              setSupplierForm((prev) => ({
+                ...prev,
+                contactPerson: event.target.value,
+              }))
+            }
+          />
+        </DialogFormField>
+        <DialogFormGrid cols={2}>
+          <DialogFormField label="Email">
+            <Input
+              value={supplierForm.email}
+              onChange={(event) =>
+                setSupplierForm((prev) => ({ ...prev, email: event.target.value }))
+              }
+            />
+          </DialogFormField>
+          <DialogFormField label="Phone">
+            <Input
+              value={supplierForm.phone}
+              onChange={(event) =>
+                setSupplierForm((prev) => ({ ...prev, phone: event.target.value }))
+              }
+            />
+          </DialogFormField>
+          <DialogFormField label="City">
+            <Input
+              value={supplierForm.city}
+              onChange={(event) =>
+                setSupplierForm((prev) => ({ ...prev, city: event.target.value }))
+              }
+            />
+          </DialogFormField>
+          <DialogFormField label="GSTIN">
+            <Input
+              value={supplierForm.gstin}
+              onChange={(event) =>
+                setSupplierForm((prev) => ({ ...prev, gstin: event.target.value }))
+              }
+            />
+          </DialogFormField>
+        </DialogFormGrid>
+        <ToggleField
+          label="Supplier status"
+          value={supplierForm.isActive ? "active" : "inactive"}
+          onValueChange={(v) =>
+            setSupplierForm((prev) => ({
+              ...prev,
+              isActive: v === "active",
+            }))
+          }
+          options={[
+            { value: "active", label: "Active" },
+            { value: "inactive", label: "Inactive" },
+          ]}
+        />
+      </FormDialog>
 
-      <Dialog open={isSourcingOpen} onOpenChange={setIsSourcingOpen}>
-        <DialogContent className="flex w-[calc(100%-1rem)] max-h-[92vh] max-w-6xl flex-col gap-2 overflow-hidden px-4 py-2.5 sm:w-[calc(100%-1.25rem)] sm:gap-2 sm:px-5 sm:py-2.5">
-          <DialogHeader className="shrink-0 space-y-1 pr-7">
-            <DialogTitle className="text-lg leading-tight">Add sourcing</DialogTitle>
-            <DialogDescription className="text-xs leading-snug sm:text-sm">
-              Choose one supplier, then select inventory items to create or update sourcing terms in bulk.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex min-h-0 flex-1 flex-col gap-2">
-            <div className="shrink-0 space-y-1.5">
-              <Label>Supplier</Label>
+      <AppDialog
+        open={isSourcingOpen}
+        onOpenChange={setIsSourcingOpen}
+        size="xl"
+        padding="flush"
+        scrollBody
+      >
+        <AppDialogHeader
+          title="Add sourcing"
+          description="Choose one supplier, then select inventory items to create or update sourcing terms in bulk."
+          sticky
+        />
+        <AppDialogBody layout="fill" className="space-y-3">
+          <div className="shrink-0 space-y-3">
+            <DialogFormField label="Supplier">
               <Select
                 value={sourcingSupplierId === "" ? "none" : String(sourcingSupplierId)}
                 onValueChange={(value) =>
                   setSourcingSupplierId(value === "none" ? "" : Number(value))
                 }
               >
-                <SelectTrigger className="ring-offset-0 focus-visible:ring-inset">
+                <SelectTrigger>
                   <SelectValue placeholder="Choose supplier" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1484,62 +1493,73 @@ export function ProcurementSection() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </DialogFormField>
             {sourcingSupplierId !== "" ? (
-              <>
-                <div className="shrink-0 rounded-lg border px-2 py-1.5 sm:px-2 sm:py-2">
-                  <div className="mb-1 text-sm font-medium leading-tight">Existing sourcing</div>
-                  {allSupplierTerms.filter((t) => t.supplierId === sourcingSupplierId)
-                    .length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No rows yet for this supplier.</p>
-                  ) : (
-                    <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto">
-                      {allSupplierTerms
-                        .filter((t) => t.supplierId === sourcingSupplierId)
-                        .map((term) => (
-                          <Badge key={term.id} variant="secondary" className="font-normal">
-                            {term.inventoryItem?.name ?? `Item #${term.inventoryItemId}`}
-                          </Badge>
-                        ))}
-                    </div>
-                  )}
+              <div className="rounded-lg border border-border bg-card px-3 py-2 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Existing sourcing
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {allSupplierTerms.filter((t) => t.supplierId === sourcingSupplierId).length} items
+                  </div>
                 </div>
-                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                  <ProcurementBulkLinePicker
-                    key={`sourcing-${String(sourcingSupplierId)}-${sourcingItemSeed.join(",")}`}
-                    mode="sourcing"
-                    resetKey={`${String(sourcingSupplierId)}-${sourcingItemSeed.join(",")}`}
-                    catalogItems={inventoryItems}
-                    isCatalogLoading={inventoryQuery.isLoading}
-                    excludeInventoryIds={linkedItemIdsForSourcingSupplier}
-                    initialSourcingItemIds={sourcingItemSeed}
-                    onSubmitSourcing={handleBulkSourcingSubmit}
-                    className="min-h-0 flex-1"
-                  />
-                </div>
-              </>
-            ) : (
-              <p className="shrink-0 text-sm text-muted-foreground">
-                Select a supplier to enable the item picker. Saving runs from the picker&apos;s Save button.
-              </p>
-            )}
+                {allSupplierTerms.filter((t) => t.supplierId === sourcingSupplierId)
+                  .length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    No rows yet for this supplier.
+                  </p>
+                ) : (
+                  <div className="flex max-h-14 flex-wrap gap-1 overflow-y-auto scrollbar-green">
+                    {allSupplierTerms
+                      .filter((t) => t.supplierId === sourcingSupplierId)
+                      .map((term) => (
+                        <Badge
+                          key={term.id}
+                          variant="secondary"
+                          className="h-6 gap-1 rounded-full px-2 py-0 text-[11px] font-normal"
+                        >
+                          {term.inventoryItem?.name ?? `Item #${term.inventoryItemId}`}
+                        </Badge>
+                      ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
-          <DialogFooter className="shrink-0 gap-2 pt-1 sm:pt-1.5">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsSourcingOpen(false);
-                setSourcingSupplierId("");
-                setSourcingItemSeed([]);
-              }}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {sourcingSupplierId !== "" ? (
+            <ProcurementBulkLinePicker
+              key={`sourcing-${String(sourcingSupplierId)}-${sourcingItemSeed.join(",")}`}
+              mode="sourcing"
+              resetKey={`${String(sourcingSupplierId)}-${sourcingItemSeed.join(",")}`}
+              catalogItems={inventoryItems}
+              isCatalogLoading={inventoryQuery.isLoading}
+              excludeInventoryIds={linkedItemIdsForSourcingSupplier}
+              initialSourcingItemIds={sourcingItemSeed}
+              onSubmitSourcing={handleBulkSourcingSubmit}
+            />
+          ) : (
+            <p className="shrink-0 text-sm text-muted-foreground">
+              Select a supplier to enable the item picker. Saving runs from the
+              picker&apos;s Save button.
+            </p>
+          )}
+        </AppDialogBody>
+        <AppDialogFooter
+          sticky
+          padded
+          secondary={{
+            label: "Close",
+            onClick: () => {
+              setIsSourcingOpen(false);
+              setSourcingSupplierId("");
+              setSourcingItemSeed([]);
+            },
+          }}
+        />
+      </AppDialog>
 
-      <Dialog
+      <AppDialog
         open={isPurchaseOrderOpen}
         onOpenChange={(open) => {
           setIsPurchaseOrderOpen(open);
@@ -1547,113 +1567,104 @@ export function ProcurementSection() {
             setPoLineSeed(undefined);
           }
         }}
+        size="xl"
+        padding="flush"
+        scrollBody
       >
-        <DialogContent className="flex w-[calc(100%-1rem)] max-h-[92vh] max-w-6xl flex-col gap-1.5 overflow-hidden p-2 sm:w-[calc(100%-1.25rem)] sm:gap-1.5 sm:p-3">
-          <DialogHeader className="shrink-0 space-y-0.5 pr-7">
-            <DialogTitle className="text-base leading-tight">Create purchase order</DialogTitle>
-            <DialogDescription className="text-xs leading-snug text-muted-foreground">
-              Choose supplier sourcing terms as lines; quantity and unit cost default from each
-              term. Save on the picker creates the order.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex min-h-0 flex-1 flex-col gap-1.5">
-            <div className="shrink-0 space-y-1.5">
-              <div className="grid grid-cols-1 gap-1.5 md:grid-cols-12">
-                <div className="space-y-1 md:col-span-4">
-                  <Label className="text-xs">Supplier</Label>
-                  <Select
-                    value={poForm.supplierId === "" ? "none" : String(poForm.supplierId)}
-                    onValueChange={handlePurchaseOrderSupplierSelect}
-                  >
-                    <SelectTrigger className="h-9 ring-offset-0 focus-visible:ring-inset">
-                      <SelectValue placeholder="Choose supplier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Choose supplier</SelectItem>
-                      {purchaseOrderSuppliersSorted.map((supplier) => (
-                        <SelectItem key={supplier.id} value={String(supplier.id)}>
-                          {supplier.name}
-                          {!supplier.isActive ? " (inactive)" : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1 md:col-span-4">
-                  <Label className="text-xs">Reference</Label>
-                  <Input
-                    className="h-9"
-                    value={poForm.referenceNo}
-                    onChange={(event) =>
-                      setPoForm((prev) => ({
-                        ...prev,
-                        referenceNo: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-1 md:col-span-4">
-                  <Label className="text-xs">Expected delivery</Label>
-                  <Input
-                    className="h-9"
-                    type="date"
-                    value={poForm.expectedDeliveryAt}
-                    onChange={(event) =>
-                      setPoForm((prev) => ({
-                        ...prev,
-                        expectedDeliveryAt: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-1 md:col-span-12">
-                  <Label className="text-xs">Notes</Label>
-                  <Textarea
-                    rows={1}
-                    className="min-h-9 resize-y py-2 text-sm leading-snug"
-                    value={poForm.notes}
-                    onChange={(event) =>
-                      setPoForm((prev) => ({ ...prev, notes: event.target.value }))
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-            {poForm.supplierId !== "" ? (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <ProcurementBulkLinePicker
-                  key={`po-${String(poForm.supplierId)}-${JSON.stringify(poLineSeed ?? [])}`}
-                  mode="purchase-order"
-                  resetKey={`${String(poForm.supplierId)}-${JSON.stringify(poLineSeed ?? [])}`}
-                  catalogItems={inventoryItems}
-                  isCatalogLoading={inventoryQuery.isLoading}
-                  excludeInventoryIds={new Set()}
-                  supplierTerms={supplierTermsForPo}
-                  supplierTermsCatalogLoading={allSupplierTermsQuery.isLoading}
-                  initialPoLines={poLineSeed}
-                  onSubmitPo={handlePurchaseOrderPickerSubmit}
-                  className="min-h-0 flex-1"
+        <AppDialogHeader
+          title="Create purchase order"
+          description="Choose supplier sourcing terms as lines; quantity and unit cost default from each term. Save on the picker creates the order."
+          icon={Plus}
+          sticky
+        />
+        <AppDialogBody layout="fill" className="space-y-3">
+          <div className="shrink-0 space-y-3">
+            <DialogFormGrid cols={3}>
+              <DialogFormField label="Supplier">
+                <Select
+                  value={poForm.supplierId === "" ? "none" : String(poForm.supplierId)}
+                  onValueChange={handlePurchaseOrderSupplierSelect}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Choose supplier</SelectItem>
+                    {purchaseOrderSuppliersSorted.map((supplier) => (
+                      <SelectItem key={supplier.id} value={String(supplier.id)}>
+                        {supplier.name}
+                        {!supplier.isActive ? " (inactive)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </DialogFormField>
+              <DialogFormField label="Reference">
+                <Input
+                  value={poForm.referenceNo}
+                  onChange={(event) =>
+                    setPoForm((prev) => ({
+                      ...prev,
+                      referenceNo: event.target.value,
+                    }))
+                  }
                 />
-              </div>
-            ) : (
-              <p className="shrink-0 text-sm text-muted-foreground">
-                Select a supplier to add order lines.
-              </p>
-            )}
+              </DialogFormField>
+              <DialogFormField label="Expected delivery">
+                <Input
+                  type="date"
+                  value={poForm.expectedDeliveryAt}
+                  onChange={(event) =>
+                    setPoForm((prev) => ({
+                      ...prev,
+                      expectedDeliveryAt: event.target.value,
+                    }))
+                  }
+                />
+              </DialogFormField>
+            </DialogFormGrid>
+            <DialogFormField label="Notes">
+              <Textarea
+                rows={1}
+                className="min-h-9 resize-y py-2 text-sm leading-snug"
+                value={poForm.notes}
+                onChange={(event) =>
+                  setPoForm((prev) => ({ ...prev, notes: event.target.value }))
+                }
+              />
+            </DialogFormField>
           </div>
-          <DialogFooter className="shrink-0 gap-1.5 pt-0">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsPurchaseOrderOpen(false);
-                setPoLineSeed(undefined);
-              }}
-            >
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {poForm.supplierId !== "" ? (
+            <ProcurementBulkLinePicker
+              key={`po-${String(poForm.supplierId)}-${JSON.stringify(poLineSeed ?? [])}`}
+              mode="purchase-order"
+              resetKey={`${String(poForm.supplierId)}-${JSON.stringify(poLineSeed ?? [])}`}
+              catalogItems={inventoryItems}
+              isCatalogLoading={inventoryQuery.isLoading}
+              excludeInventoryIds={new Set()}
+              supplierTerms={supplierTermsForPo}
+              supplierTermsCatalogLoading={allSupplierTermsQuery.isLoading}
+              initialPoLines={poLineSeed}
+              onSubmitPo={handlePurchaseOrderPickerSubmit}
+            />
+          ) : (
+            <p className="shrink-0 text-sm text-muted-foreground">
+              Select a supplier to add order lines.
+            </p>
+          )}
+        </AppDialogBody>
+        <AppDialogFooter
+          sticky
+          padded
+          secondary={{
+            label: "Cancel",
+            onClick: () => {
+              setIsPurchaseOrderOpen(false);
+              setPoLineSeed(undefined);
+            },
+          }}
+        />
+      </AppDialog>
 
       <Dialog open={isReceiptOpen} onOpenChange={handleReceiptDialogOpenChange}>
         <DialogContent className="flex w-[calc(100%-1rem)] max-h-[min(80vh,580px)] max-w-5xl flex-col gap-2 overflow-hidden p-3 sm:w-[calc(100%-1.25rem)] sm:gap-2 sm:p-4">

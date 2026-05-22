@@ -19,6 +19,7 @@ import {
   DetailFieldsGrid,
   ExpandedDetailSection,
   ExpandedDetailSurface,
+  StatusBadge,
   type DataTableColumn,
   type DataTableFilter,
 } from "@/components/shared";
@@ -45,19 +46,6 @@ interface FranchiseCertificateDetailsProps {
   totalPending: number;
   totalIssued: number;
   totalRejected: number;
-}
-
-function statusTone(status: string): string {
-  switch (status) {
-    case "Pending":
-      return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    case "Issued":
-      return "bg-green-100 text-green-800 border-green-200";
-    case "Rejected":
-      return "bg-red-100 text-red-800 border-red-200";
-    default:
-      return "bg-gray-100 text-gray-800 border-gray-200";
-  }
 }
 
 export default function FranchiseCertificateDetails({
@@ -236,9 +224,7 @@ export default function FranchiseCertificateDetails({
             <FileText className="h-4 w-4" />
           </Button>
         ) : (
-          <Badge className={`${statusTone(req.status)} border`}>
-            {req.status}
-          </Badge>
+          <StatusBadge label={req.status} />
         ),
     },
   ];

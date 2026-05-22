@@ -4,18 +4,18 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertCircle, CreditCard, Users, CheckCircle } from "lucide-react";
+import { AlertCircle, CreditCard, Users } from "lucide-react";
 import { StudentData, StudentIdStatus } from "@/services/student.service";
 import { requestStudentIdsWithRevalidation } from "@/hooks/api/student.hooks";
+import {
+  AppDialog,
+  AppDialogBody,
+  AppDialogFooter,
+  AppDialogHeader,
+  DialogStateMessage,
+  SuccessDialog,
+} from "@/components/shared/dialog";
 
 interface RequestIdModalProps {
   open: boolean;
@@ -36,7 +36,6 @@ export default function RequestIdModal({
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // Filter students who are eligible for ID requests (not issued)
   const eligibleStudents = students.filter(
     (student) => student.idIssued === StudentIdStatus.NOT_ISSUED
   );
@@ -85,222 +84,182 @@ export default function RequestIdModal({
 
   if (submitted) {
     return (
-      <Dialog open={false} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md w-full mx-4">
-          <DialogHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <CheckCircle className="h-12 w-12 text-primary" />
-            </div>
-            <DialogTitle className="text-2xl font-bold text-gray-900">
-              ID Requests Submitted!
-            </DialogTitle>
-            <DialogDescription className="text-center">
-              Your ID card requests have been submitted successfully. You will
-              be notified once the IDs are ready.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="pt-4">
-            <Button
-              className="w-full bg-primary hover:bg-primary/90"
-              onClick={handleClose}
-            >
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SuccessDialog
+        open={open}
+        onOpenChange={handleClose}
+        title="ID Requests Submitted!"
+        description="Your ID card requests have been submitted successfully. You will be notified once the IDs are ready."
+        actionLabel="Close"
+        onAction={handleClose}
+      />
     );
   }
 
+  const ineligibleCount = students.filter(
+    (s) => s.idIssued !== StudentIdStatus.NOT_ISSUED
+  ).length;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="text-center border-b border-gray-200 pb-4 flex-shrink-0">
-          <div className="flex justify-center mb-4">
-            <CreditCard className="h-8 w-8 text-primary" />
+    <AppDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="xl"
+      padding="flush"
+      scrollBody
+    >
+      <AppDialogHeader
+        title="Request Student ID Cards"
+        description="Select students to request ID cards. Only students without issued IDs are eligible."
+        icon={CreditCard}
+        sticky
+      />
+
+      <AppDialogBody className="space-y-5">
+        <DialogStateMessage
+          tone="success"
+          icon={Users}
+          title={`${eligibleStudents.length} students eligible for ID requests`}
+          description='Students with "Not Issued" ID status can request new ID cards.'
+          action={
+            <Badge
+              variant="secondary"
+              className="bg-primary/10 text-primary border-primary/20"
+            >
+              {selectedStudents.size} selected
+            </Badge>
+          }
+        />
+
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 text-sm font-medium text-card-foreground cursor-pointer">
+            <Checkbox
+              id="selectAll"
+              checked={
+                selectedStudents.size === eligibleStudents.length &&
+                eligibleStudents.length > 0
+              }
+              onCheckedChange={handleSelectAll}
+            />
+            Select All Eligible Students
+          </label>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedStudents(new Set())}
+            disabled={selectedStudents.size === 0}
+            className="rounded-lg"
+          >
+            Clear Selection
+          </Button>
+        </div>
+
+        <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <div className="bg-muted/50 px-4 py-3 border-b border-border">
+            <div className="grid grid-cols-12 gap-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <div className="col-span-1">Select</div>
+              <div className="col-span-3">Student</div>
+              <div className="col-span-2">Roll No</div>
+              <div className="col-span-2">Standard</div>
+              <div className="col-span-2">Level</div>
+              <div className="col-span-2">ID Status</div>
+            </div>
           </div>
-          <DialogTitle className="text-xl font-bold text-gray-900">
-            Request Student ID Cards
-          </DialogTitle>
-          <DialogDescription>
-            Select students to request ID cards. Only students without issued
-            IDs are eligible.
-          </DialogDescription>
-        </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
-            {/* Summary Section */}
-            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-primary" />
-                  <span className="font-medium text-primary">
-                    {eligibleStudents.length} students eligible for ID requests
-                  </span>
-                </div>
-                <Badge
-                  variant="secondary"
-                  className="bg-primary/10 text-primary"
+          <div className="max-h-96 overflow-y-auto scrollbar-green divide-y divide-border">
+            {eligibleStudents.length === 0 ? (
+              <div className="p-10 text-center text-muted-foreground">
+                <CreditCard className="h-12 w-12 mx-auto mb-3 text-muted-foreground/40" />
+                <p className="text-sm font-medium text-card-foreground">
+                  No students eligible for ID requests
+                </p>
+                <p className="text-xs">
+                  All students already have ID cards issued or requested
+                </p>
+              </div>
+            ) : (
+              eligibleStudents.map((student) => (
+                <label
+                  key={student.id}
+                  className="block px-4 py-3 hover:bg-accent/30 transition-colors cursor-pointer"
                 >
-                  {selectedStudents.size} selected
-                </Badge>
-              </div>
-              <p className="text-sm text-primary mt-2">
-                Students with "Not Issued" ID status can request new ID cards
-              </p>
-            </div>
-
-            {/* Selection Controls */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="selectAll"
-                  checked={
-                    selectedStudents.size === eligibleStudents.length &&
-                    eligibleStudents.length > 0
-                  }
-                  onCheckedChange={handleSelectAll}
-                />
-                <label htmlFor="selectAll" className="text-sm font-medium">
-                  Select All Eligible Students
-                </label>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedStudents(new Set())}
-                disabled={selectedStudents.size === 0}
-              >
-                Clear Selection
-              </Button>
-            </div>
-
-            {/* Students List */}
-            <div className="border rounded-lg">
-              <div className="bg-gray-50 px-4 py-3 border-b">
-                <div className="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700">
-                  <div className="col-span-1">Select</div>
-                  <div className="col-span-3">Student</div>
-                  <div className="col-span-2">Roll No</div>
-                  <div className="col-span-2">Standard</div>
-                  <div className="col-span-2">Level</div>
-                  <div className="col-span-2">ID Status</div>
-                </div>
-              </div>
-
-              <div className="max-h-96 overflow-y-auto">
-                {eligibleStudents.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500">
-                    <CreditCard className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p className="text-lg font-medium">
-                      No students eligible for ID requests
-                    </p>
-                    <p className="text-sm">
-                      All students already have ID cards issued or requested
-                    </p>
-                  </div>
-                ) : (
-                  eligibleStudents.map((student) => (
-                    <div
-                      key={student.id}
-                      className="px-4 py-3 border-b hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="grid grid-cols-12 gap-4 items-center">
-                        <div className="col-span-1">
-                          <Checkbox
-                            checked={selectedStudents.has(student.id)}
-                            onCheckedChange={() =>
-                              handleStudentToggle(student.id)
-                            }
-                          />
-                        </div>
-                        <div className="col-span-3">
-                          <div className="font-medium text-gray-900">
-                            {student.name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {student.sex}
-                          </div>
-                        </div>
-                        <div className="col-span-2 text-sm text-gray-700">
-                          {student.rollNo}
-                        </div>
-                        <div className="col-span-2 text-sm text-gray-700">
-                          {student.standard}
-                        </div>
-                        <div className="col-span-2">
-                          <Badge variant="outline" className="text-xs">
-                            {typeof student.level === 'object' && student.level !== null && 'name' in student.level 
-                              ? student.level.name 
-                              : typeof student.level === 'string' 
-                              ? student.level 
-                              : 'N/A'}
-                          </Badge>
-                        </div>
-                        <div className="col-span-2">
-                          <Badge
-                            variant="outline"
-                            className="bg-primary/10 text-primary border-primary/20"
-                          >
-                            {student.idIssued}
-                          </Badge>
-                        </div>
+                  <div className="grid grid-cols-12 gap-4 items-center">
+                    <div className="col-span-1">
+                      <Checkbox
+                        checked={selectedStudents.has(student.id)}
+                        onCheckedChange={() => handleStudentToggle(student.id)}
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <div className="text-sm font-medium text-card-foreground">
+                        {student.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {student.sex}
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Warning for students with other statuses */}
-            {students.filter((s) => s.idIssued !== StudentIdStatus.NOT_ISSUED)
-              .length > 0 && (
-              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-medium text-primary mb-1">
-                      Some students are not eligible
-                    </h4>
-                    <p className="text-sm text-primary">
-                      Students with "Issued" or "Requested" ID status cannot
-                      request new ID cards. Only students with "Not Issued"
-                      status are eligible.
-                    </p>
+                    <div className="col-span-2 text-sm text-card-foreground">
+                      {student.rollNo}
+                    </div>
+                    <div className="col-span-2 text-sm text-card-foreground">
+                      {student.standard}
+                    </div>
+                    <div className="col-span-2">
+                      <Badge variant="outline" className="text-xs">
+                        {typeof student.level === "object" &&
+                        student.level !== null &&
+                        "name" in student.level
+                          ? student.level.name
+                          : typeof student.level === "string"
+                          ? student.level
+                          : "N/A"}
+                      </Badge>
+                    </div>
+                    <div className="col-span-2">
+                      <Badge
+                        variant="outline"
+                        className="bg-primary/10 text-primary border-primary/20"
+                      >
+                        {student.idIssued}
+                      </Badge>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </label>
+              ))
             )}
           </div>
         </div>
 
-        <DialogFooter className="border-t border-gray-200 p-4 flex-shrink-0">
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button
-            className="bg-primary hover:bg-primary/90"
-            onClick={handleSubmit}
-            disabled={selectedStudents.size === 0 || isLoading}
-          >
-            {isLoading ? (
-              <div className="flex items-center space-x-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                <span>Submitting...</span>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <CreditCard className="w-4 h-4" />
-                <span>
-                  Request {selectedStudents.size} ID
-                  {selectedStudents.size !== 1 ? "s" : ""}
-                </span>
-              </div>
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {ineligibleCount > 0 && (
+          <DialogStateMessage
+            tone="warning"
+            icon={AlertCircle}
+            title="Some students are not eligible"
+            description='Students with "Issued" or "Requested" ID status cannot request new ID cards. Only students with "Not Issued" status are eligible.'
+          />
+        )}
+      </AppDialogBody>
+
+      <AppDialogFooter
+        sticky
+        padded
+        secondary={{
+          label: "Cancel",
+          onClick: handleClose,
+          disabled: isLoading,
+        }}
+        primary={{
+          label:
+            selectedStudents.size === 0
+              ? "Request IDs"
+              : `Request ${selectedStudents.size} ID${
+                  selectedStudents.size !== 1 ? "s" : ""
+                }`,
+          onClick: handleSubmit,
+          loading: isLoading,
+          disabled: selectedStudents.size === 0,
+          icon: CreditCard,
+        }}
+      />
+    </AppDialog>
   );
 }

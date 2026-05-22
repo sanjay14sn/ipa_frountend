@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge, type StatusTone } from "@/components/shared";
 import { useAdminOperationsMonitoring } from "@/hooks/api/operations.hooks";
 import type {
   MonitoringItemTone,
@@ -97,17 +98,18 @@ function toneValueClass(tone: MonitoringItemTone) {
   }
 }
 
-function itemBadgeClass(tone: MonitoringItemTone) {
+function itemBadgeTone(tone: MonitoringItemTone): StatusTone {
   switch (tone) {
     case "danger":
-      return "border-destructive/20 bg-destructive/10 text-destructive";
+      return "destructive";
     case "warning":
+      return "warning";
     case "info":
-      return "border-primary/20 bg-primary/10 text-primary";
+      return "info";
     case "neutral":
-      return "border-border bg-muted/30 text-muted-foreground";
+      return "neutral";
     default:
-      return "border-primary/20 bg-primary/10 text-primary";
+      return "success";
   }
 }
 
@@ -155,7 +157,11 @@ function MonitoringItemCard({ item }: { item: OperationsMonitoringListItem }) {
           <div className="truncate text-lg text-card-foreground">{item.title}</div>
           <div className="mt-1 text-sm text-muted-foreground">{item.subtitle}</div>
         </div>
-        <Badge className={cn("shrink-0", itemBadgeClass(item.tone))}>{item.status}</Badge>
+        <StatusBadge
+          className="shrink-0"
+          tone={itemBadgeTone(item.tone)}
+          label={item.status}
+        />
       </div>
     </div>
   );

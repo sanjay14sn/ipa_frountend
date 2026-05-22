@@ -1,15 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Package, CheckCircle, AlertCircle, IndianRupee } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -20,6 +11,13 @@ import {
 } from "@/services/order.service";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
+import {
+  AppDialog,
+  AppDialogBody,
+  AppDialogFooter,
+  AppDialogHeader,
+  DialogStateMessage,
+} from "@/components/shared/dialog";
 
 interface RequestMaterialsModalProps {
   isOpen: boolean;
@@ -45,7 +43,6 @@ export function RequestMaterialsModal({
     if (isOpen) {
       loadPreview();
     } else {
-      // Reset state when modal closes
       setPreview(null);
       setError(null);
       setSubmitting(false);
@@ -72,9 +69,7 @@ export function RequestMaterialsModal({
     preview.inventoryItems.length > 0;
 
   const handleConfirm = async () => {
-    if (!canPlaceRequest) {
-      return;
-    }
+    if (!canPlaceRequest) return;
 
     try {
       setSubmitting(true);
@@ -97,18 +92,21 @@ export function RequestMaterialsModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Request Training Materials
-          </DialogTitle>
-          <DialogDescription>
-            Request materials for {instructorName}'s active training level
-          </DialogDescription>
-        </DialogHeader>
+    <AppDialog
+      open={isOpen}
+      onOpenChange={onClose}
+      size="lg"
+      padding="flush"
+      scrollBody
+    >
+      <AppDialogHeader
+        title="Request Training Materials"
+        description={`Request materials for ${instructorName}'s active training level`}
+        icon={Package}
+        sticky
+      />
 
+      <AppDialogBody className="space-y-4">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -119,23 +117,20 @@ export function RequestMaterialsModal({
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : preview ? (
-          <div className="space-y-4">
-            {/* Already Ordered Alert */}
+          <>
             {preview.hasExistingOrder && (
-              <Alert>
-                <CheckCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Materials have already been ordered for this training level.
-                </AlertDescription>
-              </Alert>
+              <DialogStateMessage
+                tone="success"
+                icon={CheckCircle}
+                title="Materials have already been ordered for this training level."
+              />
             )}
 
-            {/* Training Level Info */}
             <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Active Training Level</p>
-                  <p className="font-semibold text-lg">{preview.trainingLevel.name}</p>
+                  <p className="font-semibold text-lg text-card-foreground">{preview.trainingLevel.name}</p>
                   {preview.trainingLevel.description && (
                     <p className="text-sm text-muted-foreground mt-1">
                       {preview.trainingLevel.description}
@@ -148,20 +143,19 @@ export function RequestMaterialsModal({
               </div>
             </div>
 
-            {/* Materials List */}
             {preview.inventoryItems.length > 0 ? (
               <div className="space-y-3">
-                <h3 className="font-semibold text-sm">
+                <h3 className="font-semibold text-sm text-card-foreground">
                   Materials to be Ordered ({preview.inventoryItems.length})
                 </h3>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
+                <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-green">
                   {preview.inventoryItems.map((item) => (
                     <div
                       key={item.id}
-                      className="p-3 border border-gray-200 rounded-lg bg-white flex items-center justify-between"
+                      className="p-3 border border-border rounded-lg bg-card flex items-center justify-between"
                     >
                       <div className="flex-1">
-                        <p className="font-medium text-sm">{item.name}</p>
+                        <p className="font-medium text-sm text-card-foreground">{item.name}</p>
                         {item.description && (
                           <p className="text-xs text-muted-foreground mt-1">
                             {item.description}
@@ -172,7 +166,7 @@ export function RequestMaterialsModal({
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-lg flex items-center gap-1">
+                        <p className="font-semibold text-lg flex items-center gap-1 text-card-foreground">
                           <IndianRupee className="h-4 w-4" />
                           0.00
                         </p>
@@ -191,11 +185,10 @@ export function RequestMaterialsModal({
               </Alert>
             )}
 
-            {/* Total Amount */}
             {preview.inventoryItems.length > 0 && (
               <div className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-primary/20">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold">Total Amount</span>
+                  <span className="font-semibold text-card-foreground">Total Amount</span>
                   <div className="flex items-center gap-1 text-xl font-bold text-primary">
                     <IndianRupee className="h-5 w-5" />
                     0.00
@@ -207,37 +200,35 @@ export function RequestMaterialsModal({
               </div>
             )}
 
-            {/* Error Display */}
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-          </div>
+          </>
         ) : null}
+      </AppDialogBody>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={submitting}>
-            {preview?.hasExistingOrder ? "Close" : "Cancel"}
-          </Button>
-          {canPlaceRequest && (
-            <Button onClick={handleConfirm} disabled={submitting}>
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating Order...
-                </>
-              ) : (
-                <>
-                  <Package className="h-4 w-4 mr-2" />
-                  Confirm Request
-                </>
-              )}
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <AppDialogFooter
+        sticky
+        padded
+        secondary={{
+          label: preview?.hasExistingOrder ? "Close" : "Cancel",
+          onClick: onClose,
+          disabled: submitting,
+        }}
+        primary={
+          canPlaceRequest
+            ? {
+                label: "Confirm Request",
+                onClick: handleConfirm,
+                loading: submitting,
+                icon: Package,
+              }
+            : undefined
+        }
+      />
+    </AppDialog>
   );
 }

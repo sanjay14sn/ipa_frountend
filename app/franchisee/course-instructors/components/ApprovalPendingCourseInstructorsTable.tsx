@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Clock, Phone, MapPin } from "lucide-react";
-import { DataTable } from "@/components/shared";
+import { Phone, MapPin } from "lucide-react";
+import { DataTable, StatusBadge } from "@/components/shared";
 import type { DataTableColumn, DataTableSortOption } from "@/components/shared";
 import { CourseInstructorData } from "@/services/course-instructor.service";
 import CourseInstructorDetails from "./CourseInstructorDetails";
@@ -92,12 +91,7 @@ export default function ApprovalPendingCourseInstructorsTable({
       key: "status",
       header: "Status",
       className: "w-[160px]",
-      render: () => (
-        <Badge className="bg-amber-50 text-amber-700 border border-amber-200 gap-1">
-          <Clock className="w-3 h-3" />
-          Pending Approval
-        </Badge>
-      ),
+      render: () => <StatusBadge label="Pending Approval" />,
     },
   ];
 

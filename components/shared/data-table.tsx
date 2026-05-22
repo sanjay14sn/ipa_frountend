@@ -5,7 +5,7 @@
  * pagination, expandable rows. Built on `@/components/ui/table` primitives.
  */
 
-import React, { useState, useEffect, Fragment, ReactNode, useMemo } from "react";
+import React, { useState, useEffect, useRef, Fragment, ReactNode, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -205,15 +205,23 @@ export default function DataTable<T>({
   );
   const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">(defaultSortOrder);
 
+  const onSearchChangeRef = useRef(onSearchChange);
   useEffect(() => {
+    onSearchChangeRef.current = onSearchChange;
+  });
+
+  const isFirstSearchRender = useRef(true);
+  useEffect(() => {
+    if (isFirstSearchRender.current) {
+      isFirstSearchRender.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
-      if (onSearchChange) {
-        onSearchChange(searchTerm);
-      }
+      onSearchChangeRef.current?.(searchTerm);
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, onSearchChange]);
+  }, [searchTerm]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilterValues((prev) => ({ ...prev, [key]: value }));

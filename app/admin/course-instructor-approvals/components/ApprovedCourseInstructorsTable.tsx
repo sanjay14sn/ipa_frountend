@@ -2,9 +2,8 @@
 
 import React, { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/shared";
+import { DataTable, StatusBadge } from "@/components/shared";
 import type {
   DataTableColumn,
   DataTableSortOption,
@@ -118,7 +117,7 @@ export default function ApprovedCourseInstructorsTable({
       key: "status",
       header: "Status",
       className: "w-[120px]",
-      render: (instructor) => <Badge variant="default">{instructor.status}</Badge>,
+      render: (instructor) => <StatusBadge label={instructor.status} />,
     },
     {
       key: "actions",

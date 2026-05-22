@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { DataTable } from "@/components/shared";
+import { DataTable, StatusBadge } from "@/components/shared";
 import type { DataTableColumn } from "@/components/shared";
 import type { FranchisePaymentSummary } from "@/services/payment.service";
 import { useAdminFranchisePaymentSummaries } from "@/hooks/api/payment.hooks";
@@ -54,9 +54,7 @@ export default function PaymentsTable({ franchiseId }: PaymentsTableProps = {}) 
       header: "Completed",
       className: "text-center",
       render: (s) => (
-        <Badge variant="outline" className="text-green-700 border-green-300">
-          {s.totalCompleted} completed
-        </Badge>
+        <StatusBadge tone="success" label={`${s.totalCompleted} completed`} />
       ),
     },
     {
@@ -64,9 +62,7 @@ export default function PaymentsTable({ franchiseId }: PaymentsTableProps = {}) 
       header: "Pending",
       className: "text-center",
       render: (s) => (
-        <Badge variant="outline" className="text-yellow-700 border-yellow-300">
-          {s.totalPending} pending
-        </Badge>
+        <StatusBadge tone="warning" label={`${s.totalPending} pending`} />
       ),
     },
     {

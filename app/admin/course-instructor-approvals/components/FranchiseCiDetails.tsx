@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/shared";
+import { DataTable, StatusBadge } from "@/components/shared";
 import type { DataTableColumn, DataTableSortOption } from "@/components/shared";
 import {
   DetailField,
@@ -96,11 +95,7 @@ export default function FranchiseCiDetails({
       key: "status",
       header: "Status",
       className: "w-[110px]",
-      render: (ci) => (
-        <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
-          {ci.status}
-        </Badge>
-      ),
+      render: (ci) => <StatusBadge label={ci.status} />,
     },
     {
       key: "actions",

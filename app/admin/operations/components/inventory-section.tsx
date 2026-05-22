@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { ToggleField } from "@/components/shared/toggle-field";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -1155,15 +1155,17 @@ function InventoryForm({
           }
         />
       </div>
-      <div className="flex items-center gap-3">
-        <Switch
-          checked={form.isActive}
-          onCheckedChange={(checked) =>
-            setForm((prev) => ({ ...prev, isActive: checked }))
-          }
-        />
-        <Label>Active item</Label>
-      </div>
+      <ToggleField
+        label="Item status"
+        value={form.isActive ? "active" : "inactive"}
+        onValueChange={(v) =>
+          setForm((prev) => ({ ...prev, isActive: v === "active" }))
+        }
+        options={[
+          { value: "active", label: "Active" },
+          { value: "inactive", label: "Inactive" },
+        ]}
+      />
     </div>
   );
 }

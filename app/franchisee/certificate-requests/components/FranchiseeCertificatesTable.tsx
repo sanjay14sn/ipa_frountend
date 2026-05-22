@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, FileText, Award } from "lucide-react";
-import { DataTable } from "@/components/shared";
+import { DataTable, StatusBadge } from "@/components/shared";
 import type {
   DataTableColumn,
   DataTableFilter,
@@ -87,19 +87,6 @@ export default function FranchiseeCertificatesTable({
   }, [filteredAndSortedData, currentPage]);
 
   const totalPages = Math.ceil(filteredAndSortedData.length / itemsPerPage);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "Issued":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "Rejected":
-        return "bg-red-100 text-red-800 border-red-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
 
   const getLevelColor = (level: string) => {
     if (level.startsWith("EL"))
@@ -189,11 +176,7 @@ export default function FranchiseeCertificatesTable({
       key: "status",
       header: "Status",
       className: "text-center",
-      render: (certificate) => (
-        <Badge className={`${getStatusColor(certificate.status)} border`}>
-          {certificate.status}
-        </Badge>
-      ),
+      render: (certificate) => <StatusBadge label={certificate.status} />,
     },
     {
       key: "actions",

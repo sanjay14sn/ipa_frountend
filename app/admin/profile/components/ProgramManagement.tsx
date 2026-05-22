@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Edit2, FileText, Edit, X } from "lucide-react";
+import { Plus, Trash2, Edit2, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -19,29 +19,16 @@ import {
   type FieldCoordinate,
 } from "@/services/program.service";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { DataTable } from "@/components/shared";
-import type { DataTableColumn } from "@/components/shared";
+  ConfirmDialog,
+  DialogFormField,
+  FormDialog,
+} from "@/components/shared/dialog";
+import { PageTabs, TabsContent as PageTabsContent } from "@/components/shared/page-tabs";
 import { LevelManagement } from "./LevelManagement";
 import { CITrainingLevelManagement } from "./CITrainingLevelManagement";
 import { ProgramKitManagement } from "./ProgramKitManagement";
 import { StreamManagement } from "./StreamManagement";
+import { CertificateTemplateEditor } from "./CertificateTemplateEditor";
 import { getApiBaseUrl } from "@/lib/api-utils";
 import type { Stream } from "@/services/stream.service";
 import type { StreamTransition } from "@/services/stream-transition.service";
@@ -87,17 +74,15 @@ function BasicProgramCatalogPanel({
             skipCatalogLoad
             catalogVersion={catalogVersion}
           />
-          <div className="rounded-lg border bg-white p-4 shadow-sm">
-            <StreamManagement
-              programId={programId}
-              programName={programName}
-              compact
-              initialStreams={streams}
-              initialTransitions={transitions}
-              skipInitialLoad
-              onCatalogChange={onCatalogChange}
-            />
-          </div>
+          <StreamManagement
+            programId={programId}
+            programName={programName}
+            compact
+            initialStreams={streams}
+            initialTransitions={transitions}
+            skipInitialLoad
+            onCatalogChange={onCatalogChange}
+          />
         </>
       ) : null}
     </div>
@@ -127,8 +112,6 @@ export function ProgramManagement() {
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [editProgramName, setEditProgramName] = useState("");
   const [deletingProgram, setDeletingProgram] = useState<Program | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
   const [selectedProgramForTemplate, setSelectedProgramForTemplate] =
     useState<Program | null>(null);
   const [templateData, setTemplateData] = useState<
@@ -159,8 +142,12 @@ export function ProgramManagement() {
   const [catalogTick, setCatalogTick] = useState(0);
   const [kitCounts, setKitCounts] = useState<Record<number, number>>({});
   const [openLevelModes, setOpenLevelModes] = useState<
-    Record<number, "basic" | "ci-training" | "kit-items">
+    Record<number, "basic" | "ci-training" | "kit-items" | "certificate">
   >({});
+  /** Currently active program tab (the program shown in the outer tabs row). */
+  const [activeProgramId, setActiveProgramId] = useState<string>("");
+  /** Certificate editor — selected field key in the right-side fields list. */
+  const [selectedFieldKey, setSelectedFieldKey] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [pdfScale, setPdfScale] = useState({
     width: 612,
@@ -170,8 +157,6 @@ export function ProgramManagement() {
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const itemsPerPage = 10;
-
   const { programs, isLoading } = usePrograms();
 
   useEffect(() => {
@@ -180,7 +165,37 @@ export function ProgramManagement() {
         programs.map((program) => [program.id, prev[program.id] ?? "basic"]),
       ),
     );
-  }, [programs]);
+    // Keep activeProgramId in sync: pick the first program when none selected,
+    // or reset if the active one was deleted.
+    if (programs.length === 0) {
+      if (activeProgramId !== "") setActiveProgramId("");
+      return;
+    }
+    const stillExists = programs.some(
+      (p) => String(p.id) === activeProgramId,
+    );
+    if (!stillExists) {
+      setActiveProgramId(String(programs[0].id));
+    }
+  }, [programs, activeProgramId]);
+
+  // Load the certificate template whenever the user switches to the Certificate
+  // tab for the active program. We only load once per (program, tab) combo to
+  // avoid hammering the API.
+  const certLoadedForRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!activeProgramId) return;
+    const activeProgram = programs.find(
+      (p) => String(p.id) === activeProgramId,
+    );
+    if (!activeProgram) return;
+    const mode = openLevelModes[activeProgram.id];
+    if (mode !== "certificate") return;
+    if (certLoadedForRef.current === activeProgram.id) return;
+    certLoadedForRef.current = activeProgram.id;
+    void loadCertificateTemplate(activeProgram);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProgramId, openLevelModes, programs]);
 
   const handleAddProgram = async () => {
     if (!newProgramName.trim()) {
@@ -231,9 +246,8 @@ export function ProgramManagement() {
     }
   };
 
-  const handleViewCertificateTemplate = async (program: Program) => {
+  const loadCertificateTemplate = async (program: Program) => {
     setSelectedProgramForTemplate(program);
-    setIsTemplateDialogOpen(true);
     setIsLoadingTemplate(true);
     setIsEditMode(false);
 
@@ -641,123 +655,54 @@ export function ProgramManagement() {
     return () => window.removeEventListener("resize", handleResize);
   }, [templateImageUrl]);
 
-  const totalPages = Math.ceil(programs.length / itemsPerPage);
-  const paginatedPrograms = programs.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
-
-  const columns: DataTableColumn<Program>[] = [
-    {
-      key: "program",
-      header: "Program",
-      className: "w-[360px] !h-10 !px-4 !py-2",
-    },
-    {
-      key: "id",
-      header: "Program ID",
-      className: "text-center !h-10 !px-4 !py-2",
-      render: (program) => <Badge variant="outline">ID: {program.id}</Badge>,
-    },
-    {
-      key: "createdDate",
-      header: "Created Date",
-      className: "text-center !h-10 !px-4 !py-2",
-      render: (program) =>
-        program.createdAt
-          ? new Date(program.createdAt).toLocaleDateString()
-          : "N/A",
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      className: "text-center !h-10 !px-4 !py-2",
-      render: (program) => (
-        <div className="flex items-center justify-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 rounded-md p-0 hover:bg-slate-100"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleViewCertificateTemplate(program);
-            }}
-            title="Certificate Template"
-          >
-            <FileText className="w-4 h-4 text-green-600" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 rounded-md p-0 hover:bg-slate-100"
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditingProgram(program);
-              setEditProgramName(program.name);
-              setIsEditDialogOpen(true);
-            }}
-            title="Edit program"
-          >
-            <Edit2 className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 rounded-md p-0 hover:bg-slate-100"
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeletingProgram(program);
-              setIsDeleteDialogOpen(true);
-            }}
-            title="Delete program"
-          >
-            <Trash2 className="w-4 h-4 text-destructive" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
-
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border bg-card px-4 py-4 shadow-sm sm:px-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="text-2xl text-card-foreground">Programs</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Configure program structure, streams, and kit defaults
-            </p>
-          </div>
-          <Button onClick={() => setIsAddDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Program
-          </Button>
-        </div>
-      </div>
-
-      <DataTable
-        data={paginatedPrograms}
-        loading={isLoading}
-        columns={columns}
-        getRowId={(program) => program.id.toString()}
-        renderMainCell={(program) => (
-          <div className="flex flex-col gap-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="font-medium text-gray-900">{program.name}</div>
-              <Badge
-                variant="outline"
-                className="border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
-              >
-                Kit items: {kitCounts[program.id] ?? 0}
-              </Badge>
+    <>
+      {programs.length === 0 ? (
+        <div className="space-y-4">
+          <div className="rounded-2xl border bg-card px-4 py-4 shadow-sm sm:px-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-1">
+                <h1 className="text-2xl text-card-foreground">Programs</h1>
+                <p className="text-sm text-muted-foreground">
+                  Configure program structure, streams, and kit defaults.
+                </p>
+              </div>
+              <Button onClick={() => setIsAddDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Program
+              </Button>
             </div>
-            <div className="text-sm text-gray-500">Levels and streams</div>
           </div>
-        )}
-        renderExpandedContent={(program) => (
-          <div className="border-t bg-gray-50 px-4 py-4 sm:px-5">
-            <div className="space-y-4">
-              <div className="rounded-lg border bg-white p-4 shadow-sm">
+          <div className="rounded-2xl border border-dashed bg-card px-6 py-10 text-center text-sm text-muted-foreground">
+            {isLoading
+              ? "Loading programs…"
+              : "No programs yet. Create your first program to get started."}
+          </div>
+        </div>
+      ) : (
+        <PageTabs
+          title="Programs"
+          description="Configure program structure, streams, and kit defaults."
+          action={
+            <Button onClick={() => setIsAddDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Program
+            </Button>
+          }
+          tabs={programs.map((program) => ({
+            value: String(program.id),
+            label: program.name,
+          }))}
+          value={activeProgramId || String(programs[0].id)}
+          onValueChange={setActiveProgramId}
+        >
+          {programs.map((program) => (
+            <PageTabsContent
+              key={program.id}
+              value={String(program.id)}
+              className="mt-0 space-y-4"
+            >
+              <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-5">
                 <Tabs
                   value={openLevelModes[program.id] ?? "basic"}
                   onValueChange={(value) =>
@@ -766,16 +711,47 @@ export function ProgramManagement() {
                       [program.id]: value as
                         | "basic"
                         | "ci-training"
-                        | "kit-items",
+                        | "kit-items"
+                        | "certificate",
                     }))
                   }
                   className="space-y-4"
                 >
-                  <TabsList className="grid w-full max-w-[420px] grid-cols-3">
-                    <TabsTrigger value="basic">Basic</TabsTrigger>
-                    <TabsTrigger value="ci-training">CI Training</TabsTrigger>
-                    <TabsTrigger value="kit-items">Kit Items</TabsTrigger>
-                  </TabsList>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <TabsList className="flex h-auto flex-wrap gap-1">
+                      <TabsTrigger value="basic">Basic</TabsTrigger>
+                      <TabsTrigger value="ci-training">CI Training</TabsTrigger>
+                      <TabsTrigger value="kit-items">Kit Items</TabsTrigger>
+                      <TabsTrigger value="certificate">Certificate</TabsTrigger>
+                    </TabsList>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 rounded-md p-0"
+                        onClick={() => {
+                          setEditingProgram(program);
+                          setEditProgramName(program.name);
+                          setIsEditDialogOpen(true);
+                        }}
+                        title="Rename program"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 rounded-md p-0"
+                        onClick={() => {
+                          setDeletingProgram(program);
+                          setIsDeleteDialogOpen(true);
+                        }}
+                        title="Delete program"
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
                   <TabsContent value="basic">
                     <BasicProgramCatalogPanel
                       programId={program.id}
@@ -798,327 +774,107 @@ export function ProgramManagement() {
                         setKitCounts((prev) =>
                           prev[program.id] === count
                             ? prev
-                            : {
-                                ...prev,
-                                [program.id]: count,
-                              },
+                            : { ...prev, [program.id]: count },
                         )
                       }
                     />
                   </TabsContent>
+                  <TabsContent value="certificate">
+                    {selectedProgramForTemplate?.id !== program.id ? (
+                      <div className="rounded-lg border border-dashed bg-card px-6 py-8 text-center text-sm text-muted-foreground">
+                        Open this tab to load the certificate template…
+                      </div>
+                    ) : isLoadingTemplate ? (
+                      <div className="rounded-lg border border-dashed bg-card px-6 py-8 text-center text-sm text-muted-foreground">
+                        Loading template…
+                      </div>
+                    ) : (
+                      <CertificateTemplateEditor
+                        programName={program.name}
+                        templatePreviewUrl={templatePreviewUrl}
+                        templateImageUrl={templateImageUrl}
+                        fieldCoordinates={fieldCoordinates}
+                        isEditMode={isEditMode}
+                        setIsEditMode={setIsEditMode}
+                        isSavingTemplate={isSavingTemplate}
+                        handleSaveTemplate={handleSaveTemplate}
+                        handleTemplateFileChange={handleTemplateFileChange}
+                        pdfContainerRef={pdfContainerRef}
+                        canvasRef={canvasRef}
+                        pdfToScreen={pdfToScreen}
+                        handleDragStart={handleDragStart}
+                        selectedFieldKey={selectedFieldKey}
+                        setSelectedFieldKey={setSelectedFieldKey}
+                      />
+                    )}
+                  </TabsContent>
                 </Tabs>
               </div>
-            </div>
-          </div>
-        )}
-        pagination={{ total: programs.length, totalPages }}
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        emptyMessage="No programs found. Create your first program to get started."
-        resultsText={(count, total) => `Showing ${count} of ${total} programs`}
-      />
+            </PageTabsContent>
+          ))}
+        </PageTabs>
+      )}
 
       {/* Add Program Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Program</DialogTitle>
-            <DialogDescription>
-              Create a new program. You can add levels and inventory to it
-              later.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="programName">Program Name</Label>
-              <Input
-                id="programName"
-                placeholder="e.g., Reading Literacy"
-                value={newProgramName}
-                onChange={(e) => setNewProgramName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddProgram()}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAddProgram}
-              className="bg-primary hover:bg-brand-green-600"
-            >
-              Create Program
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FormDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        size="sm"
+        title="Add New Program"
+        description="Create a new program. You can add levels and inventory to it later."
+        headerIcon={Plus}
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleAddProgram();
+        }}
+        submitLabel="Create Program"
+      >
+        <DialogFormField id="programName" label="Program Name" required>
+          <Input
+            id="programName"
+            placeholder="e.g., Reading Literacy"
+            value={newProgramName}
+            onChange={(e) => setNewProgramName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAddProgram()}
+          />
+        </DialogFormField>
+      </FormDialog>
 
       {/* Edit Program Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Program</DialogTitle>
-            <DialogDescription>Update the program name</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="editProgramName">Program Name</Label>
-              <Input
-                id="editProgramName"
-                value={editProgramName}
-                onChange={(e) => setEditProgramName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleEditProgram()}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleEditProgram}
-              className="bg-primary hover:bg-brand-green-600"
-            >
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FormDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        size="sm"
+        title="Edit Program"
+        description="Update the program name."
+        headerIcon={Edit2}
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleEditProgram();
+        }}
+        submitLabel="Save Changes"
+      >
+        <DialogFormField id="editProgramName" label="Program Name" required>
+          <Input
+            id="editProgramName"
+            value={editProgramName}
+            onChange={(e) => setEditProgramName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleEditProgram()}
+          />
+        </DialogFormField>
+      </FormDialog>
 
       {/* Delete Program Dialog */}
-      <AlertDialog
+      <ConfirmDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the program &quot;
-              {deletingProgram?.name}
-              &quot;. This action cannot be undone and will also delete all
-              associated levels and inventory.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteProgram}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        variant="destructive"
+        title="Delete program?"
+        description={`This will permanently delete the program "${deletingProgram?.name}". This action cannot be undone and will also delete all associated levels and inventory.`}
+        confirmLabel="Delete"
+        onConfirm={handleDeleteProgram}
+      />
 
-      {/* Certificate Template Dialog */}
-      <Dialog
-        open={isTemplateDialogOpen}
-        onOpenChange={setIsTemplateDialogOpen}
-      >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-green-600" />
-              Certificate Template - {selectedProgramForTemplate?.name}
-            </DialogTitle>
-            <DialogDescription>
-              Upload a PDF template and configure field coordinates for
-              certificate generation.
-            </DialogDescription>
-          </DialogHeader>
-
-          {isLoadingTemplate ? (
-            <div className="text-center py-8 text-gray-500">
-              Loading template...
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Template PDF Upload */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Template PDF</h3>
-                  {templatePreviewUrl && fieldCoordinates && (
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant={isEditMode ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setIsEditMode(!isEditMode)}
-                      >
-                        {isEditMode ? (
-                          <>
-                            <X className="w-4 h-4 mr-2" />
-                            View Mode
-                          </>
-                        ) : (
-                          <>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit Coordinates
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="templateFile">Upload Template PDF</Label>
-                    <Input
-                      id="templateFile"
-                      type="file"
-                      accept=".pdf"
-                      onChange={handleTemplateFileChange}
-                      className="mt-2"
-                    />
-                    <p className="text-sm text-gray-500 mt-1">
-                      Upload a PDF file to use as the certificate template.
-                      Click &quot;Edit Coordinates&quot; to adjust field
-                      positions.
-                    </p>
-                  </div>
-                  {templatePreviewUrl && (
-                    <div className="border rounded-lg p-4 bg-gray-50">
-                      <p className="text-sm font-medium mb-2">
-                        Template Preview:
-                      </p>
-                      <div
-                        ref={pdfContainerRef}
-                        className="relative w-full border rounded bg-white overflow-hidden"
-                        style={{ minHeight: "600px" }}
-                      >
-                        {/* Hidden canvas for PDF rendering */}
-                        <canvas
-                          ref={canvasRef}
-                          className="hidden"
-                          style={{ display: "none" }}
-                        />
-                        {/* Display image */}
-                        {templateImageUrl ? (
-                          <img
-                            src={templateImageUrl}
-                            alt="Template Preview"
-                            className="w-full h-auto"
-                            style={{ display: "block" }}
-                          />
-                        ) : (
-                          <div className="flex items-center justify-center h-full min-h-[600px]">
-                            <p className="text-gray-500">
-                              Loading PDF preview...
-                            </p>
-                          </div>
-                        )}
-                        {isEditMode && fieldCoordinates && templateImageUrl && (
-                          <div className="absolute inset-0 pointer-events-none">
-                            {Object.entries(fieldCoordinates).map(
-                              ([key, coord]) => {
-                                const r = coord.rect;
-                                if (!r || r.length < 4) return null;
-                                const x1 = pdfToScreen(r[0], false);
-                                const y1 = pdfToScreen(r[1], true);
-                                const x2 = pdfToScreen(r[2], false);
-                                const y2 = pdfToScreen(r[3], true);
-                                const width = x2 - x1;
-                                const height = y2 - y1;
-
-                                return (
-                                  <div
-                                    key={key}
-                                    className={`absolute border-2 ${
-                                      isEditMode
-                                        ? "border-blue-500 bg-blue-100/30 cursor-move pointer-events-auto"
-                                        : "border-green-500 bg-green-100/20"
-                                    }`}
-                                    style={{
-                                      left: `${x1}px`,
-                                      top: `${y1}px`,
-                                      width: `${width}px`,
-                                      height: `${height}px`,
-                                    }}
-                                    onMouseDown={(e) =>
-                                      isEditMode && handleDragStart(key, e)
-                                    }
-                                    title={coord.label}
-                                  >
-                                    <div
-                                      className={`absolute -top-6 left-0 text-xs font-medium px-1 rounded ${
-                                        isEditMode
-                                          ? "bg-blue-500 text-white"
-                                          : "bg-green-500 text-white"
-                                      }`}
-                                    >
-                                      {coord.label}
-                                    </div>
-                                  </div>
-                                );
-                              },
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      {isEditMode && (
-                        <p className="text-sm text-blue-600 mt-2">
-                          💡 Drag the blue boxes to reposition field
-                          coordinates. Click &quot;Save Template&quot; to save
-                          changes.
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsTemplateDialogOpen(false);
-                setSelectedProgramForTemplate(null);
-                setTemplateFile(null);
-                setTemplatePreviewUrl(null);
-                setTemplateImageUrl(null);
-                setIsEditMode(false);
-                setFieldCoordinates(null);
-                setTemplateId(undefined);
-                setTemplateData({
-                  certificateTitle: "",
-                  issuerName: "",
-                  signatureField1Label: "",
-                  signatureField1Name: "",
-                  signatureField2Label: "",
-                  signatureField2Name: "",
-                  additionalText: "",
-                  isActive: true,
-                });
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveTemplate}
-              disabled={isSavingTemplate}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              {isSavingTemplate ? (
-                <>
-                  <span className="animate-spin mr-2">⏳</span>
-                  Saving...
-                </>
-              ) : (
-                "Save Template"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+    </>
   );
 }

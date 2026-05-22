@@ -7,13 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -21,15 +14,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleField } from "@/components/shared/toggle-field";
 import {
   User,
   Users,
-  ArrowRight,
   Save,
   AlertCircle,
   CheckCircle,
 } from "lucide-react";
 import React from "react";
+import {
+  MultiStepDialog,
+  SuccessDialog,
+  type StepDef,
+} from "@/components/shared/dialog";
 import {
   StudentStream,
   StudentIdStatus,
@@ -55,24 +53,11 @@ function calculateAge(dob: string): number {
   return age;
 }
 
-// Define the steps for the form
-const FORM_STEPS = [
-  {
-    id: 1,
-    title: "Basic Information",
-  },
-  {
-    id: 2,
-    title: "Parent Details",
-  },
-  {
-    id: 3,
-    title: "Contact & Address",
-  },
-  {
-    id: 4,
-    title: "Academic Details",
-  },
+const FORM_STEPS: StepDef[] = [
+  { id: 1, title: "Basic Information" },
+  { id: 2, title: "Parent Details" },
+  { id: 3, title: "Contact & Address" },
+  { id: 4, title: "Academic Details" },
 ];
 
 const STANDARDS = [
@@ -93,56 +78,6 @@ const STANDARDS = [
   "12th",
 ];
 
-// Stepper Component
-const Stepper = ({
-  currentStep,
-  steps,
-}: {
-  currentStep: number;
-  steps: typeof FORM_STEPS;
-}) => {
-  return (
-    <div className="w-full">
-      <div className="flex items-center justify-between">
-        {steps.map((step, index) => (
-          <React.Fragment key={step.id}>
-            <div className="flex flex-col items-center flex-1">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-all duration-200 ${
-                  currentStep === step.id
-                    ? "bg-primary text-white border-primary shadow-md"
-                    : currentStep > step.id
-                    ? "bg-primary text-white border-primary"
-                    : "bg-white text-gray-400 border-gray-300"
-                }`}
-              >
-                {currentStep > step.id ? "✓" : step.id}
-              </div>
-              <div className="mt-2 text-center max-w-[100px]">
-                <p
-                  className={`text-xs font-medium leading-tight ${
-                    currentStep >= step.id ? "text-gray-900" : "text-gray-400"
-                  }`}
-                >
-                  {step.title}
-                </p>
-              </div>
-            </div>
-            {index < steps.length - 1 && (
-              <div className="flex items-center justify-center flex-1 max-w-[60px] px-2">
-                <div
-                  className={`h-0.5 w-full transition-all duration-200 ${
-                    currentStep > step.id ? "bg-primary" : "bg-gray-300"
-                  }`}
-                />
-              </div>
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 interface AddStudentModalProps {
   open: boolean;
@@ -741,79 +676,57 @@ export default function AddStudentModal({
       case 1:
         return (
           <div className="space-y-4">
-            {/* Student Type Selection */}
-            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-              <h4 className="font-medium text-primary mb-3 flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Student Type
-              </h4>
-              <div className="flex items-center space-x-6">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="newStudent"
-                    name="studentType"
-                    checked={!formData.existing}
-                    onChange={() => {
-                      // For new students, auto-select first level if stream is selected
-                      // and clear any previously-entered existing-student data.
-                      setFormData((prev) => {
-                        const clearedExistingFields = {
-                          previousLevelId: 0,
-                          previousMarks: "",
-                          previousTheoryMarks: "",
-                          previousTotalMarks: "",
-                          previousCompletedAt: "",
-                          previousInstructorId: 0,
-                          idCardIssued: false,
-                          idCardIssueDate: "",
-                        };
-                        if (prev.streamId > 0 && levels.length > 0) {
-                          const firstLevel = levels[0];
-                          return {
-                            ...prev,
-                            existing: false,
-                            levelId: firstLevel.id,
-                            ...clearedExistingFields,
-                          };
-                        }
-                        return {
-                          ...prev,
-                          existing: false,
-                          levelId: 0,
-                          ...clearedExistingFields,
-                        };
-                      });
-                    }}
-                    className="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-primary"
-                  />
-                  <Label htmlFor="newStudent" className="text-sm font-medium">
-                    New Student
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="existingStudent"
-                    name="studentType"
-                    checked={formData.existing}
-                    onChange={() => handleInputChange("existing", true)}
-                    className="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-primary"
-                  />
-                  <Label
-                    htmlFor="existingStudent"
-                    className="text-sm font-medium"
-                  >
-                    Existing Student
-                  </Label>
-                </div>
-              </div>
-              <p className="text-sm text-primary/80 mt-2">
-                {formData.existing
-                  ? "Select this if the student is already enrolled in your franchise"
-                  : "Select this for new student registration"}
-              </p>
-            </div>
+            <ToggleField
+              icon={User}
+              label="Student type"
+              value={formData.existing ? "existing" : "new"}
+              onValueChange={(v) => {
+                if (v === "existing") {
+                  handleInputChange("existing", true);
+                  return;
+                }
+                setFormData((prev) => {
+                  const clearedExistingFields = {
+                    previousLevelId: 0,
+                    previousMarks: "",
+                    previousTheoryMarks: "",
+                    previousTotalMarks: "",
+                    previousCompletedAt: "",
+                    previousInstructorId: 0,
+                    idCardIssued: false,
+                    idCardIssueDate: "",
+                  };
+                  if (prev.streamId > 0 && levels.length > 0) {
+                    const firstLevel = levels[0];
+                    return {
+                      ...prev,
+                      existing: false,
+                      levelId: firstLevel.id,
+                      ...clearedExistingFields,
+                    };
+                  }
+                  return {
+                    ...prev,
+                    existing: false,
+                    levelId: 0,
+                    ...clearedExistingFields,
+                  };
+                });
+              }}
+              options={[
+                {
+                  value: "new",
+                  label: "New student",
+                  description: "Select this for new student registration.",
+                },
+                {
+                  value: "existing",
+                  label: "Existing student",
+                  description:
+                    "Select this if the student is already enrolled in your franchise — you'll capture their previous level.",
+                },
+              ]}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -1646,129 +1559,34 @@ export default function AddStudentModal({
 
   if (submitted) {
     return (
-      <Dialog open={false} onOpenChange={handleModalOpenChange}>
-        <DialogContent className="max-w-md w-full mx-4">
-          <DialogHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <CheckCircle className="h-12 w-12 text-primary" />
-            </div>
-            <DialogTitle className="text-2xl font-bold text-gray-900">
-              Student Registered Successfully!
-            </DialogTitle>
-            <DialogDescription className="text-center">
-              The student has been registered successfully. You can now view and
-              manage the student from the students list.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="pt-4">
-            <Button
-              className="w-full bg-primary hover:bg-primary/90"
-              onClick={handleClose}
-            >
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SuccessDialog
+        open={open}
+        onOpenChange={handleModalOpenChange}
+        title="Student Registered Successfully!"
+        description="The student has been registered successfully. You can now view and manage the student from the students list."
+        actionLabel="Close"
+        onAction={handleClose}
+      />
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleModalOpenChange}>
-      <DialogContent className="max-w-4xl w-full mx-4 max-h-[95vh] overflow-hidden flex flex-col">
-        <DialogHeader className="text-center border-b border-gray-200 pb-4 flex-shrink-0">
-          <div className="flex justify-center mb-4">
-            <User className="h-8 w-8 text-gray-700" />
-          </div>
-          <DialogTitle className="text-xl font-bold text-gray-900">
-            Register New Student
-          </DialogTitle>
-          <DialogDescription>
-            Complete student registration step by step
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
-            {/* Progress Stepper with clear separation */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-              <Stepper currentStep={currentStep} steps={FORM_STEPS} />
-            </div>
-
-            {/* Form Content with clear separation */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">
-                    {FORM_STEPS[currentStep - 1].title}
-                  </h3>
-                  <div className="space-y-4">{renderStepContent()}</div>
-                </div>
-                {currentStep < FORM_STEPS.length ? (
-                  <div className="flex gap-4 pt-6">
-                    <div className="flex gap-2">
-                      {currentStep > 1 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handlePrevious}
-                        >
-                          Previous
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="flex-1" />
-
-                    <Button
-                      type="button"
-                      onClick={handleNext}
-                      className="bg-primary hover:bg-primary/90"
-                    >
-                      Next
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSubmit}>
-                    <div className="flex gap-4 pt-6">
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handlePrevious}
-                        >
-                          Previous
-                        </Button>
-                      </div>
-
-                      <div className="flex-1" />
-
-                      <Button
-                        type="submit"
-                        className="bg-primary hover:bg-primary/90"
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <div className="flex items-center space-x-2">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            <span>Registering...</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <Save className="w-4 h-4" />
-                            <span>Register Student</span>
-                          </div>
-                        )}
-                      </Button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <MultiStepDialog
+      open={open}
+      onOpenChange={handleModalOpenChange}
+      size="xl"
+      title="Register New Student"
+      description="Complete student registration step by step"
+      headerIcon={User}
+      steps={FORM_STEPS}
+      currentStep={currentStep}
+      onBack={handlePrevious}
+      onNext={handleNext}
+      onSubmit={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
+      isSubmitting={isLoading}
+      submitLabel="Register Student"
+    >
+      <div className="space-y-4">{renderStepContent()}</div>
+    </MultiStepDialog>
   );
 }

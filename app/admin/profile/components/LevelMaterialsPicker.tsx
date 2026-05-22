@@ -2,15 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import {
@@ -23,6 +15,11 @@ import {
   unassignInventoryFromLevel,
 } from "@/services/inventory.service";
 import { InventoryCheckboxLinkPanel } from "@/components/inventory/InventoryCheckboxLinkPanel";
+import {
+  AppDialog,
+  AppDialogBody,
+  AppDialogHeader,
+} from "@/components/shared/dialog";
 
 export function LevelMaterialsPicker({
   levelId,
@@ -87,73 +84,42 @@ export function LevelMaterialsPicker({
             <Plus className="h-3.5 w-3.5" />
           </Button>
 
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent className="flex max-h-[90vh] flex-col gap-2 overflow-hidden sm:max-w-[560px]">
-              <DialogHeader className="shrink-0">
-                <DialogTitle>Level Materials</DialogTitle>
-                <DialogDescription>
-                  Add and remove inventory items for this level.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-                {/* Section 1: Already linked */}
-                <div className="shrink-0 rounded-lg border p-3">
-                  <div className="mb-2 text-sm font-medium">Linked items</div>
-                  {isLoadingAssigned || isLoadingCatalog ? (
-                    <p className="text-sm text-muted-foreground">Loading...</p>
-                  ) : assigned.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      No linked items.
-                    </p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {assigned.map((item) => (
-                        <Badge
-                          key={item.id}
-                          variant="secondary"
-                          className="h-7 max-w-full gap-1 py-0 pl-1.5 pr-1 font-normal"
-                        >
-                          <span className="max-w-[220px] truncate">
-                            {item.name}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={disabled}
-                            className="rounded-sm px-1 text-gray-500 hover:bg-muted hover:text-destructive disabled:opacity-50"
-                            aria-label={`Remove ${item.name}`}
-                            onClick={() => void handleRemove(item.id)}
-                          >
-                            x
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Sections 2 + 3: Pending selections + catalog */}
-                <InventoryCheckboxLinkPanel
-                  key={levelId}
-                  className="min-h-0 flex-1"
-                  linkedInventoryIds={assignedIds}
-                  catalogItems={catalog}
-                  isCatalogLoading={isLoadingCatalog}
-                  onSave={async (items) => {
-                    const { assigned: count, failed } =
-                      await bulkAssignInventoryToLevel(levelId, items);
-                    await invalidateLevelItems(levelId);
-                    await refetchAssigned();
-                    if (failed.length > 0) {
-                      toast.error(`${count} linked, ${failed.length} failed`);
-                    } else {
-                      toast.success(`${items.length} item${items.length !== 1 ? "s" : ""} linked to level`);
-                    }
-                  }}
-                />
-              </div>
-            </DialogContent>
-          </Dialog>
+          <AppDialog
+            open={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+            size="xl"
+            padding="flush"
+            scrollBody
+          >
+            <AppDialogHeader
+              title="Level Materials"
+              description="Add and remove inventory items for this level."
+              sticky
+            />
+            <AppDialogBody>
+              <InventoryCheckboxLinkPanel
+                key={levelId}
+                linkedItems={assigned}
+                linkedInventoryIds={assignedIds}
+                catalogItems={catalog}
+                isCatalogLoading={isLoadingCatalog}
+                onUnlink={(item) => void handleRemove(item.id)}
+                onSave={async (items) => {
+                  const { assigned: count, failed } =
+                    await bulkAssignInventoryToLevel(levelId, items);
+                  await invalidateLevelItems(levelId);
+                  await refetchAssigned();
+                  if (failed.length > 0) {
+                    toast.error(`${count} linked, ${failed.length} failed`);
+                  } else {
+                    toast.success(
+                      `${items.length} item${items.length !== 1 ? "s" : ""} linked to level`,
+                    );
+                  }
+                }}
+              />
+            </AppDialogBody>
+          </AppDialog>
         </>
       ) : null}
     </div>

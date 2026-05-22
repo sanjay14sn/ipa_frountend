@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,7 +14,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, X } from "lucide-react";
-import { DataTable } from "@/components/shared";
+import { DataTable, StatusBadge, type StatusTone } from "@/components/shared";
 import type {
   DataTableColumn,
   DataTableFilter,
@@ -49,24 +48,27 @@ function toRow(item: ProgramRequestItem): ProgramRequestRow {
   };
 }
 
-const getStatusColor = (status: string) => {
+function getStatusTone(status: string): StatusTone {
   switch (status?.toLowerCase()) {
     case "active":
-      return "bg-green-100 text-green-800 border-green-200";
+    case "approved":
+      return "success";
     case "requested":
-      return "bg-blue-100 text-blue-800 border-blue-200";
+      return "info";
     case "termset":
     case "termsset":
     case "pendingsignature":
-      return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    case "pending":
+      return "warning";
     case "rejected":
-      return "bg-red-100 text-red-800 border-red-200";
+      return "destructive";
     case "cancelled":
-      return "bg-gray-100 text-gray-600 border-gray-200";
+    case "canceled":
+      return "neutral";
     default:
-      return "bg-gray-100 text-gray-600 border-gray-200";
+      return "neutral";
   }
-};
+}
 
 export default function ProgramRequestsTable({
   onApprove,
@@ -173,9 +175,7 @@ export default function ProgramRequestsTable({
       header: "Status",
       className: "text-center",
       render: (r) => (
-        <Badge className={`${getStatusColor(r.status)} border`}>
-          {r.status}
-        </Badge>
+        <StatusBadge tone={getStatusTone(r.status)} label={r.status} />
       ),
     },
     {

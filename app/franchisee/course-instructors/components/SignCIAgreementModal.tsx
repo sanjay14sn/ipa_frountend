@@ -2,14 +2,6 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -19,6 +11,7 @@ import {
   signCIAgreementAsFranchisee,
 } from "@/services/contracting.service";
 import { FileSignature } from "lucide-react";
+import { DetailDialog } from "@/components/shared/dialog";
 
 interface SignCIAgreementModalProps {
   open: boolean;
@@ -52,7 +45,6 @@ export default function SignCIAgreementModal({ open, onOpenChange }: SignCIAgree
   });
 
   const agreements = data?.rows ?? [];
-  const pendingMySignature = agreements.filter((a) => a.phase === "PENDING_FRANCHISEE_SIGNATURE");
 
   const handleSign = async () => {
     if (!signingId) return;
@@ -70,53 +62,78 @@ export default function SignCIAgreementModal({ open, onOpenChange }: SignCIAgree
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[560px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileSignature className="h-5 w-5" />
-            CI Agreements
-          </DialogTitle>
-          <DialogDescription>
-            Review and sign pending course instructor agreements
-          </DialogDescription>
-        </DialogHeader>
-
-        {agreements.length === 0 && (
-          <p className="text-sm text-muted-foreground py-4 text-center">No CI agreements found</p>
-        )}
-
+    <DetailDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="md"
+      title="CI Agreements"
+      description="Review and sign pending course instructor agreements"
+      headerIcon={FileSignature}
+      footer={{
+        secondary: { label: "Close", onClick: () => onOpenChange(false) },
+      }}
+    >
+      {agreements.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4 text-center">
+          No CI agreements found
+        </p>
+      ) : (
         <div className="space-y-3">
           {agreements.map((ag) => (
-            <div key={ag.id} className="rounded-lg border p-3 space-y-2">
+            <div
+              key={ag.id}
+              className="rounded-lg border border-border p-3 space-y-2"
+            >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-sm">{ag.title}</p>
+                  <p className="font-medium text-sm text-card-foreground">
+                    {ag.title}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {ag.validFrom && ag.validUntil
                       ? `${ag.validFrom} – ${ag.validUntil}`
                       : `Agreement #${ag.id}`}
                   </p>
                 </div>
-                <Badge variant={phaseBadgeVariant(ag.phase)}>{phaseLabel(ag.phase)}</Badge>
+                <Badge variant={phaseBadgeVariant(ag.phase)}>
+                  {phaseLabel(ag.phase)}
+                </Badge>
               </div>
 
-              {ag.phase === "PENDING_FRANCHISEE_SIGNATURE" && signingId !== ag.id && (
-                <Button size="sm" variant="outline" onClick={() => setSigningId(ag.id)}>
-                  Sign Agreement
-                </Button>
-              )}
+              {ag.phase === "PENDING_FRANCHISEE_SIGNATURE" &&
+                signingId !== ag.id && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSigningId(ag.id)}
+                    className="rounded-lg"
+                  >
+                    Sign Agreement
+                  </Button>
+                )}
 
               {signingId === ag.id && (
-                <div className="space-y-2 pt-1 border-t">
+                <div className="space-y-2 pt-1 border-t border-border">
                   <p className="text-xs text-muted-foreground">
-                    Your signature from the franchise agreement will be used automatically.
+                    Your signature from the franchise agreement will be used
+                    automatically.
                   </p>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSign} disabled={submitting}>
+                    <Button
+                      size="sm"
+                      onClick={handleSign}
+                      disabled={submitting}
+                      className="rounded-lg"
+                    >
                       {submitting ? "Signing..." : "Confirm Signature"}
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setSigningId(null)} disabled={submitting}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSigningId(null)}
+                      disabled={submitting}
+                      className="rounded-lg"
+                    >
                       Cancel
                     </Button>
                   </div>
@@ -125,11 +142,7 @@ export default function SignCIAgreementModal({ open, onOpenChange }: SignCIAgree
             </div>
           ))}
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      )}
+    </DetailDialog>
   );
 }

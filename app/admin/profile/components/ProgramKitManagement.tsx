@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Save, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,9 +47,19 @@ export function ProgramKitManagement({
   }, [onCountChange]);
 
   const programKitQuery = useProgramKitItems(programId);
-  const kitItems = (programKitQuery.data ?? []) as ProgramKitItemSummary[];
+  const kitItems = useMemo(
+    () => (programKitQuery.data ?? []) as ProgramKitItemSummary[],
+    [programKitQuery.data],
+  );
   const kitCatalogQuery = useKitCatalog();
-  const catalog = (kitCatalogQuery.data ?? []) as Inventory[];
+  const catalog = useMemo(
+    () => (kitCatalogQuery.data ?? []) as Inventory[],
+    [kitCatalogQuery.data],
+  );
+  const linkedInventoryIds = useMemo(
+    () => new Set(kitItems.map((item) => item.inventoryId)),
+    [kitItems],
+  );
   const isLoading = programKitQuery.isLoading;
   const isCatalogLoading = kitCatalogQuery.isLoading;
 
@@ -270,7 +280,7 @@ export function ProgramKitManagement({
 
         <InventoryCheckboxLinkPanel
           key={programId}
-          linkedInventoryIds={new Set(kitItems.map((item) => item.inventoryId))}
+          linkedInventoryIds={linkedInventoryIds}
           catalogItems={catalog}
           isCatalogLoading={isCatalogLoading}
           onSave={async (items) => {

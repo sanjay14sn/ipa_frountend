@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { ToggleField } from "@/components/shared/toggle-field";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -544,28 +544,32 @@ export function TrainingLevelsSection() {
                 }
               />
             </div>
-            <div className="flex items-center gap-6 pt-8">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={form.practicalMarksRequired}
-                  onCheckedChange={(checked) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      practicalMarksRequired: checked,
-                    }))
-                  }
-                />
-                <Label>Practical required</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={form.isActive}
-                  onCheckedChange={(checked) =>
-                    setForm((prev) => ({ ...prev, isActive: checked }))
-                  }
-                />
-                <Label>Active</Label>
-              </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 pt-4">
+              <ToggleField
+                label="Practical exam"
+                value={form.practicalMarksRequired ? "required" : "not-required"}
+                onValueChange={(v) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    practicalMarksRequired: v === "required",
+                  }))
+                }
+                options={[
+                  { value: "required", label: "Required" },
+                  { value: "not-required", label: "Not required" },
+                ]}
+              />
+              <ToggleField
+                label="Status"
+                value={form.isActive ? "active" : "inactive"}
+                onValueChange={(v) =>
+                  setForm((prev) => ({ ...prev, isActive: v === "active" }))
+                }
+                options={[
+                  { value: "active", label: "Active" },
+                  { value: "inactive", label: "Inactive" },
+                ]}
+              />
             </div>
           </div>
 

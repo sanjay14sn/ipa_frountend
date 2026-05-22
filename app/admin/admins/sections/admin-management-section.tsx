@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { ToggleField } from "@/components/shared/toggle-field";
 import {
   Select,
   SelectContent,
@@ -404,22 +404,25 @@ export function AdminManagementSection() {
             </div>
 
             {formMode === "edit" && editingAdmin?.role !== "super" ? (
-              <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-4 py-3">
-                <div>
-                  <div className="text-sm font-medium text-foreground">
-                    Active access
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Inactive admins will no longer be able to sign in.
-                  </div>
-                </div>
-                <Switch
-                  checked={form.isActive}
-                  onCheckedChange={(checked) =>
-                    setForm((prev) => ({ ...prev, isActive: checked }))
-                  }
-                />
-              </div>
+              <ToggleField
+                label="Access"
+                value={form.isActive ? "active" : "inactive"}
+                onValueChange={(v) =>
+                  setForm((prev) => ({ ...prev, isActive: v === "active" }))
+                }
+                options={[
+                  {
+                    value: "active",
+                    label: "Active",
+                    description: "This admin can sign in and access the portal.",
+                  },
+                  {
+                    value: "inactive",
+                    label: "Inactive",
+                    description: "Sign-in is disabled. The admin keeps access history but cannot log in.",
+                  },
+                ]}
+              />
             ) : null}
           </div>
 

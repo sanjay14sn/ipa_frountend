@@ -1,23 +1,17 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { completeTraining } from "@/services/course-instructor.service";
 import { toast } from "sonner";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
+import {
+  DialogFormField,
+  DialogStateMessage,
+  FormDialog,
+} from "@/components/shared/dialog";
 
 interface CompleteTrainingModalProps {
   isOpen: boolean;
@@ -62,12 +56,17 @@ export function CompleteTrainingModal({
 
       await completeTraining(trainingId, data);
 
-      toast.success(`Successfully completed training for ${instructorName}. Graduation recorded.`);
+      toast.success(
+        `Successfully completed training for ${instructorName}. Graduation recorded.`
+      );
 
       onSuccess?.();
       handleClose();
     } catch (err: any) {
-      toast.error(err.message || "Failed to complete training. The instructor may have already graduated from this level.");
+      toast.error(
+        err.message ||
+          "Failed to complete training. The instructor may have already graduated from this level."
+      );
     } finally {
       setLoading(false);
     }
@@ -82,106 +81,88 @@ export function CompleteTrainingModal({
     onClose();
   };
 
-  const handleDialogOpenChange = (open: boolean) => {
-    if (!open) handleClose();
-  };
-
   return (
-    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-green-600" />
-            Complete Training
-          </DialogTitle>
-          <DialogDescription>
-            Record graduation details for {instructorName} - {levelName}
-          </DialogDescription>
-        </DialogHeader>
+    <FormDialog
+      open={isOpen}
+      onOpenChange={(o) => (o ? null : handleClose())}
+      size="md"
+      title="Complete Training"
+      description={`Record graduation details for ${instructorName} — ${levelName}`}
+      headerIcon={CheckCircle2}
+      onSubmit={handleSubmit}
+      isSubmitting={loading}
+      submitLabel="Complete Training"
+    >
+      <DialogStateMessage
+        tone="info"
+        icon={AlertCircle}
+        title="This will mark the training as complete and record the graduation."
+        description="The instructor cannot graduate from this level again."
+      />
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              This will mark the training as complete and record the graduation.
-              The instructor cannot graduate from this level again.
-            </AlertDescription>
-          </Alert>
+      <DialogFormField
+        id="marksObtained"
+        label={
+          <span>
+            Marks Obtained (%){" "}
+            <span className="text-muted-foreground font-normal">(Optional)</span>
+          </span>
+        }
+      >
+        <Input
+          id="marksObtained"
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          value={formData.marksObtained}
+          onChange={(e) =>
+            setFormData({ ...formData, marksObtained: e.target.value })
+          }
+          onFocus={selectInputValueOnFocus}
+          placeholder="e.g., 95.5"
+          disabled={loading}
+        />
+      </DialogFormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="marksObtained">
-              Marks Obtained (%) <span className="text-gray-500">(Optional)</span>
-            </Label>
-            <Input
-              id="marksObtained"
-              type="number"
-              min="0"
-              max="100"
-              step="0.01"
-              value={formData.marksObtained}
-              onChange={(e) =>
-                setFormData({ ...formData, marksObtained: e.target.value })
-              }
-              onFocus={selectInputValueOnFocus}
-              placeholder="e.g., 95.5"
-              disabled={loading}
-            />
-          </div>
+      <DialogFormField
+        id="certificateNumber"
+        label={
+          <span>
+            Certificate Number{" "}
+            <span className="text-muted-foreground font-normal">(Optional)</span>
+          </span>
+        }
+      >
+        <Input
+          id="certificateNumber"
+          value={formData.certificateNumber}
+          onChange={(e) =>
+            setFormData({ ...formData, certificateNumber: e.target.value })
+          }
+          placeholder="e.g., CERT-2024-001"
+          disabled={loading}
+        />
+      </DialogFormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="certificateNumber">
-              Certificate Number <span className="text-gray-500">(Optional)</span>
-            </Label>
-            <Input
-              id="certificateNumber"
-              value={formData.certificateNumber}
-              onChange={(e) =>
-                setFormData({ ...formData, certificateNumber: e.target.value })
-              }
-              placeholder="e.g., CERT-2024-001"
-              disabled={loading}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">
-              Notes <span className="text-gray-500">(Optional)</span>
-            </Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
-              placeholder="Any additional notes or comments..."
-              rows={3}
-              disabled={loading}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Completing...
-                </>
-              ) : (
-                "Complete Training"
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <DialogFormField
+        id="notes"
+        label={
+          <span>
+            Notes{" "}
+            <span className="text-muted-foreground font-normal">(Optional)</span>
+          </span>
+        }
+      >
+        <Textarea
+          id="notes"
+          value={formData.notes}
+          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          placeholder="Any additional notes or comments..."
+          rows={3}
+          disabled={loading}
+        />
+      </DialogFormField>
+    </FormDialog>
   );
 }
-

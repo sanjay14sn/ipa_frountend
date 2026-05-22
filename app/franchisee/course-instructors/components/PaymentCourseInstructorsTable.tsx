@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, Award, Target, Phone, MapPin } from "lucide-react";
-import { DataTable } from "@/components/shared";
+import { DataTable, StatusBadge } from "@/components/shared";
 import type {
   DataTableColumn,
   DataTableFilter,
@@ -251,12 +251,7 @@ export default function PaymentCourseInstructorsTable({
       className: "w-[160px] text-center",
       render: (row) => (
         <div className="flex justify-center py-1">
-          <Badge
-            variant="outline"
-            className="bg-yellow-50 text-yellow-700 border-yellow-300 px-3 py-1"
-          >
-            {row.status}
-          </Badge>
+          <StatusBadge tone="warning" label={row.status} />
         </div>
       ),
     },
@@ -357,12 +352,7 @@ export default function PaymentCourseInstructorsTable({
                 </span>
               </div>
             </div>
-            <Badge
-              variant="outline"
-              className="bg-yellow-50 text-yellow-700 border-yellow-300 px-4 py-1.5 text-sm font-medium"
-            >
-              Payment Pending
-            </Badge>
+            <StatusBadge tone="warning" label="Payment Pending" />
           </div>
         )}
         filters={filters}

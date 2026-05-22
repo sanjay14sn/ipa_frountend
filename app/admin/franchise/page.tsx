@@ -1,12 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { FranchiseManagementSection } from "./components/franchise-management-section";
 import { PendingApprovalsSection } from "./components/pending-approvals-section";
@@ -19,26 +14,19 @@ function AdminFranchiseHubInner() {
   const [tab, setTab] = useTabFromUrl("franchises", TABS);
 
   return (
-    <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-      <div className="rounded-2xl border bg-card px-4 py-4 shadow-sm sm:px-5">
-        <div>
-          <div className="mb-2 inline-flex rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-            Management
-          </div>
-          <h1 className="text-2xl text-card-foreground">Franchise Hub</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Manage franchises, applications, program requests, and agreements.
-          </p>
-        </div>
-
-        <TabsList className="mt-4 flex h-auto flex-wrap justify-start gap-1">
-          <TabsTrigger value="franchises">Franchises</TabsTrigger>
-          <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="programs">Program requests</TabsTrigger>
-          <TabsTrigger value="agreements">Agreements</TabsTrigger>
-        </TabsList>
-      </div>
-
+    <PageTabs
+      eyebrow="Management"
+      title="Franchise Hub"
+      description="Manage franchises, applications, program requests, and agreements."
+      tabs={[
+        { value: "franchises", label: "Franchises" },
+        { value: "applications", label: "Applications" },
+        { value: "programs", label: "Program requests" },
+        { value: "agreements", label: "Agreements" },
+      ]}
+      value={tab}
+      onValueChange={setTab}
+    >
       <TabsContent value="franchises" className="mt-0">
         <FranchiseManagementSection />
       </TabsContent>
@@ -51,7 +39,7 @@ function AdminFranchiseHubInner() {
       <TabsContent value="agreements" className="mt-0">
         <AdminAgreementsSection />
       </TabsContent>
-    </Tabs>
+    </PageTabs>
   );
 }
 

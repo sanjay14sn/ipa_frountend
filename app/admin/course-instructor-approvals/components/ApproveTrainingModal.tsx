@@ -1,12 +1,4 @@
 import React, { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +25,10 @@ import {
   ApproveTrainingRequest,
 } from "@/services/course-instructor.service";
 import { toast } from "sonner";
+import {
+  DialogFormField,
+  FormDialog,
+} from "@/components/shared/dialog";
 
 interface ApproveTrainingModalProps {
   isOpen: boolean;
@@ -58,7 +54,6 @@ export default function ApproveTrainingModal({
     installmentAmount: "",
   });
 
-  // Calculate installment amount when amount or installment count changes
   const calculateInstallmentAmount = (totalAmount: string, count: string) => {
     if (!totalAmount || !count) return "";
     const amount = parseFloat(totalAmount);
@@ -76,7 +71,6 @@ export default function ApproveTrainingModal({
         [field]: value,
       };
 
-      // Auto-calculate installment amount when amount or installment count changes
       if (field === "amount" || field === "installmentCount") {
         const installmentAmount = calculateInstallmentAmount(
           field === "amount" ? value : newData.amount,
@@ -108,12 +102,13 @@ export default function ApproveTrainingModal({
 
       await approveTraining(Number(instructorId), trainingData);
 
-      toast.success(`Training has been successfully approved for ${instructorName}`);
+      toast.success(
+        `Training has been successfully approved for ${instructorName}`
+      );
 
       onSuccess?.();
       onClose();
 
-      // Reset form
       setFormData({
         dateOfTraining: new Date(),
         amount: "15000",
@@ -130,144 +125,116 @@ export default function ApproveTrainingModal({
   };
 
   const handleClose = () => {
-    if (!isLoading) {
-      onClose();
-    }
-  };
-
-  const handleDialogOpenChange = (open: boolean) => {
-    if (!open) handleClose();
+    if (!isLoading) onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Approve Training</DialogTitle>
-          <DialogDescription>
-            Add training details for {instructorName}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="dateOfTraining">Training Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !formData.dateOfTraining && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formData.dateOfTraining ? (
-                    format(formData.dateOfTraining, "PPP")
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={formData.dateOfTraining}
-                  onSelect={(date) =>
-                    date && handleInputChange("dateOfTraining", date)
-                  }
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="amount">Training Amount (₹)</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="Enter training amount"
-              value={formData.amount}
-              onChange={(e) => handleInputChange("amount", e.target.value)}
-              onFocus={selectInputValueOnFocus}
-              required
-            />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="useEMI"
-              checked={formData.useEMI}
-              onCheckedChange={(checked) =>
-                handleInputChange("useEMI", checked)
+    <FormDialog
+      open={isOpen}
+      onOpenChange={(o) => (o ? null : handleClose())}
+      size="sm"
+      title="Approve Training"
+      description={`Add training details for ${instructorName}`}
+      onSubmit={handleSubmit}
+      isSubmitting={isLoading}
+      submitLabel={isLoading ? "Approving..." : "Approve Training"}
+    >
+      <DialogFormField id="dateOfTraining" label="Training Date">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !formData.dateOfTraining && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {formData.dateOfTraining ? (
+                format(formData.dateOfTraining, "PPP")
+              ) : (
+                <span>Pick a date</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={formData.dateOfTraining}
+              onSelect={(date) =>
+                date && handleInputChange("dateOfTraining", date)
               }
             />
-            <Label htmlFor="useEMI">Use EMI (Installment)</Label>
-          </div>
+          </PopoverContent>
+        </Popover>
+      </DialogFormField>
 
-          {formData.useEMI && (
-            <div className="space-y-4 pl-6 border-l-2 border-gray-200">
-              <div className="space-y-2">
-                <Label htmlFor="installmentCount">Installment Period</Label>
-                <Select
-                  value={formData.installmentCount}
-                  onValueChange={(value) =>
-                    handleInputChange("installmentCount", value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select installment period" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="3">3 months</SelectItem>
-                    <SelectItem value="6">6 months</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+      <DialogFormField id="amount" label="Training Amount (₹)" required>
+        <Input
+          id="amount"
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="Enter training amount"
+          value={formData.amount}
+          onChange={(e) => handleInputChange("amount", e.target.value)}
+          onFocus={selectInputValueOnFocus}
+          required
+        />
+      </DialogFormField>
 
-              <div className="space-y-2">
-                <Label htmlFor="installmentAmount">
-                  Installment Amount (₹)
-                </Label>
-                <Input
-                  id="installmentAmount"
-                  type="text"
-                  value={
-                    formData.installmentAmount
-                      ? `₹${formData.installmentAmount}`
-                      : ""
-                  }
-                  readOnly
-                  className="bg-gray-50"
-                  placeholder="Auto-calculated"
-                />
-                {formData.installmentAmount && (
-                  <p className="text-xs text-gray-500">
-                    {formData.installmentCount} installments of ₹
-                    {formData.installmentAmount} each
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="useEMI"
+          checked={formData.useEMI}
+          onCheckedChange={(checked) => handleInputChange("useEMI", checked)}
+        />
+        <Label htmlFor="useEMI">Use EMI (Installment)</Label>
+      </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isLoading}
+      {formData.useEMI && (
+        <div className="space-y-4 pl-6 border-l-2 border-border">
+          <DialogFormField id="installmentCount" label="Installment Period">
+            <Select
+              value={formData.installmentCount}
+              onValueChange={(value) =>
+                handleInputChange("installmentCount", value)
+              }
             >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Approving..." : "Approve Training"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+              <SelectTrigger id="installmentCount">
+                <SelectValue placeholder="Select installment period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3">3 months</SelectItem>
+                <SelectItem value="6">6 months</SelectItem>
+              </SelectContent>
+            </Select>
+          </DialogFormField>
+
+          <DialogFormField
+            id="installmentAmount"
+            label="Installment Amount (₹)"
+            hint={
+              formData.installmentAmount
+                ? `${formData.installmentCount} installments of ₹${formData.installmentAmount} each`
+                : undefined
+            }
+          >
+            <Input
+              id="installmentAmount"
+              type="text"
+              value={
+                formData.installmentAmount
+                  ? `₹${formData.installmentAmount}`
+                  : ""
+              }
+              readOnly
+              className="bg-muted/40"
+              placeholder="Auto-calculated"
+            />
+          </DialogFormField>
+        </div>
+      )}
+    </FormDialog>
   );
 }

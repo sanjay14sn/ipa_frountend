@@ -4,7 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { AlertTriangle, Award, CalendarClock, CreditCard, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/shared";
+import { DataTable, StatusBadge, type StatusTone } from "@/components/shared";
 import type {
   DataTableColumn,
   DataTableFilter,
@@ -60,21 +60,15 @@ function getLevelColor(_level: string) {
   return "bg-gray-100 text-gray-800 border-gray-200";
 }
 
-function getStatusColor(isActive: boolean) {
-  return isActive
-    ? "bg-primary/10 text-primary border-primary/20"
-    : "bg-gray-50 text-gray-600 border-gray-200";
-}
-
-function getIdStatusColor(idStatus: StudentIdStatus) {
+function getIdStatusTone(idStatus: StudentIdStatus): StatusTone {
   switch (idStatus) {
     case StudentIdStatus.ISSUED:
-      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      return "success";
     case StudentIdStatus.REQUESTED:
-      return "bg-amber-50 text-amber-700 border-amber-200";
+      return "warning";
     case StudentIdStatus.NOT_ISSUED:
     default:
-      return "bg-gray-50 text-gray-700 border-gray-200";
+      return "neutral";
   }
 }
 
@@ -227,11 +221,10 @@ export default function StudentsTable({
       header: "Status",
       className: "h-auto min-h-0 w-[5.25rem] min-w-[5.25rem] px-2 py-2 text-center",
       render: (student) => (
-        <Badge
-          className={`${getStatusColor(student.isActive)} border px-1.5 text-[11px]`}
-        >
-          {student.isActive ? "Active" : "Inactive"}
-        </Badge>
+        <StatusBadge
+          label={student.isActive ? "Active" : "Inactive"}
+          className="px-1.5 text-[11px]"
+        />
       ),
     },
     {
@@ -239,11 +232,11 @@ export default function StudentsTable({
       header: "ID",
       className: "h-auto min-h-0 w-[5.5rem] min-w-[5.5rem] px-2 py-2 text-center",
       render: (student) => (
-        <Badge
-          className={`${getIdStatusColor(student.idIssued)} max-w-full truncate border px-1.5 text-[11px]`}
-        >
-          {student.idIssued}
-        </Badge>
+        <StatusBadge
+          tone={getIdStatusTone(student.idIssued)}
+          label={student.idIssued}
+          className="max-w-full truncate px-1.5 text-[11px]"
+        />
       ),
     },
     {

@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, Loader2, Save, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { ToggleField } from "@/components/shared/toggle-field";
+import { LinkPicker, type LinkPickerAddProps } from "@/components/shared/dialog/picker/LinkPicker";
 import { Label } from "@/components/ui/label";
 import type { InventoryItemSummary } from "@/services/inventory.service";
 import type {
@@ -13,9 +14,7 @@ import type {
   SupplierItemTerm,
 } from "@/services/procurement.service";
 import { toast } from "sonner";
-import { CATALOG_PENDING_SPLIT_ROW_HEIGHT } from "@/lib/catalog-line-split-layout";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
-import { cn } from "@/lib/utils";
 
 export type BulkSourcingLineSubmit = {
   inventoryItemId: number;
@@ -313,55 +312,9 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
     }
   }
 
-  return (
-    <div
-      className={cn(
-        "flex min-h-0 flex-1 flex-col rounded-lg border border-dashed bg-slate-50/60",
-        mode === "purchase-order" ? "gap-0.5 px-1.5 py-1" : "gap-0.5 px-2 py-1.5 sm:px-2 sm:py-2",
-        className,
-      )}
-    >
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-1">
-        <h4 className="text-xs font-medium leading-tight text-gray-900 sm:text-sm">
-          {mode === "sourcing" ? "Add inventory sourcing" : "Add order lines"}
-        </h4>
-        {isDirty ? (
-          <Button
-            type="button"
-            size="sm"
-            disabled={isSaving}
-            onClick={() => void handleSave()}
-            className="bg-primary hover:bg-primary/90"
-          >
-            {isSaving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            Save ({pendingCount})
-          </Button>
-        ) : null}
-      </div>
-
-      <div
-        className={cn(
-          "mt-1 flex min-h-0 flex-1",
-          isDirty ? "grid grid-cols-1 gap-2" : "flex-col gap-2",
-        )}
-        style={
-          isDirty
-            ? {
-                gridTemplateRows: `${CATALOG_PENDING_SPLIT_ROW_HEIGHT} ${CATALOG_PENDING_SPLIT_ROW_HEIGHT}`,
-              }
-            : { minHeight: "min(48vh, 420px)" }
-        }
-      >
-        {isDirty ? (
-          <div className="h-full min-h-0 space-y-1.5 overflow-y-auto rounded-md border border-primary/20 bg-primary/5 px-1 py-0.5 sm:px-1.5 sm:py-1">
-          <p className="shrink-0 text-[11px] font-medium leading-tight text-gray-900 sm:text-xs">
-            {pendingCount} selected — adjust fields then save
-          </p>
-          {Object.entries(pending).map(([idStr, draft]) => {
+  const renderPendingRows = () => (
+    <div className="space-y-1.5">
+      {Object.entries(pending).map(([idStr, draft]) => {
             const id = Number(idStr);
             const item = catalogItems.find((c) => c.id === id);
             const poTerm =
@@ -382,124 +335,114 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
               return (
                 <div
                   key={id}
-                  className="flex w-full flex-col gap-1.5 rounded-md border bg-background/80 px-1.5 py-1 sm:gap-2 sm:px-2 sm:py-1.5 lg:flex-row lg:items-end lg:justify-between lg:gap-3"
+                  className="rounded-md border border-border bg-card px-2.5 py-2 space-y-1.5"
                 >
-                  <div className="min-w-0 max-w-full shrink-0 lg:max-w-[min(26rem,48%)] lg:pr-2">
-                    <div className="truncate text-sm font-medium leading-tight text-gray-900">
-                      {displayName}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium leading-tight text-card-foreground">
+                        {displayName}
+                      </div>
+                      <div className="truncate text-[11px] leading-tight text-muted-foreground">
+                        {displaySkuLine || "—"}
+                      </div>
                     </div>
-                    <div className="break-words text-xs leading-snug text-muted-foreground">
-                      {displaySkuLine || "—"}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toggleItem(id)}
+                      className="h-7 w-7 shrink-0 inline-flex items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                      aria-label={`Remove ${displayName}`}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                  <div className="flex w-full min-w-0 flex-col gap-1.5 lg:w-auto lg:flex-row lg:items-end lg:justify-end lg:gap-3">
-                    <div className="flex min-w-0 flex-1 flex-wrap items-end gap-x-1.5 gap-y-1 sm:gap-x-2 sm:gap-y-1.5">
-                      <div className="min-w-0 flex-1 basis-[7rem] space-y-0.5 sm:max-w-[14rem]">
-                        <Label className="text-[11px] text-muted-foreground">Supplier SKU</Label>
-                        <Input
-                          className="h-8 w-full min-w-0 text-sm"
-                          value={d.supplierSku}
-                          onChange={(e) =>
-                            patchDraft(id, { supplierSku: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1 basis-[5.25rem] space-y-0.5 sm:max-w-[8rem]">
-                        <Label className="text-[11px] text-muted-foreground">Cost</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          className="h-8 w-full min-w-0 text-sm"
-                          value={d.currentUnitCost || ""}
-                          placeholder="0"
-                          onChange={(e) =>
-                            patchDraft(id, {
-                              currentUnitCost:
-                                e.target.value === ""
-                                  ? 0
-                                  : Number(e.target.value),
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1 basis-[5.25rem] space-y-0.5 sm:max-w-[7rem]">
-                        <Label className="text-[11px] text-muted-foreground">Lead (days)</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          className="h-8 w-full min-w-0 text-sm"
-                          value={d.leadTimeDays || ""}
-                          placeholder="0"
-                          onChange={(e) =>
-                            patchDraft(id, {
-                              leadTimeDays:
-                                e.target.value === ""
-                                  ? 0
-                                  : Number(e.target.value),
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1 basis-[5rem] space-y-0.5 sm:max-w-[7rem]">
-                        <Label className="text-[11px] text-muted-foreground">MOQ</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          className="h-8 w-full min-w-0 text-sm"
-                          value={d.moq || ""}
-                          placeholder="0"
-                          onChange={(e) =>
-                            patchDraft(id, {
-                              moq:
-                                e.target.value === ""
-                                  ? 0
-                                  : Number(e.target.value),
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1 basis-[5rem] space-y-0.5 sm:max-w-[7rem]">
-                        <Label className="text-[11px] text-muted-foreground">Case pack</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          className="h-8 w-full min-w-0 text-sm"
-                          value={d.casePack || ""}
-                          placeholder="0"
-                          onChange={(e) =>
-                            patchDraft(id, {
-                              casePack:
-                                e.target.value === ""
-                                  ? 0
-                                  : Number(e.target.value),
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 items-end gap-2 border-t border-border/50 pt-2 sm:justify-end sm:gap-3 lg:border-0 lg:pt-0 lg:pl-2 xl:border-l xl:border-border/50 xl:pl-4">
-                      <div className="flex flex-col gap-0.5">
-                        <Label className="text-[11px] text-muted-foreground">Preferred</Label>
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={d.isPreferred}
-                            onCheckedChange={(checked) =>
-                              patchDraft(id, { isPreferred: checked })
-                            }
-                          />
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => toggleItem(id)}
-                        className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-destructive"
-                        aria-label={`Remove ${displayName}`}
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground col-span-2">
+                      <span className="w-12 shrink-0">SKU</span>
+                      <Input
+                        className="h-7 w-full min-w-0 px-2 text-sm"
+                        value={d.supplierSku}
+                        onChange={(e) =>
+                          patchDraft(id, { supplierSku: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <span className="w-12 shrink-0">Cost</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        className="h-7 w-full min-w-0 px-2 text-sm"
+                        value={d.currentUnitCost || ""}
+                        placeholder="0"
+                        onChange={(e) =>
+                          patchDraft(id, {
+                            currentUnitCost:
+                              e.target.value === "" ? 0 : Number(e.target.value),
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <span className="w-12 shrink-0">Lead</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        className="h-7 w-full min-w-0 px-2 text-sm"
+                        value={d.leadTimeDays || ""}
+                        placeholder="0"
+                        onChange={(e) =>
+                          patchDraft(id, {
+                            leadTimeDays:
+                              e.target.value === "" ? 0 : Number(e.target.value),
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <span className="w-12 shrink-0">MOQ</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        className="h-7 w-full min-w-0 px-2 text-sm"
+                        value={d.moq || ""}
+                        placeholder="0"
+                        onChange={(e) =>
+                          patchDraft(id, {
+                            moq:
+                              e.target.value === "" ? 0 : Number(e.target.value),
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <span className="w-12 shrink-0">Pack</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        className="h-7 w-full min-w-0 px-2 text-sm"
+                        value={d.casePack || ""}
+                        placeholder="0"
+                        onChange={(e) =>
+                          patchDraft(id, {
+                            casePack:
+                              e.target.value === "" ? 0 : Number(e.target.value),
+                          })
+                        }
+                      />
+                    </label>
                   </div>
+                  <ToggleField
+                    variant="inline"
+                    value={d.isPreferred ? "yes" : "no"}
+                    onValueChange={(v) =>
+                      patchDraft(id, { isPreferred: v === "yes" })
+                    }
+                    options={[
+                      { value: "no", label: "Not preferred" },
+                      { value: "yes", label: "Preferred" },
+                    ]}
+                  />
                 </div>
               );
             }
@@ -507,23 +450,34 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
             return (
               <div
                 key={id}
-                className="flex flex-row flex-wrap items-center justify-between gap-x-2 gap-y-0.5 rounded border bg-background/80 px-1.5 py-0.5 sm:gap-x-3"
+                className="rounded-md border border-border bg-card px-2.5 py-2 space-y-1.5"
               >
-                <div className="min-w-0 max-w-[50%] shrink-0 sm:max-w-[45%]">
-                  <div className="truncate text-sm font-medium leading-tight text-gray-900">
-                    {displayName}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium leading-tight text-card-foreground">
+                      {displayName}
+                    </div>
+                    <div className="truncate text-[11px] leading-tight text-muted-foreground">
+                      {displaySkuLine || "—"}
+                    </div>
                   </div>
-                  <div className="truncate text-[11px] leading-tight text-muted-foreground">
-                    {displaySkuLine || "—"}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleItem(id)}
+                    className="h-7 w-7 shrink-0 inline-flex items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    aria-label={`Remove ${displayName}`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-x-2 gap-y-0.5 sm:min-w-0">
-                  <div className="w-[5.25rem] shrink-0 space-y-0">
-                    <Label className="text-[10px] text-muted-foreground">Qty</Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <span className="w-10 shrink-0">Qty</span>
                     <Input
+                      id={`po-qty-${id}`}
                       type="number"
                       min={1}
-                      className="h-7 w-full min-w-0 px-1.5 text-sm"
+                      className="h-7 w-full min-w-0 px-2 text-sm"
                       value={d.orderedQty || ""}
                       placeholder="1"
                       onChange={(e) =>
@@ -538,14 +492,15 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                         })
                       }
                     />
-                  </div>
-                  <div className="w-[6.5rem] shrink-0 space-y-0">
-                    <Label className="text-[10px] text-muted-foreground">Unit cost</Label>
+                  </label>
+                  <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <span className="w-10 shrink-0">Cost</span>
                     <Input
+                      id={`po-cost-${id}`}
                       type="number"
                       min={0}
                       step="0.01"
-                      className="h-7 w-full min-w-0 px-1.5 text-sm"
+                      className="h-7 w-full min-w-0 px-2 text-sm"
                       value={d.unitCost || ""}
                       placeholder="0"
                       onChange={(e) =>
@@ -557,173 +512,129 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                         })
                       }
                     />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleItem(id)}
-                    className="ml-auto shrink-0 rounded p-1 text-gray-400 hover:bg-red-50 hover:text-destructive sm:ml-0"
-                    aria-label={`Remove ${displayName}`}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  </label>
                 </div>
               </div>
             );
           })}
-        </div>
-        ) : null}
-        <div
-          className={cn(
-            "flex min-h-0 flex-col overflow-hidden rounded-lg border bg-white shadow-sm",
-            isDirty ? "h-full min-h-0" : "flex-1",
-          )}
-        >
-        <div className="shrink-0 border-b border-border/80 bg-muted/25 px-1.5 py-0.5 sm:px-2 sm:py-1">
-          <Input
-            className={cn(
-              "border-input/80 bg-background text-sm shadow-none",
-              mode === "purchase-order" ? "h-7" : "h-8",
-            )}
-            placeholder={
-              usePoTermList
-                ? "Search by name, SKU, supplier SKU, or preferred…"
-                : "Search by name, SKU, or category..."
-            }
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
-        {usePoTermList ? (
-          supplierTermsCatalogLoading && availableTerms.length === 0 ? (
-            <div className="flex items-center gap-2 px-2.5 py-4 text-sm text-gray-500 sm:px-3">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading sourcing terms…
-            </div>
-          ) : filteredTerms.length === 0 ? (
-            <div className="px-2.5 py-4 text-sm text-gray-500 sm:px-3">
-              {availableTerms.length === 0
-                ? "No sourcing terms for this supplier — add them under Suppliers & sourcing."
-                : "No terms match your search."}
-            </div>
-          ) : (
-            filteredTerms.map((term) => {
-              const item = catalogItems.find((c) => c.id === term.inventoryItemId);
-              const rowId = term.inventoryItemId;
-              const name =
-                term.inventoryItem?.name ?? item?.name ?? `Item #${rowId}`;
-              const checked = rowId in pending;
-              return (
-                <div
-                  key={term.id}
-                  className={`flex items-center gap-1.5 border-b px-1.5 py-1 last:border-b-0 transition-colors sm:gap-2 sm:px-2 ${
-                    checked ? "bg-primary/10" : "hover:bg-gray-50"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleItem(rowId)}
-                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-                      checked
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-gray-300 bg-white text-transparent"
-                    }`}
-                    aria-label={checked ? `Uncheck ${name}` : `Check ${name}`}
-                  >
-                    <Check className="h-3 w-3" />
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-gray-900">{name}</div>
-                    <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-gray-500">
-                      {item?.sku ? <span>{item.sku}</span> : null}
-                      {term.supplierSku ? (
-                        <span>Supplier SKU: {term.supplierSku}</span>
-                      ) : null}
-                    </div>
-                  </div>
-                  {!checked ? (
-                    term.isPreferred ? (
-                      <Badge className="shrink-0 text-[10px] bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-                        Preferred
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="shrink-0 text-[10px]">
-                        {item?.inventoryType ?? "—"}
-                      </Badge>
-                    )
-                  ) : (
-                    <span
-                      className="shrink-0 text-[10px] text-muted-foreground sm:text-xs"
-                      title="Edit in list above"
-                    >
-                      Above
-                    </span>
-                  )}
-                </div>
-              );
-            })
-          )
-        ) : isCatalogLoading ? (
-          <div className="flex items-center gap-2 px-2.5 py-4 text-sm text-gray-500 sm:px-3">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading inventory catalog...
-          </div>
-        ) : filteredCatalog.length === 0 ? (
-          <div className="px-2.5 py-4 text-sm text-gray-500 sm:px-3">
-            {availableCatalog.length === 0
-              ? "No items to add (all already linked or excluded)."
-              : "No items match your search."}
-          </div>
-        ) : (
-          filteredCatalog.map((item) => {
-            const checked = item.id in pending;
-            return (
-              <div
-                key={item.id}
-                className={`flex items-center gap-1.5 border-b px-1.5 py-1 last:border-b-0 transition-colors sm:gap-2 sm:px-2 ${
-                  checked ? "bg-primary/10" : "hover:bg-gray-50"
-                }`}
-              >
-                <button
-                  type="button"
-                  onClick={() => toggleItem(item.id)}
-                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-                    checked
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-gray-300 bg-white text-transparent"
-                  }`}
-                  aria-label={checked ? `Uncheck ${item.name}` : `Check ${item.name}`}
-                >
-                  <Check className="h-3 w-3" />
-                </button>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium text-gray-900">
-                    {item.name}
-                  </div>
-                  <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-gray-500">
-                    {item.sku ? <span>{item.sku}</span> : null}
-                    {item.category ? <span>{item.category}</span> : null}
-                  </div>
-                </div>
-                {!checked ? (
-                  <Badge variant="outline" className="shrink-0 text-[10px]">
-                    {item.inventoryType}
-                  </Badge>
-                ) : (
-                  <span
-                    className="shrink-0 text-[10px] text-muted-foreground sm:text-xs"
-                    title="Edit in list above"
-                  >
-                    Above
-                  </span>
-                )}
-              </div>
-            );
-          })
-        )}
-        </div>
-      </div>
-      </div>
     </div>
+  );
+
+  const renderTermRow = (term: SupplierItemTerm, checked: boolean) => {
+    const item = catalogItems.find((c) => c.id === term.inventoryItemId);
+    const rowId = term.inventoryItemId;
+    const name = term.inventoryItem?.name ?? item?.name ?? `Item #${rowId}`;
+    return (
+      <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer">
+        <Checkbox
+          checked={checked}
+          onCheckedChange={() => toggleItem(rowId)}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium text-card-foreground">
+            {name}
+          </div>
+          <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+            {item?.sku ? <span>{item.sku}</span> : null}
+            {term.supplierSku ? <span>Supplier SKU: {term.supplierSku}</span> : null}
+          </div>
+        </div>
+        {checked ? (
+          <span
+            className="shrink-0 text-[10px] text-muted-foreground sm:text-xs"
+            title="Edit in list above"
+          >
+            Above
+          </span>
+        ) : term.isPreferred ? (
+          <Badge className="shrink-0 text-[10px] bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+            Preferred
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="shrink-0 text-[10px]">
+            {item?.inventoryType ?? "—"}
+          </Badge>
+        )}
+      </label>
+    );
+  };
+
+  const renderCatalogRow = (item: InventoryItemSummary, checked: boolean) => (
+    <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer">
+      <Checkbox
+        checked={checked}
+        onCheckedChange={() => toggleItem(item.id)}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium text-card-foreground">
+          {item.name}
+        </div>
+        <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+          {item.sku ? <span>{item.sku}</span> : null}
+          {item.category ? <span>{item.category}</span> : null}
+        </div>
+      </div>
+      {checked ? (
+        <span
+          className="shrink-0 text-[10px] text-muted-foreground sm:text-xs"
+          title="Edit in list above"
+        >
+          Above
+        </span>
+      ) : (
+        <Badge variant="outline" className="shrink-0 text-[10px]">
+          {item.inventoryType}
+        </Badge>
+      )}
+    </label>
+  );
+
+  const listConfig: LinkPickerAddProps<unknown> = usePoTermList
+    ? ({
+        items: filteredTerms,
+        isLoading: supplierTermsCatalogLoading && availableTerms.length === 0,
+        getKey: (term: SupplierItemTerm) => term.id,
+        isChecked: (term: SupplierItemTerm) => term.inventoryItemId in pending,
+        onToggle: (term: SupplierItemTerm) => toggleItem(term.inventoryItemId),
+        emptyMessage:
+          availableTerms.length === 0
+            ? "No sourcing terms for this supplier — add them under Suppliers & sourcing."
+            : "No terms match your search.",
+        renderRow: renderTermRow,
+      } as LinkPickerAddProps<unknown>)
+    : ({
+        items: filteredCatalog,
+        isLoading: isCatalogLoading,
+        getKey: (item: InventoryItemSummary) => item.id,
+        isChecked: (item: InventoryItemSummary) => item.id in pending,
+        onToggle: (item: InventoryItemSummary) => toggleItem(item.id),
+        emptyMessage:
+          availableCatalog.length === 0
+            ? "No items to add (all already linked or excluded)."
+            : "No items match your search.",
+        renderRow: renderCatalogRow,
+      } as LinkPickerAddProps<unknown>);
+
+  return (
+    <LinkPicker
+      className={className}
+      fill
+      addTitle={
+        mode === "sourcing" ? "Add inventory sourcing" : "Add order lines"
+      }
+      pendingCount={pendingCount}
+      saveLabel={`Save (${pendingCount})`}
+      onSave={handleSave}
+      isSaving={isSaving}
+      search={{
+        value: search,
+        onChange: setSearch,
+        placeholder: usePoTermList
+          ? "Search by name, SKU, supplier SKU, or preferred…"
+          : "Search by name, SKU, or category…",
+      }}
+      renderPending={renderPendingRows}
+      list={listConfig}
+    />
   );
 }
