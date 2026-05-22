@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, PenLine, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import {
   DataTable,
   type DataTableColumn,
@@ -19,7 +19,6 @@ import { RequestProgramsModal } from "@/components/request-programs-modal";
 import { useUser } from "@/context/user-context";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/error-utils";
-import Link from "next/link";
 
 // ---------------------------------------------------------------------------
 // Status badge — mirrors the 3-value ProgramRequest enum:
@@ -101,35 +100,18 @@ export function ProgramsSection() {
       header: "",
       className: "w-44",
       render: (r) => {
-        // `Approved` covers the entire window between admin approval and
-        // full activation — sign + pay happens on the existing
-        // `/franchisee/agreement?agreementId=<id>` page, identical to the
-        // franchise onboarding flow.
-        const canSign = r.status === "Approved" && r.agreementId != null;
-        const canCancel = ["Pending", "Approved"].includes(r.status);
+        if (r.status !== "Pending") return null;
         return (
           <div className="flex items-center gap-1">
-            {canSign && (
-              <Button asChild variant="default" size="sm">
-                <Link
-                  href={`/franchisee/agreement?agreementId=${r.agreementId}`}
-                >
-                  <PenLine className="h-4 w-4 mr-1" />
-                  Sign &amp; Pay
-                </Link>
-              </Button>
-            )}
-            {canCancel && (
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={cancelling === r.id}
-                onClick={() => handleCancel(r.id)}
-              >
-                <X className="h-4 w-4 mr-1" />
-                Cancel
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={cancelling === r.id}
+              onClick={() => handleCancel(r.id)}
+            >
+              <X className="h-4 w-4 mr-1" />
+              Cancel
+            </Button>
           </div>
         );
       },

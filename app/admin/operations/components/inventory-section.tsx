@@ -17,7 +17,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ToggleField } from "@/components/shared/toggle-field";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -44,7 +43,13 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
-import { DataTable, type DataTableColumn } from "@/components/shared";
+import {
+  DataTable,
+  StatusBadge,
+  type DataTableColumn,
+  type DataTableFilter,
+  type DataTableSortOption,
+} from "@/components/shared";
 import { getAllPrograms, type Program } from "@/services/program.service";
 import type { Level } from "@/services/level.service";
 import type { Stream } from "@/services/stream.service";
@@ -159,6 +164,11 @@ export function InventorySection() {
   const [levelFilter, setLevelFilter] = useState<number | "">(
     initialLevelFilter ? Number(initialLevelFilter) : "",
   );
+  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<string>("name");
+  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("ASC");
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -205,8 +215,11 @@ export function InventorySection() {
     search: searchTerm || undefined,
     programId: programIdNum,
     levelId: levelIdNum,
-    sortBy: "name",
-    sortOrder: "ASC",
+    category: categoryFilter || undefined,
+    status: statusFilter || undefined,
+    lowStock: lowStockOnly || undefined,
+    sortBy,
+    sortOrder,
   });
 
   const inventory = inventoryQuery.rows;
@@ -216,7 +229,16 @@ export function InventorySection() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, programFilter, levelFilter]);
+  }, [
+    searchTerm,
+    programFilter,
+    levelFilter,
+    categoryFilter,
+    statusFilter,
+    lowStockOnly,
+    sortBy,
+    sortOrder,
+  ]);
 
   function resetAddForm() {
     setFormData(EMPTY_FORM);
@@ -515,22 +537,10 @@ export function InventorySection() {
       key: "status",
       header: "Status",
       render: (item) => (
-        <div>
-          <Badge
-            className={
-              item.isActive
-                ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                : "bg-slate-100 text-slate-700 border-slate-200"
-            }
-          >
-            {item.isActive ? "Active" : "Inactive"}
-          </Badge>
+        <div className="flex flex-col items-start gap-2">
+          <StatusBadge label={item.isActive ? "Active" : "Inactive"} />
           {item.availableQty <= item.reorderPoint ? (
-            <div className="mt-2">
-              <Badge className="bg-amber-100 text-amber-800 border-amber-200">
-                Low stock
-              </Badge>
-            </div>
+            <StatusBadge tone="warning" label="Low stock" />
           ) : null}
         </div>
       ),
@@ -583,6 +593,60 @@ export function InventorySection() {
   ];
 
   const adjustPreview = deriveAdjustmentPreview();
+
+  const tableFilters: DataTableFilter[] = [
+    {
+      key: "category",
+      label: "Category",
+      options: [
+        { value: "all", label: "All categories" },
+        ...INVENTORY_CATEGORIES.map((c) => ({ value: c, label: c })),
+      ],
+      defaultValue: "all",
+    },
+    {
+      key: "status",
+      label: "Status",
+      options: [
+        { value: "all", label: "All" },
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+      ],
+      defaultValue: "all",
+    },
+    {
+      key: "lowStock",
+      label: "Stock level",
+      options: [
+        { value: "all", label: "All items" },
+        { value: "true", label: "Low stock only" },
+      ],
+      defaultValue: "all",
+    },
+  ];
+
+  const tableSortOptions: DataTableSortOption[] = [
+    { value: "name", label: "Name" },
+    { value: "availableQty", label: "Available stock" },
+    { value: "onHandQty", label: "On-hand stock" },
+    { value: "createdAt", label: "Date added" },
+  ];
+
+  function handleFilterChange(key: string, value: string | string[]) {
+    const v = Array.isArray(value) ? value[0] ?? "" : value;
+    if (key === "category") {
+      setCategoryFilter(v === "all" ? "" : v);
+    } else if (key === "status") {
+      setStatusFilter(v === "all" ? "" : v);
+    } else if (key === "lowStock") {
+      setLowStockOnly(v === "true");
+    }
+  }
+
+  function handleSortChange(nextSortBy: string, nextSortOrder: "ASC" | "DESC") {
+    setSortBy(nextSortBy);
+    setSortOrder(nextSortOrder);
+  }
 
   const toolbarActions = (
     <div className="flex flex-wrap items-end gap-2">
@@ -745,6 +809,12 @@ export function InventorySection() {
             )}
             searchPlaceholder="Name, SKU, legacy code..."
             onSearchChange={setSearchTerm}
+            filters={tableFilters}
+            onFilterChange={handleFilterChange}
+            sortOptions={tableSortOptions}
+            defaultSortBy={sortBy}
+            defaultSortOrder={sortOrder}
+            onSortChange={handleSortChange}
             toolbarActions={toolbarActions}
             pagination={{ total, totalPages }}
             currentPage={currentPage}

@@ -22,6 +22,8 @@ export type InventoryPaginatedFilters = {
   programId?: number;
   levelId?: number;
   status?: string;
+  category?: string;
+  lowStock?: boolean;
   sortBy?: string;
   sortOrder?: string;
 };
@@ -43,6 +45,12 @@ function listParamsFromFilters(
   if (filters.status !== undefined && filters.status !== "") {
     params.status = filters.status;
   }
+  if (filters.category !== undefined && filters.category !== "") {
+    params.category = filters.category;
+  }
+  if (filters.lowStock) {
+    params.lowStock = true;
+  }
   return params;
 }
 
@@ -59,6 +67,8 @@ export function useInventoryPaginatedQuery(filters: InventoryPaginatedFilters) {
         programId: filters.programId,
         levelId: filters.levelId,
         status: filters.status,
+        category: filters.category || undefined,
+        lowStock: filters.lowStock ? true : undefined,
         sortBy: filters.sortBy ?? "name",
         sortOrder: filters.sortOrder ?? "ASC",
       }),

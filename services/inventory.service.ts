@@ -192,6 +192,8 @@ export async function getPaginatedInventory(params: {
   programId?: number;
   levelId?: number;
   status?: string;
+  category?: string;
+  lowStock?: boolean;
   sortBy?: string;
   sortOrder?: string;
 }): Promise<PaginatedInventoryResult> {
