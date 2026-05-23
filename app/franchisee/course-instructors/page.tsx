@@ -1,17 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/shared/dialog";
 import { Plus } from "lucide-react";
 import { useUser } from "@/context/user-context";
 import { deleteCourseInstructorWithRevalidation, useCourseInstructors } from "@/hooks/api/course-instructor.hooks";
@@ -79,35 +70,23 @@ export default function FranchiseeCourseInstructorsPage() {
         onCourseInstructorEdit={() => {}}
       />
 
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent className="font-sans">
-          <DialogHeader>
-            <DialogTitle>Delete Course Instructor</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this course instructor? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (!deleteCourseInstructorId) return;
-                await deleteCourseInstructorWithRevalidation(Number(deleteCourseInstructorId));
-                setIsDeleteModalOpen(false);
-                setDeleteCourseInstructorId(null);
-                void revalidate();
-              }}
-            >
-              Delete
-            </Button>
-            <DialogClose asChild>
-              <Button type="button" variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
-                Cancel
-              </Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={isDeleteModalOpen}
+        onOpenChange={setIsDeleteModalOpen}
+        variant="destructive"
+        title="Delete Course Instructor"
+        description="Are you sure you want to delete this course instructor? This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          if (!deleteCourseInstructorId) return;
+          await deleteCourseInstructorWithRevalidation(
+            Number(deleteCourseInstructorId),
+          );
+          setIsDeleteModalOpen(false);
+          setDeleteCourseInstructorId(null);
+          void revalidate();
+        }}
+      />
 
       <AddCourseInstructorModal
         open={isAddModalOpen}

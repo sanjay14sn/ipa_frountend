@@ -2,12 +2,10 @@
 
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AppDialog,
+  AppDialogHeader,
+  AppDialogBody,
+} from "@/components/shared/dialog";
 import { toast } from "sonner";
 import {
   useWaitingForSession,
@@ -32,17 +30,16 @@ export default function BulkAssignCIModal({ session, onClose }: BulkAssignCIModa
   }
 
   return (
-    <Dialog open={session != null} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex max-h-[90vh] flex-col gap-2 overflow-hidden sm:max-w-[560px]">
-        <DialogHeader className="shrink-0">
-          <DialogTitle>Assign CIs to Session</DialogTitle>
-          <DialogDescription>
-            {session
-              ? `${new Date(session.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })} — ${session.trainingLevelName ?? `Level ${session.trainingLevelId}`} — ${session.region}`
-              : ""}
-          </DialogDescription>
-        </DialogHeader>
-
+    <AppDialog open={session != null} onOpenChange={handleOpenChange} size="md" scrollBody>
+      <AppDialogHeader
+        title="Assign CIs to Session"
+        description={
+          session
+            ? `${new Date(session.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })} — ${session.trainingLevelName ?? `Level ${session.trainingLevelId}`} — ${session.region}`
+            : ""
+        }
+      />
+      <AppDialogBody layout="fill">
         {session ? (
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
             <div className="shrink-0 rounded-lg border p-3">
@@ -86,7 +83,7 @@ export default function BulkAssignCIModal({ session, onClose }: BulkAssignCIModa
             />
           </div>
         ) : null}
-      </DialogContent>
-    </Dialog>
+      </AppDialogBody>
+    </AppDialog>
   );
 }

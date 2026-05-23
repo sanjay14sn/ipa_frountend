@@ -1,17 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  AppDialog,
+  AppDialogHeader,
+  AppDialogBody,
+  AppDialogFooter,
+} from "@/components/shared/dialog";
 import {
   Select,
   SelectContent,
@@ -952,29 +950,24 @@ export default function EditStudentModal({
 
   if (submitted) {
     return (
-      <Dialog open={false} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md w-full mx-4">
-          <DialogHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <CheckCircle className="h-12 w-12 text-primary" />
-            </div>
-            <DialogTitle className="text-2xl font-bold text-gray-900">
-              Student Updated Successfully!
-            </DialogTitle>
-            <DialogDescription className="text-center">
-              The student information has been updated successfully.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="pt-4">
-            <Button
-              className="w-full bg-primary hover:bg-primary/90"
-              onClick={handleClose}
-            >
-              Close
-            </Button>
+      <AppDialog open={false} onOpenChange={handleClose} size="sm">
+        <AppDialogHeader
+          icon={CheckCircle}
+          title="Student Updated Successfully!"
+          description="The student information has been updated successfully."
+        />
+        <AppDialogBody>
+          <div className="text-center text-sm text-muted-foreground">
+            You can close this dialog.
           </div>
-        </DialogContent>
-      </Dialog>
+        </AppDialogBody>
+        <AppDialogFooter
+          primary={{
+            label: "Close",
+            onClick: handleClose,
+          }}
+        />
+      </AppDialog>
     );
   }
 
@@ -983,119 +976,91 @@ export default function EditStudentModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl w-full mx-4 max-h-[95vh] overflow-hidden flex flex-col">
-        <DialogHeader className="text-center border-b border-gray-200 pb-4 flex-shrink-0">
-          <div className="flex justify-center mb-4">
-            <Edit2 className="h-8 w-8 text-gray-700" />
-          </div>
-          <DialogTitle className="text-xl font-bold text-gray-900">
-            Edit Student
-          </DialogTitle>
-          <DialogDescription>
-            Update student information section by section
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
-            {/* Tabs */}
-            <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
-              <div className="flex gap-2">
-                {TABS.map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-md transition-all duration-200 ${
-                        activeTab === tab.id
-                          ? "bg-primary text-white shadow-md"
-                          : "bg-white text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span className="text-sm font-medium">{tab.title}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Form Content */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
-                    {(() => {
-                      const currentTab = TABS.find((t) => t.id === activeTab);
-                      if (currentTab) {
-                        const Icon = currentTab.icon;
-                        return (
-                          <>
-                            <Icon className="w-5 h-5" />
-                            {currentTab.title}
-                          </>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </h3>
-                  <div className="space-y-4">{renderTabContent()}</div>
-                </div>
-                <form onSubmit={handleSubmit}>
-                  <div className="flex gap-4 pt-6 border-t border-gray-200">
-                    <div className="flex gap-2">
-                      {activeTab > 1 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setActiveTab(activeTab - 1)}
-                        >
-                          Previous Tab
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="flex-1" />
-
-                    <div className="flex gap-2">
-                      {activeTab < TABS.length && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setActiveTab(activeTab + 1)}
-                        >
-                          Next Tab
-                        </Button>
-                      )}
-                      <Button
-                        type="submit"
-                        className="bg-primary hover:bg-primary/90"
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <div className="flex items-center space-x-2">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            <span>Updating...</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <Edit2 className="w-4 h-4" />
-                            <span>Update {TABS.find((t) => t.id === activeTab)?.title}</span>
-                          </div>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </form>
-              </div>
+    <AppDialog open={open} onOpenChange={handleClose} size="xl" scrollBody>
+      <AppDialogHeader
+        icon={Edit2}
+        title="Edit Student"
+        description="Update student information section by section"
+      />
+      <AppDialogBody>
+        <form id="edit-student-form" onSubmit={handleSubmit} className="space-y-6">
+          {/* Tabs */}
+          <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+            <div className="flex gap-2">
+              {TABS.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-md transition-all duration-200 ${
+                      activeTab === tab.id
+                        ? "bg-primary text-white shadow-md"
+                        : "bg-white text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="text-sm font-medium">{tab.title}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+
+          {/* Form Content */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
+                {(() => {
+                  const currentTab = TABS.find((t) => t.id === activeTab);
+                  if (currentTab) {
+                    const Icon = currentTab.icon;
+                    return (
+                      <>
+                        <Icon className="w-5 h-5" />
+                        {currentTab.title}
+                      </>
+                    );
+                  }
+                  return null;
+                })()}
+              </h3>
+              <div className="space-y-4">{renderTabContent()}</div>
+            </div>
+          </div>
+        </form>
+      </AppDialogBody>
+      <AppDialogFooter
+        sticky
+        tertiary={
+          activeTab > 1
+            ? {
+                label: "Previous Tab",
+                onClick: () => setActiveTab(activeTab - 1),
+                variant: "outline",
+              }
+            : undefined
+        }
+        secondary={
+          activeTab < TABS.length
+            ? {
+                label: "Next Tab",
+                onClick: () => setActiveTab(activeTab + 1),
+              }
+            : undefined
+        }
+        primary={{
+          label: isLoading
+            ? "Updating..."
+            : `Update ${TABS.find((t) => t.id === activeTab)?.title ?? ""}`,
+          type: "submit",
+          form: "edit-student-form",
+          loading: isLoading,
+          icon: Edit2,
+        }}
+      />
+    </AppDialog>
   );
 }
 

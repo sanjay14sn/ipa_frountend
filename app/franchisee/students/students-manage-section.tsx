@@ -2,15 +2,9 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, CreditCard, Plus } from "lucide-react";
+import { CreditCard, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/shared/dialog";
 import { useUser } from "@/context/user-context";
 import type { StudentData } from "@/services/student.service";
 import { StudentIdStatus } from "@/services/student.service";
@@ -125,49 +119,26 @@ export function StudentsManageSection() {
         }}
       />
 
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent className="w-full max-w-md">
-          <DialogHeader className="text-center">
-            <div className="mb-2 flex justify-center">
-              <AlertTriangle className="h-10 w-10 text-destructive" />
-            </div>
-            <DialogTitle>Delete Student</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this student? This action cannot
-              be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex gap-3 pt-2">
-            <Button
-              type="button"
-              variant="destructive"
-              className="flex-1"
-              onClick={async () => {
-                if (!deleteStudentId) return;
-                try {
-                  await deleteStudentWithRevalidation(Number(deleteStudentId));
-                  setIsDeleteModalOpen(false);
-                  setDeleteStudentId(null);
-                  void revalidate();
-                } catch (error) {
-                  console.error("Error deleting student:", error);
-                  toast.error("Failed to delete student");
-                }
-              }}
-            >
-              Delete
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => setIsDeleteModalOpen(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={isDeleteModalOpen}
+        onOpenChange={setIsDeleteModalOpen}
+        variant="destructive"
+        title="Delete Student"
+        description="Are you sure you want to delete this student? This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          if (!deleteStudentId) return;
+          try {
+            await deleteStudentWithRevalidation(Number(deleteStudentId));
+            setIsDeleteModalOpen(false);
+            setDeleteStudentId(null);
+            void revalidate();
+          } catch (error) {
+            console.error("Error deleting student:", error);
+            toast.error("Failed to delete student");
+          }
+        }}
+      />
 
       <AddStudentModal
         open={isAddModalOpen}

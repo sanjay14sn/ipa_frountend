@@ -2,12 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AppDialog,
+  AppDialogHeader,
+  AppDialogBody,
+} from "@/components/shared/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertCircle, Award, Calendar, FileText } from "lucide-react";
@@ -54,18 +52,13 @@ export function GraduationHistoryModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Award className="h-5 w-5 text-primary" />
-            Graduation History - {instructorName}
-          </DialogTitle>
-          <DialogDescription>
-            View all completed training levels and certifications
-          </DialogDescription>
-        </DialogHeader>
-
+    <AppDialog open={isOpen} onOpenChange={onClose} size="xl" scrollBody>
+      <AppDialogHeader
+        icon={Award}
+        title={`Graduation History - ${instructorName}`}
+        description="View all completed training levels and certifications"
+      />
+      <AppDialogBody>
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -179,8 +172,8 @@ export function GraduationHistoryModal({
             </div>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </AppDialogBody>
+    </AppDialog>
   );
 }
 

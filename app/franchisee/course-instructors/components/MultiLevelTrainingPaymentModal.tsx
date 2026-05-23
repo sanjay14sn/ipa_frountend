@@ -1,16 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { FormDialog } from "@/components/shared/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, CreditCard } from "lucide-react";
 import {
   getCITrainingProgress,
   CITrainingProgress,
@@ -184,66 +177,61 @@ export function MultiLevelTrainingPaymentModal({
     };
   }, [activeOrderId]);
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader className="space-y-3 pb-4 border-b">
-          <DialogTitle>Training Payment</DialogTitle>
-          <DialogDescription>
-            Single payment for all training levels for <strong>{instructorName}</strong>. First level will start; others will be marked paid.
-          </DialogDescription>
-        </DialogHeader>
+  const canPay = !loading && !error && unpaidTrainings.length > 0;
 
-        <div className="py-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            </div>
-          ) : error ? (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : unpaidTrainings.length === 0 ? (
-            <Alert>
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertDescription>
-                {trainingProgress && trainingsList.length > 0
-                  ? "All training levels have been paid."
-                  : "No training levels registered."}
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <div className="space-y-4">
-              <div className="bg-gray-50 border rounded-lg p-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">
-                    {unpaidTrainings.length} level{unpaidTrainings.length !== 1 ? "s" : ""}
-                  </span>
-                  <span className="text-2xl font-bold">
-                    ₹{totalAmount.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-              <Button
-                onClick={handlePayment}
-                disabled={processing}
-                className="w-full"
-                size="lg"
-              >
-                {processing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  "Pay Now"
-                )}
-              </Button>
-            </div>
-          )}
+  return (
+    <FormDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      size="md"
+      headerIcon={CreditCard}
+      title="Training Payment"
+      description={
+        <>
+          Single payment for all training levels for <strong>{instructorName}</strong>. First level will start; others will be marked paid.
+        </>
+      }
+      onSubmit={(e) => {
+        e.preventDefault();
+        void handlePayment();
+      }}
+      submitLabel="Pay Now"
+      cancelLabel="Cancel"
+      isSubmitting={processing}
+      canSubmit={canPay}
+    >
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
-      </DialogContent>
-    </Dialog>
+      ) : error ? (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : unpaidTrainings.length === 0 ? (
+        <Alert>
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertDescription>
+            {trainingProgress && trainingsList.length > 0
+              ? "All training levels have been paid."
+              : "No training levels registered."}
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <div className="bg-gray-50 border rounded-lg p-4">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-600">
+              {unpaidTrainings.length} level{unpaidTrainings.length !== 1 ? "s" : ""}
+            </span>
+            <span className="text-2xl font-bold">
+              ₹{totalAmount.toLocaleString()}
+            </span>
+          </div>
+        </div>
+      )}
+    </FormDialog>
   );
 }

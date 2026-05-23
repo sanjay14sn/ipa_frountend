@@ -1,15 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  AppDialog,
+  AppDialogHeader,
+  AppDialogBody,
+  AppDialogFooter,
+} from "@/components/shared/dialog";
 import {
   Table,
   TableBody,
@@ -55,24 +52,14 @@ export default function RequestedIdStudentsModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="text-center border-b border-gray-200 pb-4 flex-shrink-0">
-          <div className="flex justify-center mb-4">
-            <CreditCard className="h-8 w-8 text-primary" />
-          </div>
-          <DialogTitle className="text-xl font-bold text-gray-900">
-            Students with Requested ID Cards
-          </DialogTitle>
-          <DialogDescription>
-            {requestedIdStudents.length} student
-            {requestedIdStudents.length !== 1 ? "s" : ""} have requested ID
-            cards
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto">
-          {requestedIdStudents.length === 0 ? (
+    <AppDialog open={open} onOpenChange={onOpenChange} size="2xl" scrollBody>
+      <AppDialogHeader
+        icon={CreditCard}
+        title="Students with Requested ID Cards"
+        description={`${requestedIdStudents.length} student${requestedIdStudents.length !== 1 ? "s" : ""} have requested ID cards`}
+      />
+      <AppDialogBody>
+        {requestedIdStudents.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
               <CreditCard className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <p className="text-lg font-medium">No ID card requests</p>
@@ -168,23 +155,20 @@ export default function RequestedIdStudentsModal({
               </div>
             </div>
           )}
-        </div>
-
-        <div className="border-t border-gray-200 p-4 flex-shrink-0">
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-600">
-              Total: {requestedIdStudents.length} requested ID
-              {requestedIdStudents.length !== 1 ? "s" : ""}
-            </div>
-            <Button
-              className="bg-primary hover:bg-primary/90"
-              onClick={() => onOpenChange(false)}
-            >
-              Close
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+      </AppDialogBody>
+      <AppDialogFooter
+        sticky
+        leftSlot={
+          <span>
+            Total: {requestedIdStudents.length} requested ID
+            {requestedIdStudents.length !== 1 ? "s" : ""}
+          </span>
+        }
+        primary={{
+          label: "Close",
+          onClick: () => onOpenChange(false),
+        }}
+      />
+    </AppDialog>
   );
 }
