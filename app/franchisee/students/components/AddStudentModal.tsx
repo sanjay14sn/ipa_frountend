@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -771,11 +772,10 @@ export default function AddStudentModal({
                     </span>
                   )}
                 </Label>
-                <Input
+                <DateInput
                   id="dob"
-                  type="date"
                   value={formData.dob}
-                  onChange={(e) => handleInputChange("dob", e.target.value)}
+                  onChange={(v) => handleInputChange("dob", v)}
                   className={errors.dob ? "border-red-500" : ""}
                 />
                 {errors.dob && (
@@ -788,12 +788,11 @@ export default function AddStudentModal({
 
               <div className="space-y-2">
                 <Label htmlFor="dateOfJoining">Date of Joining *</Label>
-                <Input
+                <DateInput
                   id="dateOfJoining"
-                  type="date"
                   value={formData.dateOfJoining}
-                  onChange={(e) =>
-                    handleInputChange("dateOfJoining", e.target.value)
+                  onChange={(v) =>
+                    handleInputChange("dateOfJoining", v)
                   }
                   className={errors.dateOfJoining ? "border-red-500" : ""}
                 />
@@ -1203,13 +1202,12 @@ export default function AddStudentModal({
                       <Label htmlFor="previousCompletedAt">
                         Completion Date *
                       </Label>
-                      <Input
+                      <DateInput
                         id="previousCompletedAt"
-                        type="date"
                         max={new Date().toISOString().slice(0, 10)}
                         value={formData.previousCompletedAt}
-                        onChange={(e) =>
-                          handleInputChange("previousCompletedAt", e.target.value)
+                        onChange={(v) =>
+                          handleInputChange("previousCompletedAt", v)
                         }
                         className={
                           errors.previousCompletedAt ? "border-red-500" : ""
@@ -1261,13 +1259,12 @@ export default function AddStudentModal({
                   {formData.idCardIssued && (
                     <div className="space-y-2 max-w-xs">
                       <Label htmlFor="idCardIssueDate">Issue Date *</Label>
-                      <Input
+                      <DateInput
                         id="idCardIssueDate"
-                        type="date"
                         max={new Date().toISOString().slice(0, 10)}
                         value={formData.idCardIssueDate}
-                        onChange={(e) =>
-                          handleInputChange("idCardIssueDate", e.target.value)
+                        onChange={(v) =>
+                          handleInputChange("idCardIssueDate", v)
                         }
                         className={
                           errors.idCardIssueDate ? "border-red-500" : ""

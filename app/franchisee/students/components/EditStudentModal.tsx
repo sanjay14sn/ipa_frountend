@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -508,11 +509,10 @@ export default function EditStudentModal({
                     </span>
                   )}
                 </Label>
-                <Input
+                <DateInput
                   id="dob"
-                  type="date"
                   value={formData.dob}
-                  onChange={(e) => handleInputChange("dob", e.target.value)}
+                  onChange={(v) => handleInputChange("dob", v)}
                   className={errors.dob ? "border-red-500" : ""}
                 />
                 {errors.dob && (
@@ -525,12 +525,11 @@ export default function EditStudentModal({
 
               <div className="space-y-2">
                 <Label htmlFor="dateOfJoining">Date of Joining</Label>
-                <Input
+                <DateInput
                   id="dateOfJoining"
-                  type="date"
                   value={formData.dateOfJoining}
-                  onChange={(e) =>
-                    handleInputChange("dateOfJoining", e.target.value)
+                  onChange={(v) =>
+                    handleInputChange("dateOfJoining", v)
                   }
                 />
               </div>

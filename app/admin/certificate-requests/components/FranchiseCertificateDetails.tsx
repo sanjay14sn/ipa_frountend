@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Dialog,
   DialogContent,
@@ -230,14 +231,13 @@ export default function FranchiseCertificateDetails({
   const toolbarActions = (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-sm text-muted-foreground">Request date:</span>
-      <input
-        type="date"
+      <DateInput
         value={dateFilter}
-        onChange={(e) => {
-          setDateFilter(e.target.value);
+        onChange={(v) => {
+          setDateFilter(v);
           setPage(1);
         }}
-        className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+        className="h-9 w-[170px]"
       />
       <Button
         size="sm"

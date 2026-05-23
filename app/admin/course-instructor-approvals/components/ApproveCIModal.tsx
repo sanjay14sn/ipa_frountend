@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import {
   approveCourseInstructor,
@@ -315,21 +316,19 @@ export default function ApproveCIModal({
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="validFrom">Valid From</Label>
-              <Input
+              <DateInput
                 id="validFrom"
-                type="date"
                 value={validFrom}
-                onChange={(e) => setValidFrom(e.target.value)}
+                onChange={(v) => setValidFrom(v)}
                 required
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="validUntil">Valid Until</Label>
-              <Input
+              <DateInput
                 id="validUntil"
-                type="date"
                 value={validUntil}
-                onChange={(e) => setValidUntil(e.target.value)}
+                onChange={(v) => setValidUntil(v)}
                 required
               />
             </div>

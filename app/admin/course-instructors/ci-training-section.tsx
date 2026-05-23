@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -272,11 +273,10 @@ function CreateSessionModal({
           </div>
           <div className="space-y-2">
             <Label htmlFor="sessionDate">Session Date</Label>
-            <Input
+            <DateInput
               id="sessionDate"
-              type="date"
               value={sessionDate}
-              onChange={(e) => setSessionDate(e.target.value)}
+              onChange={(v) => setSessionDate(v)}
               required
             />
           </div>
@@ -855,11 +855,10 @@ function RescheduleSessionModal({
         </DialogHeader>
         <div className="space-y-2">
           <Label htmlFor="reschedule-date">New Session Date</Label>
-          <Input
+          <DateInput
             id="reschedule-date"
-            type="date"
             value={newDate}
-            onChange={(e) => setNewDate(e.target.value)}
+            onChange={(v) => setNewDate(v)}
           />
         </div>
         <DialogFooter>

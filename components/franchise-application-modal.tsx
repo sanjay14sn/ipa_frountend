@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -312,15 +313,14 @@ export function FranchiseApplicationModal({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="dob">Date of Birth *</Label>
-                <Input
+                <DateInput
                   id="dob"
-                  type="date"
                   value={
                     formData.franchisee.dob instanceof Date
                       ? formData.franchisee.dob.toISOString().split("T")[0]
                       : (formData.franchisee.dob as unknown as string)
                   }
-                  onChange={(e) => handleInputChange("dob", e.target.value)}
+                  onChange={(v) => handleInputChange("dob", v)}
                   className={cn(
                     "rounded-lg border-border",
                     errors.dob && "border-destructive",

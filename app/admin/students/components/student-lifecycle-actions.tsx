@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import type { StudentLifecycleRow } from "@/services/student.service";
 import { formatEntityCodeForDisplay } from "@/lib/format-entity-code";
@@ -95,12 +96,11 @@ export function StudentLifecycleActions({
             </div>
             <div className="space-y-2">
               <Label htmlFor={`extended-until-${student.studentId}`}>Extended until</Label>
-              <Input
+              <DateInput
                 id={`extended-until-${student.studentId}`}
-                type="date"
                 min={tomorrowDate()}
                 value={extendedUntil}
-                onChange={(event) => setExtendedUntil(event.target.value)}
+                onChange={(v) => setExtendedUntil(v)}
               />
             </div>
           </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleField } from "@/components/shared/toggle-field";
@@ -586,12 +587,11 @@ export function CreateFranchiseDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="dob">Date of Birth</Label>
-                <Input
+                <DateInput
                   id="dob"
-                  type="date"
                   value={formData.dob}
-                  onChange={(e) =>
-                    setFormData({ ...formData, dob: e.target.value })
+                  onChange={(v) =>
+                    setFormData({ ...formData, dob: v })
                   }
                 />
               </div>
@@ -1080,16 +1080,15 @@ export function CreateFranchiseDialog({
                           >
                             Agreement Signing Date
                           </Label>
-                          <Input
+                          <DateInput
                             id={`signed-at-${programId}`}
-                            type="date"
                             value={payroll?.signedAt || ""}
                             max={new Date().toISOString().slice(0, 10)}
-                            onChange={(e) =>
+                            onChange={(v) =>
                               updateProgramPayroll(
                                 programId,
                                 "signedAt",
-                                e.target.value,
+                                v,
                               )
                             }
                             className="h-10"
@@ -1465,10 +1464,9 @@ function PriorPaymentEditor({
       </div>
       <div className="col-span-2 space-y-1">
         <Label className="text-xs">Paid On</Label>
-        <Input
-          type="date"
+        <DateInput
           value={row.paidAt}
-          onChange={(e) => onChange({ ...row, paidAt: e.target.value })}
+          onChange={(v) => onChange({ ...row, paidAt: v })}
         />
       </div>
       <div className="col-span-2 space-y-1">

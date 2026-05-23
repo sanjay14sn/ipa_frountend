@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -332,11 +333,10 @@ export default function AddCourseInstructorModal({
             required
             error={errors.dob}
           >
-            <Input
+            <DateInput
               id="dob"
-              type="date"
               value={formData.dob}
-              onChange={(e) => handleInputChange("dob", e.target.value)}
+              onChange={(v) => handleInputChange("dob", v)}
               className={cn(errors.dob && errorClass)}
             />
           </DialogFormField>

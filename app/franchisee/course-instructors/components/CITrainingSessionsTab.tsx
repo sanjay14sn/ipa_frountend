@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
   SelectContent,
@@ -179,12 +180,11 @@ export default function CITrainingSessionsTab() {
 
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground font-medium">From</label>
-          <Input
-            type="date"
-            className="h-9 w-[140px]"
+          <DateInput
+            className="h-9 w-[160px]"
             value={fromDate}
-            onChange={(e) => {
-              setFromDate(e.target.value);
+            onChange={(v) => {
+              setFromDate(v);
               setCurrentPage(1);
             }}
           />
@@ -192,12 +192,11 @@ export default function CITrainingSessionsTab() {
 
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground font-medium">To</label>
-          <Input
-            type="date"
-            className="h-9 w-[140px]"
+          <DateInput
+            className="h-9 w-[160px]"
             value={toDate}
-            onChange={(e) => {
-              setToDate(e.target.value);
+            onChange={(v) => {
+              setToDate(v);
               setCurrentPage(1);
             }}
           />

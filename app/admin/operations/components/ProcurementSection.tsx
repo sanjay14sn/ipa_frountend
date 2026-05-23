@@ -36,6 +36,7 @@ import {
   FormDialog,
 } from "@/components/shared/dialog";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -1611,13 +1612,12 @@ export function ProcurementSection() {
                 />
               </DialogFormField>
               <DialogFormField label="Expected delivery">
-                <Input
-                  type="date"
+                <DateInput
                   value={poForm.expectedDeliveryAt}
-                  onChange={(event) =>
+                  onChange={(v) =>
                     setPoForm((prev) => ({
                       ...prev,
-                      expectedDeliveryAt: event.target.value,
+                      expectedDeliveryAt: v,
                     }))
                   }
                 />
@@ -1848,11 +1848,10 @@ function DateToolbarField({
   return (
     <div className="space-y-1">
       <Label className="text-xs text-muted-foreground">{label}</Label>
-      <Input
-        type="date"
+      <DateInput
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full min-w-[150px] sm:w-[150px]"
+        onChange={(v) => onChange(v)}
+        className="w-full min-w-[170px] sm:w-[170px]"
       />
     </div>
   );
