@@ -79,6 +79,10 @@ export default function FranchisePaymentsDetails({
 
   const columns: DataTableColumn<PaymentData>[] = [
     {
+      key: "payment",
+      header: "Payment",
+    },
+    {
       key: "type",
       header: "Type",
       render: (payment) => payment.type || "Payment",
@@ -120,17 +124,17 @@ export default function FranchisePaymentsDetails({
     {
       key: "actions",
       header: "Actions",
-      className: "text-right",
+      className: "text-center",
       render: (payment) => (
         <Button
           type="button"
           variant="ghost"
-          size="sm"
+          size="icon"
+          className="h-8 w-8"
+          title="View payment"
           onClick={() => setSelectedPayment(payment)}
-          className="h-8"
         >
-          <Eye className="mr-1 h-4 w-4" />
-          View
+          <Eye className="h-4 w-4" />
         </Button>
       ),
     },

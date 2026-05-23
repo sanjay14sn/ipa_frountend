@@ -63,38 +63,17 @@ export default function FranchiseCiDetails({
     {
       key: "instructor",
       header: "Instructor",
-      className: "w-[300px]",
+      className: "w-[260px]",
     },
     {
-      key: "contact",
-      header: "Contact",
-      className: "w-[150px]",
-      render: (ci) => (
-        <span className="text-sm text-card-foreground">{ci.phone || "N/A"}</span>
-      ),
-    },
-    {
-      key: "location",
-      header: "Location",
-      className: "w-[150px]",
-      render: (ci) => (
-        <span className="text-sm text-card-foreground">{ci.city || "N/A"}</span>
-      ),
-    },
-    {
-      key: "professional",
-      header: "Professional",
-      className: "w-[200px]",
-      render: (ci) => (
-        <span className="text-sm text-card-foreground">
-          {[ci.education, ci.occupation].filter(Boolean).join(" · ") || "N/A"}
-        </span>
-      ),
+      key: "city",
+      header: "City",
+      render: (ci) => ci.city || "—",
     },
     {
       key: "status",
       header: "Status",
-      className: "w-[110px]",
+      className: "text-center",
       render: (ci) => <StatusBadge label={ci.status} />,
     },
     {
@@ -151,12 +130,14 @@ export default function FranchiseCiDetails({
           columns={columns}
           getRowId={(ci) => ci.id.toString()}
           renderMainCell={(ci) => (
-            <div className="flex flex-col">
-              <div className="font-medium text-card-foreground">{ci.name}</div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                {[ci.education, ci.city].filter(Boolean).join(" · ") || "N/A"}
-              </div>
-            </div>
+            <span className="font-medium text-card-foreground">
+              {ci.name}
+              {ci.instructorId ? (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  · {ci.instructorId}
+                </span>
+              ) : null}
+            </span>
           )}
           renderExpandedContent={(ci) => (
             <CourseInstructorDetails

@@ -12,6 +12,10 @@ import { useUser } from "@/context/user-context";
 import {
   DataTable,
   type DataTableColumn,
+  DetailField,
+  DetailFieldsGrid,
+  ExpandedDetailSection,
+  ExpandedDetailSurface,
   TableEmptyState,
   TableLoadingState,
   TablePageShell,
@@ -198,6 +202,10 @@ export function AdminManagementSection() {
   const columns = useMemo<DataTableColumn<AdminRecord>[]>(() => {
     return [
       {
+        key: "admin",
+        header: "Admin",
+      },
+      {
         key: "role",
         header: "Role",
         render: (admin) => (
@@ -214,6 +222,7 @@ export function AdminManagementSection() {
       {
         key: "status",
         header: "Status",
+        className: "text-center",
         render: (admin) => (
           <Badge variant={admin.isActive ? "secondary" : "outline"}>
             {admin.isActive ? "Active" : "Inactive"}
@@ -221,26 +230,22 @@ export function AdminManagementSection() {
         ),
       },
       {
-        key: "updatedAt",
-        header: "Updated",
-        render: (admin) => formatDate(admin.updatedAt),
-      },
-      {
         key: "actions",
         header: "Actions",
-        className: "w-[120px]",
+        className: "w-[96px] text-center",
         render: (admin) => (
           <Button
             type="button"
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            title="Edit admin"
             onClick={(event) => {
               event.stopPropagation();
               openEdit(admin);
             }}
           >
             <PencilLine className="h-4 w-4" />
-            Edit
           </Button>
         ),
       },
@@ -282,12 +287,30 @@ export function AdminManagementSection() {
             columns={columns}
             getRowId={(admin) => String(admin.id)}
             renderMainCell={(admin) => (
-              <div className="space-y-0.5">
-                <div className="font-medium text-foreground">{admin.name}</div>
-                <div className="text-xs text-muted-foreground">
-                  {admin.emailId} | {admin.phone}
-                </div>
-              </div>
+              <span className="font-medium text-foreground">{admin.name}</span>
+            )}
+            renderExpandedContent={(admin) => (
+              <ExpandedDetailSurface>
+                <ExpandedDetailSection title="Contact & access">
+                  <DetailFieldsGrid columns={3}>
+                    <DetailField label="Email" value={admin.emailId} />
+                    <DetailField label="Phone" value={admin.phone} />
+                    <DetailField
+                      label="Role"
+                      value={admin.role === "super" ? "Superadmin" : "Regional admin"}
+                    />
+                    <DetailField
+                      label="Region"
+                      value={admin.state || "All regions"}
+                    />
+                    <DetailField
+                      label="Status"
+                      value={admin.isActive ? "Active" : "Inactive"}
+                    />
+                    <DetailField label="Updated" value={formatDate(admin.updatedAt)} />
+                  </DetailFieldsGrid>
+                </ExpandedDetailSection>
+              </ExpandedDetailSurface>
             )}
             searchPlaceholder="Search admins by name or email..."
             onSearchChange={(value) => {

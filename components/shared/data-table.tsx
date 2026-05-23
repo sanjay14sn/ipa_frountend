@@ -52,6 +52,11 @@ export interface DataTableColumn<T> {
   key: string;
   header: string;
   className?: string;
+  /**
+   * Cell renderer. Must return a single inline node (e.g. a string, badge, or
+   * row of inline icons). Multi-line stacks (`<div className="flex flex-col">`)
+   * break the uniform row height — put that detail in `renderExpandedContent`.
+   */
   render?: (item: T) => ReactNode;
 }
 
@@ -90,6 +95,11 @@ export interface DataTableProps<T> {
   loading?: boolean;
   columns: DataTableColumn<T>[];
   getRowId: (item: T) => string;
+  /**
+   * Primary cell renderer. Must return a single inline node — typically a
+   * short identifier (`Name`, `Name · ID-suffix`). Detail (email, phone, etc.)
+   * belongs in `renderExpandedContent`, not here.
+   */
   renderMainCell: (item: T) => ReactNode;
   renderExpandedContent?: (item: T) => ReactNode;
   /** Optional structured cards below custom expanded content (or alone if no renderExpandedContent). */
@@ -515,9 +525,12 @@ export default function DataTable<T>({
               </colgroup>
             )}
           <TableHeader>
-            <TableRow className="border-0 hover:bg-transparent">
+            <TableRow className="h-10 border-0 hover:bg-transparent">
               {columns.map((column) => (
-                <TableHead key={column.key} className={column.className}>
+                <TableHead
+                  key={column.key}
+                  className={cn("whitespace-nowrap", column.className)}
+                >
                   {column.header}
                 </TableHead>
               ))}
@@ -526,10 +539,10 @@ export default function DataTable<T>({
           <TableBody>
             {loading ? (
               Array.from({ length: 5 }).map((_, index) => (
-                <TableRow key={index}>
+                <TableRow key={index} className="h-12">
                   {columns.map((column) => (
-                    <TableCell key={column.key}>
-                      <div className="h-6 animate-pulse rounded bg-muted" />
+                    <TableCell key={column.key} className="whitespace-nowrap">
+                      <div className="h-4 animate-pulse rounded bg-muted" />
                     </TableCell>
                   ))}
                 </TableRow>
@@ -556,13 +569,14 @@ export default function DataTable<T>({
                   <Fragment key={rowId}>
                     <TableRow
                       className={cn(
-                        "cursor-default border-border text-card-foreground hover:bg-accent/40",
+                        "h-12 cursor-default border-border text-card-foreground hover:bg-accent/40",
                         isExpanded && "border-b-0 bg-accent/30 hover:bg-accent/40"
                       )}
                       onClick={() => onRowClick?.(item)}
                     >
                       <TableCell
                         className={cn(
+                          "whitespace-nowrap",
                           columns[0].className,
                           isExpanded && "border-l-2 border-l-primary"
                         )}
@@ -575,7 +589,7 @@ export default function DataTable<T>({
                                 e.stopPropagation();
                                 toggleRow(rowId);
                               }}
-                              className="flex h-7 w-7 items-center justify-center rounded-md text-primary hover:bg-accent"
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-primary hover:bg-accent"
                               aria-expanded={isExpanded}
                             >
                               <ChevronRight
@@ -586,14 +600,16 @@ export default function DataTable<T>({
                               />
                             </button>
                           )}
-                          <div className="flex-1">{renderMainCell(item)}</div>
+                          <div className="min-w-0 flex-1 truncate">
+                            {renderMainCell(item)}
+                          </div>
                         </div>
                       </TableCell>
 
                       {columns.slice(1).map((column) => (
                         <TableCell
                           key={column.key}
-                          className={column.className}
+                          className={cn("whitespace-nowrap", column.className)}
                         >
                           {column.render ? column.render(item) : null}
                         </TableCell>

@@ -45,24 +45,20 @@ export default function RequestedIdTable({
     {
       key: "franchise",
       header: "Franchise",
-      className: "w-[300px]",
+      className: "w-[280px]",
     },
     {
       key: "requested",
       header: "Requested",
       className: "text-center",
-      render: (g) => (
-        <Badge variant="secondary">
-          {g.totalRequested} request{g.totalRequested !== 1 ? "s" : ""}
-        </Badge>
-      ),
+      render: (g) => <Badge variant="secondary">{g.totalRequested}</Badge>,
     },
     {
       key: "issued",
       header: "Issued",
       className: "text-center",
       render: (g) => (
-        <StatusBadge tone="success" label={`${g.totalIssued} issued`} />
+        <StatusBadge tone="success" label={String(g.totalIssued)} />
       ),
     },
   ];
@@ -74,9 +70,7 @@ export default function RequestedIdTable({
       columns={columns}
       getRowId={(g) => g.franchiseId}
       renderMainCell={(g) => (
-        <div className="flex flex-col">
-          <div className="font-medium text-gray-900">{g.franchiseName}</div>
-        </div>
+        <span className="font-medium text-gray-900">{g.franchiseName}</span>
       )}
       renderExpandedContent={(g) => (
         <FranchiseIdDetails

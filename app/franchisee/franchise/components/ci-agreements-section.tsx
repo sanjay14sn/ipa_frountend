@@ -18,6 +18,10 @@ import {
 import {
   DataTable,
   type DataTableColumn,
+  DetailField,
+  DetailFieldsGrid,
+  ExpandedDetailSection,
+  ExpandedDetailSurface,
   TableLoadingState,
   TablePageShell,
 } from "@/components/shared";
@@ -268,52 +272,41 @@ export function CIAgreementsSection() {
 
   const columns: DataTableColumn<CIAgreementData>[] = [
     {
-      key: "id",
-      header: "ID",
-      className: "w-24 font-mono text-xs",
-      render: (r) => r.id,
+      key: "agreement",
+      header: "Agreement",
     },
     {
       key: "phase",
       header: "Status",
-      className: "pl-8",
+      className: "text-center",
       render: (r) => <PhaseBadge phase={r.phase} />,
     },
     {
-      key: "term",
-      header: "Term",
-      className: "text-sm text-muted-foreground whitespace-nowrap",
-      render: (r) =>
-        r.validFrom && r.validUntil
-          ? `${fmtShort(r.validFrom)} – ${fmtShort(r.validUntil)}`
-          : "—",
-    },
-    {
-      key: "sign",
-      header: "Action",
-      className: "w-56",
+      key: "actions",
+      header: "Actions",
+      className: "w-[160px] text-center",
       render: (r) => (
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center justify-center gap-1">
           <Button
             type="button"
-            size="sm"
+            size="icon"
             variant="ghost"
-            className="h-8 w-8 p-0"
+            className="h-8 w-8"
             title="View agreement"
             onClick={() => setViewingAgreementId(r.id)}
           >
-            <Eye className="h-3.5 w-3.5" />
+            <Eye className="h-4 w-4" />
           </Button>
           {r.phase === "PENDING_FRANCHISEE_SIGNATURE" && (
             <Button
               type="button"
-              size="sm"
-              variant="outline"
-              className="h-8"
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              title="Sign agreement"
               onClick={() => setSigningAgreement(r)}
             >
-              <PenLine className="mr-1.5 h-3.5 w-3.5" />
-              Sign agreement
+              <PenLine className="h-4 w-4" />
             </Button>
           )}
         </div>
@@ -338,12 +331,31 @@ export function CIAgreementsSection() {
           currentPage={page}
           onPageChange={setPage}
           renderMainCell={(r) => (
-            <div className="flex flex-col min-w-0">
-              <span className="font-medium truncate max-w-xs">{r.title}</span>
-              <span className="text-sm text-muted-foreground truncate max-w-xs">
-                {r.instructorName ?? `Instructor #${r.instructorId}`}
+            <span className="font-medium">
+              {r.title}
+              <span className="ml-2 text-xs text-muted-foreground">
+                · {r.instructorName ?? `Instructor #${r.instructorId}`}
               </span>
-            </div>
+            </span>
+          )}
+          renderExpandedContent={(r) => (
+            <ExpandedDetailSurface>
+              <ExpandedDetailSection title="Agreement details">
+                <DetailFieldsGrid columns={3}>
+                  <DetailField label="ID" value={String(r.id)} />
+                  <DetailField
+                    label="Instructor"
+                    value={r.instructorName ?? `Instructor #${r.instructorId}`}
+                  />
+                  <DetailField
+                    label="Status"
+                    value={PHASE_CONFIG[r.phase]?.label ?? r.phase}
+                  />
+                  <DetailField label="Valid from" value={fmtShort(r.validFrom)} />
+                  <DetailField label="Valid until" value={fmtShort(r.validUntil)} />
+                </DetailFieldsGrid>
+              </ExpandedDetailSection>
+            </ExpandedDetailSurface>
           )}
           emptyMessage="No CI agreements on file yet."
           resultsText={(_c, total) =>

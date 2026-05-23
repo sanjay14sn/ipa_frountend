@@ -62,13 +62,6 @@ function formatDate(value: string | Date | null | undefined): string {
 }
 
 
-function agreementProgramLabels(item: FranchiseData): string {
-  const names = [
-    ...(item.agreements ?? []).map((a) => a.programName ?? a.program?.name),
-  ].filter((name): name is string => Boolean(name?.trim()));
-  return names.length > 0 ? [...new Set(names)].join(", ") : "—";
-}
-
 function requestedPrograms(item: FranchiseData): string[] {
   const names = [
     ...(item.agreements ?? []).map((a) => a.programName ?? a.program?.name),
@@ -199,32 +192,19 @@ export function FranchiseHubTable({
           {
             key: "franchise",
             header: "Franchise",
-            className: "w-[280px]",
+            className: "w-[260px]",
           },
           {
             key: "location",
             header: "Location",
-            render: (item) => (
-              <span className="text-sm">
-                {[item.city, item.state].filter(Boolean).join(", ") || "—"}
-              </span>
-            ),
+            render: (item) =>
+              [item.city, item.state].filter(Boolean).join(", ") || "—",
           },
           {
             key: "type",
             header: "Type",
             className: "text-center",
             render: (item) => item.type ?? "—",
-          },
-          {
-            key: "programs",
-            header: "Programs",
-            className: "max-w-[220px] text-center",
-            render: (item) => (
-              <span className="line-clamp-2 text-sm">
-                {agreementProgramLabels(item)}
-              </span>
-            ),
           },
           {
             key: "agreements",
@@ -235,7 +215,7 @@ export function FranchiseHubTable({
           {
             key: "emi",
             header: "EMI",
-            className: "min-w-[220px]",
+            className: "min-w-[200px]",
             render: (item) => (
               <ReceivableCompactLine
                 summary={
@@ -247,18 +227,10 @@ export function FranchiseHubTable({
             ),
           },
           {
-            key: "createdDate",
-            header: "Created",
-            className: "text-center",
-            render: (item) => formatDate(item.createdAt),
-          },
-          {
             key: "status",
             header: "Status",
             className: "text-center",
-            render: (item) => (
-              <StatusBadge label={item.status} />
-            ),
+            render: (item) => <StatusBadge label={item.status} />,
           },
           {
             key: "actions",
@@ -290,7 +262,7 @@ export function FranchiseHubTable({
           {
             key: "application",
             header: "Application",
-            className: "w-[300px]",
+            className: "w-[280px]",
           },
           {
             key: "type",
@@ -299,24 +271,10 @@ export function FranchiseHubTable({
             render: (item) => item.type ?? "—",
           },
           {
-            key: "programs",
-            header: "Program",
-            className: "text-center",
-            render: (item) => primaryRequestedProgram(item),
-          },
-          {
-            key: "applicationDate",
-            header: "Application Date",
-            className: "text-center",
-            render: (item) => formatDate(item.createdAt),
-          },
-          {
             key: "status",
             header: "Status",
             className: "text-center",
-            render: (item) => (
-              <StatusBadge label={item.status} />
-            ),
+            render: (item) => <StatusBadge label={item.status} />,
           },
           {
             key: "actions",
@@ -363,37 +321,9 @@ export function FranchiseHubTable({
       loading={loading}
       columns={columns}
       getRowId={(item) => String(item.id)}
-      renderMainCell={(item) =>
-        variant === "franchises" ? (
-          <div className="flex flex-col">
-            <div className="font-medium text-gray-900">{item.name}</div>
-            <div className="text-sm text-gray-500">
-              {item.franchisee?.name ? `${item.franchisee.name} · ` : ""}
-              {franchiseeMail(item.franchisee)}
-              {item.franchisee?.phone ? ` · ${item.franchisee.phone}` : ""}
-            </div>
-            {(item.agreements?.length ?? 0) > 0 ? (
-              <div className="text-xs font-medium text-green-600">
-                {item.agreements?.length} agreement
-                {item.agreements?.length === 1 ? "" : "s"}
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <div className="flex flex-col">
-            <div className="font-medium text-gray-900">{item.name}</div>
-            <div className="text-sm text-gray-500">
-              {item.franchisee?.name ? `${item.franchisee.name} · ` : ""}
-              {franchiseeMail(item.franchisee)}
-              {item.franchisee?.phone ? ` · ${item.franchisee.phone}` : ""}
-            </div>
-            <div className="text-xs font-medium text-primary">
-              {[item.city, item.state].filter(Boolean).join(", ") ||
-                `ID: ${item.id}`}
-            </div>
-          </div>
-        )
-      }
+      renderMainCell={(item) => (
+        <span className="font-medium text-gray-900">{item.name}</span>
+      )}
       renderExpandedContent={(item) =>
         variant === "franchises" ? (
           <FranchiseTableExpanded item={item} />

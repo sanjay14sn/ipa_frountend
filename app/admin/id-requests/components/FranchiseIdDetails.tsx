@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { Eye } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -216,51 +215,39 @@ export default function FranchiseIdDetails({
 
   const columns: DataTableColumn<RequestedIdDetail>[] = [
     {
-      key: "rollNumber",
-      header: "Roll number",
-      className: "text-center",
-      render: (student) => (
-        <Badge variant="outline" title={student.rollNo}>
-          {formatEntityCodeForDisplay(student.rollNo)}
-        </Badge>
-      ),
+      key: "student",
+      header: "Student",
     },
     {
       key: "dob",
       header: "DOB",
       className: "text-center",
-      render: (student) => (
-        <span className="text-sm text-gray-600">
-          {student.dateOfBirth
-            ? new Date(student.dateOfBirth).toLocaleDateString()
-            : "N/A"}
-        </span>
-      ),
+      render: (student) =>
+        student.dateOfBirth
+          ? new Date(student.dateOfBirth).toLocaleDateString()
+          : "—",
     },
     {
       key: "issueDate",
       header: "Issue date",
       className: "text-center",
-      render: (student) => (
-        <span className="text-sm text-gray-600">{formatIssueDate(student)}</span>
-      ),
+      render: (student) => formatIssueDate(student),
     },
     {
       key: "actions",
       header: "Actions",
       className: "text-center",
       render: (student) => (
-        <div className="flex items-center justify-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            title="View student details"
-            onClick={() => setDetailStudent(student)}
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          title="View student details"
+          onClick={() => setDetailStudent(student)}
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
       ),
     },
   ];
@@ -331,7 +318,14 @@ export default function FranchiseIdDetails({
                 : `${student.name}-${student.rollNo}-${student.dateOfBirth ?? ""}`
             }
             renderMainCell={(student) => (
-              <div className="font-medium text-gray-900">{student.name}</div>
+              <span className="font-medium text-gray-900">
+                {student.name}
+                {student.rollNo ? (
+                  <span className="ml-2 font-mono text-xs text-muted-foreground">
+                    · {formatEntityCodeForDisplay(student.rollNo)}
+                  </span>
+                ) : null}
+              </span>
             )}
             searchPlaceholder="Search by name, roll number, or franchise..."
             onSearchChange={(value) => {

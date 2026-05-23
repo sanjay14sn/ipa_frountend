@@ -16,12 +16,36 @@ function franchiseeMail(fe: FranchiseData["franchisee"]): string {
   return raw.mail || raw.email || "-";
 }
 
+function formatDate(value: string | Date | null | undefined): string {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString();
+}
+
+function programLabels(agreements: FranchiseData["agreements"]): string {
+  const names = (agreements ?? [])
+    .map((a) => a.programName ?? a.program?.name)
+    .filter((name): name is string => Boolean(name?.trim()));
+  return names.length > 0 ? [...new Set(names)].join(", ") : "-";
+}
+
 export function FranchiseTableExpanded({ item }: { item: FranchiseData }) {
   const franchisee = item.franchisee;
   const agreements = item.agreements ?? [];
+  const location = [item.city, item.state].filter(Boolean).join(", ") || "-";
 
   return (
     <ExpandedDetailSurface>
+      <ExpandedDetailSection title="Franchise overview">
+        <DetailFieldsGrid columns={3}>
+          <DetailField label="Type" value={item.type ?? "-"} />
+          <DetailField label="Location" value={location} />
+          <DetailField label="Created" value={formatDate(item.createdAt)} />
+          <DetailField label="Programs" value={programLabels(agreements)} span={3} />
+        </DetailFieldsGrid>
+      </ExpandedDetailSection>
+
+      <Separator />
+
       <ExpandedDetailSection title="Franchisee information">
         <DetailFieldsGrid columns={3}>
           <DetailField label="Name" value={franchisee?.name ?? "-"} />

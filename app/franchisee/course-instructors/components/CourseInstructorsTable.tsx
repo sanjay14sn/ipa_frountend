@@ -129,30 +129,8 @@ export default function CourseInstructorsTable({
 
   const columns: DataTableColumn<CourseInstructorData>[] = [
     {
-      key: "contact",
-      header: "Contact",
-      className: "w-[170px]",
-      render: (ci) => (
-        <span className="text-sm text-card-foreground">{ci.phone || "N/A"}</span>
-      ),
-    },
-    {
-      key: "location",
-      header: "Location",
-      className: "w-[170px]",
-      render: (ci) => (
-        <span className="text-sm text-card-foreground">{ci.city || "N/A"}</span>
-      ),
-    },
-    {
-      key: "professional",
-      header: "Professional",
-      className: "w-[220px]",
-      render: (ci) => (
-        <span className="text-sm text-card-foreground">
-          {[ci.education, ci.occupation].filter(Boolean).join(" · ") || "N/A"}
-        </span>
-      ),
+      key: "instructor",
+      header: "Instructor",
     },
     {
       key: "eligibility",
@@ -163,7 +141,7 @@ export default function CourseInstructorsTable({
     {
       key: "status",
       header: "Status",
-      className: "w-[120px]",
+      className: "text-center",
       render: (ci) => <StatusBadge label={ci.status} />,
     },
     {
@@ -248,12 +226,14 @@ export default function CourseInstructorsTable({
       columns={columns}
       getRowId={(ci) => ci.id.toString()}
       renderMainCell={(ci) => (
-        <div className="flex flex-col">
-          <div className="font-medium text-card-foreground">{ci.name}</div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {[ci.education, ci.city].filter(Boolean).join(" · ") || "N/A"}
-          </div>
-        </div>
+        <span className="font-medium text-card-foreground">
+          {ci.name}
+          {ci.instructorId ? (
+            <span className="ml-2 text-xs text-muted-foreground">
+              · {ci.instructorId}
+            </span>
+          ) : null}
+        </span>
       )}
       renderExpandedContent={(ci) => (
         <CourseInstructorDetails courseInstructor={ci} />

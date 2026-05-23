@@ -104,14 +104,8 @@ export default function CompletedTrainingTable({
       data={paginatedData}
       columns={columns}
       getRowId={([franchiseId]) => franchiseId}
-      renderMainCell={([, franchiseName, instructors]) => (
-        <div className="flex flex-col">
-          <div className="font-medium text-gray-900">{franchiseName}</div>
-          <div className="text-sm text-gray-500">
-            {instructors.length} instructor
-            {instructors.length !== 1 ? "s" : ""} completed training
-          </div>
-        </div>
+      renderMainCell={([, franchiseName]) => (
+        <span className="font-medium text-gray-900">{franchiseName}</span>
       )}
       renderExpandedContent={(row) => (
         <InstructorDetails

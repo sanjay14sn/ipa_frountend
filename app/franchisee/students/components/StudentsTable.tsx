@@ -23,15 +23,11 @@ import { formatEntityCodeForDisplay } from "@/lib/format-entity-code";
  * swallows all leftover horizontal space and leaves a dead gap before Status/ID/Actions.
  */
 const STUDENT_TABLE_COL_GROUP_WIDTHS: string[] = [
-  "9rem",
-  "22%",
-  "5.5rem",
-  "5.5rem",
-  "6.25rem",
-  "clamp(9rem, 11vw, 13rem)",
-  "5.25rem",
-  "5.5rem",
-  "7.25rem",
+  "auto",
+  "8rem",
+  "6rem",
+  "7rem",
+  "8.5rem",
 ];
 
 interface StudentsTableProps {
@@ -144,82 +140,23 @@ export default function StudentsTable({
     {
       key: "student",
       header: "Student",
-      className: "h-auto min-h-0 min-w-0 overflow-hidden px-2 py-2",
-    },
-    {
-      key: "rollNo",
-      header: "Roll No",
-      className: "h-auto min-h-0 min-w-0 px-2 py-2",
-      render: (student) => {
-        const roll = student.rollNo || "N/A";
-        const display =
-          roll !== "N/A" ? formatEntityCodeForDisplay(roll) : "N/A";
-        return (
-          <span
-            className="block truncate font-mono text-xs leading-normal tracking-tight text-card-foreground"
-            title={roll !== "N/A" ? roll : undefined}
-          >
-            {display}
-          </span>
-        );
-      },
     },
     {
       key: "level",
       header: "Level",
-      className: "h-auto min-h-0 w-[5.5rem] min-w-[5.5rem] px-2 py-2 text-center",
+      className: "text-center",
       render: (student) => (
         <Badge
-          className={`${getLevelColor(getStudentLevelName(student))} max-w-full truncate border px-1.5 text-[11px]`}
+          className={`${getLevelColor(getStudentLevelName(student))} border px-1.5 text-[11px]`}
         >
           {getStudentLevelName(student)}
         </Badge>
       ),
     },
     {
-      key: "stream",
-      header: "Stream",
-      className: "h-auto min-h-0 w-[6rem] min-w-0 max-w-[6rem] px-2 py-2 text-center",
-      render: (student) => {
-        const label = student.stream ? String(student.stream) : "N/A";
-        return (
-          <span className="block truncate text-sm text-card-foreground" title={label}>
-            {label}
-          </span>
-        );
-      },
-    },
-    {
-      key: "phone",
-      header: "Phone",
-      className: "h-auto min-h-0 w-[6.5rem] min-w-0 max-w-[6.5rem] px-2 py-2",
-      render: (student) => {
-        const phone =
-          student.fatherContactNo || student.motherContactNo || "N/A";
-        return (
-          <span className="block truncate text-sm text-card-foreground" title={phone}>
-            {phone}
-          </span>
-        );
-      },
-    },
-    {
-      key: "mail",
-      header: "Email",
-      className: "h-auto min-h-0 min-w-0 max-w-[13rem] px-2 py-2",
-      render: (student) => (
-        <span
-          className="block truncate text-sm text-card-foreground"
-          title={student.mail || undefined}
-        >
-          {student.mail || "N/A"}
-        </span>
-      ),
-    },
-    {
       key: "status",
       header: "Status",
-      className: "h-auto min-h-0 w-[5.25rem] min-w-[5.25rem] px-2 py-2 text-center",
+      className: "text-center",
       render: (student) => (
         <StatusBadge
           label={student.isActive ? "Active" : "Inactive"}
@@ -230,19 +167,19 @@ export default function StudentsTable({
     {
       key: "idStatus",
       header: "ID",
-      className: "h-auto min-h-0 w-[5.5rem] min-w-[5.5rem] px-2 py-2 text-center",
+      className: "text-center",
       render: (student) => (
         <StatusBadge
           tone={getIdStatusTone(student.idIssued)}
           label={student.idIssued}
-          className="max-w-full truncate px-1.5 text-[11px]"
+          className="px-1.5 text-[11px]"
         />
       ),
     },
     {
       key: "actions",
       header: "Actions",
-      className: "h-auto min-h-0 w-[7.25rem] min-w-[7.25rem] max-w-[7.25rem] px-1 py-2 text-center",
+      className: "text-center",
       render: (student) => (
         <div className="flex items-center justify-center gap-0.5">
           <Button
@@ -363,23 +300,31 @@ export default function StudentsTable({
         tableClassName="table-fixed"
         columnGroupWidths={STUDENT_TABLE_COL_GROUP_WIDTHS}
         getRowId={(student) => student.id.toString()}
-        renderMainCell={(student) => (
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate font-medium text-card-foreground">
+        renderMainCell={(student) => {
+          const roll = student.rollNo
+            ? formatEntityCodeForDisplay(student.rollNo)
+            : null;
+          return (
+            <span className="inline-flex items-center gap-2 font-medium text-card-foreground">
               {student.name || "N/A"}
+              {roll ? (
+                <span className="font-mono text-xs text-muted-foreground">
+                  · {roll}
+                </span>
+              ) : null}
+              {hasOnlyWeekLeft(student.deactivateDate) && (
+                <Badge
+                  variant="destructive"
+                  className="shrink-0 text-xs"
+                  title="Student has only a week left before deactivation"
+                >
+                  <AlertTriangle className="mr-1 h-3 w-3" />
+                  1 Week Left
+                </Badge>
+              )}
             </span>
-            {hasOnlyWeekLeft(student.deactivateDate) && (
-              <Badge
-                variant="destructive"
-                className="shrink-0 text-xs"
-                title="Student has only a week left before deactivation"
-              >
-                <AlertTriangle className="mr-1 h-3 w-3" />
-                1 Week Left
-              </Badge>
-            )}
-          </div>
-        )}
+          );
+        }}
         renderExpandedContent={(student) => <StudentDetails student={student} />}
         searchPlaceholder="Search students, roll numbers, email, or parent names..."
         onSearchChange={(v) => onSearchChange?.(v)}

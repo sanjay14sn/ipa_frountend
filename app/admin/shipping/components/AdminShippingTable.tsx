@@ -125,30 +125,11 @@ export default function AdminShippingTable() {
       {
         key: "franchise",
         header: "Franchise",
-        render: (row) => {
-          const dispatch = row.dispatchItems ?? [];
-          const certCount = dispatch.filter((d) => d.itemType === "CERTIFICATE").length;
-          const idCount = dispatch.filter((d) => d.itemType === "ID_CARD").length;
-          const materialQty = (row.orderItems ?? []).reduce((s, l) => s + l.quantity, 0);
-          return (
-          <div>
-            <div className="font-medium">
-              {row.franchise?.name ?? row.franchiseId}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {materialQty} inventory qty
-              {certCount > 0
-                ? ` · ${certCount} certificate${certCount === 1 ? "" : "s"}`
-                : ""}
-              {idCount > 0 ? ` · ${idCount} ID card${idCount === 1 ? "" : "s"}` : ""}
-            </div>
-          </div>
-          );
-        },
+        render: (row) => row.franchise?.name ?? row.franchiseId ?? "—",
       },
       {
         key: "shipment",
-        header: "Shipment",
+        header: "Status",
         render: (row) => (
           <StatusBadge
             tone={shipmentTone(row.status)}
@@ -159,22 +140,7 @@ export default function AdminShippingTable() {
       {
         key: "tracking",
         header: "Tracking",
-        render: (row) => (
-          <div>
-            <div>{row.trackingNumber || "Not assigned"}</div>
-            <div className="text-xs text-muted-foreground">
-              {row.carrier || "No carrier"}
-            </div>
-          </div>
-        ),
-      },
-      {
-        key: "readyAt",
-        header: "Ready at",
-        render: (row) =>
-          row.readyToShipAt
-            ? new Date(row.readyToShipAt).toLocaleString()
-            : "Waiting",
+        render: (row) => row.trackingNumber || "—",
       },
       {
         key: "actions",
@@ -262,25 +228,17 @@ export default function AdminShippingTable() {
         loading={shipmentsQuery.isLoading}
         columns={columns}
         getRowId={(row) => String(row.id)}
-        renderMainCell={(row) => {
+        renderMainCell={(row) => (
+          <span className="font-medium">{row.referenceId}</span>
+        )}
+        renderExpandedContent={(row) => {
+          const dispatch = row.dispatchItems ?? [];
+          const certCount = dispatch.filter((d) => d.itemType === "CERTIFICATE").length;
+          const idCount = dispatch.filter((d) => d.itemType === "ID_CARD").length;
+          const materialQty = (row.orderItems ?? []).reduce((s, l) => s + l.quantity, 0);
           const dispatchOnly =
             (row.orderItems?.length ?? 0) === 0 && (row.dispatchItems?.length ?? 0) > 0;
           return (
-          <div>
-            <div className="font-medium">
-              {row.referenceId}
-            </div>
-            {dispatchOnly ? (
-              <div className="text-xs text-muted-foreground">Dispatch only (no material charge)</div>
-            ) : (
-              <div className="text-xs text-muted-foreground">
-                ₹{Number(row.totalAmount).toFixed(2)}
-              </div>
-            )}
-          </div>
-          );
-        }}
-        renderExpandedContent={(row) => (
           <ExpandedDetailSection title="Shipment details">
             <div className="space-y-4">
               <DetailFieldsGrid columns={4}>
@@ -312,6 +270,27 @@ export default function AdminShippingTable() {
                       "Not generated"
                     );
                   })()}
+                />
+                <DetailField
+                  label="Value"
+                  value={
+                    dispatchOnly
+                      ? "Dispatch only"
+                      : `₹${Number(row.totalAmount).toFixed(2)}`
+                  }
+                />
+                <DetailField
+                  label="Ready at"
+                  value={
+                    row.readyToShipAt
+                      ? new Date(row.readyToShipAt).toLocaleString()
+                      : "Waiting"
+                  }
+                />
+                <DetailField label="Inventory qty" value={String(materialQty)} />
+                <DetailField
+                  label="Certs / IDs"
+                  value={`${certCount} cert · ${idCount} ID`}
                 />
               </DetailFieldsGrid>
 
@@ -364,7 +343,8 @@ export default function AdminShippingTable() {
               ) : null}
             </div>
           </ExpandedDetailSection>
-        )}
+          );
+        }}
         searchPlaceholder="Search by order, franchise, or tracking"
         onSearchChange={(s) => {
           setSearch(s);

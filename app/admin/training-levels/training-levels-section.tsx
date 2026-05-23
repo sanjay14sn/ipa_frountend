@@ -33,9 +33,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   DataTable,
   type DataTableColumn,
+  DetailField,
+  DetailFieldsGrid,
+  ExpandedDetailSection,
+  ExpandedDetailSurface,
 } from "@/components/shared";
 import {
   createTrainingLevel,
@@ -253,35 +258,13 @@ export function TrainingLevelsSection() {
 
   const columns: DataTableColumn<TrainingLevel>[] = [
     {
-      key: "duration",
-      header: "Duration",
-      render: (level) => `${level.durationInDays} day(s)`,
-    },
-    {
-      key: "theory",
-      header: "Theory",
-      render: (level) => `${level.theoryPassMark}/${level.theoryTotalMarks}`,
-    },
-    {
-      key: "practical",
-      header: "Practical",
-      render: (level) =>
-        level.practicalTotalMarks != null && level.practicalPassMark != null ? (
-          <div className="space-y-1">
-            <div>
-              {level.practicalPassMark}/{level.practicalTotalMarks}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {level.practicalMarksRequired ? "Required" : "Situational"}
-            </div>
-          </div>
-        ) : (
-          <span className="text-muted-foreground">None</span>
-        ),
+      key: "level",
+      header: "Level",
     },
     {
       key: "fee",
       header: "Fee",
+      className: "text-right",
       render: (level) =>
         level.fee.toLocaleString("en-IN", {
           minimumFractionDigits: 0,
@@ -289,31 +272,9 @@ export function TrainingLevelsSection() {
         }),
     },
     {
-      key: "studentLevels",
-      header: "Student Levels",
-      className: "max-w-[220px]",
-      render: (level) => (
-        <TrainingLevelStudentLevelsPicker
-          trainingLevelId={level.id}
-          programId={level.programId}
-          disabled={isLoadingLevels}
-        />
-      ),
-    },
-    {
-      key: "materials",
-      header: "Materials",
-      className: "max-w-[220px]",
-      render: (level) => (
-        <TrainingLevelMaterialsPicker
-          trainingLevelId={level.id}
-          disabled={isLoadingLevels}
-        />
-      ),
-    },
-    {
       key: "status",
       header: "Status",
+      className: "text-center",
       render: (level) => (
         <Badge variant={level.isActive ? "default" : "secondary"}>
           {level.isActive ? "Active" : "Inactive"}
@@ -323,19 +284,23 @@ export function TrainingLevelsSection() {
     {
       key: "actions",
       header: "Actions",
-      className: "text-right",
+      className: "w-[96px] text-center",
       render: (level) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex items-center justify-center gap-1">
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
+            className="h-8 w-8"
+            title="Edit level"
             onClick={() => openEditDialog(level)}
           >
             <Pencil className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
+            className="h-8 w-8"
+            title="Delete level"
             onClick={() => {
               setDeletingLevel(level);
               setIsDeleteDialogOpen(true);
@@ -384,20 +349,64 @@ export function TrainingLevelsSection() {
         columns={columns}
         getRowId={(level) => String(level.id)}
         renderMainCell={(level) => (
-          <div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-mono">
-                #{level.displayOrder}
-              </Badge>
-              <span className="font-medium">{level.name}</span>
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">{level.code}</div>
-            {level.description ? (
-              <div className="mt-1 text-xs text-muted-foreground">
-                {level.description}
-              </div>
-            ) : null}
-          </div>
+          <span className="inline-flex items-center gap-2 font-medium">
+            <Badge variant="outline" className="font-mono">
+              #{level.displayOrder}
+            </Badge>
+            {level.name}
+            <span className="text-xs text-muted-foreground">· {level.code}</span>
+          </span>
+        )}
+        renderExpandedContent={(level) => (
+          <ExpandedDetailSurface>
+            <ExpandedDetailSection title="Training details">
+              <DetailFieldsGrid columns={3}>
+                <DetailField
+                  label="Duration"
+                  value={`${level.durationInDays} day(s)`}
+                />
+                <DetailField
+                  label="Theory"
+                  value={`${level.theoryPassMark}/${level.theoryTotalMarks}`}
+                />
+                <DetailField
+                  label="Practical"
+                  value={
+                    level.practicalTotalMarks != null &&
+                    level.practicalPassMark != null
+                      ? `${level.practicalPassMark}/${level.practicalTotalMarks} (${level.practicalMarksRequired ? "Required" : "Situational"})`
+                      : "None"
+                  }
+                />
+                {level.description ? (
+                  <DetailField
+                    label="Description"
+                    value={level.description}
+                    span={3}
+                  />
+                ) : null}
+              </DetailFieldsGrid>
+            </ExpandedDetailSection>
+
+            <Separator />
+
+            <ExpandedDetailSection title="Assigned student levels">
+              <TrainingLevelStudentLevelsPicker
+                trainingLevelId={level.id}
+                programId={level.programId}
+                disabled={isLoadingLevels}
+              />
+            </ExpandedDetailSection>
+
+            <Separator />
+
+            <ExpandedDetailSection title="Materials">
+              <TrainingLevelMaterialsPicker
+                trainingLevelId={level.id}
+                disabled={isLoadingLevels}
+              />
+            </ExpandedDetailSection>
+          </ExpandedDetailSurface>
         )}
         emptyMessage={
           selectedProgramId == null

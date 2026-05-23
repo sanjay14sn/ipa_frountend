@@ -40,14 +40,14 @@ export default function AdminCertificateRequestsTable({
     {
       key: "franchise",
       header: "Franchise",
-      className: "w-[300px]",
+      className: "w-[280px]",
     },
     {
       key: "pending",
       header: "Pending",
       className: "text-center",
       render: (g) => (
-        <StatusBadge tone="warning" label={`${g.totalPending} pending`} />
+        <StatusBadge tone="warning" label={String(g.totalPending)} />
       ),
     },
     {
@@ -55,7 +55,7 @@ export default function AdminCertificateRequestsTable({
       header: "Issued",
       className: "text-center",
       render: (g) => (
-        <StatusBadge tone="success" label={`${g.totalIssued} issued`} />
+        <StatusBadge tone="success" label={String(g.totalIssued)} />
       ),
     },
     {
@@ -63,7 +63,7 @@ export default function AdminCertificateRequestsTable({
       header: "Rejected",
       className: "text-center",
       render: (g) => (
-        <StatusBadge tone="destructive" label={`${g.totalRejected} rejected`} />
+        <StatusBadge tone="destructive" label={String(g.totalRejected)} />
       ),
     },
   ];

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { format, parseISO } from "date-fns";
 import { Download, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -39,15 +38,6 @@ import {
   type PaymentOrderResponse,
 } from "@/services/franchisee.service";
 import { abandonOrderPayment } from "@/services/order.service";
-
-function fmtShort(iso: string | null | undefined) {
-  if (!iso) return "-";
-  try {
-    return format(parseISO(iso), "PP");
-  } catch {
-    return iso;
-  }
-}
 
 function FranchiseeAgreementViewDialog({
   agreementId,
@@ -182,10 +172,8 @@ export function MyAgreementsSection() {
 
   const columns: DataTableColumn<AgreementRecord>[] = [
     {
-      key: "id",
-      header: "ID",
-      className: "w-16 font-mono text-xs",
-      render: (record) => record.id,
+      key: "agreement",
+      header: "Agreement",
     },
     {
       key: "type",
@@ -193,78 +181,64 @@ export function MyAgreementsSection() {
       render: (record) => <Badge variant="secondary">{record.type}</Badge>,
     },
     {
-      key: "signing",
-      header: "Signing",
-      className: "text-sm text-muted-foreground whitespace-nowrap",
-      render: (record) => fmtShort(record.dateOfSigning),
-    },
-    {
-      key: "signature",
-      header: "Signature",
-      render: (record) =>
-        record.franchiseeSignatureUrl || record.franchiseeSignature ? (
-          <Badge variant="outline">Yes</Badge>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        ),
-    },
-    {
-      key: "payment",
-      header: "Payment",
-      render: (record) =>
-        record.paymentId != null || record.payment?.id != null ? (
-          <Badge variant="outline">Linked</Badge>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        ),
-    },
-    {
       key: "emi",
       header: "EMI",
+      className: "min-w-[180px]",
       render: (record) => (
         <ReceivableCompactProgress summary={record.receivables?.installmentSummary} />
       ),
     },
     {
-      key: "scheduleB",
-      header: "Schedule B",
-      className: "w-28",
-      render: (record) => (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-8"
-          onClick={async () => {
-            try {
-              await downloadScheduleBPdfMine(record.id);
-              toast.success("Schedule B PDF download started");
-            } catch (error) {
-              toast.error(
-                getErrorMessage(error, "Failed to download Schedule B PDF"),
-              );
-            }
-          }}
-        >
-          <Download className="mr-1 h-4 w-4" />
-          PDF
-        </Button>
-      ),
+      key: "status",
+      header: "Status",
+      className: "text-center",
+      render: (record) => {
+        const signed =
+          record.franchiseeSignatureUrl || record.franchiseeSignature;
+        const paid =
+          record.paymentId != null || record.payment?.id != null;
+        const parts: string[] = [];
+        parts.push(signed ? "Signed" : "Unsigned");
+        parts.push(paid ? "Paid" : "Awaiting payment");
+        return <Badge variant="outline">{parts.join(" · ")}</Badge>;
+      },
     },
     {
       key: "actions",
-      header: "",
-      className: "w-24",
+      header: "Actions",
+      className: "w-[120px] text-center",
       render: (record) => (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setViewAgreementId(record.id)}
-        >
-          <Eye className="mr-1 h-4 w-4" />
-          View
-        </Button>
+        <div className="flex items-center justify-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            title="View agreement"
+            onClick={() => setViewAgreementId(record.id)}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            title="Download Schedule B PDF"
+            onClick={async () => {
+              try {
+                await downloadScheduleBPdfMine(record.id);
+                toast.success("Schedule B PDF download started");
+              } catch (error) {
+                toast.error(
+                  getErrorMessage(error, "Failed to download Schedule B PDF"),
+                );
+              }
+            }}
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -283,9 +257,9 @@ export function MyAgreementsSection() {
           columns={columns}
           getRowId={(record) => String(record.id)}
           renderMainCell={(record) => (
-            <div className="py-1 text-base font-medium">
+            <span className="font-medium">
               {record.program?.name ?? record.programName ?? record.title ?? `Agreement #${record.id}`}
-            </div>
+            </span>
           )}
           emptyMessage="No agreements on file yet."
           resultsText={(_count, total) =>

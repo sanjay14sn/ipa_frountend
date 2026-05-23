@@ -54,43 +54,17 @@ export function FranchiseStudentsTable({
       {
         key: "student",
         header: "Student",
-        className: "min-w-[220px]",
-      },
-      {
-        key: "rollNo",
-        header: "Roll No",
-        className: "min-w-[20rem] whitespace-nowrap",
-        render: (s) => {
-          const roll = s.rollNo?.trim() ? s.rollNo : "N/A";
-          const display =
-            roll !== "N/A" ? formatEntityCodeForDisplay(roll) : "N/A";
-          return (
-            <span
-              className="font-mono text-xs leading-normal tracking-tight text-card-foreground"
-              title={roll !== "N/A" ? roll : undefined}
-            >
-              {display}
-            </span>
-          );
-        },
       },
       {
         key: "program",
         header: "Program",
-        className: "w-[9rem] max-w-[9rem]",
-        render: (s) => {
-          const label = String(s.programId ?? "—");
-          return (
-            <span className="block truncate text-sm text-card-foreground" title={label}>
-              {label}
-            </span>
-          );
-        },
+        className: "text-center",
+        render: (s) => String(s.programId ?? "—"),
       },
       {
         key: "active",
         header: "Active",
-        className: "w-[5.5rem] text-center",
+        className: "text-center",
         render: (s) => (
           <Badge variant={s.isActive ? "secondary" : "outline"}>
             {s.isActive ? "Yes" : "No"}
@@ -100,8 +74,8 @@ export function FranchiseStudentsTable({
       {
         key: "idCard",
         header: "ID",
-        className: "w-[7rem] text-center",
-        render: (s) => <span className="text-sm">{s.idIssued}</span>,
+        className: "text-center",
+        render: (s) => s.idIssued,
       },
     ],
     [],
@@ -120,14 +94,21 @@ export function FranchiseStudentsTable({
       loading={isLoading}
       columns={columns}
       getRowId={(s) => String(s.id)}
-      renderMainCell={(s) => (
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="truncate font-medium text-card-foreground">{s.name || "N/A"}</span>
-          {s.mail ? (
-            <span className="truncate text-xs text-muted-foreground">{s.mail}</span>
-          ) : null}
-        </div>
-      )}
+      renderMainCell={(s) => {
+        const roll = s.rollNo?.trim()
+          ? formatEntityCodeForDisplay(s.rollNo)
+          : null;
+        return (
+          <span className="font-medium text-card-foreground">
+            {s.name || "N/A"}
+            {roll ? (
+              <span className="ml-2 font-mono text-xs text-muted-foreground">
+                · {roll}
+              </span>
+            ) : null}
+          </span>
+        );
+      }}
       searchPlaceholder="Search by name or roll number…"
       onSearchChange={(s) => {
         setSearchTerm(s);

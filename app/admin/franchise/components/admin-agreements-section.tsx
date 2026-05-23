@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { format, parseISO } from "date-fns";
 import { Download, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -31,15 +30,6 @@ import {
 } from "@/components/receivables/InstallmentSummaryCard";
 import { getErrorMessage } from "@/lib/error-utils";
 import { useAgreementAdmin, useAgreementsAdmin } from "@/hooks/api/agreement.hooks";
-
-function fmtShort(iso: string | null | undefined) {
-  if (!iso) return "-";
-  try {
-    return format(parseISO(iso), "PP");
-  } catch {
-    return iso;
-  }
-}
 
 function AdminAgreementViewDialog({
   agreementId,
@@ -122,10 +112,8 @@ export function AdminAgreementsSection({
 
   const columns: DataTableColumn<AgreementRecord>[] = [
     {
-      key: "id",
-      header: "ID",
-      className: "w-16 font-mono text-xs",
-      render: (record) => record.id,
+      key: "agreement",
+      header: "Agreement",
     },
     {
       key: "type",
@@ -133,78 +121,49 @@ export function AdminAgreementsSection({
       render: (record) => <Badge variant="secondary">{record.type}</Badge>,
     },
     {
-      key: "signing",
-      header: "Signing",
-      className: "text-sm text-muted-foreground whitespace-nowrap",
-      render: (record) => fmtShort(record.dateOfSigning),
-    },
-    {
-      key: "signature",
-      header: "Signature",
-      render: (record) =>
-        record.franchiseeSignatureUrl || record.franchiseeSignature ? (
-          <Badge variant="outline">Yes</Badge>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        ),
-    },
-    {
-      key: "payment",
-      header: "Payment",
-      render: (record) =>
-        record.paymentId != null || record.payment?.id != null ? (
-          <Badge variant="outline">Linked</Badge>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        ),
-    },
-    {
       key: "emi",
       header: "EMI",
+      className: "min-w-[180px]",
       render: (record) => (
         <ReceivableCompactProgress summary={record.receivables?.installmentSummary} />
       ),
     },
     {
-      key: "scheduleB",
-      header: "Schedule B",
-      className: "w-28",
-      render: (record) => (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-8"
-          onClick={async () => {
-            try {
-              await downloadScheduleBPdfAdmin(record.id);
-              toast.success("Schedule B PDF download started");
-            } catch (error) {
-              toast.error(
-                getErrorMessage(error, "Failed to download Schedule B PDF"),
-              );
-            }
-          }}
-        >
-          <Download className="mr-1 h-4 w-4" />
-          PDF
-        </Button>
-      ),
-    },
-    {
       key: "actions",
-      header: "",
-      className: "w-24",
+      header: "Actions",
+      className: "w-[140px] text-center",
       render: (record) => (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setViewAgreementId(record.id)}
-        >
-          <Eye className="mr-1 h-4 w-4" />
-          View
-        </Button>
+        <div className="flex items-center justify-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 p-0"
+            title="View agreement"
+            onClick={() => setViewAgreementId(record.id)}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 p-0"
+            title="Download Schedule B PDF"
+            onClick={async () => {
+              try {
+                await downloadScheduleBPdfAdmin(record.id);
+                toast.success("Schedule B PDF download started");
+              } catch (error) {
+                toast.error(
+                  getErrorMessage(error, "Failed to download Schedule B PDF"),
+                );
+              }
+            }}
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -270,13 +229,12 @@ export function AdminAgreementsSection({
           columns={columns}
           getRowId={(record) => String(record.id)}
           renderMainCell={(record) => (
-            <div className="flex flex-col">
-              <span className="font-medium">Agreement #{record.id}</span>
-              <span className="max-w-[240px] truncate text-sm text-muted-foreground">
-                {record.franchise?.name ?? record.franchiseId ?? "-"}
-                {record.status ? ` · ${record.status}` : ""}
+            <span className="font-medium">
+              Agreement #{record.id}
+              <span className="ml-2 text-xs text-muted-foreground">
+                · {record.franchise?.name ?? record.franchiseId ?? "-"}
               </span>
-            </div>
+            </span>
           )}
           emptyMessage="No agreements found."
           resultsText={(_count, total) =>

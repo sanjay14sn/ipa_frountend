@@ -45,11 +45,16 @@ import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import {
   DataTable,
+  DetailField,
+  DetailFieldsGrid,
+  ExpandedDetailSection,
+  ExpandedDetailSurface,
   StatusBadge,
   type DataTableColumn,
   type DataTableFilter,
   type DataTableSortOption,
 } from "@/components/shared";
+import { Separator } from "@/components/ui/separator";
 import { getAllPrograms, type Program } from "@/services/program.service";
 import type { Level } from "@/services/level.service";
 import type { Stream } from "@/services/stream.service";
@@ -494,56 +499,29 @@ export function InventorySection() {
 
   const columns: DataTableColumn<InventoryItemSummary>[] = [
     {
+      key: "item",
+      header: "Item",
+    },
+    {
       key: "category",
       header: "Category",
-      render: (item) => (
-        <div>
-          <div>{item.category ?? "Uncategorized"}</div>
-          <div className="text-xs text-muted-foreground">
-            {item.unitOfMeasurement || "No unit"}
-          </div>
-        </div>
-      ),
+      render: (item) => item.category ?? "Uncategorized",
     },
     {
-      key: "balances",
-      header: "Balances",
-      render: (item) => (
-        <div>
-          <div>On hand {item.onHandQty}</div>
-          <div className="text-xs text-muted-foreground">
-            Reserved {item.reservedQty} · Available {item.availableQty}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            On order {item.onOrderQty} · Avg cost ₹
-            {item.weightedAverageCost.toFixed(2)}
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: "reorder",
-      header: "Reorder",
-      render: (item) => (
-        <div>
-          <div>Reorder point {item.reorderPoint}</div>
-          <div className="text-xs text-muted-foreground">
-            Safety {item.safetyStock} · Cycle {item.reorderCycleDays}d
-          </div>
-        </div>
-      ),
+      key: "onHand",
+      header: "On hand",
+      className: "text-center",
+      render: (item) => item.onHandQty,
     },
     {
       key: "status",
       header: "Status",
-      render: (item) => (
-        <div className="flex flex-col items-start gap-2">
-          <StatusBadge label={item.isActive ? "Active" : "Inactive"} />
-          {item.availableQty <= item.reorderPoint ? (
-            <StatusBadge tone="warning" label="Low stock" />
-          ) : null}
-        </div>
-      ),
+      render: (item) => {
+        const lowStock =
+          item.isActive && item.availableQty <= item.reorderPoint;
+        if (lowStock) return <StatusBadge tone="warning" label="Low stock" />;
+        return <StatusBadge label={item.isActive ? "Active" : "Inactive"} />;
+      },
     },
     {
       key: "actions",
@@ -795,17 +773,98 @@ export function InventorySection() {
             columns={columns}
             getRowId={(item) => String(item.id)}
             renderMainCell={(item) => (
-              <div>
-                <div className="font-medium">{item.name}</div>
-                <div className="text-xs text-muted-foreground">
-                  {item.sku}
-                  {item.legacyItemCode ? ` · ${item.legacyItemCode}` : ""}
-                  {item.legacyIsoCode ? ` · ${item.legacyIsoCode}` : ""}
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {item.inventoryType} · {item.lifecycleStatus}
-                </div>
-              </div>
+              <span className="font-medium">
+                {item.name}
+                {item.sku ? (
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    · {item.sku}
+                  </span>
+                ) : null}
+              </span>
+            )}
+            renderExpandedContent={(item) => (
+              <ExpandedDetailSurface>
+                <ExpandedDetailSection title="Identity">
+                  <DetailFieldsGrid columns={4}>
+                    <DetailField label="Name" value={item.name} />
+                    <DetailField label="SKU" value={item.sku ?? "—"} />
+                    <DetailField
+                      label="Legacy item code"
+                      value={item.legacyItemCode ?? "—"}
+                    />
+                    <DetailField
+                      label="Legacy ISO code"
+                      value={item.legacyIsoCode ?? "—"}
+                    />
+                    <DetailField
+                      label="Unit of measurement"
+                      value={item.unitOfMeasurement || "—"}
+                    />
+                    <DetailField
+                      label="Inventory type"
+                      value={item.inventoryType}
+                    />
+                    <DetailField
+                      label="Lifecycle"
+                      value={item.lifecycleStatus}
+                    />
+                    <DetailField
+                      label="Active"
+                      value={item.isActive ? "Yes" : "No"}
+                    />
+                    {item.description ? (
+                      <DetailField
+                        label="Description"
+                        value={item.description}
+                        span={4}
+                      />
+                    ) : null}
+                  </DetailFieldsGrid>
+                </ExpandedDetailSection>
+
+                <Separator />
+
+                <ExpandedDetailSection title="Stock balances">
+                  <DetailFieldsGrid columns={4}>
+                    <DetailField label="On hand" value={String(item.onHandQty)} />
+                    <DetailField
+                      label="Reserved"
+                      value={String(item.reservedQty)}
+                    />
+                    <DetailField
+                      label="Available"
+                      value={String(item.availableQty)}
+                    />
+                    <DetailField
+                      label="On order"
+                      value={String(item.onOrderQty)}
+                    />
+                    <DetailField
+                      label="Avg cost"
+                      value={`₹${item.weightedAverageCost.toFixed(2)}`}
+                    />
+                  </DetailFieldsGrid>
+                </ExpandedDetailSection>
+
+                <Separator />
+
+                <ExpandedDetailSection title="Reorder configuration">
+                  <DetailFieldsGrid columns={3}>
+                    <DetailField
+                      label="Reorder point"
+                      value={String(item.reorderPoint)}
+                    />
+                    <DetailField
+                      label="Safety stock"
+                      value={String(item.safetyStock)}
+                    />
+                    <DetailField
+                      label="Cycle"
+                      value={`${item.reorderCycleDays} days`}
+                    />
+                  </DetailFieldsGrid>
+                </ExpandedDetailSection>
+              </ExpandedDetailSurface>
             )}
             searchPlaceholder="Name, SKU, legacy code..."
             onSearchChange={setSearchTerm}

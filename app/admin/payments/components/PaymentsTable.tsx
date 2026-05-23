@@ -37,7 +37,7 @@ export default function PaymentsTable({ franchiseId }: PaymentsTableProps = {}) 
     {
       key: "franchise",
       header: "Franchise",
-      className: "w-[300px]",
+      className: "w-[280px]",
     },
     {
       key: "totalPayments",
@@ -45,16 +45,8 @@ export default function PaymentsTable({ franchiseId }: PaymentsTableProps = {}) 
       className: "text-center",
       render: (s) => (
         <Badge variant="secondary">
-          {s.totalPayments} payment{s.totalPayments !== 1 ? "s" : ""}
+          {s.totalPayments}
         </Badge>
-      ),
-    },
-    {
-      key: "totalCompleted",
-      header: "Completed",
-      className: "text-center",
-      render: (s) => (
-        <StatusBadge tone="success" label={`${s.totalCompleted} completed`} />
       ),
     },
     {
@@ -62,7 +54,7 @@ export default function PaymentsTable({ franchiseId }: PaymentsTableProps = {}) 
       header: "Pending",
       className: "text-center",
       render: (s) => (
-        <StatusBadge tone="warning" label={`${s.totalPending} pending`} />
+        <StatusBadge tone="warning" label={String(s.totalPending)} />
       ),
     },
     {
@@ -84,12 +76,7 @@ export default function PaymentsTable({ franchiseId }: PaymentsTableProps = {}) 
       columns={columns}
       getRowId={(s) => s.franchiseId ?? s.franchiseName}
       renderMainCell={(s) => (
-        <div className="flex flex-col">
-          <div className="font-medium text-gray-900">{s.franchiseName}</div>
-          <div className="text-sm text-gray-500">
-            {s.franchiseeEmail ?? "N/A"}
-          </div>
-        </div>
+        <span className="font-medium text-gray-900">{s.franchiseName}</span>
       )}
       renderExpandedContent={(s) => (
         <FranchisePaymentsDetails

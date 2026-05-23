@@ -159,39 +159,18 @@ export function FranchiseCiListTable({ franchiseId }: FranchiseCiListTableProps)
   const columns: DataTableColumn<CourseInstructorData>[] = useMemo(
     () => [
       {
-        key: "contact",
-        header: "Contact",
-        className: "w-[170px]",
-        render: (c) => (
-          <span className="text-sm text-card-foreground">
-            {c.phone || "N/A"}
-          </span>
-        ),
+        key: "instructor",
+        header: "Instructor",
       },
       {
-        key: "location",
-        header: "Location",
-        className: "w-[170px]",
-        render: (c) => (
-          <span className="text-sm text-card-foreground">
-            {c.city || "N/A"}
-          </span>
-        ),
-      },
-      {
-        key: "professional",
-        header: "Professional",
-        className: "w-[220px]",
-        render: (c) => (
-          <span className="text-sm text-card-foreground">
-            {[c.education, c.occupation].filter(Boolean).join(" · ") || "N/A"}
-          </span>
-        ),
+        key: "city",
+        header: "City",
+        render: (c) => c.city || "—",
       },
       {
         key: "status",
         header: "Status",
-        className: "w-[120px] text-center",
+        className: "text-center",
         render: (c) => <StatusBadge label={c.status} />,
       },
       {
@@ -266,12 +245,14 @@ export function FranchiseCiListTable({ franchiseId }: FranchiseCiListTableProps)
         columns={columns}
         getRowId={(c) => String(c.id)}
         renderMainCell={(c) => (
-          <div className="flex flex-col">
-            <span className="font-medium text-card-foreground">{c.name}</span>
-            <div className="mt-1 text-xs text-muted-foreground">
-              {[c.education, c.city].filter(Boolean).join(" · ") || c.franchise?.name || "—"}
-            </div>
-          </div>
+          <span className="font-medium text-card-foreground">
+            {c.name}
+            {c.instructorId ? (
+              <span className="ml-2 text-xs text-muted-foreground">
+                · {c.instructorId}
+              </span>
+            ) : null}
+          </span>
         )}
         renderExpandedContent={(c) => (
           <div className="p-4">

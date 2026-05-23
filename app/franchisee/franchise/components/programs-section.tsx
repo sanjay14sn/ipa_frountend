@@ -7,6 +7,10 @@ import { Plus, X } from "lucide-react";
 import {
   DataTable,
   type DataTableColumn,
+  DetailField,
+  DetailFieldsGrid,
+  ExpandedDetailSection,
+  ExpandedDetailSurface,
   TablePageShell,
   TableLoadingState,
 } from "@/components/shared";
@@ -84,35 +88,26 @@ export function ProgramsSection() {
     {
       key: "status",
       header: "Status",
+      className: "text-center",
       render: (r) => <StatusBadge status={r.status} />,
     },
     {
-      key: "requestedAt",
-      header: "Requested",
-      className: "text-sm text-muted-foreground whitespace-nowrap",
-      render: (r) =>
-        r.requestedAt
-          ? new Date(r.requestedAt).toLocaleDateString()
-          : "-",
-    },
-    {
       key: "actions",
-      header: "",
-      className: "w-44",
+      header: "Actions",
+      className: "w-[120px] text-center",
       render: (r) => {
         if (r.status !== "Pending") return null;
         return (
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={cancelling === r.id}
-              onClick={() => handleCancel(r.id)}
-            >
-              <X className="h-4 w-4 mr-1" />
-              Cancel
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            title="Cancel request"
+            disabled={cancelling === r.id}
+            onClick={() => handleCancel(r.id)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
         );
       },
     },
@@ -138,16 +133,34 @@ export function ProgramsSection() {
           columns={columns}
           getRowId={(r) => String(r.id)}
           renderMainCell={(r) => (
-            <div className="flex flex-col">
-              <span className="font-medium">
-                {r.program?.name ?? `Program #${r.programId}`}
-              </span>
-              {r.franchise?.name ? (
-                <span className="text-sm text-muted-foreground">
-                  {r.franchise.name}
-                </span>
-              ) : null}
-            </div>
+            <span className="font-medium">
+              {r.program?.name ?? `Program #${r.programId}`}
+            </span>
+          )}
+          renderExpandedContent={(r) => (
+            <ExpandedDetailSurface>
+              <ExpandedDetailSection title="Request details">
+                <DetailFieldsGrid columns={3}>
+                  <DetailField
+                    label="Program"
+                    value={r.program?.name ?? `#${r.programId}`}
+                  />
+                  <DetailField
+                    label="Franchise"
+                    value={r.franchise?.name ?? "—"}
+                  />
+                  <DetailField label="Status" value={r.status} />
+                  <DetailField
+                    label="Requested"
+                    value={
+                      r.requestedAt
+                        ? new Date(r.requestedAt).toLocaleString()
+                        : "—"
+                    }
+                  />
+                </DetailFieldsGrid>
+              </ExpandedDetailSection>
+            </ExpandedDetailSurface>
           )}
           emptyMessage="No program requests yet. Click 'Request Program' to get started."
           resultsText={(_count, total) =>

@@ -59,19 +59,6 @@ function paymentTone(status: string | null | undefined): StatusTone {
   }
 }
 
-function allocationTone(status: string | null | undefined): StatusTone {
-  switch ((status ?? "").toUpperCase()) {
-    case "ALLOCATED":
-      return "success";
-    case "RELEASED":
-      return "info";
-    case "BACKORDERED":
-      return "warning";
-    default:
-      return "neutral";
-  }
-}
-
 function fulfillmentTone(status: string | null | undefined): StatusTone {
   switch ((status ?? "").toLowerCase()) {
     case "verified":
@@ -271,27 +258,7 @@ export default function AdminOrdersTable({
       {
         key: "franchise",
         header: "Franchise",
-        render: (order) => {
-          const dispatch = order.dispatchItems ?? [];
-          const certCount = dispatch.filter((d) => d.itemType === "CERTIFICATE").length;
-          const idCount = dispatch.filter((d) => d.itemType === "ID_CARD").length;
-          const materialQty = (order.lineItems ?? []).reduce((s, l) => s + l.quantity, 0);
-          return (
-          <div>
-            <div className="font-medium">
-              {order.franchise?.name ?? order.franchiseId}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {order.totalStudents == null ? "—" : `${order.totalStudents} students`} ·{" "}
-              {materialQty} inventory qty
-              {certCount > 0
-                ? ` · ${certCount} certificate${certCount === 1 ? "" : "s"}`
-                : ""}
-              {idCount > 0 ? ` · ${idCount} ID card${idCount === 1 ? "" : "s"}` : ""}
-            </div>
-          </div>
-          );
-        },
+        render: (order) => order.franchise?.name ?? order.franchiseId ?? "—",
       },
       {
         key: "payment",
@@ -301,23 +268,6 @@ export default function AdminOrdersTable({
             tone={paymentTone(order.paymentStatus)}
             label={order.paymentStatus || "Unknown"}
           />
-        ),
-      },
-      {
-        key: "allocation",
-        header: "Allocation",
-        render: (order) => (
-          <div>
-            <StatusBadge
-              tone={allocationTone(order.allocationStatus)}
-              label={order.allocationStatus || "Unknown"}
-            />
-            {order.backorderedAt ? (
-              <div className="mt-1 text-xs text-muted-foreground">
-                Backordered {new Date(order.backorderedAt).toLocaleDateString()}
-              </div>
-            ) : null}
-          </div>
         ),
       },
       {
@@ -463,20 +413,20 @@ export default function AdminOrdersTable({
       columns={columns}
       getRowId={(order) => String(order.id)}
       renderMainCell={(order) => (
-        <div>
-          <div className="font-medium">
-            {order.referenceId || `Order #${order.id}`}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {new Date(order.createdAt).toLocaleString()}
-          </div>
-        </div>
+        <span className="font-medium">
+          {order.referenceId || `Order #${order.id}`}
+        </span>
       )}
       renderExpandedContent={(order) => {
         const standalone = isStandaloneDispatchOrderType(order.orderType);
         const hasDispatch = (order.dispatchItems?.length ?? 0) > 0;
         const inventoryLines = clubOrderItems(order.lineItems ?? []);
         const hasInventory = inventoryLines.length > 0;
+
+        const dispatch = order.dispatchItems ?? [];
+        const certCount = dispatch.filter((d) => d.itemType === "CERTIFICATE").length;
+        const idCount = dispatch.filter((d) => d.itemType === "ID_CARD").length;
+        const materialQty = (order.lineItems ?? []).reduce((s, l) => s + l.quantity, 0);
 
         return (
         <>
@@ -487,6 +437,17 @@ export default function AdminOrdersTable({
                 value={new Date(order.createdAt).toLocaleString()}
               />
               <DetailField label="Status" value={order.adminStatus ?? order.status} />
+              <DetailField
+                label="Allocation"
+                value={
+                  <>
+                    {order.allocationStatus || "Unknown"}
+                    {order.backorderedAt
+                      ? ` · backordered ${new Date(order.backorderedAt).toLocaleDateString()}`
+                      : ""}
+                  </>
+                }
+              />
               {standalone ? null : (
                 <DetailField
                   label="Total amount"
@@ -496,6 +457,15 @@ export default function AdminOrdersTable({
               <DetailField
                 label="Franchise"
                 value={order.franchise?.name ?? String(order.franchiseId ?? "—")}
+              />
+              <DetailField
+                label="Students"
+                value={order.totalStudents == null ? "—" : String(order.totalStudents)}
+              />
+              <DetailField label="Inventory qty" value={String(materialQty)} />
+              <DetailField
+                label="Certificates / IDs"
+                value={`${certCount} cert · ${idCount} ID`}
               />
               {order.referenceId ? (
                 <DetailField label="Payment ref" value={order.referenceId} span={2} />

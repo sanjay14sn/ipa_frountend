@@ -4,8 +4,15 @@ import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, BookOpen, Award } from "lucide-react";
-import { DataTable, StatusBadge } from "@/components/shared";
+import { Award } from "lucide-react";
+import {
+  DataTable,
+  DetailField,
+  DetailFieldsGrid,
+  ExpandedDetailSection,
+  ExpandedDetailSurface,
+  StatusBadge,
+} from "@/components/shared";
 import type {
   DataTableColumn,
   DataTableFilter,
@@ -185,36 +192,15 @@ export default function EligibleStudentsTable({
     {
       key: "student",
       header: "Student",
-      className: "w-[300px]",
     },
     {
-      key: "levelStandard",
-      header: "Level & Standard",
+      key: "level",
+      header: "Level",
       className: "text-center",
       render: (student) => (
-        <div className="space-y-1">
-          <Badge className={`${getLevelColor(student.levelName)} border`}>
-            {student.levelName}
-          </Badge>
-          <div className="text-sm text-gray-600">{student.standard}</div>
-        </div>
-      ),
-    },
-    {
-      key: "details",
-      header: "Details",
-      className: "text-center",
-      render: (student) => (
-        <div className="text-sm space-y-1">
-          <div className="flex items-center justify-center">
-            <Calendar className="w-3 h-3 mr-1" />
-            <span>{new Date(student.dateOfBirth).toLocaleDateString()}</span>
-          </div>
-          <div className="flex items-center justify-center">
-            <BookOpen className="w-3 h-3 mr-1" />
-            {student.stream}
-          </div>
-        </div>
+        <Badge className={`${getLevelColor(student.levelName)} border`}>
+          {student.levelName}
+        </Badge>
       ),
     },
     {
@@ -225,10 +211,6 @@ export default function EligibleStudentsTable({
         if (student.eligibilityReason === "no_certificate") {
           return <StatusBadge tone="info" label="First certificate" />;
         }
-        // "duration_exceeded" branch — only show the strong "Duration exceeded"
-        // label once at least 15 days have elapsed past the level's duration
-        // window. Inside the duration..duration+15d window, show a softer
-        // "Eligible" label so franchisees aren't alarmed the day after duration.
         const exceededAt15Days = isPastDurationPlusFifteenDays(
           student.lastCertIssuedAt,
           student.durationInMonths
@@ -241,25 +223,18 @@ export default function EligibleStudentsTable({
       },
     },
     {
-      key: "status",
-      header: "Status",
-      className: "text-center",
-      render: (student) => (
-        <StatusBadge label={student.isActive ? "Active" : "Inactive"} />
-      ),
-    },
-    {
       key: "actions",
       header: "Actions",
       className: "text-center",
       render: (student) => (
         <Button
-          size="sm"
+          size="icon"
+          variant="ghost"
+          className="h-8 w-8"
+          title="Request Certificate"
           onClick={() => onRequestCertificate?.(student)}
-          className="bg-primary hover:bg-primary/90"
         >
-          <Award className="w-4 h-4 mr-1" />
-          Request Certificate
+          <Award className="h-4 w-4 text-primary" />
         </Button>
       ),
     },
@@ -339,7 +314,7 @@ export default function EligibleStudentsTable({
         columns={columns}
         getRowId={(student) => student.id.toString()}
         renderMainCell={(student) => (
-          <div className="flex items-center gap-3">
+          <span className="inline-flex items-center gap-3">
             <Checkbox
               checked={selectedStudents.has(student.id)}
               onCheckedChange={(checked) =>
@@ -348,17 +323,49 @@ export default function EligibleStudentsTable({
               className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
               onClick={(e) => e.stopPropagation()}
             />
-            <div className="flex flex-col flex-1">
-              <div className="font-medium text-gray-900">{student.name}</div>
-              <div className="text-sm text-gray-500">
-                {student.rollNo} • Age {calculateAge(student.dateOfBirth)} •{" "}
-                {student.sex}
-              </div>
-              <div className="text-xs text-primary font-medium">
-                {student.standard} • {student.stream}
-              </div>
-            </div>
-          </div>
+            <span className="font-medium text-gray-900">
+              {student.name}
+              <span className="ml-2 text-xs text-muted-foreground">
+                · {student.rollNo}
+              </span>
+            </span>
+          </span>
+        )}
+        renderExpandedContent={(student) => (
+          <ExpandedDetailSurface>
+            <ExpandedDetailSection title="Student details">
+              <DetailFieldsGrid columns={4}>
+                <DetailField label="Standard" value={student.standard} />
+                <DetailField label="Stream" value={student.stream || "—"} />
+                <DetailField label="Sex" value={student.sex || "—"} />
+                <DetailField
+                  label="Date of birth"
+                  value={
+                    student.dateOfBirth
+                      ? new Date(student.dateOfBirth).toLocaleDateString()
+                      : "—"
+                  }
+                />
+                <DetailField label="Age" value={String(calculateAge(student.dateOfBirth))} />
+                <DetailField
+                  label="Last certificate issued"
+                  value={
+                    student.lastCertIssuedAt
+                      ? new Date(student.lastCertIssuedAt).toLocaleDateString()
+                      : "Never"
+                  }
+                />
+                <DetailField
+                  label="Level duration"
+                  value={`${student.durationInMonths} months`}
+                />
+                <DetailField
+                  label="Status"
+                  value={student.isActive ? "Active" : "Inactive"}
+                />
+              </DetailFieldsGrid>
+            </ExpandedDetailSection>
+          </ExpandedDetailSurface>
         )}
       searchPlaceholder="Search eligible students by name or roll number..."
       onSearchChange={setSearchTerm}

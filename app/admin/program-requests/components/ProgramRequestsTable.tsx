@@ -164,13 +164,6 @@ export default function ProgramRequestsTable({
       render: (r) => r.program?.name ?? `#${r.programId}`,
     },
     {
-      key: "requestDate",
-      header: "Request Date",
-      className: "text-center",
-      render: (r) =>
-        r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "—",
-    },
-    {
       key: "status",
       header: "Status",
       className: "text-center",
@@ -236,15 +229,9 @@ export default function ProgramRequestsTable({
         columns={columns}
         getRowId={(r) => r.id.toString()}
         renderMainCell={(r) => (
-          <div className="flex flex-col">
-            <div className="font-medium text-gray-900">
-              {r.franchise?.name ?? r.franchiseId}
-            </div>
-            <div className="text-sm text-gray-500">
-              {r.franchisee?.name || "Not specified"} •{" "}
-              {r.franchisee?.mail || "—"}
-            </div>
-          </div>
+          <span className="font-medium text-gray-900">
+            {r.franchise?.name ?? r.franchiseId}
+          </span>
         )}
         renderExpandedContent={(r) => <ProgramRequestDetails request={r} />}
         searchPlaceholder="Search franchise, program, or franchisee..."

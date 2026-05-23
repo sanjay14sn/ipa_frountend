@@ -120,41 +120,12 @@ export default function OrdersTable({
     },
     {
       key: "orderType",
-      header: "Order Type",
+      header: "Type",
       className: "text-center",
       render: (order) => (
         <Badge variant="outline" className="text-xs">
           {order.orderType}
         </Badge>
-      ),
-    },
-    {
-      key: "students",
-      header: "Students / CIs",
-      className: "text-center",
-      render: (order) => (
-        <div className="font-medium">
-          {order.totalStudents == null ? (
-            <span className="text-muted-foreground">—</span>
-          ) : (
-            <>
-              {order.totalStudents}
-              {order.totalInstructors != null && order.totalInstructors > 0 && (
-                <span className="text-xs text-muted-foreground block">
-                  + {order.totalInstructors} CI{order.totalInstructors > 1 ? 's' : ''}
-                </span>
-              )}
-            </>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: "items",
-      header: "Items",
-      className: "text-center",
-      render: (order) => (
-        <div className="font-medium">{order.totalItems || 0}</div>
       ),
     },
     {
@@ -243,12 +214,7 @@ export default function OrdersTable({
       columns={columns}
       getRowId={(order) => order.id.toString()}
       renderMainCell={(order) => (
-        <div>
-          <div className="font-medium">Order #{order.id}</div>
-          <div className="text-xs text-muted-foreground">
-            {new Date(order.createdAt).toLocaleString()}
-          </div>
-        </div>
+        <span className="font-medium">Order #{order.id}</span>
       )}
       renderExpandedContent={(order) => (
         <OrderDetails

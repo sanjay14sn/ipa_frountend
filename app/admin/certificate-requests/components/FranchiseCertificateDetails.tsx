@@ -141,6 +141,10 @@ export default function FranchiseCertificateDetails({
 
   const columns: DataTableColumn<AdminCertificateRequest>[] = [
     {
+      key: "student",
+      header: "Student",
+    },
+    {
       key: "level",
       header: "Level",
       className: "text-center",
@@ -153,40 +157,18 @@ export default function FranchiseCertificateDetails({
     {
       key: "instructor",
       header: "Instructor",
-      className: "text-center",
-      render: (req) => (
-        <span className="text-sm text-gray-600">{req.instructorName}</span>
-      ),
+      render: (req) => req.instructorName || "—",
     },
     {
       key: "marks",
-      header: "Marks",
+      header: "%",
       className: "text-center",
       render: (req) => {
-        const denominator = req.totalMarks || req.levelTotalMarks || 1;
-        const percentage =
-          denominator > 0
-            ? ((req.marksObtained / denominator) * 100).toFixed(1)
-            : "N/A";
-        return (
-          <div className="text-sm">
-            <div className="font-medium">
-              {req.marksObtained}/{denominator}
-            </div>
-            <div className="text-xs text-gray-500">{percentage}%</div>
-          </div>
-        );
+        const denominator = req.totalMarks || req.levelTotalMarks || 0;
+        return denominator > 0
+          ? `${((req.marksObtained / denominator) * 100).toFixed(1)}%`
+          : "—";
       },
-    },
-    {
-      key: "requestDate",
-      header: "Request Date",
-      className: "text-center",
-      render: (req) => (
-        <span className="text-sm text-gray-600">
-          {new Date(req.requestDate).toLocaleDateString()}
-        </span>
-      ),
     },
     {
       key: "actions",
@@ -196,32 +178,34 @@ export default function FranchiseCertificateDetails({
         req.status === "Pending" ? (
           <div className="flex items-center justify-center gap-1">
             <Button
-              size="sm"
+              variant="ghost"
+              size="icon"
               onClick={() => handleApprove(req.id)}
-              className="h-8 w-8 bg-green-600 p-0 hover:bg-green-700"
+              className="h-8 w-8"
               title="Issue Certificate"
             >
-              <Check className="h-4 w-4" />
+              <Check className="h-4 w-4 text-green-600" />
             </Button>
             <Button
-              size="sm"
-              variant="destructive"
+              variant="ghost"
+              size="icon"
               onClick={() => handleReject(req.id)}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8"
               title="Reject"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4 text-destructive" />
             </Button>
           </div>
         ) : req.status === "Issued" ? (
           <Button
-            size="sm"
+            variant="ghost"
+            size="icon"
             onClick={() => setSelectedCertificate(req)}
-            className="h-8 w-8 bg-blue-600 p-0 hover:bg-blue-700"
+            className="h-8 w-8"
             title="View Certificate"
             aria-label="View Certificate"
           >
-            <FileText className="h-4 w-4" />
+            <FileText className="h-4 w-4 text-blue-600" />
           </Button>
         ) : (
           <StatusBadge label={req.status} />
@@ -293,12 +277,14 @@ export default function FranchiseCertificateDetails({
               columns={columns}
               getRowId={(req) => String(req.id)}
               renderMainCell={(req) => (
-                <div>
-                  <div className="font-medium text-gray-900">
-                    {req.studentName}
-                  </div>
-                  <div className="text-xs text-gray-500">{req.studentRollNo}</div>
-                </div>
+                <span className="font-medium text-gray-900">
+                  {req.studentName}
+                  {req.studentRollNo ? (
+                    <span className="ml-2 font-mono text-xs text-muted-foreground">
+                      · {req.studentRollNo}
+                    </span>
+                  ) : null}
+                </span>
               )}
               searchPlaceholder="Search by student, roll number, or instructor..."
               onSearchChange={(value) => {

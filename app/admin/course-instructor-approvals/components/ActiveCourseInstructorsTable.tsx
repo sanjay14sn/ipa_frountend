@@ -64,35 +64,18 @@ export default function ActiveCourseInstructorsTable() {
 
   const columns: DataTableColumn<AdminCourseInstructorData>[] = [
     {
-      key: "contact",
-      header: "Contact",
-      className: "w-[170px]",
-      render: (instructor) => (
-        <span className="text-sm text-card-foreground">{instructor.phone || "N/A"}</span>
-      ),
+      key: "instructor",
+      header: "Instructor",
     },
     {
-      key: "location",
-      header: "Location",
-      className: "w-[170px]",
-      render: (instructor) => (
-        <span className="text-sm text-card-foreground">{instructor.city || "N/A"}</span>
-      ),
-    },
-    {
-      key: "professional",
-      header: "Professional",
-      className: "w-[220px]",
-      render: (instructor) => (
-        <span className="text-sm text-card-foreground">
-          {[instructor.education, instructor.occupation].filter(Boolean).join(" · ") || "N/A"}
-        </span>
-      ),
+      key: "city",
+      header: "City",
+      render: (instructor) => instructor.city || "—",
     },
     {
       key: "status",
       header: "Status",
-      className: "w-[120px]",
+      className: "text-center",
       render: () => <StatusBadge label="Active" />,
     },
     {
@@ -147,12 +130,14 @@ export default function ActiveCourseInstructorsTable() {
         columns={columns}
         getRowId={(instructor) => instructor.id.toString()}
         renderMainCell={(instructor) => (
-          <div className="flex flex-col">
-            <div className="font-medium text-card-foreground">{instructor.name}</div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              {[instructor.education, instructor.city].filter(Boolean).join(" · ") || "Location N/A"}
-            </div>
-          </div>
+          <span className="font-medium text-card-foreground">
+            {instructor.name}
+            {instructor.instructorId ? (
+              <span className="ml-2 text-xs text-muted-foreground">
+                · {instructor.instructorId}
+              </span>
+            ) : null}
+          </span>
         )}
         renderExpandedContent={(instructor) => (
           <CourseInstructorDetails

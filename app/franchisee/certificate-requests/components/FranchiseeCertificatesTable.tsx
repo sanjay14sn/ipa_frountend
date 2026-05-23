@@ -3,8 +3,15 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, FileText, Award } from "lucide-react";
-import { DataTable, StatusBadge } from "@/components/shared";
+import { Award } from "lucide-react";
+import {
+  DataTable,
+  DetailField,
+  DetailFieldsGrid,
+  ExpandedDetailSection,
+  ExpandedDetailSurface,
+  StatusBadge,
+} from "@/components/shared";
 import type {
   DataTableColumn,
   DataTableFilter,
@@ -121,56 +128,18 @@ export default function FranchiseeCertificatesTable({
     {
       key: "student",
       header: "Student",
-      className: "w-[250px]",
     },
     {
-      key: "instructor",
-      header: "Instructor",
+      key: "percentage",
+      header: "%",
       className: "text-center",
-      render: (certificate) => (
-        <div className="text-sm">
-          <div className="font-medium">{certificate.instructorName}</div>
-          <div className="text-gray-500">ID: {certificate.instructorInstructorId}</div>
-        </div>
-      ),
-    },
-    {
-      key: "marks",
-      header: "Marks & Percentage",
-      className: "text-center",
-      render: (certificate) => (
-        <div className="text-sm">
-          <div className="font-medium">
-            {certificate.marksObtained}/{certificate.totalMarks || certificate.levelTotalMarks || 0}
-          </div>
-          <div className="text-gray-500">
-            {(certificate.totalMarks || certificate.levelTotalMarks || 0) > 0
-              ? `${((certificate.marksObtained / (certificate.totalMarks || certificate.levelTotalMarks)) * 100).toFixed(1)}%`
-              : "N/A"}
-          </div>
-          <div className="text-xs text-gray-500">
-            {"Pass >= "}{certificate.levelPassMark || 0}
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: "requestDate",
-      header: "Request Date",
-      className: "text-center",
-      render: (certificate) => (
-        <div className="text-sm">
-          <div className="flex items-center justify-center">
-            <Calendar className="w-3 h-3 mr-1" />
-            <span>{new Date(certificate.requestDate).toLocaleDateString()}</span>
-          </div>
-          {certificate.issueDate && (
-            <div className="text-xs text-gray-500 mt-1">
-              Issued: {new Date(certificate.issueDate).toLocaleDateString()}
-            </div>
-          )}
-        </div>
-      ),
+      render: (certificate) => {
+        const denom =
+          certificate.totalMarks || certificate.levelTotalMarks || 0;
+        return denom > 0
+          ? `${((certificate.marksObtained / denom) * 100).toFixed(1)}%`
+          : "—";
+      },
     },
     {
       key: "status",
@@ -184,17 +153,17 @@ export default function FranchiseeCertificatesTable({
       className: "text-center",
       render: (certificate) => (
         <Button
-          size="sm"
+          size="icon"
+          variant="ghost"
+          className="h-8 w-8"
+          title="View certificate"
           onClick={() => {
             setSelectedStudentId(certificate.studentId);
             setSelectedCertificateId(certificate.id);
             setIsCertificatesModalOpen(true);
           }}
-          className="bg-blue-600 hover:bg-blue-700"
-          title="View Certificate"
         >
-          <Award className="w-4 h-4 mr-1" />
-          View Certificate
+          <Award className="h-4 w-4 text-primary" />
         </Button>
       ),
     },
@@ -228,24 +197,92 @@ export default function FranchiseeCertificatesTable({
       columns={columns}
       getRowId={(certificate) => certificate.id.toString()}
       renderMainCell={(certificate) => (
-        <div className="flex flex-col">
-          <div className="font-medium text-gray-900">{certificate.studentName}</div>
-          <div className="text-sm text-gray-500">
-            {certificate.studentRollNo} • Age{" "}
-            {calculateAge(certificate.studentDateOfBirth)} • {certificate.studentSex}
-          </div>
-          <div className="text-xs text-primary font-medium">
-            {certificate.studentStandard} • {certificate.studentStream}
-          </div>
-          <Badge
-            className={`${getLevelColor(
-              certificate.studentLevel
-            )} border text-xs mt-1 w-fit`}
-          >
-            {certificate.studentLevel}
-          </Badge>
-        </div>
+        <span className="font-medium text-gray-900">
+          {certificate.studentName}
+          <span className="ml-2 text-xs text-muted-foreground">
+            · {certificate.studentRollNo}
+          </span>
+        </span>
       )}
+      renderExpandedContent={(certificate) => {
+        const denom =
+          certificate.totalMarks || certificate.levelTotalMarks || 0;
+        const pct =
+          denom > 0
+            ? `${((certificate.marksObtained / denom) * 100).toFixed(1)}%`
+            : "—";
+        return (
+          <ExpandedDetailSurface>
+            <ExpandedDetailSection title="Student">
+              <DetailFieldsGrid columns={4}>
+                <DetailField
+                  label="Level"
+                  value={
+                    <Badge
+                      className={`${getLevelColor(certificate.studentLevel)} border text-xs`}
+                    >
+                      {certificate.studentLevel}
+                    </Badge>
+                  }
+                />
+                <DetailField label="Standard" value={certificate.studentStandard} />
+                <DetailField label="Stream" value={certificate.studentStream || "—"} />
+                <DetailField label="Sex" value={certificate.studentSex || "—"} />
+                <DetailField
+                  label="Age"
+                  value={String(calculateAge(certificate.studentDateOfBirth))}
+                />
+                <DetailField
+                  label="Date of birth"
+                  value={
+                    certificate.studentDateOfBirth
+                      ? new Date(certificate.studentDateOfBirth).toLocaleDateString()
+                      : "—"
+                  }
+                />
+              </DetailFieldsGrid>
+            </ExpandedDetailSection>
+
+            <ExpandedDetailSection title="Certificate">
+              <DetailFieldsGrid columns={4}>
+                <DetailField
+                  label="Instructor"
+                  value={certificate.instructorName}
+                />
+                <DetailField
+                  label="Instructor ID"
+                  value={certificate.instructorInstructorId}
+                />
+                <DetailField
+                  label="Marks"
+                  value={`${certificate.marksObtained} / ${certificate.totalMarks || certificate.levelTotalMarks || 0}`}
+                />
+                <DetailField label="Percentage" value={pct} />
+                <DetailField
+                  label="Pass mark"
+                  value={String(certificate.levelPassMark || 0)}
+                />
+                <DetailField
+                  label="Requested"
+                  value={
+                    certificate.requestDate
+                      ? new Date(certificate.requestDate).toLocaleDateString()
+                      : "—"
+                  }
+                />
+                <DetailField
+                  label="Issued"
+                  value={
+                    certificate.issueDate
+                      ? new Date(certificate.issueDate).toLocaleDateString()
+                      : "—"
+                  }
+                />
+              </DetailFieldsGrid>
+            </ExpandedDetailSection>
+          </ExpandedDetailSurface>
+        );
+      }}
       searchPlaceholder="Search by student name, roll number, or instructor..."
       onSearchChange={setSearchTerm}
       filters={filters}
