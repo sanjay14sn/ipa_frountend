@@ -93,7 +93,8 @@ interface ProgramPayroll {
   gstFranchiseFee: boolean;
   gstRoyalty: boolean;
   gstMaterialCost: boolean;
-  freeload: boolean;
+  /** Agreement signing date (YYYY-MM-DD). Drives expiry = signedAt + tenure. */
+  signedAt: string;
   /** EMI configuration (when installment > 0). */
   downPayment: number;
   priorPayments: PriorPaymentRow[];
@@ -197,7 +198,14 @@ export function CreateFranchiseDialog({
         }
         break;
 
-      case 3: // Payroll - no validation needed, defaults are OK
+      case 3: // Payroll — require a signing date per selected program
+        for (const programId of formData.selectedPrograms) {
+          const p = programPayrolls[programId];
+          if (!p?.signedAt) {
+            newErrors[`signedAt-${programId}`] =
+              "Agreement signing date is required";
+          }
+        }
         break;
 
       case 4: // Security (only for new franchisee; password is auto-emailed)
@@ -254,7 +262,7 @@ export function CreateFranchiseDialog({
           gstFranchiseFee: false,
           gstRoyalty: false,
           gstMaterialCost: false,
-          freeload: false,
+          signedAt: new Date().toISOString().slice(0, 10),
           downPayment: 0,
           priorPayments: [],
           lumpSumPayment: null,
@@ -305,6 +313,7 @@ export function CreateFranchiseDialog({
               gstMaterialCost: !!p.gstMaterialCost,
               tenure: 12,
             },
+            signedAt: p.signedAt,
             installmentEnabled,
           };
 
@@ -1063,27 +1072,33 @@ export function CreateFranchiseDialog({
                           </div>
                         </div>
 
-                        {/* Freeload */}
+                        {/* Agreement Signing Date */}
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-card-foreground">
-                            Freeload
+                          <Label
+                            htmlFor={`signed-at-${programId}`}
+                            className="text-sm font-medium text-card-foreground"
+                          >
+                            Agreement Signing Date
                           </Label>
-                          <ToggleField
-                            name={`freeload-${programId}`}
-                            variant="inline"
-                            value={payroll?.freeload ? "yes" : "no"}
-                            onValueChange={(v) =>
+                          <Input
+                            id={`signed-at-${programId}`}
+                            type="date"
+                            value={payroll?.signedAt || ""}
+                            max={new Date().toISOString().slice(0, 10)}
+                            onChange={(e) =>
                               updateProgramPayroll(
                                 programId,
-                                "freeload",
-                                v === "yes",
+                                "signedAt",
+                                e.target.value,
                               )
                             }
-                            options={[
-                              { value: "no", label: "Standard" },
-                              { value: "yes", label: "Freeload" },
-                            ]}
+                            className="h-10"
                           />
+                          {errors[`signedAt-${programId}`] && (
+                            <p className="text-xs text-destructive">
+                              {errors[`signedAt-${programId}`]}
+                            </p>
+                          )}
                         </div>
 
                         {/* Installment plan (full-width subcard) */}

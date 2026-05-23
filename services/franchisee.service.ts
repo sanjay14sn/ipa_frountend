@@ -355,7 +355,7 @@ export interface SetupProgramTerms {
 export interface SetupProgram {
   programId: number;
   terms: SetupProgramTerms;
-  signedAt?: string;
+  signedAt: string;
   installmentEnabled: boolean;
   /** Present when installmentEnabled === false. */
   lumpSum?: { enabled: false; lumpSumPayment?: SetupPriorPayment };

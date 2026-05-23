@@ -19,7 +19,6 @@ export interface ProgramRequestPayroll {
   gstFranchiseFee: boolean;
   gstRoyalty: boolean;
   gstMaterialCost: boolean;
-  freeload: boolean;
 }
 
 export interface ApproveProgramRequestPayload {

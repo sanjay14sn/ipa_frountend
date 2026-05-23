@@ -94,7 +94,6 @@ export function ProgramRequestsSection() {
           gstFranchiseFee: program.gstFranchiseFee,
           gstRoyalty: program.gstRoyalty,
           gstMaterialCost: program.gstMaterialCost,
-          freeload: false,
         },
         dateOfPayment: new Date().toISOString().split("T")[0],
         dateOfJoining: new Date().toISOString().split("T")[0],
