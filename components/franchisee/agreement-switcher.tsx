@@ -39,7 +39,19 @@ export function AgreementSwitcher() {
   const [switching, setSwitching] = useState(false);
 
   if (loading && agreements.length === 0) return null;
-  if (agreements.length <= 1) return null;
+  if (agreements.length === 0) return null;
+
+  // Single program: static card, no dropdown
+  if (agreements.length === 1) {
+    const single = agreements[0];
+    const label = single.programName ?? single.title ?? "Untitled program";
+    return (
+      <div className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium text-primary shadow-sm">
+        <FileText className="h-3.5 w-3.5 opacity-60" />
+        <span className="max-w-[160px] truncate">{label}</span>
+      </div>
+    );
+  }
 
   const isOnAgreementPage =
     pathname === "/franchisee/agreement" ||

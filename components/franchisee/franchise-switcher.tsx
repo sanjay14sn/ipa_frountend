@@ -17,14 +17,25 @@ import {
 import { StatusBadge } from "@/components/shared";
 import { useUser } from "@/context/user-context";
 
-export function FranchiseSwitcher() {
+export function FranchiseSwitcher({
+  fallbackLabel,
+}: {
+  fallbackLabel?: string;
+} = {}) {
   const { user, switchFranchise } = useUser();
   const router = useRouter();
   const [switching, setSwitching] = useState(false);
 
-  // Hide if no franchises or only one franchise
+  // Single franchise (or none): static card, no dropdown
   if (!user?.franchises || user.franchises.length <= 1) {
-    return null;
+    const name =
+      user?.franchiseName ?? user?.franchises?.[0]?.name ?? fallbackLabel;
+    if (!name) return null;
+    return (
+      <div className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium text-primary shadow-sm">
+        <span className="max-w-[140px] truncate">{name}</span>
+      </div>
+    );
   }
 
   const handleSwitch = async (franchiseId: string) => {

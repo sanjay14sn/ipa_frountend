@@ -75,13 +75,7 @@ export default function FranchiseeLayout({
       <div className="min-h-screen bg-surface">
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-brand-white-200/50 px-4">
           <div className="flex items-center gap-2">
-            {user.franchises && user.franchises.length > 1 ? (
-              <FranchiseSwitcher />
-            ) : (
-              <span className="text-sm font-medium text-primary truncate max-w-[200px]">
-                {user.franchiseName ?? "Franchise Setup"}
-              </span>
-            )}
+            <FranchiseSwitcher fallbackLabel="Franchise Setup" />
             <AgreementSwitcher />
           </div>
           <PortalHeaderActions />
@@ -111,13 +105,7 @@ export default function FranchiseeLayout({
             </BreadcrumbList>
           </Breadcrumb>
           <div className="flex items-center gap-2">
-            {user.franchises && user.franchises.length > 1 ? (
-              <FranchiseSwitcher />
-            ) : user.franchiseName ? (
-              <span className="text-sm font-medium text-primary truncate max-w-[160px]">
-                {user.franchiseName}
-              </span>
-            ) : null}
+            <FranchiseSwitcher />
             <AgreementSwitcher />
           </div>
           <PortalHeaderActions />
