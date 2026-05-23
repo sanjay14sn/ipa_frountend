@@ -148,6 +148,20 @@ export default function FranchiseeCertificatesTable({
       render: (certificate) => <StatusBadge label={certificate.status} />,
     },
     {
+      key: "dispatch",
+      header: "Dispatch",
+      className: "text-center",
+      render: (certificate) =>
+        certificate.dispatchStatus === "Dispatched" ? (
+          <StatusBadge
+            tone="success"
+            label={`Dispatched${certificate.dispatchedAt ? ` ${new Date(certificate.dispatchedAt).toLocaleDateString()}` : ""}`}
+          />
+        ) : (
+          <StatusBadge tone="neutral" label="Not dispatched" />
+        ),
+    },
+    {
       key: "actions",
       header: "Actions",
       className: "text-center",

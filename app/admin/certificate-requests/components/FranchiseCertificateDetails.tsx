@@ -33,13 +33,10 @@ import {
   approveCertificateRequestWithRevalidation,
   rejectCertificateRequestWithRevalidation,
   useAdminCertificateDetails,
-  useBulkDispatchCertificates,
   useDispatchEligibleOrders,
 } from "@/hooks/api/student.hooks";
-import {
-  BulkDispatchPickerModal,
-  type DispatchPickerItem,
-} from "@/components/shared/BulkDispatchPickerModal";
+import { useDispatchEligibleCertificates } from "@/hooks/api/certificate-dispatch.hooks";
+import { BulkDispatchFlowModal } from "@/components/shared/BulkDispatchFlowModal";
 
 interface FranchiseCertificateDetailsProps {
   franchiseId: string;
@@ -78,30 +75,30 @@ export default function FranchiseCertificateDetails({
   );
 
   const detailsQuery = useAdminCertificateDetails(franchiseId, queryParams);
-  const bulkDispatch = useBulkDispatchCertificates();
   const eligibleQuery = useDispatchEligibleOrders(franchiseId, dispatchOpen);
+  const eligibleCountQuery = useDispatchEligibleCertificates(
+    { franchiseId, page: 1, limit: 1 },
+    true,
+  );
   const requests = detailsQuery.data?.data ?? [];
 
-  const pendingDispatchItems: DispatchPickerItem[] = useMemo(() => {
-    return requests
-      .filter((r) => {
-        if (r.status !== "Pending") return false;
-        if (!dateFilter) return true;
-        return (r.requestDate ?? "").slice(0, 10) === dateFilter;
-      })
-      .map((r) => {
-        const denominator = r.totalMarks || r.levelTotalMarks || 1;
-        return {
-          id: r.id,
-          label: r.studentName,
-          sublabel: r.studentRollNo,
-          requestDate: (r.requestDate ?? "").slice(0, 10),
-          levelMarks: `${r.marksObtained}/${denominator}`,
-          ciName: r.instructorName,
-          levelCode: r.studentLevelCode?.trim() || r.studentLevel || undefined,
-        };
-      });
-  }, [requests, dateFilter]);
+  const eligibleCertCount = (() => {
+    const payload = eligibleCountQuery.data;
+    if (!payload || typeof payload !== "object") return 0;
+    const obj = payload as Record<string, unknown>;
+    if (
+      obj.meta &&
+      typeof obj.meta === "object" &&
+      typeof (obj.meta as Record<string, unknown>).total === "number"
+    ) {
+      return Number((obj.meta as Record<string, unknown>).total);
+    }
+    if (typeof obj.total === "number") return Number(obj.total);
+    if (Array.isArray(obj.rows)) return obj.rows.length;
+    if (Array.isArray(obj.data)) return obj.data.length;
+    if (Array.isArray(payload)) return (payload as unknown[]).length;
+    return 0;
+  })();
 
   const totalRequests = detailsQuery.data?.meta.total ?? 0;
   const totalPages = detailsQuery.data?.meta.totalPages ?? 1;
@@ -170,6 +167,20 @@ export default function FranchiseCertificateDetails({
           ? `${((req.marksObtained / denominator) * 100).toFixed(1)}%`
           : "—";
       },
+    },
+    {
+      key: "dispatch",
+      header: "Dispatch",
+      className: "text-center",
+      render: (req) =>
+        req.dispatchStatus === "Dispatched" ? (
+          <StatusBadge
+            tone="success"
+            label={`Dispatched${req.dispatchedAt ? ` ${new Date(req.dispatchedAt).toLocaleDateString()}` : ""}`}
+          />
+        ) : (
+          <StatusBadge tone="neutral" label="Not dispatched" />
+        ),
     },
     {
       key: "actions",
@@ -244,7 +255,7 @@ export default function FranchiseCertificateDetails({
         variant="default"
         className="h-9 shrink-0"
         onClick={() => setDispatchOpen(true)}
-        disabled={pendingDispatchItems.length === 0}
+        disabled={eligibleCertCount === 0}
       >
         Dispatch Certificates
       </Button>
@@ -366,19 +377,14 @@ export default function FranchiseCertificateDetails({
         </DialogContent>
       </Dialog>
 
-      <BulkDispatchPickerModal
+      <BulkDispatchFlowModal
         open={dispatchOpen}
         onOpenChange={setDispatchOpen}
-        title="Certificates"
-        items={pendingDispatchItems}
+        franchiseId={franchiseId}
         eligibleOrders={eligibleQuery.data ?? []}
         isLoadingOrders={eligibleQuery.isLoading}
-        onConfirm={async (selectedIds, orderId) => {
-          await bulkDispatch.mutateAsync({
-            ids: selectedIds,
-            orderId: orderId ?? undefined,
-          });
-          await detailsQuery.refetch();
+        onComplete={() => {
+          void detailsQuery.refetch();
         }}
       />
     </>

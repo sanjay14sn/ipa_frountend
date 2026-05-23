@@ -34,7 +34,7 @@ import {
   runStudentLifecycleInvalidation,
   extendStudentLifecycle,
   reactivateStudentLifecycle,
-  bulkDispatchCertificates,
+  bulkApproveCertificates,
   bulkDispatchIdCards,
   type StudentData,
   type StudentPaginationParams,
@@ -486,10 +486,10 @@ export function useDispatchEligibleOrders(franchiseId: string, enabled = false) 
   });
 }
 
-export function useBulkDispatchCertificates() {
+export function useBulkApproveCertificates() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: bulkDispatchCertificates,
+    mutationFn: (vars: { ids: number[] }) => bulkApproveCertificates(vars),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
       void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });

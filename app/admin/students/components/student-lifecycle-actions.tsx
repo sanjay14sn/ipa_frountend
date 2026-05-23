@@ -1,18 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { CalendarClock, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
-import { Label } from "@/components/ui/label";
+import {
+  DialogFormField,
+  FormDialog,
+} from "@/components/shared/dialog";
 import type { StudentLifecycleRow } from "@/services/student.service";
 import { formatEntityCodeForDisplay } from "@/lib/format-entity-code";
 
@@ -80,40 +75,41 @@ export function StudentLifecycleActions({
         </Button>
       </div>
 
-      <Dialog open={mode != null} onOpenChange={(open) => !open && setMode(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="rounded-lg border bg-muted/30 p-3 text-sm">
-              <div className="font-medium text-foreground">{student.name}</div>
-              <div className="text-muted-foreground" title={student.rollNo}>
-                {formatEntityCodeForDisplay(student.rollNo)} ·{" "}
-                {student.levelName || "Current level"}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`extended-until-${student.studentId}`}>Extended until</Label>
-              <DateInput
-                id={`extended-until-${student.studentId}`}
-                min={tomorrowDate()}
-                value={extendedUntil}
-                onChange={(v) => setExtendedUntil(v)}
-              />
-            </div>
+      <FormDialog
+        open={mode != null}
+        onOpenChange={(open) => !open && setMode(null)}
+        size="md"
+        title={title}
+        description={description}
+        headerIcon={mode === "reactivate" ? RotateCcw : CalendarClock}
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+        submitLabel="Save"
+        canSubmit={!busy && !!extendedUntil}
+        isSubmitting={busy}
+      >
+        <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+          <div className="font-medium text-foreground">{student.name}</div>
+          <div className="text-muted-foreground" title={student.rollNo}>
+            {formatEntityCodeForDisplay(student.rollNo)} ·{" "}
+            {student.levelName || "Current level"}
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setMode(null)}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={submit} disabled={busy || !extendedUntil}>
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+        <DialogFormField
+          id={`extended-until-${student.studentId}`}
+          label="Extended until"
+          required
+        >
+          <DateInput
+            id={`extended-until-${student.studentId}`}
+            min={tomorrowDate()}
+            value={extendedUntil}
+            onChange={(v) => setExtendedUntil(v)}
+          />
+        </DialogFormField>
+      </FormDialog>
     </>
   );
 }

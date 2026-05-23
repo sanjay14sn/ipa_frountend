@@ -11,12 +11,14 @@ export interface Stream {
   displayOrder?: number;
   description?: string | null;
   isActive?: boolean;
+  hasStartingKit?: boolean;
 }
 
 export interface CreateStreamDto {
   name: string;
   programId: number;
   isActive?: boolean;
+  hasStartingKit?: boolean;
   description?: string | null;
   minAge?: number | null;
   maxAge?: number | null;

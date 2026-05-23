@@ -78,6 +78,7 @@ export function StreamManagement({
   const [formData, setFormData] = useState({
     name: "",
     isActive: true,
+    hasStartingKit: true,
     minAge: "" as string,
     maxAge: "" as string,
     displayOrder: "" as string,
@@ -131,6 +132,7 @@ export function StreamManagement({
     setFormData({
       name: "",
       isActive: true,
+      hasStartingKit: true,
       minAge: "",
       maxAge: "",
       displayOrder: "",
@@ -152,6 +154,7 @@ export function StreamManagement({
       name: formData.name.trim(),
       programId,
       isActive: formData.isActive,
+      hasStartingKit: formData.hasStartingKit,
       minAge: parseOptInt(formData.minAge),
       maxAge: parseOptInt(formData.maxAge),
       displayOrder: Number(formData.displayOrder) || 0,
@@ -346,8 +349,16 @@ export function StreamManagement({
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-card-foreground">
-                        {stream.name}
+                      <div className="flex items-center gap-1.5 truncate text-sm font-medium text-card-foreground">
+                        <span className="truncate">{stream.name}</span>
+                        {stream.hasStartingKit ? (
+                          <Badge
+                            variant="outline"
+                            className="shrink-0 border-primary/30 bg-primary/10 px-1.5 py-0 text-[10px] font-medium text-primary"
+                          >
+                            Starting kit
+                          </Badge>
+                        ) : null}
                       </div>
                       <div className="mt-0.5 text-xs text-muted-foreground">
                         {formatAgeRange(stream.minAge, stream.maxAge)}
@@ -366,6 +377,7 @@ export function StreamManagement({
                         setEditFormData({
                           name: stream.name,
                           isActive: stream.isActive ?? true,
+                          hasStartingKit: stream.hasStartingKit ?? true,
                           minAge: stream.minAge ?? null,
                           maxAge: stream.maxAge ?? null,
                           displayOrder: stream.displayOrder ?? 0,
@@ -535,6 +547,17 @@ export function StreamManagement({
             { value: "inactive", label: "Inactive" },
           ]}
         />
+        <ToggleField
+          label="Starting kit"
+          value={formData.hasStartingKit ? "yes" : "no"}
+          onValueChange={(v) =>
+            setFormData({ ...formData, hasStartingKit: v === "yes" })
+          }
+          options={[
+            { value: "yes", label: "Yes" },
+            { value: "no", label: "No" },
+          ]}
+        />
       </FormDialog>
 
       <FormDialog
@@ -621,6 +644,17 @@ export function StreamManagement({
           options={[
             { value: "active", label: "Active" },
             { value: "inactive", label: "Inactive" },
+          ]}
+        />
+        <ToggleField
+          label="Starting kit"
+          value={(editFormData.hasStartingKit ?? true) ? "yes" : "no"}
+          onValueChange={(v) =>
+            setEditFormData({ ...editFormData, hasStartingKit: v === "yes" })
+          }
+          options={[
+            { value: "yes", label: "Yes" },
+            { value: "no", label: "No" },
           ]}
         />
       </FormDialog>

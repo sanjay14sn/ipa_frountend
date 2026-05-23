@@ -332,7 +332,9 @@ export default function UnifiedMaterialRequestDialog({
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {(streamsQuery.data ?? []).map((stream) => {
+                    {(streamsQuery.data ?? [])
+                      .filter((stream) => stream.hasStartingKit !== false)
+                      .map((stream) => {
                       const rowEntries = kitRows
                         .map((row, index) => ({ row, index }))
                         .filter((e) => e.row.streamId === stream.id);

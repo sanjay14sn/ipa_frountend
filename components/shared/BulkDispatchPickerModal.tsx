@@ -1,16 +1,13 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Check, Loader2, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Check, Loader2, Truck, X } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AppDialog,
+  AppDialogBody,
+  AppDialogFooter,
+  AppDialogHeader,
+} from "@/components/shared/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -120,16 +117,21 @@ export function BulkDispatchPickerModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:max-w-[560px] sm:p-0">
-        <DialogHeader className="space-y-1.5 px-4 pb-2 pt-4 pr-10 sm:px-5 sm:pb-3 sm:pt-5">
-          <DialogTitle>Dispatch {title}</DialogTitle>
-          <DialogDescription>
-            Choose how to dispatch, then select the items to include.
-          </DialogDescription>
-        </DialogHeader>
+    <AppDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="lg"
+      scrollBody
+      maxHeight="max-h-[85vh]"
+    >
+      <AppDialogHeader
+        title={`Dispatch ${title}`}
+        description="Choose how to dispatch, then select the items to include."
+        icon={Truck}
+      />
 
-        <div className="max-h-[calc(85vh-10.5rem)] min-h-0 space-y-4 overflow-y-auto px-4 pb-0 pt-2 sm:px-5 sm:pt-3">
+      <AppDialogBody>
+        <div className="space-y-4">
           <div className="space-y-2 rounded-lg border p-3">
             <p className="text-sm font-medium text-gray-900">Dispatch as</p>
             <div className="space-y-1 text-sm">
@@ -299,28 +301,24 @@ export function BulkDispatchPickerModal({
             </div>
           </div>
         </div>
+      </AppDialogBody>
 
-        <DialogFooter className="flex flex-row justify-end gap-2 border-t bg-background px-4 py-3 sm:gap-2 sm:px-5">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            disabled={isConfirmDisabled}
-            onClick={() => void handleConfirm()}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Dispatching…
-              </>
-            ) : (
-              `Dispatch ${selectedIds.length > 0 ? `${selectedIds.length} ` : ""}${title}`
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <AppDialogFooter
+        sticky
+        secondary={{
+          label: "Cancel",
+          onClick: () => onOpenChange(false),
+          disabled: isSubmitting,
+        }}
+        primary={{
+          label: isSubmitting
+            ? "Dispatching…"
+            : `Dispatch ${selectedIds.length > 0 ? `${selectedIds.length} ` : ""}${title}`,
+          onClick: () => void handleConfirm(),
+          loading: isSubmitting,
+          disabled: isConfirmDisabled,
+        }}
+      />
+    </AppDialog>
   );
 }

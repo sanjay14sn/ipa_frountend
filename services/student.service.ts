@@ -483,6 +483,9 @@ export interface AdminCertificateRequest {
   levelTotalMarks: number;
   certificatePdfPath?: string;
   issueDate?: string;
+  dispatchStatus: "Not dispatched" | "Dispatched";
+  dispatchedAt: string | null;
+  dispatchOrderId: number | null;
 }
 
 export interface AdminCertificateRequestsByFranchise {
@@ -558,6 +561,11 @@ function mapCertRow(c: CertificateRow): AdminCertificateRequest {
       ? String(c.certificatePdfPath)
       : undefined,
     issueDate: c.issueDate ? String(c.issueDate) : undefined,
+    dispatchStatus:
+      c.dispatchStatus === "Dispatched" ? "Dispatched" : "Not dispatched",
+    dispatchedAt: c.dispatchedAt ? String(c.dispatchedAt) : null,
+    dispatchOrderId:
+      c.dispatchOrderId != null ? Number(c.dispatchOrderId) : null,
   };
 }
 
@@ -610,13 +618,49 @@ export async function rejectCertificateRequest(
   return unwrapData(response);
 }
 
-export async function bulkDispatchCertificates(dto: {
+export async function bulkApproveCertificates(dto: {
   ids: number[];
-  orderId?: number;
 }): Promise<{ succeeded: number[]; failed: number[] }> {
   const response = await api.post(
-    "/admin/certification/certificates/bulk-dispatch",
+    "/admin/certification/certificates/bulk-approve",
     dto,
+  );
+  return unwrapData(response);
+}
+
+export async function previewBulkDispatchPdf(ids: number[]): Promise<Blob> {
+  const response = await api.post(
+    "/admin/certification/certificates/bulk-dispatch/preview",
+    { ids },
+    { responseType: "blob" },
+  );
+  return response.data instanceof Blob
+    ? response.data
+    : new Blob([response.data], { type: "application/pdf" });
+}
+
+export async function confirmBulkDispatch(
+  ids: number[],
+  orderId?: number,
+): Promise<{ dispatched: number[]; skipped: number[]; orderId: number }> {
+  const response = await api.post(
+    "/admin/certification/certificates/bulk-dispatch/confirm",
+    { ids, orderId },
+  );
+  return unwrapData(response);
+}
+
+export async function getDispatchEligibleCertificates(params: {
+  franchiseId?: string;
+  programId?: number;
+  levelId?: number;
+  page?: number;
+  limit?: number;
+  search?: string;
+}) {
+  const response = await api.get(
+    "/admin/certification/certificates/dispatch-eligible",
+    { params },
   );
   return unwrapData(response);
 }
@@ -1129,6 +1173,9 @@ export interface FranchiseeCertificate {
   instructorInstructorId: string;
   levelPassMark: number;
   levelTotalMarks: number;
+  dispatchStatus: "Not dispatched" | "Dispatched";
+  dispatchedAt: string | null;
+  dispatchOrderId: number | null;
 }
 
 export interface FranchiseeCertificatesResponse {
