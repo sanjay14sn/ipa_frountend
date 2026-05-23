@@ -35,7 +35,7 @@ import {
   useAdminCertificateDetails,
   useDispatchEligibleOrders,
 } from "@/hooks/api/student.hooks";
-import { useDispatchEligibleCertificates } from "@/hooks/api/certificate-dispatch.hooks";
+import { useApproveAndDispatchEligibleCertificates } from "@/hooks/api/certificate-dispatch.hooks";
 import { BulkDispatchFlowModal } from "@/components/shared/BulkDispatchFlowModal";
 
 interface FranchiseCertificateDetailsProps {
@@ -76,7 +76,7 @@ export default function FranchiseCertificateDetails({
 
   const detailsQuery = useAdminCertificateDetails(franchiseId, queryParams);
   const eligibleQuery = useDispatchEligibleOrders(franchiseId, dispatchOpen);
-  const eligibleCountQuery = useDispatchEligibleCertificates(
+  const eligibleCountQuery = useApproveAndDispatchEligibleCertificates(
     { franchiseId, page: 1, limit: 1 },
     true,
   );
@@ -256,8 +256,9 @@ export default function FranchiseCertificateDetails({
         className="h-9 shrink-0"
         onClick={() => setDispatchOpen(true)}
         disabled={eligibleCertCount === 0}
+        title="Approves any pending certificates in your selection and dispatches all selected"
       >
-        Dispatch Certificates
+        Approve and Dispatch
       </Button>
     </div>
   );

@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Loader2, Truck, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  FileText,
+  Loader2,
+  Mail,
+  Truck,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   AppDialog,
@@ -10,13 +18,18 @@ import {
   AppDialogHeader,
 } from "@/components/shared/dialog";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
   usePreviewBulkDispatch,
   useConfirmBulkDispatch,
-  useDispatchEligibleCertificates,
+  useApproveSubsetForDispatch,
+  useApproveAndDispatchEligibleCertificates,
 } from "@/hooks/api/certificate-dispatch.hooks";
 import type { DispatchEligibleOrder } from "@/components/shared/BulkDispatchPickerModal";
+
+type CertStatus = "Pending" | "Issued";
 
 interface DispatchEligibleCertRow {
   id: number;
@@ -29,6 +42,7 @@ interface DispatchEligibleCertRow {
   instructorName: string;
   studentLevel: string;
   studentLevelCode?: string;
+  status: CertStatus;
 }
 
 function rowToItem(row: DispatchEligibleCertRow) {
@@ -41,6 +55,7 @@ function rowToItem(row: DispatchEligibleCertRow) {
     levelMarks: `${row.marksObtained}/${denominator}`,
     ciName: row.instructorName,
     levelCode: row.studentLevelCode?.trim() || row.studentLevel || undefined,
+    status: row.status,
   };
 }
 
@@ -72,6 +87,9 @@ function normalizeEligibleRows(payload: unknown): DispatchEligibleCertRow[] {
         ? (raw.level as Record<string, unknown>)
         : {};
 
+    const rawStatus = String(raw.status ?? "").trim().toLowerCase();
+    const status: CertStatus = rawStatus === "issued" ? "Issued" : "Pending";
+
     return {
       id: Number(raw.id),
       studentName: String(
@@ -92,6 +110,7 @@ function normalizeEligibleRows(payload: unknown): DispatchEligibleCertRow[] {
           : level.code != null
             ? String(level.code)
             : undefined,
+      status,
     };
   });
 }
@@ -154,14 +173,18 @@ export function BulkDispatchFlowModal({
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [orderMode, setOrderMode] = useState<"new" | "existing">("new");
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [approvedIds, setApprovedIds] = useState<number[]>([]);
+  const [alreadyIssuedIds, setAlreadyIssuedIds] = useState<number[]>([]);
+  const [failedIds, setFailedIds] = useState<number[]>([]);
   const downloadedKeyRef = useRef<string | null>(null);
 
-  const eligibleQuery = useDispatchEligibleCertificates(
+  const eligibleQuery = useApproveAndDispatchEligibleCertificates(
     { franchiseId, page: 1, limit: 500 },
     open,
   );
   const previewMutation = usePreviewBulkDispatch();
   const confirmMutation = useConfirmBulkDispatch();
+  const approveMutation = useApproveSubsetForDispatch();
 
   const eligibleRows = useMemo(
     () => normalizeEligibleRows(eligibleQuery.data),
@@ -179,6 +202,9 @@ export function BulkDispatchFlowModal({
     setSearch("");
     setOrderMode("new");
     setSelectedOrderId(null);
+    setApprovedIds([]);
+    setAlreadyIssuedIds([]);
+    setFailedIds([]);
     if (pdfUrl) {
       window.URL.revokeObjectURL(pdfUrl);
     }
@@ -216,30 +242,65 @@ export function BulkDispatchFlowModal({
   async function handleGeneratePdf() {
     if (selectedIds.length === 0) return;
     try {
-      const blob = await previewMutation.mutateAsync(selectedIds);
+      // 1) Approve any pending certs in selection (no-op for already-ISSUED).
+      const approveResult = await approveMutation.mutateAsync(selectedIds);
+      const approved = approveResult?.approved ?? [];
+      const alreadyIssued = approveResult?.alreadyIssued ?? [];
+      const failed = approveResult?.failed ?? [];
+      setApprovedIds(approved);
+      setAlreadyIssuedIds(alreadyIssued);
+      setFailedIds(failed);
+
+      // True failure: nothing succeeded at all -> stay on step 1.
+      if (approved.length === 0 && alreadyIssued.length === 0) {
+        toast.error("None of the selected certificates could be approved.");
+        return;
+      }
+
+      if (failed.length > 0) {
+        toast.warning(
+          `${failed.length} certificate${failed.length === 1 ? "" : "s"} failed to approve; proceeding with the rest.`,
+        );
+      }
+
+      // 2) Generate the merged preview PDF for the successful set.
+      const dispatchableIds = selectedIds.filter(
+        (id) => !failed.includes(id),
+      );
+      const blob = await previewMutation.mutateAsync(dispatchableIds);
       if (pdfUrl) {
         window.URL.revokeObjectURL(pdfUrl);
       }
       const url = window.URL.createObjectURL(blob);
       setPdfUrl(url);
+
+      // 3) Advance to step 2.
       setStep("preview");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Failed to generate PDF";
+        err instanceof Error
+          ? err.message
+          : "Failed to approve or generate PDF";
       toast.error(message);
     }
   }
 
   async function handleConfirm() {
     try {
+      const dispatchableIds = selectedIds.filter(
+        (id) => !failedIds.includes(id),
+      );
       const result = await confirmMutation.mutateAsync({
-        ids: selectedIds,
-        orderId: orderMode === "existing" ? selectedOrderId ?? undefined : undefined,
+        ids: dispatchableIds,
+        orderId:
+          orderMode === "existing" ? selectedOrderId ?? undefined : undefined,
       });
-      const dispatched = result?.dispatched?.length ?? selectedIds.length;
+      const dispatched = result?.dispatched?.length ?? dispatchableIds.length;
       const skipped = result?.skipped?.length ?? 0;
       toast.success(
-        `Dispatched ${dispatched}${skipped ? ` (${skipped} skipped)` : ""}`,
+        `Approved ${approvedIds.length} and dispatched ${dispatched}${
+          skipped ? ` (${skipped} skipped)` : ""
+        }`,
       );
       if (pdfUrl) {
         window.URL.revokeObjectURL(pdfUrl);
@@ -263,15 +324,42 @@ export function BulkDispatchFlowModal({
     setStep("select");
   }
 
-  const pendingCount = selectedIds.length;
-  const isDirty = pendingCount > 0;
-  const isGenerating = previewMutation.isPending;
+  const selectedCount = selectedIds.length;
+  const isDirty = selectedCount > 0;
+  const isGenerating = previewMutation.isPending || approveMutation.isPending;
   const isSubmitting = confirmMutation.isPending;
+
+  const selectedItems = useMemo(
+    () => items.filter((i) => selectedIds.includes(i.id)),
+    [items, selectedIds],
+  );
+  const pendingInSelection = useMemo(
+    () => selectedItems.filter((i) => i.status === "Pending").length,
+    [selectedItems],
+  );
+
+  const generateLabel =
+    pendingInSelection > 0 ? "Approve & Generate PDF" : "Generate PDF";
 
   const isGenerateDisabled = selectedIds.length === 0 || isGenerating;
   const isConfirmDisabled =
     isSubmitting ||
     (orderMode === "existing" && selectedOrderId === null);
+
+  // Name lookup for summary cards in step 2.
+  const nameById = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const i of items) map.set(i.id, i.label);
+    return map;
+  }, [items]);
+
+  function namesFor(ids: number[]) {
+    const names = ids
+      .map((id) => nameById.get(id))
+      .filter((n): n is string => Boolean(n));
+    const joined = names.join(", ");
+    return joined.length > 200 ? `${joined.slice(0, 200)}…` : joined;
+  }
 
   return (
     <AppDialog
@@ -314,7 +402,7 @@ export function BulkDispatchFlowModal({
               {isDirty ? (
                 <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
                   <p className="mb-2 text-xs font-medium text-gray-900">
-                    {pendingCount} selected — not yet dispatched
+                    {selectedCount} selected — not yet dispatched
                   </p>
                   {selectedIds.map((id) => {
                     const item = items.find((i) => i.id === id);
@@ -405,6 +493,18 @@ export function BulkDispatchFlowModal({
                             </div>
                           ) : null}
                         </div>
+
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "shrink-0 text-[10px]",
+                            item.status === "Pending"
+                              ? "border-amber-300 text-amber-800"
+                              : "border-primary/40 text-primary",
+                          )}
+                        >
+                          {item.status}
+                        </Badge>
                       </div>
                     );
                   })
@@ -418,18 +518,78 @@ export function BulkDispatchFlowModal({
           <div className="flex h-full min-h-0 flex-col lg:flex-row">
             {/* Left — PDF preview grows with the popup width but always leaves
                 room for the orders panel on the right. */}
-            <div className="min-h-0 min-w-0 overflow-hidden border-b border-border bg-muted px-4 py-4 sm:px-5 lg:flex-1 lg:border-b-0 lg:border-r">
-              {pdfUrl ? (
-                <iframe
-                  src={pdfUrl}
-                  title="Bulk certificate dispatch preview"
-                  className="block h-full w-full rounded-md border border-border/60 bg-white shadow-sm"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center rounded-md border border-border/60 bg-white text-sm text-muted-foreground shadow-sm">
-                  Preview unavailable.
+            <div className="flex min-h-0 min-w-0 flex-col border-b border-border bg-muted px-4 py-4 sm:px-5 lg:flex-1 lg:border-b-0 lg:border-r">
+              {approvedIds.length > 0 ||
+              alreadyIssuedIds.length > 0 ||
+              failedIds.length > 0 ? (
+                <div className="mb-3 grid shrink-0 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {approvedIds.length > 0 ? (
+                    <Card className="border-primary/30 bg-primary/5">
+                      <CardContent className="p-3">
+                        <div className="flex items-center gap-2 text-primary">
+                          <Mail className="h-4 w-4 shrink-0" />
+                          <span className="text-xs font-semibold">
+                            Approved &amp; mailed ({approvedIds.length})
+                          </span>
+                        </div>
+                        {namesFor(approvedIds) ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {namesFor(approvedIds)}
+                          </p>
+                        ) : null}
+                      </CardContent>
+                    </Card>
+                  ) : null}
+                  {alreadyIssuedIds.length > 0 ? (
+                    <Card className="border-border bg-muted/60">
+                      <CardContent className="p-3">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <FileText className="h-4 w-4 shrink-0" />
+                          <span className="text-xs font-semibold">
+                            Already issued ({alreadyIssuedIds.length})
+                          </span>
+                        </div>
+                        {namesFor(alreadyIssuedIds) ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {namesFor(alreadyIssuedIds)}
+                          </p>
+                        ) : null}
+                      </CardContent>
+                    </Card>
+                  ) : null}
+                  {failedIds.length > 0 ? (
+                    <Card className="border-destructive/30 bg-destructive/5">
+                      <CardContent className="p-3">
+                        <div className="flex items-center gap-2 text-destructive">
+                          <AlertTriangle className="h-4 w-4 shrink-0" />
+                          <span className="text-xs font-semibold">
+                            Failed to approve ({failedIds.length})
+                          </span>
+                        </div>
+                        {namesFor(failedIds) ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {namesFor(failedIds)}
+                          </p>
+                        ) : null}
+                      </CardContent>
+                    </Card>
+                  ) : null}
                 </div>
-              )}
+              ) : null}
+
+              <div className="min-h-0 flex-1 overflow-hidden">
+                {pdfUrl ? (
+                  <iframe
+                    src={pdfUrl}
+                    title="Bulk certificate dispatch preview"
+                    className="block h-full w-full rounded-md border border-border/60 bg-white shadow-sm"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center rounded-md border border-border/60 bg-white text-sm text-muted-foreground shadow-sm">
+                    Preview unavailable.
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Right — dispatch-as panel is a fixed sidebar so it never gets clipped. */}
@@ -547,7 +707,7 @@ export function BulkDispatchFlowModal({
             ? {
                 label: isGenerating
                   ? "Generating…"
-                  : `Generate merged PDF${selectedIds.length > 0 ? ` (${selectedIds.length})` : ""}`,
+                  : `${generateLabel}${selectedIds.length > 0 ? ` (${selectedIds.length})` : ""}`,
                 onClick: () => void handleGeneratePdf(),
                 loading: isGenerating,
                 disabled: isGenerateDisabled,

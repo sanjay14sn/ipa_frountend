@@ -665,6 +665,47 @@ export async function getDispatchEligibleCertificates(params: {
   return unwrapData(response);
 }
 
+export interface ApproveAndDispatchClassification {
+  approveIds: number[];
+  alreadyIssuedIds: number[];
+  ineligible: Array<{ id: number; reason: string }>;
+}
+
+export async function classifyForApproveAndDispatch(
+  ids: number[],
+): Promise<ApproveAndDispatchClassification> {
+  const response = await api.post(
+    "/admin/certification/certificates/dispatch-eligible/classify",
+    { ids },
+  );
+  return unwrapData(response);
+}
+
+export async function approveSubsetForDispatch(
+  ids: number[],
+): Promise<{ approved: number[]; alreadyIssued: number[]; failed: number[] }> {
+  const response = await api.post(
+    "/admin/certification/certificates/approve-and-dispatch/approve",
+    { ids },
+  );
+  return unwrapData(response);
+}
+
+export async function getApproveAndDispatchEligibleCertificates(params: {
+  franchiseId?: string;
+  programId?: number;
+  levelId?: number;
+  page?: number;
+  limit?: number;
+  search?: string;
+}) {
+  const response = await api.get(
+    "/admin/certification/certificates/approve-and-dispatch-eligible",
+    { params },
+  );
+  return unwrapData(response);
+}
+
 export async function bulkDispatchIdCards(dto: {
   studentIds: number[];
   orderId?: number;
