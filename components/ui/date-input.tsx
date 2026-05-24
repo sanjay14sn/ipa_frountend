@@ -77,11 +77,14 @@ const DateInput = React.forwardRef<HTMLDivElement, DateInputProps>(
     const minDate = isoToDate(min) ?? undefined;
     const maxDate = isoToDate(max) ?? undefined;
 
+    const isEmpty = dateValue == null;
+
     return (
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <div
           ref={ref}
-          className={cn("relative w-full", className)}
+          data-empty={isEmpty || undefined}
+          className={cn("date-input-wrapper relative w-full", className)}
         >
           <DateField
             value={dateValue}
@@ -105,52 +108,39 @@ const DateInput = React.forwardRef<HTMLDivElement, DateInputProps>(
                 fullWidth: true,
                 ...aria,
                 sx: {
-                  // Match shadcn Input: h-10, rounded-md (10px), border #e5e7eb,
-                  // ring #064e3b on focus, placeholder muted #6b7280.
-                  "& .MuiOutlinedInput-root": {
+                  // Root: match shadcn Input shell (h-10, rounded-md, bg).
+                  "& .MuiPickersOutlinedInput-root": {
                     height: 40,
                     borderRadius: "calc(0.75rem - 2px)",
                     fontSize: "0.875rem",
                     fontFamily: "inherit",
                     color: "#064e3b",
                     backgroundColor: "#fafafa",
-                    paddingRight: "40px", // space for the calendar icon
+                    paddingRight: "40px",
+                    paddingLeft: 0,
                   },
-                  "& .MuiOutlinedInput-input": {
+                  // Sections (DD / MM / YYYY) — inner padding mirrors shadcn px-3 py-2.
+                  "& .MuiPickersSectionList-root": {
                     padding: "8px 12px",
-                    fontFamily: "inherit",
                   },
-                  // Mute the unfilled format mask sections (DD / MM / YYYY).
-                  "& .MuiPickersInputBase-sectionContent[data-placeholder='true'], & .MuiPickersInputBase-sectionsContainer:not(:focus-within) .MuiPickersInputBase-sectionContent":
+                  "& .MuiPickersSectionList-sectionContent, & .MuiPickersSectionList-sectionSeparator":
                     {
-                      color: "inherit",
+                      fontFamily: "inherit",
                     },
-                  "& .MuiPickersSectionList-root .MuiPickersSectionList-sectionContent:empty + .MuiPickersSectionList-sectionContent, & .MuiPickersOutlinedInput-sectionsContainer .MuiPickersInputBase-sectionContent":
-                    {
-                      color: "inherit",
-                    },
-                  "& .MuiPickersInputBase-root.MuiPickersOutlinedInput-root:not(.Mui-focused):not(.MuiPickersInputBase-adornedStart) .MuiPickersInputBase-sectionsContainer":
-                    {
-                      color: "inherit",
-                    },
-                  // Default (unfocused) border colour.
-                  "& .MuiOutlinedInput-notchedOutline, & .MuiPickersOutlinedInput-notchedOutline":
-                    {
-                      borderColor: "#e5e7eb",
-                      borderWidth: 1,
-                    },
-                  // Hover state.
-                  "&:hover .MuiOutlinedInput-notchedOutline, &:hover .MuiPickersOutlinedInput-notchedOutline":
-                    {
-                      borderColor: "#e5e7eb",
-                    },
-                  // Focused: brand-green ring + offset matching shadcn focus-visible.
-                  "& .Mui-focused .MuiOutlinedInput-notchedOutline, & .Mui-focused .MuiPickersOutlinedInput-notchedOutline":
+                  // Default (unfocused) 1px border matching shadcn border-input.
+                  "& .MuiPickersOutlinedInput-notchedOutline": {
+                    borderColor: "#e5e7eb",
+                    borderWidth: 1,
+                  },
+                  "&:hover .MuiPickersOutlinedInput-notchedOutline": {
+                    borderColor: "#e5e7eb",
+                  },
+                  // Focused: stay 1px to avoid the visual "thickening".
+                  "& .MuiPickersOutlinedInput-root.Mui-focused .MuiPickersOutlinedInput-notchedOutline":
                     {
                       borderColor: "#064e3b",
-                      borderWidth: 2,
+                      borderWidth: 1,
                     },
-                  // Disabled state.
                   "& .Mui-disabled": {
                     opacity: 0.5,
                     cursor: "not-allowed",

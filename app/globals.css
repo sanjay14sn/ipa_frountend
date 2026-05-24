@@ -81,6 +81,15 @@
     pointer-events: auto !important;
   }
 
+  /* MUI X DateField placeholder muting — sections always render text content
+     (DD / MM / YYYY when empty, digits when filled). Wrapper sets
+     data-empty="true" when no value is selected, letting us mute the format
+     mask so it looks like a normal shadcn placeholder. */
+  .date-input-wrapper[data-empty="true"] .MuiPickersSectionList-sectionContent,
+  .date-input-wrapper[data-empty="true"] .MuiPickersSectionList-sectionSeparator {
+    color: #6b7280;
+  }
+
   h1,
   h2,
   h3,
