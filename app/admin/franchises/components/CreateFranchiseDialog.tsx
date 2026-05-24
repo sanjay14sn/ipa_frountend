@@ -1435,6 +1435,7 @@ function PaidUnpaidSection({
             variant="outline"
             size="sm"
             className="shrink-0"
+            disabled={franchiseFee > 0 && paidSum >= franchiseFee}
             onClick={() =>
               onUpdate(programId, "paidPayments", [
                 ...payroll.paidPayments,
@@ -1452,23 +1453,45 @@ function PaidUnpaidSection({
           </p>
         ) : (
           <div className="space-y-2">
-            {payroll.paidPayments.map((row, idx) => (
-              <PaidPaymentEditor
-                key={idx}
-                row={row}
-                amountError={errors[`paid-${programId}-${idx}-amount`]}
-                paidAtError={errors[`paid-${programId}-${idx}-paidAt`]}
-                onChange={(next) => {
-                  const copy = [...payroll.paidPayments];
-                  copy[idx] = next;
-                  onUpdate(programId, "paidPayments", copy);
-                }}
-                onRemove={() => {
-                  const copy = payroll.paidPayments.filter((_, i) => i !== idx);
-                  onUpdate(programId, "paidPayments", copy);
-                }}
-              />
-            ))}
+            {payroll.paidPayments.map((row, idx) => {
+              // Cap each row at (franchiseFee - sum of OTHER rows) so the
+              // total paid can never exceed the franchise fee. When
+              // franchiseFee is 0 (not yet entered), don't enforce a cap.
+              const sumOthers = payroll.paidPayments.reduce(
+                (acc, r, i) => acc + (i === idx ? 0 : Number(r.amount) || 0),
+                0,
+              );
+              const rowMax =
+                franchiseFee > 0
+                  ? Math.max(0, franchiseFee - sumOthers)
+                  : undefined;
+              return (
+                <PaidPaymentEditor
+                  key={idx}
+                  row={row}
+                  amountError={errors[`paid-${programId}-${idx}-amount`]}
+                  paidAtError={errors[`paid-${programId}-${idx}-paidAt`]}
+                  amountMax={rowMax}
+                  onChange={(next) => {
+                    const requested = Number(next.amount) || 0;
+                    const clamped =
+                      rowMax != null
+                        ? Math.max(0, Math.min(requested, rowMax))
+                        : Math.max(0, requested);
+                    const safe = { ...next, amount: clamped };
+                    const copy = [...payroll.paidPayments];
+                    copy[idx] = safe;
+                    onUpdate(programId, "paidPayments", copy);
+                  }}
+                  onRemove={() => {
+                    const copy = payroll.paidPayments.filter(
+                      (_, i) => i !== idx,
+                    );
+                    onUpdate(programId, "paidPayments", copy);
+                  }}
+                />
+              );
+            })}
           </div>
         )}
 
@@ -1607,12 +1630,14 @@ function PaidPaymentEditor({
   row,
   amountError,
   paidAtError,
+  amountMax,
   onChange,
   onRemove,
 }: {
   row: PaidPaymentRow;
   amountError?: string;
   paidAtError?: string;
+  amountMax?: number;
   onChange: (next: PaidPaymentRow) => void;
   onRemove: () => void;
 }) {
@@ -1623,6 +1648,7 @@ function PaidPaymentEditor({
         <Input
           type="number"
           min="0"
+          max={amountMax}
           value={row.amount === 0 ? "" : row.amount}
           onChange={(e) =>
             onChange({
@@ -1636,6 +1662,11 @@ function PaidPaymentEditor({
         />
         {amountError && (
           <p className="text-[11px] text-destructive">{amountError}</p>
+        )}
+        {!amountError && amountMax != null && amountMax > 0 && row.amount > 0 && row.amount === amountMax && (
+          <p className="text-[11px] text-muted-foreground">
+            Capped at remaining balance
+          </p>
         )}
       </div>
       <div className="col-span-3 space-y-1">
