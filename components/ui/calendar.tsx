@@ -22,8 +22,17 @@ function Calendar({
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
-        month_caption: "flex justify-center pt-1 relative items-center",
+        month_caption: "flex justify-center pt-1 relative items-center h-7",
         caption_label: "text-sm font-medium",
+        // captionLayout="dropdown" styles — visible label inside each
+        // dropdown_root, with the real <select> overlaid invisibly.
+        dropdowns: "flex items-center gap-1",
+        dropdown_root:
+          "relative inline-flex items-center rounded-md border border-input bg-background px-2 py-0.5 text-sm font-medium hover:bg-accent",
+        dropdown:
+          "absolute inset-0 z-10 opacity-0 cursor-pointer appearance-none bg-transparent",
+        months_dropdown: "",
+        years_dropdown: "",
         nav: "space-x-1 flex items-center",
         button_previous: cn(
           buttonVariants({ variant: "outline" }),

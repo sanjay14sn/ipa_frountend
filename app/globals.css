@@ -107,6 +107,18 @@
     color: #6b7280;
   }
 
+  /* react-day-picker dropdown chevron indicator (captionLayout="dropdown"). */
+  .rdp-dropdown_root::after {
+    content: "";
+    margin-left: 0.25rem;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid currentColor;
+    opacity: 0.6;
+  }
+
   h1,
   h2,
   h3,

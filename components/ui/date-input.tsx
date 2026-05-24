@@ -168,6 +168,9 @@ const DateInput = React.forwardRef<HTMLDivElement, DateInputProps>(
                 mode="single"
                 selected={dateValue ?? undefined}
                 defaultMonth={dateValue ?? maxDate ?? minDate}
+                captionLayout="dropdown"
+                startMonth={minDate ?? new Date(1950, 0)}
+                endMonth={maxDate ?? new Date(2100, 11)}
                 disabled={
                   minDate || maxDate
                     ? (d: Date) => {
