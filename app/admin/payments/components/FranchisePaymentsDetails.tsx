@@ -18,6 +18,8 @@ import {
   DetailFieldsGrid,
   ExpandedDetailSection,
   ExpandedDetailSurface,
+  SummaryStatCard,
+  SummaryStatGrid,
   type DataTableColumn,
   type DataTableFilter,
 } from "@/components/shared";
@@ -157,23 +159,32 @@ export default function FranchisePaymentsDetails({
   return (
     <ExpandedDetailSurface className="border-t border-border/60">
       <ExpandedDetailSection title="Franchise payment summary">
-        <DetailFieldsGrid columns={4}>
-          <DetailField label="Franchise" value={franchiseName} />
-          <DetailField label="Total payments" value={totalPaymentsCount} />
-          <DetailField
+        <SummaryStatGrid>
+          <SummaryStatCard
+            label="Total payments"
+            value={totalPaymentsCount}
+            description="All transactions"
+          />
+          <SummaryStatCard
             label="Completed amount"
             value={
               totalAmount != null
                 ? `Rs. ${totalAmount.toLocaleString("en-IN")}`
                 : "N/A"
             }
+            description="Captured to date"
           />
-          <DetailField
+          <SummaryStatCard
             label="Completed payments"
             value={totalCompleted ?? "N/A"}
+            description="Successful captures"
           />
-          <DetailField label="Pending payments" value={totalPending ?? "N/A"} />
-        </DetailFieldsGrid>
+          <SummaryStatCard
+            label="Pending payments"
+            value={totalPending ?? "N/A"}
+            description="Awaiting capture"
+          />
+        </SummaryStatGrid>
       </ExpandedDetailSection>
 
       <Separator />

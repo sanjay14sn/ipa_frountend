@@ -20,7 +20,8 @@ import { getFranchiseApplicationDetail } from "@/services/franchisee.service";
 import AdminOrdersTable from "@/app/admin/orders/components/AdminOrdersTable";
 import { FranchiseStudentsTable } from "./components/FranchiseStudentsTable";
 import { FranchiseCiListTable } from "./components/FranchiseCiListTable";
-import PaymentsTable from "@/app/admin/payments/components/PaymentsTable";
+import { FranchiseOrdersSummary } from "./components/FranchiseOrdersSummary";
+import { FranchisePaymentsTab } from "./components/FranchisePaymentsTab";
 import { FranchiseAgreementsWorkspace } from "@/app/admin/franchise/components/FranchiseAgreementsWorkspace";
 
 const TABS = ["students", "ci", "orders", "payments", "agreements"] as const;
@@ -196,11 +197,17 @@ function FranchiseDetailInner() {
       </TabsContent>
 
       <TabsContent value="orders" className="mt-0">
-        <AdminOrdersTable franchiseId={franchiseId} />
+        <div className="space-y-4">
+          <FranchiseOrdersSummary franchiseId={franchiseId} />
+          <AdminOrdersTable franchiseId={franchiseId} />
+        </div>
       </TabsContent>
 
       <TabsContent value="payments" className="mt-0">
-        <PaymentsTable franchiseId={franchiseId} />
+        <FranchisePaymentsTab
+          franchiseId={franchiseId}
+          franchiseName={franchise?.name ?? "Franchise"}
+        />
       </TabsContent>
 
       <TabsContent value="agreements" className="mt-0">

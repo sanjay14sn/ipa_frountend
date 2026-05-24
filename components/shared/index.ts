@@ -35,3 +35,5 @@ export type { MultiSelectOption } from "./MultiSelectDropdown";
 
 export { StatusBadge } from "./status-badge";
 export type { StatusTone } from "./status-badge";
+
+export { SummaryStatCard, SummaryStatGrid } from "./summary-stat-card";
