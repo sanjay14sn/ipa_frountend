@@ -31,6 +31,7 @@ export interface DateInputProps {
   required?: boolean;
   placeholder?: string;
   className?: string;
+  autoFocus?: boolean;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
 }
@@ -45,15 +46,30 @@ function dateToIso(d: Date): string {
   return format(d, ISO_FORMAT);
 }
 
+function isoToDisplay(iso: string | undefined | null): string {
+  const d = isoToDate(iso);
+  return d ? format(d, DISPLAY_FORMAT) : "";
+}
+
+function tryParseDisplay(text: string): Date | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const d = parse(trimmed, DISPLAY_FORMAT, new Date());
+  return isValid(d) ? d : null;
+}
+
 /**
  * Drop-in replacement for `<Input type="date" />`.
  *
- * Built on react-day-picker (via shadcn Calendar) so it looks and behaves like
- * a proper date picker: the trigger button shows the selected date in
- * dd/MM/yyyy and clicking it opens the calendar. The underlying value stays as
- * ISO yyyy-mm-dd so existing service/API contracts keep working.
+ * Behavior:
+ * - Always displays dates in dd/MM/yyyy (locale-independent).
+ * - User can either TYPE a date directly in the field, or pick from the calendar.
+ * - Underlying value stays ISO yyyy-mm-dd so existing service/API contracts work.
+ *
+ * Built on `react-day-picker` (via shadcn Calendar) + `date-fns` — both already
+ * installed.
  */
-const DateInput = React.forwardRef<HTMLButtonElement, DateInputProps>(
+const DateInput = React.forwardRef<HTMLInputElement, DateInputProps>(
   (
     {
       value,
@@ -66,76 +82,117 @@ const DateInput = React.forwardRef<HTMLButtonElement, DateInputProps>(
       required,
       placeholder,
       className,
+      autoFocus,
       ...aria
     },
     ref,
   ) => {
     const [open, setOpen] = React.useState(false);
+    const [text, setText] = React.useState<string>(() => isoToDisplay(value));
+
+    // Keep the displayed text in sync with the controlled value coming from
+    // outside (e.g. form resets) — but only when the user isn't mid-edit.
+    React.useEffect(() => {
+      setText(isoToDisplay(value));
+    }, [value]);
 
     const selected = isoToDate(value);
     const minDate = isoToDate(min);
     const maxDate = isoToDate(max);
 
-    const display = selected ? format(selected, DISPLAY_FORMAT) : "";
-    const placeholderText = placeholder ?? "dd/mm/yyyy";
+    const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const raw = e.target.value;
+      setText(raw);
+      // Only commit when the user has typed a fully valid dd/mm/yyyy.
+      const d = tryParseDisplay(raw);
+      if (!d) {
+        if (raw.trim() === "" && value) onChange?.("");
+        return;
+      }
+      if (minDate && d < minDate) return;
+      if (maxDate && d > maxDate) return;
+      onChange?.(dateToIso(d));
+    };
+
+    const handleBlur = () => {
+      if (!text.trim()) {
+        if (value) onChange?.("");
+        return;
+      }
+      const d = tryParseDisplay(text);
+      if (!d) {
+        // Invalid input on blur — revert to last good value.
+        setText(isoToDisplay(value));
+        return;
+      }
+      setText(format(d, DISPLAY_FORMAT));
+    };
 
     return (
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            ref={ref}
-            id={id}
-            type="button"
-            variant="outline"
-            disabled={disabled}
-            aria-required={required || undefined}
-            className={cn(
-              "h-10 w-full justify-start px-3 font-normal",
-              !display && "text-muted-foreground",
-              className,
-            )}
-            {...aria}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4 shrink-0 opacity-70" />
-            <span className="truncate">{display || placeholderText}</span>
-          </Button>
-        </PopoverTrigger>
-        {/* Hidden input keeps native form submission / required validation working. */}
+      <div
+        className={cn(
+          "relative flex h-10 w-full items-center rounded-md border border-input bg-background ring-offset-background focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+          disabled && "cursor-not-allowed opacity-50",
+          className,
+        )}
+      >
+        <CalendarIcon className="pointer-events-none ml-3 h-4 w-4 shrink-0 text-muted-foreground" />
         <input
-          type="hidden"
+          ref={ref}
+          id={id}
           name={name}
-          value={value ?? ""}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          autoFocus={autoFocus}
+          disabled={disabled}
           required={required}
+          placeholder={placeholder ?? "dd/mm/yyyy"}
+          value={text}
+          onChange={handleTextChange}
+          onBlur={handleBlur}
+          className="h-full flex-1 min-w-0 bg-transparent px-2 text-sm placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed md:text-sm"
+          {...aria}
         />
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={selected}
-            defaultMonth={selected ?? maxDate ?? minDate}
-            captionLayout="dropdown"
-            startMonth={new Date(1950, 0)}
-            endMonth={new Date(2100, 11)}
-            disabled={
-              minDate || maxDate
-                ? (d: Date) => {
-                    if (minDate && d < minDate) return true;
-                    if (maxDate && d > maxDate) return true;
-                    return false;
-                  }
-                : undefined
-            }
-            onSelect={(d: Date | undefined) => {
-              if (!d) {
-                onChange?.("");
-              } else {
-                onChange?.(dateToIso(d));
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={disabled}
+              aria-label="Open calendar"
+              tabIndex={-1}
+              className="mr-0.5 h-8 w-8 shrink-0 p-0 text-muted-foreground hover:text-foreground"
+            >
+              <CalendarIcon className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <Calendar
+              mode="single"
+              selected={selected}
+              defaultMonth={selected ?? maxDate ?? minDate}
+              disabled={
+                minDate || maxDate
+                  ? (d: Date) => {
+                      if (minDate && d < minDate) return true;
+                      if (maxDate && d > maxDate) return true;
+                      return false;
+                    }
+                  : undefined
               }
-              setOpen(false);
-            }}
-            initialFocus
-          />
-        </PopoverContent>
-      </Popover>
+              onSelect={(d: Date | undefined) => {
+                if (!d) return;
+                onChange?.(dateToIso(d));
+                setText(format(d, DISPLAY_FORMAT));
+                setOpen(false);
+              }}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
     );
   },
 );
