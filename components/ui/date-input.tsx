@@ -9,7 +9,6 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DateField } from "@mui/x-date-pickers/DateField";
 
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -50,13 +49,11 @@ function dateToIso(d: Date): string {
 }
 
 /**
- * Date input built on MUI X DateField (segmented dd/MM/yyyy typing — day,
- * month and year are independent input slots) combined with the shadcn
- * Calendar in a Popover for visual picking.
+ * MUI X `DateField` (segmented dd/MM/yyyy typing) styled to match the
+ * shadcn/Tailwind theme, with a calendar icon inside the field that opens
+ * the shadcn Calendar in a Popover for visual picking.
  *
- * - Type into the field: day slot → arrow/slash → month slot → year slot.
- * - Click the calendar icon: opens the shadcn Calendar to pick a date.
- * - Value in/out stays ISO yyyy-mm-dd so existing API contracts are preserved.
+ * Value in/out is ISO yyyy-mm-dd so existing API contracts are preserved.
  */
 const DateInput = React.forwardRef<HTMLDivElement, DateInputProps>(
   (
@@ -84,7 +81,7 @@ const DateInput = React.forwardRef<HTMLDivElement, DateInputProps>(
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <div
           ref={ref}
-          className={cn("flex w-full items-center gap-1", className)}
+          className={cn("relative w-full", className)}
         >
           <DateField
             value={dateValue}
@@ -108,42 +105,73 @@ const DateInput = React.forwardRef<HTMLDivElement, DateInputProps>(
                 fullWidth: true,
                 ...aria,
                 sx: {
-                  // Match shadcn input look (h-10, rounded-md, border-input).
+                  // Match shadcn Input: h-10, rounded-md (10px), border #e5e7eb,
+                  // ring #064e3b on focus, placeholder muted #6b7280.
                   "& .MuiOutlinedInput-root": {
                     height: 40,
-                    borderRadius: "0.375rem",
+                    borderRadius: "calc(0.75rem - 2px)",
                     fontSize: "0.875rem",
                     fontFamily: "inherit",
-                    backgroundColor: "hsl(var(--background))",
-                    color: "hsl(var(--foreground))",
+                    color: "#064e3b",
+                    backgroundColor: "#fafafa",
+                    paddingRight: "40px", // space for the calendar icon
                   },
-                  "& .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "hsl(var(--input))",
+                  "& .MuiOutlinedInput-input": {
+                    padding: "8px 12px",
+                    fontFamily: "inherit",
                   },
-                  "&:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "hsl(var(--input))",
-                  },
-                  "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
+                  // Mute the unfilled format mask sections (DD / MM / YYYY).
+                  "& .MuiPickersInputBase-sectionContent[data-placeholder='true'], & .MuiPickersInputBase-sectionsContainer:not(:focus-within) .MuiPickersInputBase-sectionContent":
                     {
-                      borderColor: "hsl(var(--ring))",
+                      color: "inherit",
+                    },
+                  "& .MuiPickersSectionList-root .MuiPickersSectionList-sectionContent:empty + .MuiPickersSectionList-sectionContent, & .MuiPickersOutlinedInput-sectionsContainer .MuiPickersInputBase-sectionContent":
+                    {
+                      color: "inherit",
+                    },
+                  "& .MuiPickersInputBase-root.MuiPickersOutlinedInput-root:not(.Mui-focused):not(.MuiPickersInputBase-adornedStart) .MuiPickersInputBase-sectionsContainer":
+                    {
+                      color: "inherit",
+                    },
+                  // Default (unfocused) border colour.
+                  "& .MuiOutlinedInput-notchedOutline, & .MuiPickersOutlinedInput-notchedOutline":
+                    {
+                      borderColor: "#e5e7eb",
                       borderWidth: 1,
                     },
+                  // Hover state.
+                  "&:hover .MuiOutlinedInput-notchedOutline, &:hover .MuiPickersOutlinedInput-notchedOutline":
+                    {
+                      borderColor: "#e5e7eb",
+                    },
+                  // Focused: brand-green ring + offset matching shadcn focus-visible.
+                  "& .Mui-focused .MuiOutlinedInput-notchedOutline, & .Mui-focused .MuiPickersOutlinedInput-notchedOutline":
+                    {
+                      borderColor: "#064e3b",
+                      borderWidth: 2,
+                    },
+                  // Disabled state.
+                  "& .Mui-disabled": {
+                    opacity: 0.5,
+                    cursor: "not-allowed",
+                  },
                 },
               },
             }}
           />
+          {/* Calendar icon overlaying the right side of the input — opens the
+              shadcn Calendar popover. */}
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-              <Button
+              <button
                 type="button"
-                variant="outline"
-                size="icon"
                 disabled={disabled}
                 aria-label="Open calendar"
-                className="h-10 w-10 shrink-0"
+                tabIndex={-1}
+                className="absolute right-1 top-1/2 -translate-y-1/2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50"
               >
                 <CalendarIcon className="h-4 w-4" />
-              </Button>
+              </button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
               <Calendar
