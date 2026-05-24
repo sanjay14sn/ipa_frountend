@@ -81,10 +81,27 @@
     pointer-events: auto !important;
   }
 
-  /* MUI X DateField placeholder muting — sections always render text content
-     (DD / MM / YYYY when empty, digits when filled). Wrapper sets
-     data-empty="true" when no value is selected, letting us mute the format
-     mask so it looks like a normal shadcn placeholder. */
+  /* MUI X DateField — force every internal piece to inherit the app's font
+     stack so it visually matches the shadcn Input next to it instead of
+     falling back to Roboto + MUI letter-spacing. */
+  .date-input-wrapper,
+  .date-input-wrapper .MuiPickersOutlinedInput-root,
+  .date-input-wrapper .MuiPickersInputBase-root,
+  .date-input-wrapper .MuiPickersSectionList-root,
+  .date-input-wrapper .MuiPickersSectionList-section,
+  .date-input-wrapper .MuiPickersSectionList-sectionContent,
+  .date-input-wrapper .MuiPickersSectionList-sectionSeparator,
+  .date-input-wrapper .MuiInputBase-input {
+    font-family: inherit !important;
+    font-size: 0.875rem;
+    letter-spacing: normal;
+    line-height: 1.5;
+  }
+
+  /* Placeholder muting — sections always render text content (DD / MM / YYYY
+     when empty, digits when filled). Wrapper carries data-empty="true" when
+     no value is set, letting us mute the format mask so it reads as a normal
+     shadcn placeholder. */
   .date-input-wrapper[data-empty="true"] .MuiPickersSectionList-sectionContent,
   .date-input-wrapper[data-empty="true"] .MuiPickersSectionList-sectionSeparator {
     color: #6b7280;
