@@ -100,6 +100,12 @@ interface ProgramPayroll {
   unpaidSplitEnabled: boolean;
   /** Number of EMI receivables to create for the unpaid remainder. */
   unpaidSplitCount: number;
+  /**
+   * Explicit due date of the first unpaid receivable (yyyy-mm-dd).
+   * When the unpaid amount is split, subsequent EMIs are scheduled at
+   * monthly intervals from this date.
+   */
+  unpaidFirstDueDate: string;
 }
 
 export function CreateFranchiseDialog({
@@ -231,6 +237,11 @@ export function CreateFranchiseDialog({
             newErrors[`split-${programId}`] =
               "Installment count must be at least 1";
           }
+          const unpaidAmount = Math.max(0, franchiseFee - paidSum);
+          if (unpaidAmount > 0 && !p.unpaidFirstDueDate) {
+            newErrors[`unpaidDueDate-${programId}`] =
+              "Due date is required for the unpaid amount";
+          }
         }
         break;
 
@@ -292,6 +303,11 @@ export function CreateFranchiseDialog({
           paidPayments: [],
           unpaidSplitEnabled: false,
           unpaidSplitCount: 1,
+          unpaidFirstDueDate: (() => {
+            const d = new Date();
+            d.setMonth(d.getMonth() + 1);
+            return d.toISOString().slice(0, 10);
+          })(),
         },
       });
     }
@@ -369,6 +385,7 @@ export function CreateFranchiseDialog({
               downPaymentAmount: 0,
               installmentMonths,
               priorPayments: [],
+              firstDueDate: p.unpaidFirstDueDate || undefined,
             };
           } else {
             base.lumpSum = { enabled: false };
@@ -1309,6 +1326,13 @@ function formatRupees(n: number): string {
   });
 }
 
+function formatDueDateDisplay(iso: string): string {
+  if (!iso) return "—";
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return iso;
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
 function PaidUnpaidSection({
   programId,
   payroll,
@@ -1445,45 +1469,75 @@ function PaidUnpaidSection({
               ]}
             />
 
-            {payroll.unpaidSplitEnabled && (
-              <div className="grid max-w-xs grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {payroll.unpaidSplitEnabled && (
+                <div className="space-y-2">
+                  <Label
+                    htmlFor={`unpaid-count-${programId}`}
+                    className="text-sm font-medium text-card-foreground"
+                  >
+                    Number of EMIs
+                  </Label>
+                  <Input
+                    id={`unpaid-count-${programId}`}
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={payroll.unpaidSplitCount || ""}
+                    onChange={(e) =>
+                      onUpdate(
+                        programId,
+                        "unpaidSplitCount",
+                        e.target.value === ""
+                          ? 1
+                          : Math.max(
+                              1,
+                              Math.floor(Number(e.target.value)) || 1,
+                            ),
+                      )
+                    }
+                    onFocus={selectInputValueOnFocus}
+                    className="h-10"
+                    placeholder="1"
+                  />
+                  {errors[`split-${programId}`] && (
+                    <p className="text-xs text-destructive">
+                      {errors[`split-${programId}`]}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-2">
                 <Label
-                  htmlFor={`unpaid-count-${programId}`}
+                  htmlFor={`unpaid-due-date-${programId}`}
                   className="text-sm font-medium text-card-foreground"
                 >
-                  Number of EMIs
+                  {payroll.unpaidSplitEnabled && splitCount > 1
+                    ? "First due date"
+                    : "Due date"}
                 </Label>
-                <Input
-                  id={`unpaid-count-${programId}`}
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={payroll.unpaidSplitCount || ""}
-                  onChange={(e) =>
-                    onUpdate(
-                      programId,
-                      "unpaidSplitCount",
-                      e.target.value === ""
-                        ? 1
-                        : Math.max(1, Math.floor(Number(e.target.value)) || 1),
-                    )
+                <DateInput
+                  id={`unpaid-due-date-${programId}`}
+                  value={payroll.unpaidFirstDueDate}
+                  onChange={(v) =>
+                    onUpdate(programId, "unpaidFirstDueDate", v)
                   }
-                  onFocus={selectInputValueOnFocus}
+                  min={payroll.signedAt || undefined}
                   className="h-10"
-                  placeholder="1"
                 />
-                {errors[`split-${programId}`] && (
+                {errors[`unpaidDueDate-${programId}`] && (
                   <p className="text-xs text-destructive">
-                    {errors[`split-${programId}`]}
+                    {errors[`unpaidDueDate-${programId}`]}
                   </p>
                 )}
               </div>
-            )}
+            </div>
 
             <p className="rounded-lg border border-dashed border-border bg-background px-4 py-3 text-sm text-card-foreground">
-              {payroll.unpaidSplitEnabled
-                ? `${splitCount} receivables of ₹${formatRupees(perInstallment)} each`
-                : `1 receivable of ₹${formatRupees(unpaidAmount)}`}
+              {splitCount > 1
+                ? `${splitCount} receivables of ₹${formatRupees(perInstallment)} each, starting ${formatDueDateDisplay(payroll.unpaidFirstDueDate)}`
+                : `1 receivable of ₹${formatRupees(unpaidAmount)} due ${formatDueDateDisplay(payroll.unpaidFirstDueDate)}`}
             </p>
           </>
         )}

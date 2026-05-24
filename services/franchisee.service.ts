@@ -376,6 +376,11 @@ export interface SetupProgram {
     downPaymentAmount: number;
     installmentMonths: number;
     priorPayments: SetupPriorPayment[];
+    /**
+     * Optional explicit due date (yyyy-mm-dd) of the first receivable item.
+     * Subsequent items are scheduled at monthly intervals from this date.
+     */
+    firstDueDate?: string;
   };
   /**
    * Already-received payments recorded against the agreement with no
