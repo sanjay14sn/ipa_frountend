@@ -60,7 +60,7 @@ import React from "react";
 const FORM_STEPS: StepDef[] = [
   { id: 1, title: "Personal Info" },
   { id: 2, title: "Franchise Details" },
-  { id: 3, title: "Payroll Setup" },
+  { id: 3, title: "Agreement Terms" },
   { id: 4, title: "Security" },
 ];
 
@@ -96,6 +96,8 @@ interface ProgramPayroll {
   gstMaterialCost: boolean;
   /** Agreement signing date (YYYY-MM-DD). Drives expiry = signedAt + tenure. */
   signedAt: string;
+  /** Agreement tenure in months. Drives expiry = signedAt + tenure. */
+  tenure: number;
   /** EMI configuration (when installment > 0). */
   downPayment: number;
   priorPayments: PriorPaymentRow[];
@@ -264,6 +266,7 @@ export function CreateFranchiseDialog({
           gstRoyalty: false,
           gstMaterialCost: false,
           signedAt: new Date().toISOString().slice(0, 10),
+          tenure: 12,
           downPayment: 0,
           priorPayments: [],
           lumpSumPayment: null,
@@ -312,7 +315,7 @@ export function CreateFranchiseDialog({
               gstFranchiseFee: !!p.gstFranchiseFee,
               gstRoyalty: !!p.gstRoyalty,
               gstMaterialCost: !!p.gstMaterialCost,
-              tenure: 12,
+              tenure: Math.max(1, Math.floor(Number(p.tenure) || 12)),
             },
             signedAt: p.signedAt,
             installmentEnabled,
@@ -1096,6 +1099,40 @@ export function CreateFranchiseDialog({
                           {errors[`signedAt-${programId}`] && (
                             <p className="text-xs text-destructive">
                               {errors[`signedAt-${programId}`]}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Agreement Tenure (months) */}
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor={`tenure-${programId}`}
+                            className="text-sm font-medium text-card-foreground"
+                          >
+                            Agreement Tenure (months)
+                          </Label>
+                          <Input
+                            id={`tenure-${programId}`}
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={payroll?.tenure ?? ""}
+                            onChange={(e) =>
+                              updateProgramPayroll(
+                                programId,
+                                "tenure",
+                                e.target.value === ""
+                                  ? 0
+                                  : Math.max(1, Math.floor(Number(e.target.value))),
+                              )
+                            }
+                            onFocus={selectInputValueOnFocus}
+                            className="h-10"
+                            placeholder="12"
+                          />
+                          {errors[`tenure-${programId}`] && (
+                            <p className="text-xs text-destructive">
+                              {errors[`tenure-${programId}`]}
                             </p>
                           )}
                         </div>
