@@ -338,6 +338,17 @@ export interface SetupPriorPayment {
   matches: SetupPriorPaymentMatch;
 }
 
+/**
+ * Historical payment received for the agreement that is NOT matched to a
+ * specific receivable item — used by the Paid/Unpaid setup flow.
+ */
+export interface SetupAdvancePayment {
+  amount: number;
+  paidAt: string; // ISO date
+  mode: PaymentMode;
+  reference?: string;
+}
+
 export interface SetupProgramTerms {
   franchiseFee: number;
   kitCost: number;
@@ -366,6 +377,12 @@ export interface SetupProgram {
     installmentMonths: number;
     priorPayments: SetupPriorPayment[];
   };
+  /**
+   * Already-received payments recorded against the agreement with no
+   * receivable item matching. The backend computes receivable plan principal
+   * as `franchiseFee - sum(advancePayments) - emi.downPaymentAmount`.
+   */
+  advancePayments?: SetupAdvancePayment[];
 }
 
 export interface SetupExistingFranchisePayload {

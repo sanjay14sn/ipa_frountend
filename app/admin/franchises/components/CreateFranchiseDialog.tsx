@@ -49,7 +49,7 @@ import {
   setupExistingFranchise,
   listAllFranchisees,
   type SetupExistingFranchisePayload,
-  type SetupPriorPayment,
+  type SetupAdvancePayment,
   type SetupProgram,
   type PaymentMode,
   type FranchiseeOption,
@@ -71,13 +71,11 @@ interface CreateFranchiseDialogProps {
   onSuccess: () => void;
 }
 
-interface PriorPaymentRow {
+interface PaidPaymentRow {
   amount: number;
   paidAt: string;
   mode: PaymentMode;
   reference: string;
-  matchKind: "down-payment" | "installment" | "agreement-fee";
-  matchSequence: number;
 }
 
 interface ProgramPayroll {
@@ -89,8 +87,6 @@ interface ProgramPayroll {
   ciShare: number;
   franchiseShare: number;
   royalty: number;
-  /** Number of EMI installments. 0 means lump-sum (no EMI). */
-  installment: number;
   gstFranchiseFee: boolean;
   gstRoyalty: boolean;
   gstMaterialCost: boolean;
@@ -98,11 +94,12 @@ interface ProgramPayroll {
   signedAt: string;
   /** Agreement tenure in months. Drives expiry = signedAt + tenure. */
   tenure: number;
-  /** EMI configuration (when installment > 0). */
-  downPayment: number;
-  priorPayments: PriorPaymentRow[];
-  /** Lump-sum optional single payment (when installment === 0). */
-  lumpSumPayment: PriorPaymentRow | null;
+  /** Historical payments already received against this program. */
+  paidPayments: PaidPaymentRow[];
+  /** When true, the unpaid remainder is split into N equal EMIs. */
+  unpaidSplitEnabled: boolean;
+  /** Number of EMI receivables to create for the unpaid remainder. */
+  unpaidSplitCount: number;
 }
 
 export function CreateFranchiseDialog({
@@ -201,12 +198,38 @@ export function CreateFranchiseDialog({
         }
         break;
 
-      case 3: // Payroll — require a signing date per selected program
+      case 3: // Agreement Terms — require a signing date and validate payments
         for (const programId of formData.selectedPrograms) {
           const p = programPayrolls[programId];
           if (!p?.signedAt) {
             newErrors[`signedAt-${programId}`] =
               "Agreement signing date is required";
+          }
+          if (!p) continue;
+          const franchiseFee = Number(p.franchiseFee) || 0;
+          const paidSum = p.paidPayments.reduce(
+            (acc, r) => acc + (Number(r.amount) || 0),
+            0,
+          );
+          if (paidSum > franchiseFee + 0.001) {
+            newErrors[`paid-${programId}`] =
+              "Paid total exceeds franchise fee";
+          }
+          p.paidPayments.forEach((row, idx) => {
+            if (!(Number(row.amount) > 0)) {
+              newErrors[`paid-${programId}-${idx}-amount`] = "Amount required";
+            }
+            if (!row.paidAt) {
+              newErrors[`paid-${programId}-${idx}-paidAt`] = "Date required";
+            }
+          });
+          if (
+            p.unpaidSplitEnabled &&
+            (!Number.isInteger(Number(p.unpaidSplitCount)) ||
+              Number(p.unpaidSplitCount) < 1)
+          ) {
+            newErrors[`split-${programId}`] =
+              "Installment count must be at least 1";
           }
         }
         break;
@@ -261,15 +284,14 @@ export function CreateFranchiseDialog({
           ciShare: 0,
           franchiseShare: 0,
           royalty: 0,
-          installment: 0,
           gstFranchiseFee: false,
           gstRoyalty: false,
           gstMaterialCost: false,
           signedAt: new Date().toISOString().slice(0, 10),
           tenure: 12,
-          downPayment: 0,
-          priorPayments: [],
-          lumpSumPayment: null,
+          paidPayments: [],
+          unpaidSplitEnabled: false,
+          unpaidSplitCount: 1,
         },
       });
     }
@@ -301,11 +323,27 @@ export function CreateFranchiseDialog({
       const programs: SetupProgram[] = formData.selectedPrograms.map(
         (programId) => {
           const p = programPayrolls[programId];
-          const installmentEnabled = Number(p.installment) > 0;
+          const franchiseFee = Number(p.franchiseFee) || 0;
+          const paidSum = p.paidPayments.reduce(
+            (acc, r) => acc + (Number(r.amount) || 0),
+            0,
+          );
+          const unpaidAmount = Math.max(0, franchiseFee - paidSum);
+          const installmentEnabled = unpaidAmount > 0;
+
+          const advancePayments: SetupAdvancePayment[] = p.paidPayments.map(
+            (row) => ({
+              amount: Number(row.amount) || 0,
+              paidAt: row.paidAt,
+              mode: row.mode,
+              reference: row.reference || undefined,
+            }),
+          );
+
           const base: SetupProgram = {
             programId: p.programId,
             terms: {
-              franchiseFee: Number(p.franchiseFee) || 0,
+              franchiseFee,
               kitCost: Number(p.kitCost) || 0,
               materialCost: Number(p.materialCost) || 0,
               monthlyFee: Number(p.monthlyFee) || 0,
@@ -319,27 +357,21 @@ export function CreateFranchiseDialog({
             },
             signedAt: p.signedAt,
             installmentEnabled,
+            advancePayments,
           };
 
           if (installmentEnabled) {
+            const installmentMonths = p.unpaidSplitEnabled
+              ? Math.max(1, Math.floor(Number(p.unpaidSplitCount) || 1))
+              : 1;
             base.emi = {
               enabled: true,
-              downPaymentAmount: Number(p.downPayment) || 0,
-              installmentMonths: Number(p.installment),
-              priorPayments: p.priorPayments.map((row) =>
-                priorRowToPayload(row),
-              ),
+              downPaymentAmount: 0,
+              installmentMonths,
+              priorPayments: [],
             };
           } else {
-            base.lumpSum = {
-              enabled: false,
-              lumpSumPayment: p.lumpSumPayment
-                ? priorRowToPayload({
-                    ...p.lumpSumPayment,
-                    matchKind: "agreement-fee",
-                  })
-                : undefined,
-            };
+            base.lumpSum = { enabled: false };
           }
 
           return base;
@@ -395,22 +427,6 @@ export function CreateFranchiseDialog({
       setLoading(false);
     }
   };
-
-  function priorRowToPayload(row: PriorPaymentRow): SetupPriorPayment {
-    return {
-      amount: Number(row.amount) || 0,
-      paidAt: row.paidAt,
-      mode: row.mode,
-      reference: row.reference || undefined,
-      matches:
-        row.matchKind === "installment"
-          ? {
-              kind: "installment",
-              sequenceNumber: Number(row.matchSequence) || 1,
-            }
-          : { kind: row.matchKind },
-    };
-  }
 
   const handleClose = () => {
     setCurrentStep(1);
@@ -831,7 +847,6 @@ export function CreateFranchiseDialog({
               formData.selectedPrograms.map((programId) => {
                 const program = programs.find((p) => p.id === programId);
                 const payroll = programPayrolls[programId];
-                const installmentEnabled = Number(payroll?.installment ?? 0) > 0;
 
                 return (
                   <Card
@@ -1137,88 +1152,13 @@ export function CreateFranchiseDialog({
                           )}
                         </div>
 
-                        {/* Installment plan (full-width subcard) */}
-                        <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/10 p-4 md:col-span-2 lg:col-span-3">
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              id={`installment-plan-${programId}`}
-                              checked={installmentEnabled}
-                              onCheckedChange={(checked) =>
-                                updateProgramPayroll(
-                                  programId,
-                                  "installment",
-                                  checked === true
-                                    ? Math.max(1, Number(payroll?.installment) || 12)
-                                    : 0,
-                                )
-                              }
-                            />
-                            <Label
-                              htmlFor={`installment-plan-${programId}`}
-                              className="cursor-pointer text-sm font-medium text-card-foreground"
-                            >
-                              Installment plan
-                            </Label>
-                          </div>
-                          <div className="grid max-w-lg grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium text-card-foreground">
-                                Installment Months
-                              </Label>
-                              <Input
-                                type="number"
-                                min={1}
-                                value={installmentEnabled ? (payroll?.installment || "") : ""}
-                                disabled={!installmentEnabled}
-                                onChange={(e) =>
-                                  updateProgramPayroll(
-                                    programId,
-                                    "installment",
-                                    e.target.value === ""
-                                      ? 0
-                                      : Math.max(
-                                          1,
-                                          Math.floor(Number(e.target.value)) || 1,
-                                        ),
-                                  )
-                                }
-                                className="h-10"
-                                placeholder="0"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium text-card-foreground">
-                                Down Payment Amount
-                              </Label>
-                              <div className="relative">
-                                <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={payroll?.downPayment || ""}
-                                  disabled={!installmentEnabled}
-                                  onChange={(e) =>
-                                    updateProgramPayroll(
-                                      programId,
-                                      "downPayment",
-                                      e.target.value === ""
-                                        ? 0
-                                        : Number(e.target.value),
-                                    )
-                                  }
-                                  className="h-10 pl-10"
-                                  placeholder="0"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
                       </div>
 
-                      <PaymentsAndEmiSection
+                      <PaidUnpaidSection
                         programId={programId}
                         payroll={payroll}
                         onUpdate={updateProgramPayroll}
+                        errors={errors}
                       />
                     </CardContent>
                   </Card>
@@ -1342,7 +1282,7 @@ export function CreateFranchiseDialog({
   );
 }
 
-interface PaymentsAndEmiSectionProps {
+interface PaidUnpaidSectionProps {
   programId: number;
   payroll: ProgramPayroll | undefined;
   onUpdate: (
@@ -1350,142 +1290,224 @@ interface PaymentsAndEmiSectionProps {
     field: keyof ProgramPayroll,
     value: any,
   ) => void;
+  errors: Record<string, string>;
 }
 
-function emptyPriorPaymentRow(
-  matchKind: PriorPaymentRow["matchKind"] = "down-payment",
-): PriorPaymentRow {
+function emptyPaidRow(): PaidPaymentRow {
   return {
     amount: 0,
     paidAt: new Date().toISOString().slice(0, 10),
     mode: "cash",
     reference: "",
-    matchKind,
-    matchSequence: 1,
   };
 }
 
-function PaymentsAndEmiSection({
+function formatRupees(n: number): string {
+  return n.toLocaleString("en-IN", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  });
+}
+
+function PaidUnpaidSection({
   programId,
   payroll,
   onUpdate,
-}: PaymentsAndEmiSectionProps) {
+  errors,
+}: PaidUnpaidSectionProps) {
   if (!payroll) return null;
-  const installmentsEnabled = Number(payroll.installment) > 0;
+  const franchiseFee = Number(payroll.franchiseFee) || 0;
+  const paidSum = payroll.paidPayments.reduce(
+    (acc, r) => acc + (Number(r.amount) || 0),
+    0,
+  );
+  const unpaidAmount = Math.max(0, franchiseFee - paidSum);
+  const splitCount = payroll.unpaidSplitEnabled
+    ? Math.max(1, Math.floor(Number(payroll.unpaidSplitCount) || 1))
+    : 1;
+  const perInstallment = unpaidAmount > 0 ? unpaidAmount / splitCount : 0;
 
   return (
-    <div className="mt-4 space-y-3 border-t border-border pt-4">
+    <div className="mt-4 space-y-4 border-t border-border pt-4">
       <h3 className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
         <CreditCard className="h-4 w-4" />
-        Already received payments
+        Received payments
       </h3>
 
-      {installmentsEnabled ? (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm text-muted-foreground">
-              Record installments or down-payment already collected from the
-              franchisee. These will be linked to the corresponding receivable
-              items.
+      {/* Paid subcard */}
+      <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-medium text-card-foreground">
+              Paid payments{" "}
+              <span className="ml-1 text-xs text-muted-foreground">
+                ({payroll.paidPayments.length})
+              </span>
             </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="shrink-0"
-              onClick={() =>
-                onUpdate(programId, "priorPayments", [
-                  ...payroll.priorPayments,
-                  emptyPriorPaymentRow(
-                    Number(payroll.downPayment) > 0
-                      ? "down-payment"
-                      : "installment",
-                  ),
-                ])
-              }
-            >
-              + Add payment
-            </Button>
+            <p className="text-xs text-muted-foreground">
+              Record any amounts already received against the franchise fee.
+              Paid is optional.
+            </p>
           </div>
-          {payroll.priorPayments.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border bg-accent/20 px-4 py-6 text-center text-sm text-muted-foreground">
-              No prior payments recorded yet.
-            </p>
-          ) : (
-            payroll.priorPayments.map((row, idx) => (
-              <PriorPaymentEditor
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() =>
+              onUpdate(programId, "paidPayments", [
+                ...payroll.paidPayments,
+                emptyPaidRow(),
+              ])
+            }
+          >
+            + Add payment
+          </Button>
+        </div>
+
+        {payroll.paidPayments.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-border bg-background px-4 py-5 text-center text-sm text-muted-foreground">
+            No payments recorded yet.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {payroll.paidPayments.map((row, idx) => (
+              <PaidPaymentEditor
                 key={idx}
                 row={row}
-                emiMode
+                amountError={errors[`paid-${programId}-${idx}-amount`]}
+                paidAtError={errors[`paid-${programId}-${idx}-paidAt`]}
                 onChange={(next) => {
-                  const copy = [...payroll.priorPayments];
+                  const copy = [...payroll.paidPayments];
                   copy[idx] = next;
-                  onUpdate(programId, "priorPayments", copy);
+                  onUpdate(programId, "paidPayments", copy);
                 }}
                 onRemove={() => {
-                  const copy = payroll.priorPayments.filter((_, i) => i !== idx);
-                  onUpdate(programId, "priorPayments", copy);
+                  const copy = payroll.paidPayments.filter((_, i) => i !== idx);
+                  onUpdate(programId, "paidPayments", copy);
                 }}
               />
-            ))
-          )}
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between border-t border-primary/10 pt-2 text-sm">
+          <span className="text-muted-foreground">Total paid</span>
+          <span className="font-medium text-card-foreground">
+            ₹{formatRupees(paidSum)}
+          </span>
         </div>
-      ) : (
-        <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
-          <ToggleField
-            name={`lumpsum-${programId}`}
-            tone="primary"
-            label="One-time agreement-fee payment"
-            value={payroll.lumpSumPayment ? "collected" : "none"}
-            onValueChange={(v) =>
-              onUpdate(
-                programId,
-                "lumpSumPayment",
-                v === "collected" ? emptyPriorPaymentRow("agreement-fee") : null,
-              )
-            }
-            options={[
-              {
-                value: "none",
-                label: "Not collected",
-                description: "No prior agreement-fee payment to record.",
-              },
-              {
-                value: "collected",
-                label: "Record collected payment",
-                description:
-                  "Capture details of a one-time agreement-fee payment already received from the franchisee.",
-              },
-            ]}
-          />
-          {payroll.lumpSumPayment && (
-            <PriorPaymentEditor
-              row={payroll.lumpSumPayment}
-              emiMode={false}
-              onChange={(next) => onUpdate(programId, "lumpSumPayment", next)}
-              onRemove={() => onUpdate(programId, "lumpSumPayment", null)}
+        {errors[`paid-${programId}`] && (
+          <p className="text-xs text-destructive">
+            {errors[`paid-${programId}`]}
+          </p>
+        )}
+      </div>
+
+      {/* Unpaid subcard */}
+      <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium text-card-foreground">
+            Unpaid balance
+          </p>
+          <span className="text-sm font-semibold text-card-foreground">
+            ₹{formatRupees(unpaidAmount)}
+          </span>
+        </div>
+
+        {unpaidAmount === 0 ? (
+          <p className="rounded-lg border border-dashed border-border bg-background px-4 py-3 text-center text-sm text-muted-foreground">
+            Fully paid — no receivable plan will be created.
+          </p>
+        ) : (
+          <>
+            <ToggleField
+              name={`unpaid-split-${programId}`}
+              tone="primary"
+              label="Split unpaid balance into EMIs"
+              value={payroll.unpaidSplitEnabled ? "split" : "single"}
+              onValueChange={(v) =>
+                onUpdate(programId, "unpaidSplitEnabled", v === "split")
+              }
+              options={[
+                {
+                  value: "single",
+                  label: "Single receivable",
+                  description:
+                    "One receivable for the full unpaid amount.",
+                },
+                {
+                  value: "split",
+                  label: "Split into EMIs",
+                  description:
+                    "Break the unpaid amount into N equal monthly receivables.",
+                },
+              ]}
             />
-          )}
-        </div>
-      )}
+
+            {payroll.unpaidSplitEnabled && (
+              <div className="grid max-w-xs grid-cols-1 gap-2">
+                <Label
+                  htmlFor={`unpaid-count-${programId}`}
+                  className="text-sm font-medium text-card-foreground"
+                >
+                  Number of EMIs
+                </Label>
+                <Input
+                  id={`unpaid-count-${programId}`}
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={payroll.unpaidSplitCount || ""}
+                  onChange={(e) =>
+                    onUpdate(
+                      programId,
+                      "unpaidSplitCount",
+                      e.target.value === ""
+                        ? 1
+                        : Math.max(1, Math.floor(Number(e.target.value)) || 1),
+                    )
+                  }
+                  onFocus={selectInputValueOnFocus}
+                  className="h-10"
+                  placeholder="1"
+                />
+                {errors[`split-${programId}`] && (
+                  <p className="text-xs text-destructive">
+                    {errors[`split-${programId}`]}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <p className="rounded-lg border border-dashed border-border bg-background px-4 py-3 text-sm text-card-foreground">
+              {payroll.unpaidSplitEnabled
+                ? `${splitCount} receivables of ₹${formatRupees(perInstallment)} each`
+                : `1 receivable of ₹${formatRupees(unpaidAmount)}`}
+            </p>
+          </>
+        )}
+      </div>
     </div>
   );
 }
 
-function PriorPaymentEditor({
+function PaidPaymentEditor({
   row,
-  emiMode,
+  amountError,
+  paidAtError,
   onChange,
   onRemove,
 }: {
-  row: PriorPaymentRow;
-  emiMode: boolean;
-  onChange: (next: PriorPaymentRow) => void;
+  row: PaidPaymentRow;
+  amountError?: string;
+  paidAtError?: string;
+  onChange: (next: PaidPaymentRow) => void;
   onRemove: () => void;
 }) {
   return (
-    <div className="grid grid-cols-12 gap-2 items-end rounded-xl border border-border bg-card p-3">
-      <div className="col-span-2 space-y-1">
+    <div className="grid grid-cols-12 items-end gap-2 rounded-lg border border-border bg-card p-3">
+      <div className="col-span-3 space-y-1">
         <Label className="text-xs">Amount (₹)</Label>
         <Input
           type="number"
@@ -1497,19 +1519,29 @@ function PriorPaymentEditor({
               amount: e.target.value === "" ? 0 : Number(e.target.value),
             })
           }
+          onFocus={selectInputValueOnFocus}
+          className={amountError ? "border-destructive" : ""}
+          placeholder="0"
         />
+        {amountError && (
+          <p className="text-[11px] text-destructive">{amountError}</p>
+        )}
       </div>
-      <div className="col-span-2 space-y-1">
+      <div className="col-span-3 space-y-1">
         <Label className="text-xs">Paid On</Label>
         <DateInput
           value={row.paidAt}
           onChange={(v) => onChange({ ...row, paidAt: v })}
+          className={paidAtError ? "border-destructive" : ""}
         />
+        {paidAtError && (
+          <p className="text-[11px] text-destructive">{paidAtError}</p>
+        )}
       </div>
       <div className="col-span-2 space-y-1">
         <Label className="text-xs">Mode</Label>
         <select
-          className="w-full rounded-md border border-input bg-background h-9 text-sm px-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           value={row.mode}
           onChange={(e) =>
             onChange({ ...row, mode: e.target.value as PaymentMode })
@@ -1523,54 +1555,24 @@ function PriorPaymentEditor({
           <option value="other">Other</option>
         </select>
       </div>
-      <div className="col-span-2 space-y-1">
-        <Label className="text-xs">Reference #</Label>
+      <div className="col-span-3 space-y-1">
+        <Label className="text-xs">Reference</Label>
         <Input
           value={row.reference}
           onChange={(e) => onChange({ ...row, reference: e.target.value })}
+          placeholder="Optional"
         />
       </div>
-      {emiMode && (
-        <>
-          <div className="col-span-1 space-y-1">
-            <Label className="text-xs">Pays</Label>
-            <select
-              className="w-full rounded-md border border-input bg-background h-9 text-sm px-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              value={row.matchKind}
-              onChange={(e) =>
-                onChange({
-                  ...row,
-                  matchKind: e.target.value as PriorPaymentRow["matchKind"],
-                })
-              }
-            >
-              <option value="down-payment">Down</option>
-              <option value="installment">EMI</option>
-            </select>
-          </div>
-          <div className="col-span-1 space-y-1">
-            <Label className="text-xs">EMI #</Label>
-            <Input
-              type="number"
-              min="1"
-              disabled={row.matchKind !== "installment"}
-              value={row.matchSequence}
-              onChange={(e) =>
-                onChange({ ...row, matchSequence: Number(e.target.value) || 1 })
-              }
-            />
-          </div>
-        </>
-      )}
-      <div className={emiMode ? "col-span-2" : "col-span-4"}>
+      <div className="col-span-1">
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={onRemove}
-          className="text-destructive hover:text-destructive"
+          className="w-full text-destructive hover:text-destructive"
+          aria-label="Remove payment"
         >
-          Remove
+          ×
         </Button>
       </div>
     </div>
