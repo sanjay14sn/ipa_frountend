@@ -146,6 +146,9 @@ export function CreateFranchiseDialog({
     franchiseName: "",
     franchiseType: FranchiseType.AREA,
     franchiseAddress: "",
+    franchiseCity: "",
+    franchiseState: "",
+    franchisePincode: "",
     selectedPrograms: [] as number[],
   });
 
@@ -198,6 +201,15 @@ export function CreateFranchiseDialog({
         }
         if (!formData.franchiseAddress.trim()) {
           newErrors.franchiseAddress = "Franchise address is required";
+        }
+        if (!formData.franchiseState.trim()) {
+          newErrors.franchiseState = "State is required";
+        }
+        if (!formData.franchiseCity.trim()) {
+          newErrors.franchiseCity = "City is required";
+        }
+        if (formData.franchisePincode && !/^\d{6}$/.test(formData.franchisePincode)) {
+          newErrors.franchisePincode = "Pincode must be 6 digits";
         }
         if (formData.selectedPrograms.length === 0) {
           newErrors.selectedPrograms = "At least one program must be selected";
@@ -422,10 +434,10 @@ export function CreateFranchiseDialog({
         franchise: {
           name: formData.franchiseName,
           type: formData.franchiseType,
-          city: formData.city,
-          state: formData.state,
+          city: formData.franchiseCity,
+          state: formData.franchiseState,
           address: formData.franchiseAddress || undefined,
-          pincode: formData.pincode || undefined,
+          pincode: formData.franchisePincode || undefined,
         },
         programs,
       };
@@ -465,6 +477,9 @@ export function CreateFranchiseDialog({
       franchiseName: "",
       franchiseType: FranchiseType.AREA,
       franchiseAddress: "",
+      franchiseCity: "",
+      franchiseState: "",
+      franchisePincode: "",
       selectedPrograms: [],
     });
     setProgramPayrolls({});
@@ -813,6 +828,48 @@ export function CreateFranchiseDialog({
               {errors.franchiseAddress && (
                 <p className="text-red-500 text-sm">
                   {errors.franchiseAddress}
+                </p>
+              )}
+            </div>
+
+            <StateCitySelect
+              id="franchiseCity"
+              value={formData.franchiseCity}
+              stateValue={formData.franchiseState}
+              onChange={(val) => {
+                setFormData({ ...formData, franchiseCity: val });
+                if (errors.franchiseCity)
+                  setErrors({ ...errors, franchiseCity: "" });
+              }}
+              onStateChange={(val) => {
+                setFormData({ ...formData, franchiseState: val });
+                if (errors.franchiseState)
+                  setErrors({ ...errors, franchiseState: "" });
+              }}
+              label="City"
+              required
+              error={errors.franchiseCity || errors.franchiseState}
+            />
+
+            <div className="space-y-2">
+              <Label htmlFor="franchisePincode">Pincode</Label>
+              <Input
+                id="franchisePincode"
+                inputMode="numeric"
+                maxLength={6}
+                value={formData.franchisePincode}
+                onChange={(e) => {
+                  const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 6);
+                  setFormData({ ...formData, franchisePincode: digitsOnly });
+                  if (errors.franchisePincode)
+                    setErrors({ ...errors, franchisePincode: "" });
+                }}
+                placeholder="6-digit pincode"
+                className={errors.franchisePincode ? "border-red-500" : ""}
+              />
+              {errors.franchisePincode && (
+                <p className="text-red-500 text-sm">
+                  {errors.franchisePincode}
                 </p>
               )}
             </div>
