@@ -463,20 +463,25 @@ export default function SetupExistingCIDialog({
               className={cn(errors.occupation && errorClass)}
             />
           </DialogFormField>
-          <DialogFormField id="address" label="Address" required error={errors.address}>
+          <DialogFormField id="reference" label="Reference" required error={errors.reference}>
+            <Input
+              value={ciData.reference}
+              onChange={(e) => updateCi({ reference: e.target.value })}
+              className={cn(errors.reference && errorClass)}
+            />
+          </DialogFormField>
+          <DialogFormField
+            id="address"
+            label="Address"
+            required
+            error={errors.address}
+            className="md:col-span-2"
+          >
             <Textarea
               value={ciData.address}
               onChange={(e) => updateCi({ address: e.target.value })}
               className={cn(errors.address && errorClass)}
-              rows={2}
-            />
-          </DialogFormField>
-          <DialogFormField id="reference" label="Reference" required error={errors.reference}>
-            <Textarea
-              value={ciData.reference}
-              onChange={(e) => updateCi({ reference: e.target.value })}
-              className={cn(errors.reference && errorClass)}
-              rows={2}
+              rows={3}
             />
           </DialogFormField>
         </DialogFormGrid>
