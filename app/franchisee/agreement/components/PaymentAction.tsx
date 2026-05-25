@@ -52,20 +52,20 @@ export default function PaymentAction({
     payablePrincipal != null;
   const isFinal = variant === "final";
 
-  // Final step uses the big "Pay today to activate" hero CTA layout.
+  // Final step — compact, professional payment card.
   if (isFinal && showPayableHeadline) {
     return (
-      <div className="rounded-xl border-2 border-primary/40 bg-primary/5 p-5 shadow-sm">
-        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-          <div className="flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
-              Pay today to activate
+      <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              Amount due now
             </p>
-            <p className="mt-2 text-4xl font-semibold tabular-nums text-primary sm:text-5xl">
+            <p className="mt-0.5 text-2xl font-semibold tabular-nums text-card-foreground">
               {money(payableAmount)}
             </p>
             {payableLabel || showGstSplit ? (
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 {payableLabel ?? ""}
                 {payableLabel && showGstSplit ? " · " : ""}
                 {showGstSplit
@@ -77,7 +77,7 @@ export default function PaymentAction({
             ) : null}
           </div>
 
-          <div className="flex flex-col items-stretch gap-2 md:items-end">
+          <div className="flex flex-col items-stretch gap-1.5 md:items-end">
             <Button
               onClick={onPaymentSubmit}
               disabled={
@@ -85,35 +85,34 @@ export default function PaymentAction({
                 isProcessingPayment ||
                 Boolean(signatureHint)
               }
-              size="lg"
-              className="rounded-lg px-6 py-6 text-base font-medium shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg px-5 text-sm font-medium shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isProcessingPayment ? (
                 <>
-                  <div className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   Processing…
                 </>
               ) : (
                 <>
-                  <Lock className="mr-2 h-4 w-4" />
-                  Pay {money(payableAmount)} securely
+                  <Lock className="mr-2 h-3.5 w-3.5" />
+                  Pay {money(payableAmount)}
                 </>
               )}
             </Button>
-            <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground md:justify-end">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              <span>256-bit secure · Razorpay</span>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground md:justify-end">
+              <ShieldCheck className="h-3 w-3" />
+              <span>Secured by Razorpay · PCI DSS</span>
             </div>
           </div>
         </div>
 
         {!agreementAccepted ? (
-          <p className="mt-3 text-xs font-medium text-destructive">
-            Please accept terms and conditions to proceed
+          <p className="mt-2 text-xs font-medium text-destructive">
+            Please accept the terms and conditions to proceed.
           </p>
         ) : null}
         {signatureHint ? (
-          <p className="mt-3 text-xs font-medium text-amber-800">{signatureHint}</p>
+          <p className="mt-2 text-xs font-medium text-amber-800">{signatureHint}</p>
         ) : null}
       </div>
     );

@@ -973,18 +973,18 @@ function FranchiseAgreementContent() {
             {currentStep === 4 ? (
               <div className="space-y-6">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                     Step 4 of 4 · Final step
                   </p>
-                  <h2 className="mt-1 text-2xl font-normal text-card-foreground sm:text-3xl">
-                    {payableHeadline && installmentInitialPayable
-                      ? "Almost there — one payment to activate"
-                      : "Final step — activate your franchise"}
+                  <h2 className="mt-1 text-2xl font-normal text-card-foreground">
+                    {installmentInitialPayable
+                      ? "Confirm and pay"
+                      : "Confirm and pay"}
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
                     {installmentInitialPayable
-                      ? `Pay the ${installmentInitialPayable.kind === "down-payment" ? "down payment" : "first installment"} to unlock your franchise dashboard right away. The remaining fee is split into easy monthly EMIs — no surprises, no hidden charges.`
-                      : "Complete your agreement payment to unlock your franchise dashboard. Activation happens after the backend verifies the payment."}
+                      ? `Settle the ${installmentInitialPayable.kind === "down-payment" ? "down payment" : "first installment"} to activate your franchise. The remaining principal is collected over the EMI schedule below.`
+                      : "Complete the agreement payment to activate your franchise. Activation is confirmed after payment is verified."}
                   </p>
                 </div>
 
