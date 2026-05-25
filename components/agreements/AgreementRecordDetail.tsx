@@ -486,7 +486,12 @@ export function AgreementRecordDetail({
 
           <div className="grid items-stretch gap-3 xl:grid-cols-12">
             <div className="h-full xl:col-span-8">
-              <PaymentBreakdown paymentDetails={franchiseData.paymentDetails} />
+              <PaymentBreakdown
+                paymentDetails={franchiseData.paymentDetails}
+                // Same per-level breakdown lives in the Schedule B tab
+                // (IPA share = royalty); skip it here to avoid duplication.
+                hideRecurringFeesTable
+              />
             </div>
 
             <div className="flex h-full flex-col gap-3 xl:col-span-4">

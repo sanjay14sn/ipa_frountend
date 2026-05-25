@@ -29,6 +29,14 @@ interface PaymentBreakdownProps {
     | ReceivableFranchiseeSummary
     | ReceivableCompactSummary
     | null;
+  /**
+   * Hide the per-level recurring fees table (Term fees / CI share / Franchise
+   * share / Royalty). The agreement modal's Overview tab uses this to skip
+   * the breakdown — the same data lives in the dedicated Schedule B tab
+   * (IPA share = royalty there), so showing it twice is redundant. Defaults
+   * to false so the franchisee onboarding page keeps the table.
+   */
+  hideRecurringFeesTable?: boolean;
 }
 
 const DEFAULT_L1_MONTHS = 4;
@@ -241,10 +249,12 @@ function ProgramSection({
   program,
   fmt,
   isLast,
+  hideRecurringFeesTable = false,
 }: {
   program: any;
   fmt: (n: number | string | undefined | null) => string;
   isLast: boolean;
+  hideRecurringFeesTable?: boolean;
 }) {
   return (
     <div className={cn("p-4", !isLast && "border-b border-border")}>
@@ -282,9 +292,11 @@ function ProgramSection({
           }
         />
       </div>
-      <div className="mt-4 border-t border-border pt-4">
-        <LevelRecurringFeesBreakdown payroll={program} />
-      </div>
+      {hideRecurringFeesTable ? null : (
+        <div className="mt-4 border-t border-border pt-4">
+          <LevelRecurringFeesBreakdown payroll={program} />
+        </div>
+      )}
     </div>
   );
 }
@@ -292,6 +304,7 @@ function ProgramSection({
 export default function PaymentBreakdown({
   paymentDetails,
   installmentSummary,
+  hideRecurringFeesTable = false,
 }: PaymentBreakdownProps) {
   if (!paymentDetails) return null;
 
@@ -409,6 +422,7 @@ export default function PaymentBreakdown({
           program={program}
           fmt={fmt}
           isLast={idx === programs.length - 1}
+          hideRecurringFeesTable={hideRecurringFeesTable}
         />
       ))}
 
