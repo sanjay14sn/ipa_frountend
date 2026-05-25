@@ -229,6 +229,7 @@ export function AgreementRecordDetail({
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(["franchise-agreement", "financial-terms"]),
   );
+  const [now] = useState(() => Date.now());
 
   const sigSrc = agreementSignatureSrc(data);
   const franchiseData = buildAgreementDetailFranchiseData(data);
@@ -386,7 +387,7 @@ export function AgreementRecordDetail({
             const timeLeft = (() => {
               if (!data.expiresAt) return "-";
               try {
-                const ms = parseISO(data.expiresAt).getTime() - Date.now();
+                const ms = parseISO(data.expiresAt).getTime() - now;
                 if (ms <= 0) return "Expired";
                 const months = Math.floor(ms / (1000 * 60 * 60 * 24 * 30.44));
                 if (months < 12) return `${months}m`;

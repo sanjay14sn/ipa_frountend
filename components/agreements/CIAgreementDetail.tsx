@@ -95,6 +95,7 @@ export function CIAgreementDetail({
   packageSectionContent,
   hideAgreementTerms,
 }: CIAgreementDetailProps) {
+  const [now] = useState(() => Date.now());
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(ciAgreementContent.sections.slice(0, 2).map((section) => section.id)),
   );
@@ -134,7 +135,7 @@ export function CIAgreementDetail({
   const timeLeft = (() => {
     if (!agreement.validUntil) return "—";
     try {
-      const ms = parseISO(agreement.validUntil).getTime() - Date.now();
+      const ms = parseISO(agreement.validUntil).getTime() - now;
       if (ms <= 0) return "Expired";
       const months = Math.floor(ms / (1000 * 60 * 60 * 24 * 30.44));
       if (months < 12) return `${months}m`;
