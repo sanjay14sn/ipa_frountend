@@ -229,18 +229,8 @@ export default function SetupExistingCIDialog({
       if (agreementSignedAt > today) e.agreementSignedAt = "Cannot be in the future";
       const pkgErr = validatePackages(packages, sortedLevels);
       if (pkgErr) e.packages = pkgErr;
-      if (completedThrough != null) {
-        for (const pkg of packages) {
-          const containsCompleted = pkg.trainingLevelIds.some((id) => {
-            const lvl = sortedLevels.find((l) => l.id === id);
-            return lvl != null && lvl.displayOrder <= completedThrough;
-          });
-          if (containsCompleted && pkg.paid !== true) {
-            e.packages = `Package "${pkg.name}" contains completed levels — mark it as paid.`;
-            break;
-          }
-        }
-      }
+      // Packages containing a completed level are auto-paid at submit (see
+      // handleSubmit); no explicit "must mark as paid" check is needed here.
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -275,15 +265,25 @@ export default function SetupExistingCIDialog({
         validity: { validFrom, validUntil },
         agreementSignedAt,
         completedThrough,
-        trainingPackages: packages.map((p) => ({
-          name: p.name.trim(),
-          code: p.code.trim(),
-          description: p.description.trim() || undefined,
-          packageOrder: p.packageOrder,
-          fee: Number(p.fee) || 0,
-          trainingLevelIds: p.trainingLevelIds,
-          paid: p.paid === true,
-        })),
+        trainingPackages: packages.map((p) => {
+          // Effective paid = admin's explicit toggle OR auto-paid because the
+          // package contains a level the CI has already completed.
+          const containsCompleted =
+            completedThrough != null &&
+            p.trainingLevelIds.some((id) => {
+              const lvl = sortedLevels.find((l) => l.id === id);
+              return lvl != null && lvl.displayOrder <= completedThrough;
+            });
+          return {
+            name: p.name.trim(),
+            code: p.code.trim(),
+            description: p.description.trim() || undefined,
+            packageOrder: p.packageOrder,
+            fee: Number(p.fee) || 0,
+            trainingLevelIds: p.trainingLevelIds,
+            paid: containsCompleted || p.paid === true,
+          };
+        }),
       });
       setSubmitted(true);
       onSuccess();

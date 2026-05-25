@@ -299,12 +299,13 @@ export function TrainingPackageMatrix({
                       key={`level-${level.id}-pkg-${pkg.packageOrder}`}
                       className="px-2 py-2 text-center"
                     >
-                      <input
-                        type="checkbox"
-                        checked={pkg.trainingLevelIds.includes(level.id)}
-                        onChange={() => toggleLevelInMatrix(packageIndex, level.id)}
-                        className="h-4 w-4"
-                      />
+                      <div className="flex justify-center">
+                        <Checkbox
+                          checked={pkg.trainingLevelIds.includes(level.id)}
+                          onCheckedChange={() => toggleLevelInMatrix(packageIndex, level.id)}
+                          aria-label={`Assign ${level.name || `Level ${level.displayOrder}`} to ${pkg.code || `Package ${packageIndex + 1}`}`}
+                        />
+                      </div>
                     </td>
                   ))}
                 </tr>
