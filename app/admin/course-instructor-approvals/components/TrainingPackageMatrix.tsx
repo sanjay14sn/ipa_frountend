@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Plus, X, CheckCircle } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -217,7 +217,7 @@ export function TrainingPackageMatrix({
           <thead>
             <tr className="border-b">
               {showCompletionColumn && (
-                <th className="px-3 py-2 text-left font-medium">Completed?</th>
+                <th className="px-3 py-2 text-left font-medium">Completed</th>
               )}
               <th className="px-3 py-2 text-left font-medium">Level</th>
               <th className="px-3 py-2 text-left font-medium">Code</th>
@@ -225,8 +225,8 @@ export function TrainingPackageMatrix({
                 const autoPaid = containsCompletedLevel(pkg);
                 return (
                   <th key={`pkg-col-${index}`} className="px-2 py-2 align-top">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-1.5">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="flex items-center justify-center gap-1.5">
                         <Button
                           type="button"
                           variant="outline"
@@ -247,11 +247,11 @@ export function TrainingPackageMatrix({
                             })
                           }
                           placeholder={`P${index + 1}`}
-                          className="h-7 min-w-[96px] text-xs"
+                          className="h-7 min-w-[96px] text-xs text-center"
                         />
                       </div>
                       {showPaidToggle && (
-                        <label className="flex items-center gap-1 text-xs">
+                        <label className="flex items-center justify-center gap-1 text-xs">
                           <Checkbox
                             checked={autoPaid || pkg.paid === true}
                             disabled={autoPaid}
@@ -259,7 +259,7 @@ export function TrainingPackageMatrix({
                               updatePackage(index, { paid: checked === true })
                             }
                           />
-                          <span>{autoPaid ? "Paid ✓ (locked)" : "Already paid?"}</span>
+                          <span>{autoPaid ? "Paid" : "Already paid"}</span>
                         </label>
                       )}
                     </div>
@@ -287,9 +287,6 @@ export function TrainingPackageMatrix({
                           setLevelCompleted(level, checked === true)
                         }
                       />
-                      {isCompleted && (
-                        <CheckCircle className="inline h-3 w-3 ml-1 text-green-600" />
-                      )}
                     </td>
                   )}
                   <td className="px-3 py-2 font-medium">

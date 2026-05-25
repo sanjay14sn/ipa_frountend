@@ -447,6 +447,7 @@ export default function SetupExistingCIDialog({
             label="City"
             required
             error={errors.city}
+            mode="flat"
           />
           <DialogFormField id="education" label="Education" required error={errors.education}>
             <Input
