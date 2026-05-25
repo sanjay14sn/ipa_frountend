@@ -374,6 +374,7 @@ export default function AddCourseInstructorModal({
             label="City"
             required
             error={errors.city}
+            mode="flat"
           />
 
           <DialogFormField
