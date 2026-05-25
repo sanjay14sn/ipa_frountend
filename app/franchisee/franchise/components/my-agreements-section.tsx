@@ -82,7 +82,13 @@ function FranchiseeAgreementViewDialog({
       <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-[min(1200px,94vw)]">
         <DialogHeader className="border-b border-border px-4 py-4 text-left sm:px-5">
           <DialogTitle>
-            {agreement ? (agreement.title || `Agreement #${agreement.id}`).replace(/\s+[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i, "").trim() : "Agreement details"}
+            {(() => {
+              const cleaned = (agreement?.title ?? "")
+                .replace(/\s+\S*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\S*$/i, "")
+                .replace(/\s+#?\d+\s*$/, "")
+                .trim();
+              return cleaned || "Franchise Agreement";
+            })()}
           </DialogTitle>
           <DialogDescription>
             View the agreement without leaving the My agreements table.

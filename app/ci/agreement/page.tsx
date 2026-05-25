@@ -6,14 +6,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   ArrowLeft,
   ArrowRight,
   Check,
@@ -103,7 +95,7 @@ function CIAgreementStepper({ currentStep }: { currentStep: CIStepIndex }) {
   );
 }
 
-// ─── Key Details ──────────────────────────────────────────────────────────────
+// ─── Date helpers ─────────────────────────────────────────────────────────────
 
 function fmtDate(d: string | null) {
   if (!d) return "—";
@@ -112,158 +104,6 @@ function fmtDate(d: string | null) {
     month: "short",
     year: "numeric",
   });
-}
-function fmtMoney(x: number) {
-  return x.toLocaleString("en-IN", { maximumFractionDigits: 2 });
-}
-
-function packageCoverage(ids: number[]) {
-  if (!ids.length) return "No levels";
-  const sorted = [...ids].sort((a, b) => a - b);
-  return `Levels ${sorted[0]} to ${sorted[sorted.length - 1]}`;
-}
-
-function KeyDetailsCard({ agreement }: { agreement: CIAgreementRecord }) {
-  const rows: { label: string; value: string }[] = [
-    { label: "Franchisor", value: "Ideal Play Abacus India Pvt Ltd" },
-    { label: "Franchisee", value: agreement.franchisee?.name ?? "—" },
-    { label: "Centre", value: agreement.franchisee?.centreName ?? "—" },
-    { label: "Centre Address", value: agreement.franchisee?.centreAddress ?? "—" },
-    { label: "Course Instructor", value: agreement.instructor?.name ?? "—" },
-    { label: "CI Address", value: agreement.instructor?.address ?? "—" },
-    { label: "CI Phone", value: agreement.instructor?.phone ?? "—" },
-    {
-      label: "Term",
-      value:
-        agreement.validFrom && agreement.validUntil
-          ? `${fmtDate(agreement.validFrom)} — ${fmtDate(agreement.validUntil)}`
-          : "—",
-    },
-  ];
-
-  const ciShare = Number(agreement.ciShare ?? 0);
-  const l1 = agreement.levelDurations?.l1 ?? 4;
-  const l2 = agreement.levelDurations?.l2 ?? 3;
-  const packages = agreement.trainingPackages ?? [];
-
-  return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <h3 className="mb-3 border-b border-border pb-2 text-base font-medium text-card-foreground">
-        Key Details
-      </h3>
-      <div className="space-y-2">
-        {rows.map((r) => (
-          <div key={r.label} className="flex items-start justify-between gap-4 text-sm">
-            <span className="min-w-[140px] text-muted-foreground">{r.label}</span>
-            <span className="text-right text-card-foreground">{r.value}</span>
-          </div>
-        ))}
-      </div>
-
-      {agreement.ciShare != null && (
-        <div className="mt-4 space-y-2 rounded-xl border border-border bg-accent/30 p-3 text-sm">
-          <p className="font-medium text-card-foreground">CI Share per level</p>
-          <p className="text-xs text-muted-foreground">
-            Per-month earnings for the duration of each level.
-          </p>
-          <div className="overflow-x-auto rounded-lg border border-border bg-card/70">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[40%] text-card-foreground">Item</TableHead>
-                  <TableHead className="text-right text-card-foreground">Level 1</TableHead>
-                  <TableHead className="text-right text-card-foreground">Level 2 onwards</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell className="text-muted-foreground">Duration</TableCell>
-                  <TableCell className="text-right font-medium text-card-foreground">
-                    {l1} {l1 === 1 ? "month" : "months"}
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-card-foreground align-top">
-                    <span className="block">{l2} {l2 === 1 ? "month" : "months"}</span>
-                    <span className="mt-0.5 block text-xs font-normal text-muted-foreground">(per level)</span>
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="text-muted-foreground">CI share (per month)</TableCell>
-                  <TableCell className="text-right font-semibold text-card-foreground">
-                    ₹{fmtMoney(ciShare)}
-                  </TableCell>
-                  <TableCell className="text-right font-semibold text-card-foreground">
-                    ₹{fmtMoney(ciShare)}
-                  </TableCell>
-                </TableRow>
-                <TableRow className="bg-primary/5">
-                  <TableCell className="font-medium text-card-foreground">Total per level</TableCell>
-                  <TableCell className="text-right font-semibold text-primary">
-                    ₹{fmtMoney(ciShare * l1)}
-                  </TableCell>
-                  <TableCell className="text-right font-semibold text-primary">
-                    ₹{fmtMoney(ciShare * l2)}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      )}
-
-      <div className="mt-4 space-y-2 rounded-xl border border-border bg-accent/30 p-3 text-sm">
-        <p className="font-medium text-card-foreground">Assigned training packages</p>
-        <p className="text-xs text-muted-foreground">
-          These are the same CI package definitions linked to this agreement.
-        </p>
-        {packages.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No packages linked yet.</p>
-        ) : (
-          <div className="overflow-x-auto rounded-lg border border-border bg-card/70">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="text-card-foreground">Order</TableHead>
-                  <TableHead className="text-card-foreground">Package</TableHead>
-                  <TableHead className="text-card-foreground">Coverage</TableHead>
-                  <TableHead className="text-right text-card-foreground">Fee</TableHead>
-                  <TableHead className="text-right text-card-foreground">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {packages
-                  .slice()
-                  .sort((a, b) => a.packageOrder - b.packageOrder)
-                  .map((pkg) => (
-                    <TableRow key={pkg.id}>
-                      <TableCell>{pkg.packageOrder}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-card-foreground">{pkg.name}</span>
-                          <span className="text-xs text-muted-foreground">{pkg.code}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {packageCoverage(pkg.trainingLevelIds)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-card-foreground">
-                        ₹{fmtMoney(Number(pkg.fee ?? 0))}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {pkg.purchaseStatus === "PAID"
-                          ? "Purchased"
-                          : pkg.purchaseStatus === "PENDING"
-                          ? "Pending"
-                          : "Unpaid"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
-    </div>
-  );
 }
 
 // ─── Signature Step ───────────────────────────────────────────────────────────
@@ -535,7 +375,7 @@ function CIAgreementContent() {
                 <p className="text-sm text-muted-foreground">
                   Confirm the information below matches your approved application.
                 </p>
-                <KeyDetailsCard agreement={agreement} />
+                <CIAgreementDetail agreement={agreement} hideAgreementTerms />
               </div>
             )}
 

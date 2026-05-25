@@ -282,33 +282,6 @@ export function AgreementRecordDetail({
         ["Order ID", payment.razorpayOrderId ?? "-"],
       ]
     : [];
-  const keyFacts = [
-    {
-      label: "Program",
-      value:
-        data.program?.name ??
-        data.programName ??
-        data.programs?.[0]?.name ??
-        (data.programId != null ? `Program #${data.programId}` : "-"),
-      icon: FileText,
-    },
-    {
-      label: "Franchise",
-      value: data.franchise?.name ?? data.franchiseId ?? "-",
-      icon: Building2,
-    },
-    {
-      label: "Executed",
-      value: fmtDate(data.dateOfSigning),
-      icon: CalendarDays,
-    },
-    {
-      label: "Signature",
-      value: data.signed ? "Signed" : "Pending",
-      icon: PenLine,
-    },
-  ];
-
   async function handleDownloadScheduleB() {
     setSchedulePdfLoading(true);
     try {
@@ -358,70 +331,6 @@ export function AgreementRecordDetail({
 
   return (
     <div className="space-y-4">
-      <Card className="overflow-hidden rounded-2xl border-border shadow-sm">
-        <CardContent className="p-0">
-          <div className="border-b border-border bg-accent/30 px-4 py-4 sm:px-5">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-2xl text-card-foreground">
-                    {(data.title || `Agreement #${data.id}`).replace(/\s+[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i, "").trim()}
-                  </h2>
-                  {(() => {
-                    const badge = agreementStatusBadge(data.status, data.signed);
-                    return <Badge variant={badge.tone}>{badge.label}</Badge>;
-                  })()}
-                  <Badge variant="secondary">{data.type}</Badge>
-                  {data.referenceCode ? (
-                    <Badge variant="outline">Ref: {data.referenceCode}</Badge>
-                  ) : null}
-                </div>
-                <p className="max-w-3xl text-sm text-muted-foreground">
-                  Review agreement summary, legal terms, Schedule B, payment,
-                  and signature details.
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={schedulePdfLoading}
-                onClick={() => void handleDownloadScheduleB()}
-              >
-                {schedulePdfLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-2 h-4 w-4" />
-                )}
-                Schedule B PDF
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid gap-3 px-4 py-4 sm:px-5 md:grid-cols-2 xl:grid-cols-4">
-            {keyFacts.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.label}
-                  className="rounded-xl border border-border bg-card p-3 shadow-sm"
-                >
-                  <div className="mb-2 flex items-center gap-2 text-muted-foreground">
-                    <Icon className="h-4 w-4" />
-                    <span className="text-[11px] font-medium uppercase tracking-[0.08em]">
-                      {item.label}
-                    </span>
-                  </div>
-                  <p className="text-sm font-semibold text-card-foreground">
-                    {item.value}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
       <AgreementEmiScheduleCard
         summary={installmentSummary}
         onViewFullSchedule={
@@ -638,10 +547,11 @@ export function AgreementRecordDetail({
                             <ShieldCheck className="h-4 w-4 text-muted-foreground" />
                             <p className="font-semibold text-sm">Agreement lifecycle</p>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            Agreement #{data.id}
-                            {data.tenure != null ? ` · ${data.tenure}-month tenure` : ""}
-                          </p>
+                          {data.tenure != null ? (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {data.tenure}-month tenure
+                            </p>
+                          ) : null}
                         </div>
                         <Badge variant={lifecycleBadge.tone} className="shrink-0">
                           {lifecycleBadge.label}
@@ -683,8 +593,7 @@ export function AgreementRecordDetail({
                       </div>
 
                       <div className="flex-1" />
-                      <div className="grid grid-cols-3 gap-2 border-t border-border pt-4">
-                        <SimpleFactRow label="Agreement ID" value={String(data.id)} />
+                      <div className="grid grid-cols-2 gap-2 border-t border-border pt-4">
                         <SimpleFactRow label="Last updated" value={data.updatedAt ? fmtShortDate(data.updatedAt) : "—"} />
                         <SimpleFactRow label="Time remaining" value={timeLeft} />
                       </div>
@@ -1247,11 +1156,8 @@ function ScheduleBCard({
               </p>
             </div>
             {executedAtFmt && (
-              <Badge
-                variant="outline"
-                className="text-xs gap-1.5 shrink-0 border-emerald-200 text-emerald-700 bg-emerald-50"
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <Badge className="text-xs gap-1.5 shrink-0">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />
                 Executed · {executedAtFmt}
               </Badge>
             )}
@@ -1263,7 +1169,7 @@ function ScheduleBCard({
                   <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
                     Franchisor Signatory
                   </p>
-                  <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white text-[10px] px-2 py-0.5">
+                  <Badge className="text-[10px] px-2 py-0.5">
                     SIGNED
                   </Badge>
                 </div>
@@ -1303,7 +1209,7 @@ function ScheduleBCard({
                     Franchisee Signatory
                   </p>
                   {signatureSrc && (
-                    <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white text-[10px] px-2 py-0.5">
+                    <Badge className="text-[10px] px-2 py-0.5">
                       SIGNED
                     </Badge>
                   )}

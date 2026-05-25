@@ -198,7 +198,13 @@ export interface CIAgreementRecord {
   dateOfSigning: string | null;
   ciShare: number | null;
   levelDurations: { l1: number; l2: number };
-  franchisee: { name: string; centreName: string; centreAddress: string } | null;
+  franchisee: {
+    name: string;
+    centreName: string;
+    centreAddress: string;
+    phone?: string | null;
+    mail?: string | null;
+  } | null;
   instructor: { name: string; address: string | null; phone: string | null } | null;
   ciSignedAt?: string | null;
   franchiseeSignedAt?: string | null;

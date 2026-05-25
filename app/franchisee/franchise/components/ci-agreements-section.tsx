@@ -220,7 +220,15 @@ function ViewDialog({
     <Dialog open={agreementId !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-h-[90vh] w-[96vw] overflow-y-auto sm:max-w-[1200px]">
         <DialogHeader>
-          <DialogTitle>Course Instructor Agreement</DialogTitle>
+          <DialogTitle>
+            {(() => {
+              const cleaned = (data?.title ?? "")
+                .replace(/\s+\S*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\S*$/i, "")
+                .replace(/\s+#?\d+\s*$/, "")
+                .trim();
+              return cleaned || "Course Instructor Agreement";
+            })()}
+          </DialogTitle>
           <DialogDescription>Read-only view of the CI agreement.</DialogDescription>
         </DialogHeader>
         {isLoading ? (

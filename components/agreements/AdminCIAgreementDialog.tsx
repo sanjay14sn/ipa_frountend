@@ -600,7 +600,15 @@ export function AdminCIAgreementDialog({
     >
       <DialogContent className="max-h-[90vh] w-[96vw] overflow-y-auto sm:max-w-[1320px]">
         <DialogHeader>
-          <DialogTitle>Course Instructor Agreement</DialogTitle>
+          <DialogTitle>
+            {(() => {
+              const cleaned = (data?.title ?? "")
+                .replace(/\s+\S*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\S*$/i, "")
+                .replace(/\s+#?\d+\s*$/, "")
+                .trim();
+              return cleaned || "Course Instructor Agreement";
+            })()}
+          </DialogTitle>
           <DialogDescription>
             {instructor?.name ? `Agreement view for ${instructor.name}` : "Agreement view"}
           </DialogDescription>
