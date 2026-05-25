@@ -98,8 +98,13 @@ export default function UnifiedInvoiceGroupedSummary({
                   title={g.streamName}
                   kitQty={g.quantity}
                   costs={[
-                    { label: "Kit cost", unit: g.kitUnit },
-                    { label: "Royalty", unit: g.royaltyUnit },
+                    // Kit cost: never carries GST per business rule.
+                    { label: "Kit cost", unit: g.kitUnit, gstUnit: 0 },
+                    {
+                      label: "Royalty",
+                      unit: g.royaltyUnit,
+                      gstUnit: g.royaltyGstUnit ?? 0,
+                    },
                   ]}
                   tshirtBreakdown={g.tshirtBreakdown}
                   items={g.items.map((it) => ({
@@ -144,23 +149,32 @@ export default function UnifiedInvoiceGroupedSummary({
                   </div>
                 );
               }
-              const costs = [];
+              // Pass per-category GST through so the cost rows can show
+              // "incl. 18% GST ₹X" under MATERIAL and ROYALTY (kit is exempt).
+              const costs: Array<{
+                label: string;
+                amount: number;
+                gstAmount?: number;
+              }> = [];
               if (bd.materialCost > 0) {
                 costs.push({
                   label: "Material cost",
                   amount: bd.materialCost,
+                  gstAmount: bd.materialCostGst ?? 0,
                 });
               }
               if (bd.kitCost > 0) {
                 costs.push({
                   label: "Starting kit",
                   amount: bd.kitCost,
+                  gstAmount: 0,
                 });
               }
               if (bd.royalty > 0) {
                 costs.push({
                   label: "Royalty",
                   amount: bd.royalty,
+                  gstAmount: bd.royaltyGst ?? 0,
                 });
               }
               return (

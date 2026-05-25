@@ -62,9 +62,18 @@ export function OrderPaymentDetailsPanel({
           />
           <DetailField label="Fee" value={formatRsAmount(payment.fee ?? null, currency)} />
           <DetailField
-            label="GST / Tax"
-            value={formatRsAmount(payment.tax ?? null, currency)}
+            label="Gateway fee tax"
+            value={formatRsAmount(
+              payment.gatewayFeeTaxAmount ?? payment.tax ?? null,
+              currency,
+            )}
           />
+          {payment.goodsGstAmount != null && Number(payment.goodsGstAmount) > 0 ? (
+            <DetailField
+              label="GST (18%)"
+              value={formatRsAmount(payment.goodsGstAmount, currency)}
+            />
+          ) : null}
           <DetailField
             label="Order ID"
             value={payment.razorpayOrderId ?? "—"}

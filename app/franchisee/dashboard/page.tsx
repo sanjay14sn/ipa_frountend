@@ -256,18 +256,30 @@ export default function FranchiseeDashboard() {
     [agreementsQuery.data],
   );
   const emiSummary = emiAgreement?.receivables?.installmentSummary ?? null;
+  // Prefer payable totals — that's what the franchisee actually owes
+  // (principal + GST). Fall back to legacy principal-only on older responses.
   const emiOutstanding = isFullInstallmentSummary(emiSummary)
-    ? emiSummary.totals.outstandingAmount
-    : (emiSummary?.outstandingAmount ?? 0);
+    ? (emiSummary.totals.payableOutstandingAmount ??
+        emiSummary.totals.outstandingAmount)
+    : (emiSummary?.payableOutstandingAmount ??
+        emiSummary?.outstandingAmount ??
+        0);
   const emiNextAmount = isFullInstallmentSummary(emiSummary)
-    ? emiSummary.nextDueItem?.amount
+    ? (emiSummary.nextDueItem?.payableAmount ?? emiSummary.nextDueItem?.amount)
     : emiSummary?.nextDueAmount;
   const emiNextDate = isFullInstallmentSummary(emiSummary)
     ? emiSummary.nextDueItem?.dueAt
     : emiSummary?.nextDueAt;
   const emiOverdue = isFullInstallmentSummary(emiSummary)
-    ? emiSummary.totals.overdueAmount
+    ? (emiSummary.totals.payableOverdueAmount ??
+        emiSummary.totals.overdueAmount)
     : (emiSummary?.overdueAmount ?? 0);
+  const emiPaidCount = isFullInstallmentSummary(emiSummary)
+    ? emiSummary.totals.paidItemCount
+    : (emiSummary?.paidItemCount ?? null);
+  const emiTotalCount = isFullInstallmentSummary(emiSummary)
+    ? emiSummary.totals.installmentCount
+    : (emiSummary?.installmentCount ?? null);
 
   const loading = canFetch && (statsQuery.isLoading || ordersQuery.isLoading);
 
@@ -299,6 +311,10 @@ export default function FranchiseeDashboard() {
       sub: emiSummary
         ? `Next ${emiNextAmount != null ? money(emiNextAmount) : "-"}${
             emiNextDate ? ` due ${shortDate(emiNextDate)}` : ""
+          }${
+            emiPaidCount != null && emiTotalCount != null
+              ? ` · ${emiPaidCount} of ${emiTotalCount} EMIs paid`
+              : ""
           }`
         : "No active EMI",
       icon: IndianRupee,

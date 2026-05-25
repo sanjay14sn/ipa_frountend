@@ -17,6 +17,10 @@ export interface CheckoutCostRow {
   unit?: number;
   /** Fixed amount (student-style) */
   amount?: number;
+  /** GST contribution per unit (multiplied by kitQty). 0 for KIT rows. */
+  gstUnit?: number;
+  /** Fixed GST contribution (student-style). 0 for KIT rows. */
+  gstAmount?: number;
 }
 
 export interface CheckoutLineItem {
@@ -128,12 +132,25 @@ export default function InvoiceGroupCard({
           {costs.map((c, i) => {
             const isUnit = c.unit != null;
             const rowAmount = isUnit ? c.unit! * qty : (c.amount ?? 0);
+            // Only KIT-row GST is meaningfully different from "0"; pass it
+            // through but never derive (caller decides). Skip the GST hint
+            // line entirely when there's no GST on this category.
+            const rowGst = isUnit
+              ? (c.gstUnit ?? 0) * qty
+              : (c.gstAmount ?? 0);
             return (
               <div
                 key={`${c.label}-${i}`}
                 className="grid grid-cols-[1fr_auto_auto] gap-2 px-4 py-2 text-sm"
               >
-                <span className="text-muted-foreground">{c.label}</span>
+                <div className="flex flex-col">
+                  <span className="text-muted-foreground">{c.label}</span>
+                  {rowGst > 0 ? (
+                    <span className="text-[11px] text-muted-foreground/80">
+                      incl. 18% GST {currencyFormatter.format(rowGst)}
+                    </span>
+                  ) : null}
+                </div>
                 <span className="text-right tabular-nums text-muted-foreground">
                   {isUnit
                     ? `${currencyFormatter.format(c.unit!)} × ${qty}`

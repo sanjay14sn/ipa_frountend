@@ -140,9 +140,26 @@ export default function OrdersTable({
       key: "value",
       header: "Value",
       className: "text-center",
-      render: (order) => (
-        <span className="font-medium">₹{Number(order.totalAmount).toFixed(2)}</span>
-      ),
+      render: (order) => {
+        const total = Number(order.totalAmount);
+        const subtotal =
+          order.subtotalAmount != null ? Number(order.subtotalAmount) : null;
+        const gst = order.gstAmount != null ? Number(order.gstAmount) : null;
+        const showBreakdown =
+          subtotal != null && gst != null && gst > 0;
+        return (
+          <span
+            className="font-medium"
+            title={
+              showBreakdown
+                ? `Subtotal ₹${subtotal.toFixed(2)} + GST ₹${gst.toFixed(2)} = Total ₹${total.toFixed(2)}`
+                : undefined
+            }
+          >
+            ₹{total.toFixed(2)}
+          </span>
+        );
+      },
     },
     {
       key: "actions",

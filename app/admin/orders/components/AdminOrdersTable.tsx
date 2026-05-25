@@ -281,14 +281,30 @@ export default function AdminOrdersTable({
       {
         key: "value",
         header: "Value",
-        render: (order) =>
-          isStandaloneDispatchOrderType(order.orderType) ? (
-            <span className="text-sm text-muted-foreground">—</span>
-          ) : (
-            <span className="font-medium">
-              ₹{Number(order.totalAmount).toFixed(2)}
+        render: (order) => {
+          if (isStandaloneDispatchOrderType(order.orderType)) {
+            return <span className="text-sm text-muted-foreground">—</span>;
+          }
+          const total = Number(order.totalAmount);
+          const subtotal =
+            order.subtotalAmount != null ? Number(order.subtotalAmount) : null;
+          const gst =
+            order.gstAmount != null ? Number(order.gstAmount) : null;
+          const showBreakdown =
+            subtotal != null && gst != null && gst > 0;
+          return (
+            <span
+              className="font-medium"
+              title={
+                showBreakdown
+                  ? `Subtotal ₹${subtotal.toFixed(2)} + GST ₹${gst.toFixed(2)} = Total ₹${total.toFixed(2)}`
+                  : undefined
+              }
+            >
+              ₹{total.toFixed(2)}
             </span>
-          ),
+          );
+        },
       },
       {
         key: "actions",

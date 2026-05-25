@@ -49,6 +49,14 @@ export interface OrderItemData {
   quantity: number;
   unitPrice: string;
   totalPrice: string;
+  /** Pre-GST unit price; mirrors `unitPrice` on legacy rows. */
+  unitNetPrice?: string | number | null;
+  /** GST on a single unit (0 for KIT / FEE lines). */
+  unitGstAmount?: string | number | null;
+  /** GST on the whole line — usually `unitGstAmount * quantity`. */
+  lineGstAmount?: string | number | null;
+  /** Tag for the GST category — drives whether GST hint shows on the row. */
+  lineCategory?: "ROYALTY" | "MATERIAL" | "KIT" | "FEE" | null;
   reservedQty?: number;
   backorderedQty?: number;
   fulfilledQty?: number;
@@ -78,7 +86,12 @@ export interface PaymentDetails {
   cardType: string | null;
   cardIssuer: string | null;
   fee: number | null;
+  /** @deprecated Razorpay processing-fee tax — use `gatewayFeeTaxAmount`. */
   tax: number | null;
+  /** Razorpay's tax on the gateway processing fee. */
+  gatewayFeeTaxAmount?: number | null;
+  /** Goods/services GST (18%) on what the franchisee paid for. */
+  goodsGstAmount?: number | null;
 }
 
 export interface PaymentSummary {
@@ -96,7 +109,12 @@ export interface PaymentSummary {
   email?: string | null;
   contact?: string | null;
   fee?: number | null;
+  /** @deprecated Razorpay processing-fee tax — use `gatewayFeeTaxAmount`. */
   tax?: number | null;
+  /** Razorpay's tax on the gateway processing fee. */
+  gatewayFeeTaxAmount?: number | null;
+  /** Goods/services GST (18%) on what the franchisee paid for. */
+  goodsGstAmount?: number | null;
   /** Raw Razorpay / checkout payload (order detail responses). */
   acquirerData?: Record<string, unknown> | null;
 }
@@ -131,6 +149,12 @@ export interface OrderData {
   totalStudents?: number | null;
   totalInstructors?: number | null;
   totalAmount: string | number;
+  /** Pre-GST subtotal; mirrors `totalAmount` on legacy rows. */
+  subtotalAmount?: string | number | null;
+  /** GST contribution to `totalAmount`. Zero when all components are inclusive. */
+  gstAmount?: string | number | null;
+  /** TRUE when the order total has no separate GST surcharge. */
+  isGstInclusive?: boolean;
   status: OrderStatus | string;
   adminStatus?: string;
   franchiseeStatus?: string;
@@ -195,6 +219,11 @@ export interface InvoiceLine {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  /** Pre-GST unit price; mirrors `unitPrice` on legacy snapshots. */
+  unitNetPrice?: number | null;
+  /** GST on this line (0 for KIT / FEE). */
+  lineGstAmount?: number | null;
+  lineCategory?: "ROYALTY" | "MATERIAL" | "KIT" | "FEE" | null;
   studentId?: number;
   instructorId?: number;
   inventoryItemId?: number;
@@ -211,7 +240,11 @@ export interface StartingKitGroupPreview {
   streamName: string;
   quantity: number;
   kitUnit: number;
+  /** GST per unit on the kit portion. Always 0 per business rule. */
+  kitGstUnit?: number;
   royaltyUnit: number;
+  /** GST per unit on the royalty portion (18% when `gstRoyalty=false`). */
+  royaltyGstUnit?: number;
   tshirtBreakdown: Array<{
     tshirtItemId: number | null;
     tshirtName: string | null;
@@ -244,8 +277,14 @@ export interface StudentGroupPreview {
   isFirstLevel: boolean;
   durationInMonths: number;
   royalty: number;
+  /** GST portion of royalty (18% when `gstRoyalty=false`). */
+  royaltyGst?: number;
   materialCost: number;
+  /** GST portion of material cost (18% when `gstMaterialCost=false`). */
+  materialCostGst?: number;
   kitCost: number;
+  /** GST portion of kit cost — always 0 per business rule. */
+  kitCostGst?: number;
   totalPrice: number;
   items: StudentGroupPreviewItem[];
 }
@@ -257,8 +296,12 @@ export interface StudentBreakdown {
   levelName: string;
   isFirstLevel: boolean;
   royalty: number;
+  royaltyGst?: number;
   materialCost: number;
+  materialCostGst?: number;
   kitCost: number;
+  /** Always 0 per business rule. */
+  kitCostGst?: number;
   totalPrice: number;
   durationInMonths: number;
 }
@@ -272,6 +315,12 @@ export interface InvoicePreview {
   /** Populated for legacy student-only preview; unified preview returns `[]` — use `studentGroups`. */
   lines: InvoiceLine[];
   totalAmount: number;
+  /** Pre-GST subtotal — present on unified preview. */
+  subtotalAmount?: number;
+  /** GST contribution to `totalAmount`. */
+  gstAmount?: number;
+  /** TRUE when total has no separate GST surcharge. */
+  isGstInclusive?: boolean;
   /** Present on unified preview (`studentIds` / mixed); mirrors backend `previewUnified`. */
   studentGroups?: StudentGroupPreview[];
   startingKitGroups?: StartingKitGroupPreview[];

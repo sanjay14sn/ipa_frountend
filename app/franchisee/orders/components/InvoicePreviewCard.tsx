@@ -119,7 +119,14 @@ export default function InvoicePreviewCard({
                           <>
                             <div>
                               <div className="flex items-center justify-between px-4 py-2.5">
-                                <span className="text-sm font-medium text-card-foreground">Material Cost</span>
+                                <span className="text-sm font-medium text-card-foreground">
+                                  Material Cost
+                                  {(student.materialCostGst ?? 0) > 0 ? (
+                                    <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                                      (incl. 18% GST {currencyFormatter.format(student.materialCostGst ?? 0)})
+                                    </span>
+                                  ) : null}
+                                </span>
                                 <span className="text-sm tabular-nums text-card-foreground">{currencyFormatter.format(student.materialCost)}</span>
                               </div>
                               {levelItems.length > 0 && (
@@ -154,7 +161,14 @@ export default function InvoicePreviewCard({
                             )}
 
                             <div className="flex items-center justify-between px-4 py-2.5">
-                              <span className="text-sm font-medium text-card-foreground">Royalty</span>
+                              <span className="text-sm font-medium text-card-foreground">
+                                Royalty
+                                {(student.royaltyGst ?? 0) > 0 ? (
+                                  <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                                    (incl. 18% GST {currencyFormatter.format(student.royaltyGst ?? 0)})
+                                  </span>
+                                ) : null}
+                              </span>
                               <span className="text-sm tabular-nums text-card-foreground">{currencyFormatter.format(student.royalty)}</span>
                             </div>
                           </>
@@ -203,14 +217,41 @@ export default function InvoicePreviewCard({
 
             {!hideFooter ? (
             <div className="rounded-xl border border-border bg-muted/25 p-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {isFinalized ? "Total" : "Estimated total"}
-                </span>
-                <span className="text-lg font-semibold tabular-nums text-card-foreground">
-                  {currencyFormatter.format(preview.totalAmount)}
-                </span>
-              </div>
+              {preview.subtotalAmount != null &&
+              preview.gstAmount != null &&
+              preview.gstAmount > 0 ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="tabular-nums text-card-foreground">
+                      {currencyFormatter.format(preview.subtotalAmount)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">GST (18%)</span>
+                    <span className="tabular-nums text-card-foreground">
+                      {currencyFormatter.format(preview.gstAmount)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-border pt-1.5 text-sm">
+                    <span className="text-muted-foreground">
+                      {isFinalized ? "Total" : "Estimated total"}
+                    </span>
+                    <span className="text-lg font-semibold tabular-nums text-card-foreground">
+                      {currencyFormatter.format(preview.totalAmount)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {isFinalized ? "Total" : "Estimated total"}
+                  </span>
+                  <span className="text-lg font-semibold tabular-nums text-card-foreground">
+                    {currencyFormatter.format(preview.totalAmount)}
+                  </span>
+                </div>
+              )}
               {zeroAmountLabel && preview.totalAmount === 0 && (
                 <p className="mt-2 text-xs text-muted-foreground">{zeroAmountLabel}</p>
               )}

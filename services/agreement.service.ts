@@ -93,7 +93,16 @@ export interface ReceivableSummaryItem {
   label: string;
   kind: "down-payment" | "installment";
   sequenceNumber: number | null;
+  /** Legacy net amount — equal to `principalAmount`. */
   amount: number;
+  /** Pre-GST principal of this EMI / down payment. */
+  principalAmount?: number;
+  /** GST surcharge added when the parent agreement is GST-exclusive (else 0). */
+  gstAmount?: number;
+  /** Actual Razorpay charge for this item (principal + GST). */
+  payableAmount?: number;
+  /** TRUE when the parent agreement's franchise fee already includes GST. */
+  isGstInclusive?: boolean;
   status: "scheduled" | "due" | "overdue" | "paid";
   dueAt: string | null;
   paidAt: string | null;
@@ -123,6 +132,22 @@ export interface ReceivableInstallmentSummary {
     installmentCount: number;
     paidItemCount: number;
     outstandingItemCount: number;
+    /** Sum of `gstAmount` across all items. Zero when the plan is inclusive. */
+    gstAmount?: number;
+    /** Sum of `payableAmount` across all items (principal + GST). */
+    payableAmount?: number;
+    /** Sum of `gstAmount` across paid items. */
+    gstPaidAmount?: number;
+    /** Sum of `payableAmount` across paid items — what was actually charged. */
+    payablePaidAmount?: number;
+    /** Sum of `gstAmount` across unpaid items. */
+    gstOutstandingAmount?: number;
+    /** Sum of `payableAmount` across unpaid items — what is still owed. */
+    payableOutstandingAmount?: number;
+    /** Sum of `gstAmount` across overdue items. */
+    gstOverdueAmount?: number;
+    /** Sum of `payableAmount` across overdue items. */
+    payableOverdueAmount?: number;
   };
   initialPayableItem: ReceivableSummaryItem | null;
   nextDueItem: ReceivableSummaryItem | null;
@@ -144,6 +169,16 @@ export interface ReceivableCompactSummary {
   nextDueAt: string | null;
   nextDueAmount: number | null;
   initialPayableLabel: string | null;
+  /** Sum of GST across all items in the plan. */
+  gstAmount?: number;
+  /** Sum of payable (principal + GST) across paid items. */
+  payablePaidAmount?: number;
+  /** Sum of payable across unpaid items. */
+  payableOutstandingAmount?: number;
+  /** Total EMI count (down-payment + installments). */
+  installmentCount?: number;
+  /** Number of items already marked paid. */
+  paidItemCount?: number;
 }
 
 export interface ReceivableFranchiseeSummary extends ReceivableCompactSummary {
@@ -374,13 +409,23 @@ export async function getReceivablePlanMine(
   return unwrapData<ReceivableInstallmentSummary | null>(response);
 }
 
-/** Multipart: field name `signature` (ipa-new). */
-export async function submitFranchiseeSignatureImage(
+export interface ESignaturePayload {
+  svg: string;
+  method: "drawn" | "typed";
+  consentVersion: string;
+}
+
+/** Multipart: field name `signature` carrying an SVG vector signature. */
+export async function submitFranchiseeSignature(
   agreementId: number,
-  file: File,
+  payload: ESignaturePayload,
 ): Promise<AgreementRecord> {
+  const blob = new Blob([payload.svg], { type: "image/svg+xml" });
+  const file = new File([blob], "signature.svg", { type: "image/svg+xml" });
   const formData = new FormData();
   formData.append("signature", file);
+  formData.append("signatureMethod", payload.method);
+  formData.append("consentVersion", payload.consentVersion);
   const response = await api.post(`/agreement/${agreementId}/sign`, formData);
   return unwrapData<AgreementRecord>(response);
 }

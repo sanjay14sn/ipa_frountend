@@ -114,19 +114,31 @@ export function ReceivableCompactLine({
     return <span className="text-muted-foreground">No EMI plan</span>;
   }
 
+  // Prefer payable (principal + GST) — that's what the franchisee actually
+  // pays / owes via Razorpay. Falls back to legacy principal-only on older
+  // backend responses that don't carry the split yet.
   const paid = isFullInstallmentSummary(summary)
-    ? summary.totals.paidAmount
-    : summary.paidAmount;
+    ? summary.totals.payablePaidAmount ?? summary.totals.paidAmount
+    : summary.payablePaidAmount ?? summary.paidAmount;
   const outstanding = isFullInstallmentSummary(summary)
-    ? summary.totals.outstandingAmount
-    : summary.outstandingAmount;
+    ? summary.totals.payableOutstandingAmount ?? summary.totals.outstandingAmount
+    : summary.payableOutstandingAmount ?? summary.outstandingAmount;
   const nextDueAt = isFullInstallmentSummary(summary)
     ? summary.nextDueItem?.dueAt
     : summary.nextDueAt;
+  const paidCount = isFullInstallmentSummary(summary)
+    ? summary.totals.paidItemCount
+    : summary.paidItemCount;
+  const totalCount = isFullInstallmentSummary(summary)
+    ? summary.totals.installmentCount
+    : summary.installmentCount;
 
   return (
     <span className="text-sm text-muted-foreground">
       Paid {money(paid)}{" · "}Outstanding {money(outstanding)}
+      {paidCount != null && totalCount != null
+        ? ` · ${paidCount} of ${totalCount} EMIs paid`
+        : ""}
       {nextDueAt ? ` · Next ${fmtDate(nextDueAt)}` : ""}
     </span>
   );
@@ -147,18 +159,27 @@ export function ReceivableCompactProgress({
     return <span className="text-muted-foreground">No EMI plan</span>;
   }
 
+  // Use payable (principal + GST) for amounts shown to the franchisee — that
+  // matches the Razorpay charge. Fall back to principal-only for older
+  // backend responses.
   const paid = isFullInstallmentSummary(summary)
-    ? summary.totals.paidAmount
-    : summary.paidAmount;
+    ? summary.totals.payablePaidAmount ?? summary.totals.paidAmount
+    : summary.payablePaidAmount ?? summary.paidAmount;
   const outstanding = isFullInstallmentSummary(summary)
-    ? summary.totals.outstandingAmount
-    : summary.outstandingAmount;
+    ? summary.totals.payableOutstandingAmount ?? summary.totals.outstandingAmount
+    : summary.payableOutstandingAmount ?? summary.outstandingAmount;
   const total = isFullInstallmentSummary(summary)
-    ? summary.totals.principal || summary.principal
+    ? summary.totals.payableAmount ?? summary.totals.principal ?? summary.principal
     : paid + outstanding;
   const nextDueAt = isFullInstallmentSummary(summary)
     ? summary.nextDueItem?.dueAt
     : summary.nextDueAt;
+  const paidCount = isFullInstallmentSummary(summary)
+    ? summary.totals.paidItemCount
+    : summary.paidItemCount;
+  const totalCount = isFullInstallmentSummary(summary)
+    ? summary.totals.installmentCount
+    : summary.installmentCount;
   const progressValue =
     total > 0 ? Math.min(100, Math.max(0, (paid / total) * 100)) : 0;
 
@@ -169,6 +190,9 @@ export function ReceivableCompactProgress({
       </div>
       <span className="text-sm text-muted-foreground">
         Paid {money(paid)}{" · "}Outstanding {money(outstanding)}
+        {paidCount != null && totalCount != null
+          ? ` · ${paidCount} of ${totalCount} EMIs paid`
+          : ""}
         {nextDueAt ? ` · Next ${fmtDate(nextDueAt)}` : ""}
       </span>
     </div>
@@ -182,7 +206,6 @@ function ItemRows({
   items: ReceivableSummaryItem[];
   gstFranchiseFee?: boolean | null;
 }) {
-  const showGstBadge = gstFranchiseFee === false;
   return (
     <Table>
       <TableHeader>
@@ -195,34 +218,48 @@ function ItemRows({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {items.map((item) => (
-          <TableRow key={item.receivableItemId}>
-            <TableCell>
-              <div className="font-medium">{item.label}</div>
-              <div className="text-xs text-muted-foreground">
-                {prettify(item.kind)}
-                {item.isInitialPayable ? " · initial payment" : ""}
-              </div>
-            </TableCell>
-            <TableCell>
-              <Badge variant={statusVariant(item.status)}>
-                {prettify(item.status)}
-              </Badge>
-            </TableCell>
-            <TableCell>{fmtDate(item.dueAt)}</TableCell>
-            <TableCell>{fmtDate(item.paidAt)}</TableCell>
-            <TableCell className="text-right font-medium">
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <span>{money(item.amount)}</span>
-                {showGstBadge ? (
-                  <Badge variant="outline" className="font-normal">
-                    +{GST_RATE_LABEL} at payment
-                  </Badge>
-                ) : null}
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
+        {items.map((item) => {
+          // Prefer per-item GST split from backend; fall back to the parent
+          // `gstFranchiseFee` flag for legacy responses without the split.
+          const itemInclusive =
+            item.isGstInclusive ?? (gstFranchiseFee !== false);
+          const principal = item.principalAmount ?? item.amount;
+          const gst =
+            item.gstAmount ??
+            (itemInclusive ? 0 : Math.round(item.amount * 0.18 * 100) / 100);
+          const payable =
+            item.payableAmount ??
+            (itemInclusive ? item.amount : item.amount + gst);
+          const showSplit = !itemInclusive && gst > 0;
+          return (
+            <TableRow key={item.receivableItemId}>
+              <TableCell>
+                <div className="font-medium">{item.label}</div>
+                <div className="text-xs text-muted-foreground">
+                  {prettify(item.kind)}
+                  {item.isInitialPayable ? " · initial payment" : ""}
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge variant={statusVariant(item.status)}>
+                  {prettify(item.status)}
+                </Badge>
+              </TableCell>
+              <TableCell>{fmtDate(item.dueAt)}</TableCell>
+              <TableCell>{fmtDate(item.paidAt)}</TableCell>
+              <TableCell className="text-right font-medium">
+                <div className="flex flex-col items-end gap-0.5">
+                  <span>{money(payable)}</span>
+                  {showSplit ? (
+                    <span className="text-[11px] font-normal text-muted-foreground">
+                      {money(principal)} + {GST_RATE_LABEL} {money(gst)}
+                    </span>
+                  ) : null}
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );
@@ -254,12 +291,10 @@ export function InstallmentSummaryCard({
   onViewFullSchedule?: () => void;
   viewFullScheduleLabel?: string;
 }) {
-  const showGstBadge = gstFranchiseFee === false;
-  const gstNote = showGstBadge ? (
-    <Badge variant="outline" className="font-normal">
-      +{GST_RATE_LABEL}
-    </Badge>
-  ) : null;
+  // `gstFranchiseFee === false` historically toggled a "+18% GST at payment"
+  // badge on item rows. With the new per-item GST split, the breakdown is
+  // shown inline (principal + GST = payable), so the badge is no longer
+  // needed. We still use the flag as a fallback for legacy responses.
   const [showFullSchedule, setShowFullSchedule] = useState(false);
 
   if (!isFullInstallmentSummary(summary)) {
@@ -272,6 +307,12 @@ export function InstallmentSummaryCard({
           : null;
       const nextDueItem =
         "nextDueItem" in summary ? summary.nextDueItem : null;
+      // Prefer payable totals — that's what the franchisee was charged / owes.
+      const compactPaid =
+        summary.payablePaidAmount ?? summary.paidAmount;
+      const compactOutstanding =
+        summary.payableOutstandingAmount ?? summary.outstandingAmount;
+      const compactGst = summary.gstAmount ?? 0;
       return (
         <Card className="overflow-hidden rounded-xl border-border shadow-sm">
           <CardHeader className="border-b bg-accent/30 p-4">
@@ -291,13 +332,20 @@ export function InstallmentSummaryCard({
             </div>
           </CardHeader>
           <CardContent className="space-y-4 p-4">
-            <div className="grid gap-3 md:grid-cols-3">
-              <Fact icon={IndianRupee} label="Paid" value={money(summary.paidAmount)} />
+            <div className="grid gap-3 md:grid-cols-4">
+              <Fact icon={IndianRupee} label="Paid" value={money(compactPaid)} />
               <Fact
                 icon={IndianRupee}
                 label="Outstanding"
-                value={money(summary.outstandingAmount)}
+                value={money(compactOutstanding)}
               />
+              {compactGst > 0 ? (
+                <Fact
+                  icon={IndianRupee}
+                  label={`GST included (${GST_RATE_LABEL})`}
+                  value={money(compactGst)}
+                />
+              ) : null}
               <Fact
                 icon={CalendarDays}
                 label="Next due"
@@ -319,11 +367,14 @@ export function InstallmentSummaryCard({
                   value={nextDueItem?.label ?? (nextDueAt ? "Upcoming EMI" : "-")}
                 />
                 <Info
-                  label="Payment history"
+                  label="EMIs paid"
                   value={
-                    "paymentHistoryCount" in summary
-                      ? `${summary.paymentHistoryCount} paid item${summary.paymentHistoryCount === 1 ? "" : "s"}`
-                      : "-"
+                    summary.paidItemCount != null &&
+                    summary.installmentCount != null
+                      ? `${summary.paidItemCount} of ${summary.installmentCount}`
+                      : "paymentHistoryCount" in summary
+                        ? `${summary.paymentHistoryCount} paid item${summary.paymentHistoryCount === 1 ? "" : "s"}`
+                        : "-"
                   }
                 />
               </div>
@@ -385,28 +436,40 @@ export function InstallmentSummaryCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4 p-4">
-        <div className="grid gap-3 md:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-5">
           <Fact
             icon={IndianRupee}
             label="Franchise fee"
-            value={money(summary.principal)}
+            value={money(summary.totals.payableAmount ?? summary.principal)}
           />
           <Fact
             icon={IndianRupee}
             label="Paid"
-            value={money(summary.totals.paidAmount)}
+            value={money(
+              summary.totals.payablePaidAmount ?? summary.totals.paidAmount,
+            )}
           />
           <Fact
             icon={IndianRupee}
             label="Outstanding"
-            value={money(summary.totals.outstandingAmount)}
+            value={money(
+              summary.totals.payableOutstandingAmount ??
+                summary.totals.outstandingAmount,
+            )}
           />
+          {(summary.totals.gstAmount ?? 0) > 0 ? (
+            <Fact
+              icon={IndianRupee}
+              label={`GST included (${GST_RATE_LABEL})`}
+              value={money(summary.totals.gstAmount)}
+            />
+          ) : null}
           <Fact
             icon={CalendarDays}
             label="Next due"
             value={
               summary.nextDueItem
-                ? `${money(summary.nextDueItem.amount)} on ${fmtDate(summary.nextDueItem.dueAt)}`
+                ? `${money(summary.nextDueItem.payableAmount ?? summary.nextDueItem.amount)} on ${fmtDate(summary.nextDueItem.dueAt)}`
                 : "-"
             }
           />
@@ -418,11 +481,27 @@ export function InstallmentSummaryCard({
             <Info
               label="Down payment"
               value={
-                summary.downPayment ? money(summary.downPayment.amount) : "Not set"
+                summary.downPayment
+                  ? money(
+                      summary.downPayment.payableAmount ??
+                        summary.downPayment.amount,
+                    )
+                  : "Not set"
               }
-              trailing={summary.downPayment ? gstNote : null}
+              trailing={
+                summary.downPayment &&
+                summary.downPayment.gstAmount != null &&
+                summary.downPayment.gstAmount > 0 ? (
+                  <span className="text-[11px] text-muted-foreground">
+                    incl. {GST_RATE_LABEL} {money(summary.downPayment.gstAmount)}
+                  </span>
+                ) : null
+              }
             />
-            <Info label="Monthly installments" value={String(summary.totals.installmentCount)} />
+            <Info
+              label="EMIs paid"
+              value={`${summary.totals.paidItemCount} of ${summary.totals.installmentCount}`}
+            />
           </div>
         </div>
 

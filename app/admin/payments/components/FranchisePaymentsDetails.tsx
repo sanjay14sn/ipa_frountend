@@ -300,12 +300,22 @@ export default function FranchisePaymentsDetails({
                   )}
                 />
                 <DetailField
-                  label="GST / Tax"
+                  label="Gateway fee tax"
                   value={formatRsAmount(
-                    selectedPayment.tax,
+                    selectedPayment.gatewayFeeTaxAmount ?? selectedPayment.tax,
                     selectedPayment.currency ?? "INR",
                   )}
                 />
+                {selectedPayment.goodsGstAmount != null &&
+                Number(selectedPayment.goodsGstAmount) > 0 ? (
+                  <DetailField
+                    label="GST (18%)"
+                    value={formatRsAmount(
+                      selectedPayment.goodsGstAmount,
+                      selectedPayment.currency ?? "INR",
+                    )}
+                  />
+                ) : null}
                 <DetailField
                   label="Order ID"
                   value={selectedPayment.razorpayOrderId || "N/A"}

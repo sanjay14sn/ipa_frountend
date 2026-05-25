@@ -40,7 +40,12 @@ export interface PaymentData {
   email?: string | null;
   contact?: string | null;
   fee?: number | null;
+  /** @deprecated Razorpay processing-fee tax — use `gatewayFeeTaxAmount`. */
   tax?: number | null;
+  /** Razorpay's tax on the gateway processing fee. */
+  gatewayFeeTaxAmount?: number | null;
+  /** Goods/services GST (18%) on what the franchisee paid for. */
+  goodsGstAmount?: number | null;
 }
 
 export interface FranchisePaymentGroup {
