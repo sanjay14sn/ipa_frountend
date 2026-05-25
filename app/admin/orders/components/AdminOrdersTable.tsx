@@ -19,6 +19,7 @@ import { AdminOrderInvoiceDialog } from "./AdminOrderInvoiceDialog";
 import { DispatchItemsSummaryTable } from "./DispatchItemsSummaryTable";
 import { isStandaloneDispatchOrderType } from "./dispatch-order-helpers";
 import { Separator } from "@/components/ui/separator";
+import { OrderPaymentDetailsPanel } from "@/components/orders/OrderPaymentDetailsPanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -573,34 +574,12 @@ export default function AdminOrdersTable({
             <>
               <Separator />
               <ExpandedDetailSection title="Payment">
-                <DetailFieldsGrid columns={3}>
-                  <DetailField label="Payment ID" value={String(order.payment.id)} />
-                  <DetailField label="Status" value={order.payment.status} />
-                  <DetailField
-                    label="Method"
-                    value={order.payment.method ?? "—"}
-                  />
-                  <DetailField
-                    label="Amount"
-                    value={new Intl.NumberFormat("en-IN", {
-                      style: "currency",
-                      currency: order.payment.currency ?? "INR",
-                      maximumFractionDigits: 2,
-                    }).format(Number(order.payment.amount))}
-                  />
-                  <DetailField
-                    label="Currency"
-                    value={order.payment.currency ?? "INR"}
-                  />
-                  <DetailField
-                    label="Paid at"
-                    value={
-                      order.payment.paidAt
-                        ? new Date(order.payment.paidAt).toLocaleString()
-                        : "—"
-                    }
-                  />
-                </DetailFieldsGrid>
+                <OrderPaymentDetailsPanel
+                  payment={order.payment}
+                  hideTitle
+                  className="border-0 bg-transparent p-0"
+                  fallbackGoodsGstAmount={order.gstAmount ?? null}
+                />
               </ExpandedDetailSection>
             </>
           ) : null}

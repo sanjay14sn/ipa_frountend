@@ -16,15 +16,31 @@ export interface OrderPaymentDetailsPanelProps {
   /** When true, omit the panel heading (use when wrapped in e.g. ExpandedDetailSection). */
   hideTitle?: boolean;
   className?: string;
+  /**
+   * Fallback for `payment.goodsGstAmount` when the payment row hasn't been
+   * stamped yet (legacy rows created before the GST split fix). Callers that
+   * have the linked order in scope should pass `order.gstAmount` here so the
+   * "GST (18%)" line still renders for those orders.
+   */
+  fallbackGoodsGstAmount?: number | string | null;
 }
 
 export function OrderPaymentDetailsPanel({
   payment,
   hideTitle = false,
   className = "",
+  fallbackGoodsGstAmount = null,
 }: OrderPaymentDetailsPanelProps) {
   const currency = payment.currency ?? "INR";
   const methodFields = getMethodSpecificFields(payment);
+  // Prefer the payment row's own value; fall back to the linked order's GST
+  // so legacy rows (pre-backfill) still surface the line.
+  const effectiveGoodsGst =
+    payment.goodsGstAmount != null
+      ? Number(payment.goodsGstAmount)
+      : fallbackGoodsGstAmount != null
+        ? Number(fallbackGoodsGstAmount)
+        : null;
 
   return (
     <div
@@ -68,10 +84,10 @@ export function OrderPaymentDetailsPanel({
               currency,
             )}
           />
-          {payment.goodsGstAmount != null && Number(payment.goodsGstAmount) > 0 ? (
+          {effectiveGoodsGst != null && effectiveGoodsGst > 0 ? (
             <DetailField
               label="GST (18%)"
-              value={formatRsAmount(payment.goodsGstAmount, currency)}
+              value={formatRsAmount(effectiveGoodsGst, currency)}
             />
           ) : null}
           <DetailField

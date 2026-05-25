@@ -201,7 +201,11 @@ export function OrderRowInvoiceDialog({
               No stored material invoice or dispatch lines for this order.
             </p>
             {order?.payment ? (
-              <OrderPaymentDetailsPanel payment={order.payment} className="mt-4" />
+              <OrderPaymentDetailsPanel
+                payment={order.payment}
+                className="mt-4"
+                fallbackGoodsGstAmount={order.gstAmount ?? null}
+              />
             ) : null}
           </div>
         ) : tabsMode === "invoice-only" ? (
@@ -215,7 +219,11 @@ export function OrderRowInvoiceDialog({
                 </p>
               )}
               {order?.payment ? (
-                <OrderPaymentDetailsPanel payment={order.payment} className="mt-4" />
+                <OrderPaymentDetailsPanel
+                payment={order.payment}
+                className="mt-4"
+                fallbackGoodsGstAmount={order.gstAmount ?? null}
+              />
               ) : null}
             </div>
             {snapshot ? (
@@ -264,7 +272,11 @@ export function OrderRowInvoiceDialog({
                 <DispatchRecipientTable rows={idCards} emptyLabel="None on this order." />
               </TabsContent>
               {order?.payment ? (
-                <OrderPaymentDetailsPanel payment={order.payment} className="mt-4" />
+                <OrderPaymentDetailsPanel
+                payment={order.payment}
+                className="mt-4"
+                fallbackGoodsGstAmount={order.gstAmount ?? null}
+              />
               ) : null}
             </div>
           </Tabs>

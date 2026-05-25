@@ -140,6 +140,7 @@ export default function OrderDetails({
               payment={detailedOrder.payment}
               hideTitle
               className="border-0 bg-transparent p-0"
+              fallbackGoodsGstAmount={detailedOrder.gstAmount ?? null}
             />
           </ExpandedDetailSection>
         </>
