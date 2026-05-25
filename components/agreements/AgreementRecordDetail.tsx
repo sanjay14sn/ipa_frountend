@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { getProcessedAgreementContent } from "@/lib/agreementContent";
 import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
+import { EmiTimeline } from "@/components/receivables/EmiTimeline";
 import {
   agreementSignatureSrc,
   downloadScheduleBPdfAdmin,
@@ -160,16 +161,37 @@ function hasReceivablePlan(
   return !("hasPlan" in summary) || Boolean(summary.hasPlan);
 }
 
-function statusTone(status: string | null | undefined) {
+type BadgeTone = "default" | "secondary" | "outline" | "destructive";
+
+/**
+ * Lifecycle badge for an agreement. The new contract (post-refactor):
+ *   - `agreement.signed` is the single source of truth for "signed".
+ *   - `agreement.status === 'Valid'` only after BOTH signed AND payment-linked.
+ * The combo `status='Approved' && signed=true` means "signed, awaiting payment"
+ * — a real intermediate state that was previously rendered as plain "Approved".
+ */
+function agreementStatusBadge(
+  status: string | null | undefined,
+  signed: boolean | undefined,
+): { label: string; tone: BadgeTone } {
   switch (status) {
-    case "Signed":
-      return "default";
-    case "PendingSignature":
-      return "secondary";
+    case "Valid":
+    case "Signed": // legacy alias — same tone
+      return { label: "Valid", tone: "default" };
+    case "Approved":
+    case "PendingSignature": // legacy alias — same family
+      return signed
+        ? { label: "Signed · awaiting payment", tone: "default" }
+        : { label: "Approved · awaiting signature", tone: "secondary" };
+    case "Suspended":
+      return { label: "Suspended", tone: "secondary" };
+    case "Void":
+    case "Expired":
+      return { label: "Void", tone: "destructive" };
     case "Draft":
-      return "outline";
+      return { label: "Draft", tone: "outline" };
     default:
-      return "secondary";
+      return { label: status ?? "-", tone: "secondary" };
   }
 }
 
@@ -267,7 +289,7 @@ export function AgreementRecordDetail({
     },
     {
       label: "Signature",
-      value: sigSrc ? "Available" : "Pending",
+      value: data.signed ? "Signed" : "Pending",
       icon: PenLine,
     },
   ];
@@ -330,7 +352,10 @@ export function AgreementRecordDetail({
                   <h2 className="text-2xl text-card-foreground">
                     {data.title || `Agreement #${data.id}`}
                   </h2>
-                  <Badge variant={statusTone(data.status)}>{data.status ?? "-"}</Badge>
+                  {(() => {
+                    const badge = agreementStatusBadge(data.status, data.signed);
+                    return <Badge variant={badge.tone}>{badge.label}</Badge>;
+                  })()}
                   <Badge variant="secondary">{data.type}</Badge>
                   {data.referenceCode ? (
                     <Badge variant="outline">Ref: {data.referenceCode}</Badge>
@@ -485,6 +510,7 @@ export function AgreementRecordDetail({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-1 flex-col space-y-3 p-3 pt-0">
+                  <Row label="Date of signing" value={fmtDate(data.dateOfSigning)} />
                   <Row label="Captured at" value={fmtDate(data.franchiseeSignedAt)} />
                   {sigSrc ? (
                     <div className="flex flex-1 flex-col space-y-2">
@@ -506,9 +532,13 @@ export function AgreementRecordDetail({
                         Open signature file
                       </a>
                     </div>
+                  ) : data.signed ? (
+                    <p className="flex flex-1 items-center text-sm text-muted-foreground">
+                      Signature on file (stored on the franchisee profile).
+                    </p>
                   ) : (
                     <p className="flex flex-1 items-center text-sm text-muted-foreground">
-                      No signature on file.
+                      Signature not yet captured.
                     </p>
                   )}
                 </CardContent>
@@ -710,40 +740,15 @@ function AgreementEmiScheduleCard({
   onPayReceivableItem?: () => void;
   isInitiatingReceivablePayment?: boolean;
 }) {
-  const [showFullSchedule, setShowFullSchedule] = useState(false);
   const hasPlan = hasReceivablePlan(summary);
 
   if (!summary || !hasPlan) {
     return (
-      <Card className="overflow-hidden rounded-xl border-border shadow-sm">
-        <CardHeader className="border-b bg-accent/30 p-4">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Menu className="h-4 w-4" />
-            Franchise fee EMI schedule
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 text-sm text-muted-foreground">
-          No EMI plan is linked to this agreement.
-        </CardContent>
-      </Card>
+      <EmiTimeline summary={summary} title="Franchise fee EMI plan" />
     );
   }
 
   const fullSummary = isFullInstallmentSummary(summary) ? summary : null;
-  const compactSummary = !fullSummary
-    ? (summary as ReceivableFranchiseeSummary | ReceivableCompactSummary)
-    : null;
-  const paidAmount = fullSummary
-    ? fullSummary.totals.paidAmount
-    : compactSummary?.paidAmount ?? 0;
-  const outstandingAmount = fullSummary
-    ? fullSummary.totals.outstandingAmount
-    : compactSummary?.outstandingAmount ?? 0;
-  const totalAmount = fullSummary
-    ? fullSummary.totals.principal || fullSummary.principal
-    : paidAmount + outstandingAmount;
-  const paidPercent =
-    totalAmount > 0 ? Math.min(100, Math.max(0, (paidAmount / totalAmount) * 100)) : 0;
   const nextDueItem = fullSummary
     ? fullSummary.nextDueItem
     : "nextDueItem" in summary
@@ -754,32 +759,11 @@ function AgreementEmiScheduleCard({
     : "initialPayableItem" in summary
       ? summary.initialPayableItem
       : null;
-  const paymentHistoryCount = fullSummary
-    ? fullSummary.totals.paidItemCount
-    : "paymentHistoryCount" in summary
-      ? summary.paymentHistoryCount
-      : paidAmount > 0
-        ? 1
-        : 0;
-  const installmentCount = fullSummary
-    ? fullSummary.totals.installmentCount
-    : null;
   const agreementId = fullSummary
     ? fullSummary.agreementId
     : "agreementId" in summary
       ? summary.agreementId
       : null;
-  const nextDueAmount = fullSummary
-    ? nextDueItem?.amount ?? null
-    : nextDueItem?.amount ?? compactSummary?.nextDueAmount ?? null;
-  const nextDueAt = fullSummary
-    ? nextDueItem?.dueAt ?? null
-    : nextDueItem?.dueAt ?? compactSummary?.nextDueAt ?? null;
-  const standing = prettifyToken(summary.standing);
-  const canShowFullSchedule = Boolean(fullSummary || onViewFullSchedule);
-  const fullScheduleButtonLabel = showFullSchedule
-    ? "Hide full schedule"
-    : viewFullScheduleLabel;
   const payableItem =
     nextDueItem && !nextDueItem.paidAt
       ? nextDueItem
@@ -787,154 +771,74 @@ function AgreementEmiScheduleCard({
         ? initialPayableItem
         : null;
   const canPayNow = Boolean(payableItem && onPayReceivableItem);
-
-  function handleScheduleAction() {
-    if (!fullSummary && onViewFullSchedule) {
-      setShowFullSchedule(true);
-      onViewFullSchedule();
-      return;
-    }
-    setShowFullSchedule((current) => !current);
-  }
+  const payableAmountToShow =
+    payableItem?.payableAmount ?? payableItem?.amount ?? null;
 
   return (
-    <Card className="rounded-xl border-border shadow-sm">
-      <CardContent className="space-y-3 p-4">
-        <div className="space-y-3 border-b border-border pb-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-accent/40 text-primary">
-                <Menu className="h-4 w-4" />
-              </span>
-              <h3 className="text-base font-semibold text-card-foreground">EMI</h3>
-            </div>
-            <Badge variant={statusVariant(summary.standing)} className="w-fit">
-              {standing}
-            </Badge>
-          </div>
+    <div className="space-y-3">
+      <EmiTimeline
+        summary={summary}
+        title="Franchise fee EMI plan"
+        agreementRef={agreementId ? `Agreement #${agreementId}` : null}
+      />
 
-          <div className="space-y-2">
-            <div className="relative">
-              <Progress value={paidPercent} className="h-3 bg-[#dceee6]" />
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Paid {money(paidAmount)}
-              {" · "}
-              Outstanding {money(outstandingAmount)}
-              {" · "}
-              Next {nextDueAt ? fmtShortDate(nextDueAt) : "-"}
+      {summary.holdReason ? (
+        <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {summary.holdReason}
+        </p>
+      ) : null}
+
+      {/* Pay-now CTA — only when the franchisee can pay and we have a payable item */}
+      {canPayNow && payableItem ? (
+        <div className="flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+              Next payable
+            </p>
+            <p className="mt-0.5 text-sm font-medium text-card-foreground">
+              {payableItem.label}
+              {payableItem.dueAt ? (
+                <span className="ml-1 text-xs text-muted-foreground">
+                  · due {fmtShortDate(payableItem.dueAt)}
+                </span>
+              ) : null}
             </p>
           </div>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => onPayReceivableItem?.()}
+            disabled={isInitiatingReceivablePayment}
+          >
+            {isInitiatingReceivablePayment ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Opening payment…
+              </>
+            ) : (
+              <>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Pay {money(payableAmountToShow)} now
+              </>
+            )}
+          </Button>
         </div>
+      ) : null}
 
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <EmiMetric
-            label="Next due"
-            value={nextDueAmount != null ? money(nextDueAmount) : '-'}
-            hint={fmtShortDate(nextDueAt)}
-          />
-          <EmiMetric
-            label="Initial payable"
-            value={
-              initialPayableItem?.label ??
-              ("initialPayableLabel" in summary ? summary.initialPayableLabel : null) ??
-              '-'
-            }
-          />
-          <EmiMetric label="Next item" value={nextDueItem?.label ?? '-'} />
-          <EmiMetric
-            label="Payment history"
-            value={`${paymentHistoryCount} paid item${paymentHistoryCount === 1 ? "" : "s"}`}
-          />
-        </div>
-
-        {summary.holdReason ? (
-          <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {summary.holdReason}
-          </p>
-        ) : null}
-
-        <div className="flex flex-col gap-3 border-t border-border pt-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <span>
-              <span className="font-semibold text-card-foreground">Schedule:</span>{" "}
-              <span className="text-muted-foreground">
-                Monthly{installmentCount ? ` / ${installmentCount} installments` : ""}
-              </span>
-            </span>
-            <span>
-              <span className="font-semibold text-card-foreground">Agreement:</span>{" "}
-              <span className="text-muted-foreground">
-                {agreementId ? `#${agreementId}` : "-"}
-              </span>
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {canPayNow && payableItem ? (
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => onPayReceivableItem?.()}
-                disabled={isInitiatingReceivablePayment}
-              >
-                {isInitiatingReceivablePayment ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Opening payment...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Pay {money(payableItem.amount)} now
-                  </>
-                )}
-              </Button>
-            ) : null}
-            {canShowFullSchedule ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleScheduleAction}
-                disabled={!fullSummary && viewFullScheduleLabel.toLowerCase().includes("loading")}
-              >
-                {fullScheduleButtonLabel}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : null}
-          </div>
-        </div>
-
-        {canPayNow && payableItem?.dueAt ? (
-          <p className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-muted-foreground">
-            You can pay this EMI before its due date ({fmtShortDate(payableItem.dueAt)}).
-          </p>
-        ) : null}
-
-        {showFullSchedule && fullSummary ? (
-          <div className="border-t border-border pt-3">
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Due date</TableHead>
-                    <TableHead>Paid date</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {fullSummary.items.map((item) => (
-                    <EmiScheduleRow key={item.receivableItemId} item={item} />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
+      {/* Loading indicator while the full plan is being fetched */}
+      {!fullSummary && onViewFullSchedule ? (
+        <button
+          type="button"
+          onClick={onViewFullSchedule}
+          disabled={viewFullScheduleLabel.toLowerCase().includes("loading")}
+          className="text-xs text-muted-foreground underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {viewFullScheduleLabel.toLowerCase().includes("loading")
+            ? "Loading full schedule…"
+            : "Load full schedule"}
+        </button>
+      ) : null}
+    </div>
   );
 }
 

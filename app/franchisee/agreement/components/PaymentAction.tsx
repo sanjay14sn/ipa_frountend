@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Lock, ShieldCheck } from "lucide-react";
 import { GST_RATE_LABEL } from "@/lib/gst";
 
 interface PaymentActionProps {
@@ -11,10 +11,10 @@ interface PaymentActionProps {
   /** Shown on agreement onboarding step 4 */
   variant?: "default" | "final";
   /**
-   * The actual amount about to be charged via Razorpay. Shown prominently on
-   * the final step so the franchisee can see at a glance how much they owe
-   * right now. For installment agreements this is the down payment / first
-   * EMI's payable; for one-shot agreements it's the full fee + GST.
+   * The actual amount about to be charged via Razorpay. Shown prominently so
+   * the franchisee can see at a glance how much they owe right now. For
+   * installment agreements this is the down payment / first EMI's payable;
+   * for one-shot agreements it's the full fee + GST.
    */
   payableAmount?: number | null;
   /** Pre-GST principal of `payableAmount` — drives the breakdown line. */
@@ -50,7 +50,76 @@ export default function PaymentAction({
     payableGst != null &&
     Number(payableGst) > 0 &&
     payablePrincipal != null;
+  const isFinal = variant === "final";
 
+  // Final step uses the big "Pay today to activate" hero CTA layout.
+  if (isFinal && showPayableHeadline) {
+    return (
+      <div className="rounded-xl border-2 border-primary/40 bg-primary/5 p-5 shadow-sm">
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
+              Pay today to activate
+            </p>
+            <p className="mt-2 text-4xl font-semibold tabular-nums text-primary sm:text-5xl">
+              {money(payableAmount)}
+            </p>
+            {payableLabel || showGstSplit ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {payableLabel ?? ""}
+                {payableLabel && showGstSplit ? " · " : ""}
+                {showGstSplit
+                  ? `${money(payablePrincipal)} + ${GST_RATE_LABEL} ${money(
+                      payableGst,
+                    )}`
+                  : ""}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="flex flex-col items-stretch gap-2 md:items-end">
+            <Button
+              onClick={onPaymentSubmit}
+              disabled={
+                !agreementAccepted ||
+                isProcessingPayment ||
+                Boolean(signatureHint)
+              }
+              size="lg"
+              className="rounded-lg px-6 py-6 text-base font-medium shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isProcessingPayment ? (
+                <>
+                  <div className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Processing…
+                </>
+              ) : (
+                <>
+                  <Lock className="mr-2 h-4 w-4" />
+                  Pay {money(payableAmount)} securely
+                </>
+              )}
+            </Button>
+            <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground md:justify-end">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>256-bit secure · Razorpay</span>
+            </div>
+          </div>
+        </div>
+
+        {!agreementAccepted ? (
+          <p className="mt-3 text-xs font-medium text-destructive">
+            Please accept terms and conditions to proceed
+          </p>
+        ) : null}
+        {signatureHint ? (
+          <p className="mt-3 text-xs font-medium text-amber-800">{signatureHint}</p>
+        ) : null}
+      </div>
+    );
+  }
+
+  // Default (non-final) layout — the existing compact card.
   return (
     <div className="mx-auto max-w-4xl">
       <div className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
@@ -67,8 +136,7 @@ export default function PaymentAction({
               ) : null}
               {showGstSplit ? (
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {money(payablePrincipal)} + {GST_RATE_LABEL}{" "}
-                  {money(payableGst)}
+                  {money(payablePrincipal)} + {GST_RATE_LABEL} {money(payableGst)}
                 </p>
               ) : null}
             </div>
@@ -80,14 +148,10 @@ export default function PaymentAction({
         <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <div className="flex-1 text-center md:text-left">
             <h4 className="mb-2 text-lg font-normal text-card-foreground">
-              {variant === "final"
-                ? "Activate your franchise"
-                : "Complete your registration"}
+              Complete your registration
             </h4>
             <p className="text-sm text-muted-foreground">
-              {variant === "final"
-                ? "Complete your signed agreement payment to unlock your dashboard. Activation happens after the backend verifies the payment."
-                : "Finalize payment to access your franchise dashboard and begin operations."}
+              Finalize payment to access your franchise dashboard and begin operations.
             </p>
             {!agreementAccepted && (
               <p className="mt-2 text-xs font-medium text-destructive">

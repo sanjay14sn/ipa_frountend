@@ -17,8 +17,9 @@ import FranchiseDetails from "./components/FranchiseDetails";
 import PaymentBreakdown from "./components/PaymentBreakdown";
 import AgreementTerms from "./components/AgreementTerms";
 import PaymentAction from "./components/PaymentAction";
-import { InstallmentSummaryCard } from "@/components/receivables/InstallmentSummaryCard";
+import { EmiTimeline } from "@/components/receivables/EmiTimeline";
 import { getFranchiseFeePayable } from "@/lib/gst";
+import { Zap, Layout, Mail } from "lucide-react";
 import { FranchiseAgreementSignaturePanel } from "./components/FranchiseAgreementSignaturePanel";
 import {
   AgreementStepper,
@@ -379,6 +380,22 @@ function FranchiseAgreementContent() {
   useEffect(() => {
     setFullReceivablePlan(null);
   }, [effectiveFranchiseId]);
+
+  // Eagerly load the full receivable plan when the agreement is available and
+  // carries an installment plan — the new EmiTimeline needs item-level data
+  // (down payment + each installment) to render the per-stop layout, and the
+  // compact summary embedded on the agreement detail doesn't carry it.
+  useEffect(() => {
+    if (!feeAgreement?.id) return;
+    if (fullReceivablePlan || fullReceivablePlanLoading) return;
+    const hasPlan = Boolean(
+      feeAgreement.receivables?.installmentSummary ||
+        feeAgreement.receivables?.paymentSummary,
+    );
+    if (!hasPlan) return;
+    void handleViewFullSchedule();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feeAgreement?.id, fullReceivablePlan, fullReceivablePlanLoading]);
 
   useEffect(() => {
     if (!user?.profile || user.role === "admin" || !effectiveFranchiseId) {
@@ -900,19 +917,12 @@ function FranchiseAgreementContent() {
                   paymentDetails={franchiseData.paymentDetails}
                   installmentSummary={installmentSummary}
                 />
-                <InstallmentSummaryCard
+                <EmiTimeline
                   summary={installmentSummary}
                   gstFranchiseFee={feeAgreement?.gstFranchiseFee ?? null}
-                  title="Your franchise fee EMI split-up"
-                  onViewFullSchedule={
-                    feeAgreement?.id && !fullReceivablePlan
-                      ? () => void handleViewFullSchedule()
-                      : undefined
-                  }
-                  viewFullScheduleLabel={
-                    fullReceivablePlanLoading
-                      ? "Loading schedule..."
-                      : "View full schedule"
+                  title="Your franchise fee EMI plan"
+                  agreementRef={
+                    feeAgreement?.id ? `Agreement #${feeAgreement.id}` : null
                   }
                 />
               </div>
@@ -961,29 +971,32 @@ function FranchiseAgreementContent() {
             ) : null}
 
             {currentStep === 4 ? (
-              <div className="space-y-4">
-                <h2 className="text-xl font-normal text-card-foreground">
-                  Final step - payment
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Complete your agreement payment after signing. Activation happens
-                  after the backend verifies the payment.
-                </p>
-                <InstallmentSummaryCard
+              <div className="space-y-6">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
+                    Step 4 of 4 · Final step
+                  </p>
+                  <h2 className="mt-1 text-2xl font-normal text-card-foreground sm:text-3xl">
+                    {payableHeadline && installmentInitialPayable
+                      ? "Almost there — one payment to activate"
+                      : "Final step — activate your franchise"}
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                    {installmentInitialPayable
+                      ? `Pay the ${installmentInitialPayable.kind === "down-payment" ? "down payment" : "first installment"} to unlock your franchise dashboard right away. The remaining fee is split into easy monthly EMIs — no surprises, no hidden charges.`
+                      : "Complete your agreement payment to unlock your franchise dashboard. Activation happens after the backend verifies the payment."}
+                  </p>
+                </div>
+
+                <EmiTimeline
                   summary={installmentSummary}
                   gstFranchiseFee={feeAgreement?.gstFranchiseFee ?? null}
-                  title="Payable schedule"
-                  onViewFullSchedule={
-                    feeAgreement?.id && !fullReceivablePlan
-                      ? () => void handleViewFullSchedule()
-                      : undefined
-                  }
-                  viewFullScheduleLabel={
-                    fullReceivablePlanLoading
-                      ? "Loading schedule..."
-                      : "View full schedule"
+                  title="Your payment plan"
+                  agreementRef={
+                    feeAgreement?.id ? `Agreement #${feeAgreement.id}` : null
                   }
                 />
+
                 <PaymentAction
                   agreementAccepted={agreementAccepted}
                   isProcessingPayment={isProcessingPayment || activationSyncing}
@@ -995,6 +1008,32 @@ function FranchiseAgreementContent() {
                   payableGst={payableHeadline?.gst ?? null}
                   payableLabel={payableHeadline?.label ?? null}
                 />
+
+                <div>
+                  <h3 className="text-base font-medium text-card-foreground">
+                    What happens after you pay
+                  </h3>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <PostPayStep
+                      icon={Zap}
+                      step="Step 1"
+                      title="Payment verified"
+                      description="Usually within 2 minutes of a successful transaction."
+                    />
+                    <PostPayStep
+                      icon={Layout}
+                      step="Step 2"
+                      title="Franchise dashboard opens"
+                      description="You'll be redirected automatically — no extra steps."
+                    />
+                    <PostPayStep
+                      icon={Mail}
+                      step="Step 3"
+                      title="Welcome email sent"
+                      description="Receipt, GST invoice and onboarding playbook."
+                    />
+                  </div>
+                </div>
               </div>
             ) : null}
 
@@ -1098,5 +1137,32 @@ export default function FranchiseAgreementPage() {
     >
       <FranchiseAgreementContent />
     </Suspense>
+  );
+}
+
+function PostPayStep({
+  icon: Icon,
+  step,
+  title,
+  description,
+}: {
+  icon: typeof Zap;
+  step: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Icon className="h-4 w-4" />
+        </span>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          {step}
+        </span>
+      </div>
+      <p className="mt-3 text-sm font-medium text-card-foreground">{title}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+    </div>
   );
 }

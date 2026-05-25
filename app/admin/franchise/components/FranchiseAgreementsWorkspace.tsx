@@ -8,10 +8,8 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DetailField, DetailFieldsGrid, DetailMessage } from "@/components/shared";
 import type { AgreementRecord } from "@/services/agreement.service";
-import {
-  InstallmentSummaryCard,
-  ReceivableCompactLine,
-} from "@/components/receivables/InstallmentSummaryCard";
+import { ReceivableCompactLine } from "@/components/receivables/InstallmentSummaryCard";
+import { EmiTimeline } from "@/components/receivables/EmiTimeline";
 import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
 import { AgreementKitItemsDialog } from "./AgreementKitItemsDialog";
 
@@ -194,10 +192,13 @@ export function FranchiseAgreementsWorkspace({
               <ReceivableCompactLine
                 summary={agreement.receivables?.installmentSummary}
               />
-              <InstallmentSummaryCard
+              <EmiTimeline
                 summary={agreement.receivables?.installmentSummary}
                 gstFranchiseFee={agreement.gstFranchiseFee ?? null}
-                title="Franchise fee EMI split-up"
+                title="Franchise fee EMI plan"
+                agreementRef={
+                  agreement.id ? `Agreement #${agreement.id}` : null
+                }
               />
             </div>
           </TabsContent>
