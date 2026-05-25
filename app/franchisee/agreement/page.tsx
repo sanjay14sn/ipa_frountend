@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, CheckCircle, Loader2, PenLine, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle, Loader2, PenLine } from "lucide-react";
 import { useUser } from "@/context/user-context";
 import {
   AgreementContent,
@@ -18,6 +18,7 @@ import PaymentBreakdown from "./components/PaymentBreakdown";
 import AgreementTerms from "./components/AgreementTerms";
 import PaymentAction from "./components/PaymentAction";
 import { InstallmentSummaryCard } from "@/components/receivables/InstallmentSummaryCard";
+import { getFranchiseFeePayable } from "@/lib/gst";
 import { FranchiseAgreementSignaturePanel } from "./components/FranchiseAgreementSignaturePanel";
 import {
   AgreementStepper,
@@ -37,11 +38,13 @@ import {
   downloadScheduleBPdfMine,
   franchiseeProfileSignatureSrc,
   getReceivablePlanMine,
-  submitFranchiseeSignatureImage,
+  submitFranchiseeSignature,
   submitFranchiseeSignatureWithStored,
   type AgreementRecord,
+  type ESignaturePayload,
   type ReceivableInstallmentSummary,
 } from "@/services/agreement.service";
+import { ESignaturePad } from "@/components/esignature/ESignaturePad";
 import { getFranchiseeProfile } from "@/services/auth.service";
 import { getErrorMessage } from "@/lib/error-utils";
 import {
@@ -125,11 +128,8 @@ function FranchiseAgreementContent() {
     null,
   );
   const [feeAgreementLoading, setFeeAgreementLoading] = useState(true);
-  // Step 3 signing controls — the action buttons live next to the footer Next
-  // button (see the JSX below). The hidden file input is owned here so the
-  // "Upload and sign" path can trigger it on click.
   const [signing, setSigning] = useState(false);
-  const signatureInputRef = useRef<HTMLInputElement>(null);
+  const [eSignatureOpen, setESignatureOpen] = useState(false);
   const [fullReceivablePlan, setFullReceivablePlan] =
     useState<ReceivableInstallmentSummary | null>(null);
   const [fullReceivablePlanLoading, setFullReceivablePlanLoading] =
@@ -167,6 +167,43 @@ function FranchiseAgreementContent() {
     feeAgreement?.receivables?.installmentSummary ??
     feeAgreement?.receivables?.paymentSummary ??
     null;
+
+  // Pay-now headline for PaymentBreakdown / PaymentAction. For installment
+  // agreements this is the initial payable (down payment or first EMI); for
+  // non-installment agreements we fall back to the full franchise fee + GST.
+  const installmentInitialPayable = (() => {
+    const summary = installmentSummary as any;
+    if (!summary) return null;
+    if ("initialPayableItem" in summary && summary.initialPayableItem) {
+      const item = summary.initialPayableItem;
+      if (item.paidAt) return null;
+      return {
+        label: item.label as string,
+        amount: Number(item.payableAmount ?? item.amount ?? 0),
+        principal: Number(item.principalAmount ?? item.amount ?? 0),
+        gst: Number(item.gstAmount ?? 0),
+        kind: item.kind as "down-payment" | "installment",
+      };
+    }
+    return null;
+  })();
+  const nonInstallmentPayable = (() => {
+    if (installmentInitialPayable) return null;
+    if (!feeAgreement?.franchiseFee || feeAgreement.franchiseFee <= 0)
+      return null;
+    const breakdown = getFranchiseFeePayable(
+      feeAgreement.franchiseFee,
+      feeAgreement.gstFranchiseFee ?? null,
+    );
+    return {
+      label: "Franchise fee" as const,
+      amount: breakdown.payable,
+      principal: breakdown.base,
+      gst: breakdown.gst,
+    };
+  })();
+  const payableHeadline =
+    installmentInitialPayable ?? nonInstallmentPayable;
 
   // Step 4 (Payment) unlocks once `agreement.signed === true`. Post-refactor,
   // signing flips the `signed` boolean while the agreement stays in `Approved`
@@ -464,40 +501,27 @@ function FranchiseAgreementContent() {
     }
   };
 
-  /** Picker entry point — actual upload happens in onSignatureFileChange. */
-  const triggerSignatureUpload = () => {
-    signatureInputRef.current?.click();
+  const openESignatureDialog = () => {
+    setESignatureOpen(true);
   };
 
   /**
-   * Upload + sign in one go. The backend persists the file to
-   * `franchisee.franchiseeSignature` AND flips `agreement.signed=true`, so the
-   * next time this franchisee signs anything they'll see the on-file branch.
+   * Adopt an in-browser e-signature (drawn or typed) and apply it to the
+   * agreement. The backend persists the SVG to `franchisee.franchiseeSignature`
+   * AND flips `agreement.signed=true`, so the next time this franchisee signs
+   * anything they'll see the on-file branch.
    */
-  const onSignatureFileChange = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !feeAgreement) return;
-    const MAX_BYTES = 5 * 1024 * 1024;
-    const ALLOWED = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-    if (file.size > MAX_BYTES) {
-      toast.error("Signature image must be 5MB or smaller.");
-      return;
-    }
-    if (!ALLOWED.includes(file.type)) {
-      toast.error("Use a PNG, JPEG, or WebP image.");
-      return;
-    }
+  const handleAdoptESignature = async (payload: ESignaturePayload) => {
+    if (!feeAgreement) return;
     setSigning(true);
     try {
-      const updated = await submitFranchiseeSignatureImage(feeAgreement.id, file);
+      const updated = await submitFranchiseeSignature(feeAgreement.id, payload);
       setFeeAgreement(updated);
       await invalidateAfterSign(feeAgreement.id);
+      setESignatureOpen(false);
       toast.success("Signature saved — proceed to payment");
     } catch (err) {
-      toast.error(getErrorMessage(err, "Could not upload signature"));
+      toast.error(getErrorMessage(err, "Could not save signature"));
     } finally {
       setSigning(false);
     }
@@ -872,7 +896,10 @@ function FranchiseAgreementContent() {
                 <FranchiseeInformation franchiseData={franchiseData} />
                 <LocationDetails franchiseData={franchiseData} />
                 <FranchiseDetails franchiseData={franchiseData} />
-                <PaymentBreakdown paymentDetails={franchiseData.paymentDetails} />
+                <PaymentBreakdown
+                  paymentDetails={franchiseData.paymentDetails}
+                  installmentSummary={installmentSummary}
+                />
                 <InstallmentSummaryCard
                   summary={installmentSummary}
                   gstFranchiseFee={feeAgreement?.gstFranchiseFee ?? null}
@@ -930,15 +957,6 @@ function FranchiseAgreementContent() {
                   agreement={feeAgreement}
                   loading={feeAgreementLoading}
                 />
-                {/* Hidden file input owned by the page so the footer's
-                    "Upload and sign" button can trigger it directly. */}
-                <input
-                  ref={signatureInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  className="hidden"
-                  onChange={onSignatureFileChange}
-                />
               </div>
             ) : null}
 
@@ -972,6 +990,10 @@ function FranchiseAgreementContent() {
                   onPaymentSubmit={handlePaymentSubmit}
                   signatureHint={signatureHint}
                   variant="final"
+                  payableAmount={payableHeadline?.amount ?? null}
+                  payablePrincipal={payableHeadline?.principal ?? null}
+                  payableGst={payableHeadline?.gst ?? null}
+                  payableLabel={payableHeadline?.label ?? null}
                 />
               </div>
             ) : null}
@@ -995,7 +1017,7 @@ function FranchiseAgreementContent() {
                     button shows is data-driven, mutually exclusive:
                       - signed already → no sign button (Next is live)
                       - has on-file signature → "Sign with this signature"
-                      - no on-file signature → "Upload and sign"
+                      - no on-file signature → "Sign agreement" (opens e-sig pad)
                     The Next button stays visible throughout so the user has a
                     consistent forward affordance; it goes live as soon as
                     signing completes (isSigned flips true via setFeeAgreement).
@@ -1023,15 +1045,15 @@ function FranchiseAgreementContent() {
                       <Button
                         type="button"
                         className="rounded-lg"
-                        onClick={triggerSignatureUpload}
+                        onClick={openESignatureDialog}
                         disabled={signing || feeAgreementLoading}
                       >
                         {signing ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
-                          <Upload className="mr-2 h-4 w-4" />
+                          <PenLine className="mr-2 h-4 w-4" />
                         )}
-                        Upload and sign
+                        Sign agreement
                       </Button>
                     )
                   ) : null}
@@ -1051,6 +1073,13 @@ function FranchiseAgreementContent() {
           </div>
         </div>
       </div>
+      <ESignaturePad
+        open={eSignatureOpen}
+        onOpenChange={setESignatureOpen}
+        defaultName={user?.profile?.name ?? user?.name ?? ""}
+        onAdopt={handleAdoptESignature}
+        submitting={signing}
+      />
     </div>
   );
 }

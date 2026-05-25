@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { CreditCard } from "lucide-react";
+import { GST_RATE_LABEL } from "@/lib/gst";
 
 interface PaymentActionProps {
   agreementAccepted: boolean;
@@ -9,7 +10,27 @@ interface PaymentActionProps {
   signatureHint?: string | null;
   /** Shown on agreement onboarding step 4 */
   variant?: "default" | "final";
+  /**
+   * The actual amount about to be charged via Razorpay. Shown prominently on
+   * the final step so the franchisee can see at a glance how much they owe
+   * right now. For installment agreements this is the down payment / first
+   * EMI's payable; for one-shot agreements it's the full fee + GST.
+   */
+  payableAmount?: number | null;
+  /** Pre-GST principal of `payableAmount` — drives the breakdown line. */
+  payablePrincipal?: number | null;
+  /** GST portion of `payableAmount`. 0 / null hides the breakdown line. */
+  payableGst?: number | null;
+  /** Friendly description for what's being paid (e.g. "Down payment", "Installment 1"). */
+  payableLabel?: string | null;
 }
+
+const money = (n: number | null | undefined) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(Number(n ?? 0));
 
 export default function PaymentAction({
   agreementAccepted,
@@ -17,10 +38,45 @@ export default function PaymentAction({
   onPaymentSubmit,
   signatureHint,
   variant = "default",
+  payableAmount,
+  payablePrincipal,
+  payableGst,
+  payableLabel,
 }: PaymentActionProps) {
+  const showPayableHeadline =
+    payableAmount != null && Number(payableAmount) > 0;
+  const showGstSplit =
+    showPayableHeadline &&
+    payableGst != null &&
+    Number(payableGst) > 0 &&
+    payablePrincipal != null;
+
   return (
     <div className="mx-auto max-w-4xl">
       <div className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        {showPayableHeadline ? (
+          <div className="mb-4 flex flex-col gap-2 rounded-xl border-2 border-primary/50 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                You will pay now
+              </p>
+              {payableLabel ? (
+                <p className="mt-1 text-sm font-medium text-card-foreground">
+                  {payableLabel}
+                </p>
+              ) : null}
+              {showGstSplit ? (
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {money(payablePrincipal)} + {GST_RATE_LABEL}{" "}
+                  {money(payableGst)}
+                </p>
+              ) : null}
+            </div>
+            <span className="text-3xl font-semibold text-primary">
+              {money(payableAmount)}
+            </span>
+          </div>
+        ) : null}
         <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <div className="flex-1 text-center md:text-left">
             <h4 className="mb-2 text-lg font-normal text-card-foreground">
@@ -63,7 +119,7 @@ export default function PaymentAction({
               ) : (
                 <>
                   <CreditCard className="mr-2 h-5 w-5" />
-                  Complete Payment
+                  {showPayableHeadline ? `Pay ${money(payableAmount)}` : "Complete Payment"}
                 </>
               )}
             </Button>

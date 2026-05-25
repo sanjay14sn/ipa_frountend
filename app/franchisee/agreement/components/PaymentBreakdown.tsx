@@ -8,9 +8,25 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
+import type {
+  ReceivableCompactSummary,
+  ReceivableFranchiseeSummary,
+  ReceivableInstallmentSummary,
+} from "@/services/agreement.service";
 
 interface PaymentBreakdownProps {
   paymentDetails: any;
+  /**
+   * When the receivable plan is active (installment agreements), this drives
+   * the "Pay now" headline so the franchisee sees the down payment they owe
+   * today — not the full franchise fee. Falls back to the full fee + GST
+   * when no plan / no initial payable.
+   */
+  installmentSummary?:
+    | ReceivableInstallmentSummary
+    | ReceivableFranchiseeSummary
+    | ReceivableCompactSummary
+    | null;
 }
 
 const DEFAULT_L1_MONTHS = 4;
@@ -137,6 +153,7 @@ function LevelRecurringFeesBreakdown({ payroll }: { payroll: any }) {
 
 export default function PaymentBreakdown({
   paymentDetails,
+  installmentSummary,
 }: PaymentBreakdownProps) {
   if (!paymentDetails) return null;
 
@@ -185,6 +202,42 @@ export default function PaymentBreakdown({
     summary.franchiseFee,
     summary.gstFranchiseFee,
   );
+
+  // Installment-aware "pay now" — when an EMI plan is in place the first
+  // payable is just the down payment (or first installment), not the whole
+  // franchise fee. The full fee + GST stays informational below.
+  const isFullSummary =
+    installmentSummary != null &&
+    "items" in (installmentSummary as object);
+  const hasPlan =
+    installmentSummary != null &&
+    (!("hasPlan" in installmentSummary) || installmentSummary.hasPlan);
+  const initialPayableItem = isFullSummary
+    ? (installmentSummary as ReceivableInstallmentSummary).initialPayableItem
+    : null;
+  const planPrincipal = isFullSummary
+    ? (installmentSummary as ReceivableInstallmentSummary).principal
+    : null;
+  const planPayableTotal = isFullSummary
+    ? (installmentSummary as ReceivableInstallmentSummary).totals.payableAmount
+    : null;
+  const installmentCount = isFullSummary
+    ? (installmentSummary as ReceivableInstallmentSummary).totals.installmentCount
+    : null;
+  const showInitialPayable =
+    hasPlan && initialPayableItem != null && initialPayableItem.paidAt == null;
+  const initialPayableAmount = showInitialPayable
+    ? (initialPayableItem!.payableAmount ?? initialPayableItem!.amount)
+    : null;
+  const initialPayablePrincipal = showInitialPayable
+    ? (initialPayableItem!.principalAmount ?? initialPayableItem!.amount)
+    : null;
+  const initialPayableGst = showInitialPayable
+    ? (initialPayableItem!.gstAmount ?? 0)
+    : 0;
+  const initialPayableIsInclusive = showInitialPayable
+    ? (initialPayableItem!.isGstInclusive ?? true)
+    : true;
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
@@ -296,18 +349,72 @@ export default function PaymentBreakdown({
         </div>
       ) : null}
 
-      {/* Franchise Fee to Pay */}
+      {/* Pay-now (installment-aware) */}
+      {showInitialPayable ? (
+        <div className="mt-4 flex flex-col gap-3 rounded-xl border-2 border-primary/50 bg-primary/5 p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Pay now
+              </p>
+              <p className="mt-1 text-sm font-medium text-card-foreground">
+                {initialPayableItem!.label}
+                {!initialPayableIsInclusive && initialPayableGst > 0 ? (
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    (₹{fmt(initialPayablePrincipal)} + {GST_RATE_LABEL} ₹
+                    {fmt(initialPayableGst)})
+                  </span>
+                ) : null}
+              </p>
+            </div>
+            <span className="text-2xl font-semibold text-primary">
+              ₹{fmt(initialPayableAmount)}
+            </span>
+          </div>
+          {planPrincipal != null && initialPayablePrincipal != null ? (
+            <p className="border-t border-primary/20 pt-2 text-xs text-muted-foreground">
+              Balance ₹{fmt(
+                (planPayableTotal ?? planPrincipal) -
+                  (initialPayableAmount ?? 0),
+              )}{" "}
+              spread across{" "}
+              {Math.max(
+                0,
+                (installmentCount ?? 0) -
+                  (initialPayableItem!.kind === "installment" ? 1 : 0),
+              )}{" "}
+              monthly installment
+              {Math.max(
+                0,
+                (installmentCount ?? 0) -
+                  (initialPayableItem!.kind === "installment" ? 1 : 0),
+              ) === 1
+                ? ""
+                : "s"}
+              .
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Total franchise fee — informational */}
       <div className="mt-4 flex flex-col gap-2 rounded-xl border border-border bg-accent/30 p-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-card-foreground">
-            Franchise Fee
+            {showInitialPayable ? "Total franchise fee" : "Franchise Fee"}
             {feePayable.inclusive ? (
               <Badge variant="secondary">GST inclusive</Badge>
             ) : (
               <Badge variant="outline">+{GST_RATE_LABEL}</Badge>
             )}
           </span>
-          <span className="text-xl font-semibold text-primary">
+          <span
+            className={
+              showInitialPayable
+                ? "text-lg font-semibold text-card-foreground"
+                : "text-xl font-semibold text-primary"
+            }
+          >
             ₹{fmt(feePayable.base)}
           </span>
         </div>
@@ -317,7 +424,8 @@ export default function PaymentBreakdown({
               +{GST_RATE_LABEL} (₹{fmt(feePayable.gst)})
             </span>
             <span className="font-semibold text-card-foreground">
-              Payable now: ₹{fmt(feePayable.payable)}
+              {showInitialPayable ? "Total payable" : "Payable now"}: ₹
+              {fmt(feePayable.payable)}
             </span>
           </div>
         ) : null}
