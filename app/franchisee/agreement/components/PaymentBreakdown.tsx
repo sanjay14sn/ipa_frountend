@@ -104,6 +104,35 @@ function FeeCell({
   );
 }
 
+/**
+ * Renders a fee headline that respects the agreement's GST flag — payable
+ * as the primary number, with a small "₹net + 18% GST ₹gst" sub-line when
+ * the fee is GST-exclusive. Used in the program summary so Material Cost
+ * and Franchise Fee both surface their GST treatment at a glance.
+ */
+function renderGstAwareFeeValue({
+  principal,
+  inclusive,
+  fmt,
+}: {
+  principal: number;
+  inclusive: boolean;
+  fmt: (n: number | string | undefined | null) => string;
+}): React.ReactNode {
+  if (principal <= 0) return `₹${fmt(0)}`;
+  if (inclusive) return `₹${fmt(principal)}`;
+  const gst = Math.round(principal * 0.18 * 100) / 100;
+  const payable = Math.round((principal + gst) * 100) / 100;
+  return (
+    <span className="block">
+      <span className="block">₹{fmt(payable)}</span>
+      <span className="mt-0.5 block text-[10px] font-normal text-muted-foreground">
+        ₹{fmt(principal)} + 18% GST ₹{fmt(gst)}
+      </span>
+    </span>
+  );
+}
+
 /** Term fees × level duration table — flat, no card wrapper. */
 function LevelRecurringFeesBreakdown({ payroll }: { payroll: any }) {
   const termFees = Number(payroll?.monthlyFee ?? 0);
@@ -224,9 +253,24 @@ function ProgramSection({
         {program.program?.name || "Program"}
       </div>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <FeeCell label="Franchise Fee" value={`₹${fmt(program.franchiseFee)}`} />
+        <FeeCell
+          label="Franchise Fee"
+          value={renderGstAwareFeeValue({
+            principal: Number(program.franchiseFee ?? 0),
+            inclusive: program.gstFranchiseFee !== false,
+            fmt,
+          })}
+        />
+        {/* Kit cost is GST-exempt per business rule; render principal as-is. */}
         <FeeCell label="Kit Cost" value={`₹${fmt(program.kitCost)}`} />
-        <FeeCell label="Material Cost" value={`₹${fmt(program.materialCost)}`} />
+        <FeeCell
+          label="Material Cost"
+          value={renderGstAwareFeeValue({
+            principal: Number(program.materialCost ?? 0),
+            inclusive: program.gstMaterialCost !== false,
+            fmt,
+          })}
+        />
         <FeeCell
           label="Installment"
           value={

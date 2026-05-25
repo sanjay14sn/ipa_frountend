@@ -117,6 +117,18 @@ function formatFranchiseFee(
   return `${money(payable.base)} + ${GST_RATE_LABEL} (${money(payable.payable)} payable)`;
 }
 
+/** Same shape as `formatFranchiseFee` but reads the material-cost GST flag. */
+function formatMaterialCharges(
+  data: Pick<AgreementScheduleBView, "materialCost" | "gstMaterialCost">,
+): string {
+  const inclusive = data.gstMaterialCost !== false;
+  if (inclusive) {
+    return `${money(data.materialCost)} (GST inclusive)`;
+  }
+  const payable = getFranchiseFeePayable(data.materialCost, false);
+  return `${money(payable.base)} + ${GST_RATE_LABEL} (${money(payable.payable)} payable)`;
+}
+
 function prettifyToken(value: string | null | undefined): string {
   if (!value) return "-";
   return value
@@ -1008,10 +1020,7 @@ function ScheduleBCard({
                 "Registration charges",
                 money(data.kitCost),
               ],
-              [
-                "Material charges",
-                `${money(data.materialCost)}${data.gstMaterialCost ? " (GST included)" : ""}`,
-              ],
+              ["Material charges", formatMaterialCharges(data)],
             ]}
           />
           <DetailList
