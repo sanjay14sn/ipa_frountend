@@ -247,6 +247,10 @@ export default function UnifiedMaterialRequestDialog({
 
   const handleContinue = async () => {
     const totalAmount = preview?.totalAmount ?? 0;
+    // `preview.gstAmount` is the GST portion the backend computed in
+    // `previewUnified`; pass it along so the payment row records it
+    // (the order doesn't exist yet — created post-verify).
+    const goodsGstAmount = preview?.gstAmount;
     setIsSubmitting(true);
     try {
       const result = await initiateOrderPayment({
@@ -262,6 +266,7 @@ export default function UnifiedMaterialRequestDialog({
         notes: undefined,
         paymentRecordId: undefined,
         totalAmount,
+        goodsGstAmount,
       });
       onPaymentInitiated(result);
       onClose();

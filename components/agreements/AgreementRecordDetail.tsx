@@ -598,26 +598,47 @@ export function AgreementRecordDetail({
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {receivablePaymentItems.map((item) => (
-                              <TableRow key={item.receivableItemId}>
-                                <TableCell>
-                                  <div className="font-medium">{item.label}</div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {prettifyToken(item.kind)}
-                                  </div>
-                                </TableCell>
-                                <TableCell>{fmtDate(item.paidAt)}</TableCell>
-                                <TableCell>{item.paymentId ?? "-"}</TableCell>
-                                <TableCell>
-                                  <Badge variant={statusVariant(item.status)}>
-                                    {prettifyToken(item.status)}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="text-right font-medium">
-                                  {money(item.amount)}
-                                </TableCell>
-                              </TableRow>
-                            ))}
+                            {receivablePaymentItems.map((item) => {
+                              // Show payable (principal + GST) as the primary
+                              // number — matches what was actually charged via
+                              // Razorpay. Mirrors the inline split used in
+                              // InstallmentSummaryCard ItemRows.
+                              const principal =
+                                item.principalAmount ?? item.amount;
+                              const gst = item.gstAmount ?? 0;
+                              const payable =
+                                item.payableAmount ?? item.amount;
+                              const showSplit =
+                                item.isGstInclusive === false && gst > 0;
+                              return (
+                                <TableRow key={item.receivableItemId}>
+                                  <TableCell>
+                                    <div className="font-medium">{item.label}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {prettifyToken(item.kind)}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{fmtDate(item.paidAt)}</TableCell>
+                                  <TableCell>{item.paymentId ?? "-"}</TableCell>
+                                  <TableCell>
+                                    <Badge variant={statusVariant(item.status)}>
+                                      {prettifyToken(item.status)}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right font-medium">
+                                    <div className="flex flex-col items-end gap-0.5">
+                                      <span>{money(payable)}</span>
+                                      {showSplit ? (
+                                        <span className="text-[11px] font-normal text-muted-foreground">
+                                          {money(principal)} + {GST_RATE_LABEL}{" "}
+                                          {money(gst)}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </div>

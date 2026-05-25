@@ -391,6 +391,13 @@ export interface InitiateOrderPaymentDto {
   notes?: string;
   paymentRecordId?: number;
   totalAmount: number;
+  /**
+   * GST (18%) portion of `totalAmount`, taken from `previewUnified.gstAmount`.
+   * Forwarded to the backend at initiate-time so the payment row gets
+   * `goodsGstAmount` populated (the order doesn't exist yet — it's created
+   * after Razorpay verify, so the backend can't look it up).
+   */
+  goodsGstAmount?: number;
 }
 
 export interface OrderPaymentResponse {
@@ -1173,6 +1180,10 @@ export async function initiateOrderPayment(
   const response = await api.post("/billing/payment/initiate", {
     type: "ORDER_PAYMENT",
     amount: paymentData.totalAmount,
+    // `goodsGstAmount` is the GST portion of the total; sent so the payment
+    // row records it (the order doesn't exist at this point, so the server
+    // can't look it up like agreement/receivable flows do).
+    goodsGstAmount: paymentData.goodsGstAmount,
     acquirerData: {
       studentIds: paymentData.studentIds,
       instructorIds: paymentData.instructorIds,
