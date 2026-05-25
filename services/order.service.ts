@@ -638,6 +638,12 @@ function normalizeOrder(row: any): OrderData {
     totalStudents,
     totalInstructors,
     totalAmount: toCurrencyString(row?.totalAmount),
+    subtotalAmount:
+      row?.subtotalAmount != null ? toCurrencyString(row.subtotalAmount) : null,
+    gstAmount:
+      row?.gstAmount != null ? toCurrencyString(row.gstAmount) : null,
+    isGstInclusive:
+      row?.isGstInclusive != null ? Boolean(row.isGstInclusive) : undefined,
     status,
     adminStatus: row?.adminStatus ?? undefined,
     franchiseeStatus: row?.franchiseeStatus ?? undefined,
@@ -696,6 +702,12 @@ function normalizeOrder(row: any): OrderData {
               contact: p.contact != null ? String(p.contact) : null,
               fee: p.fee != null ? Number(p.fee) : null,
               tax: p.tax != null ? Number(p.tax) : null,
+              gatewayFeeTaxAmount:
+                p.gatewayFeeTaxAmount != null
+                  ? Number(p.gatewayFeeTaxAmount)
+                  : null,
+              goodsGstAmount:
+                p.goodsGstAmount != null ? Number(p.goodsGstAmount) : null,
               acquirerData: cloneAcquirerDataJson(p.acquirerData),
             };
           })()
