@@ -921,3 +921,58 @@ export async function getAdminCIDetails(
     meta: { total, page: pageNum, limit: lim, totalPages },
   };
 }
+
+// ---------------------------------------------------------------------------
+// Setup Existing Course Instructor (admin back-fill wizard)
+// ---------------------------------------------------------------------------
+
+export interface SetupExistingCITrainingPackage {
+  name: string;
+  code: string;
+  description?: string;
+  packageOrder: number;
+  fee: number;
+  trainingLevelIds: number[];
+  paid: boolean;
+}
+
+export interface SetupExistingCIPayload {
+  franchiseId: string;
+  programId: number;
+  ci: {
+    name: string;
+    dob: string;
+    phone: string;
+    email: string;
+    address: string;
+    city: string;
+    state?: string;
+    bloodGroup: string;
+    education: string;
+    occupation: string;
+    reference: string;
+  };
+  validity: { validFrom: string; validUntil: string };
+  agreementSignedAt: string;
+  completedThrough: number | null;
+  trainingPackages: SetupExistingCITrainingPackage[];
+}
+
+export interface SetupExistingCIResponse {
+  courseInstructorId: number;
+  instructorCode: string;
+  agreementId: number;
+  assignedPackageIds: number[];
+}
+
+/**
+ * Admin one-shot: create an existing CI with back-signed agreement,
+ * issued credentials, and training packages whose completion + paid
+ * state is pre-populated per the matrix in the wizard.
+ */
+export async function setupExistingCourseInstructor(
+  payload: SetupExistingCIPayload,
+): Promise<SetupExistingCIResponse> {
+  const response = await api.post("/admin/ci-setup/existing", payload);
+  return unwrapData<SetupExistingCIResponse>(response);
+}
