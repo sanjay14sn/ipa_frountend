@@ -5,8 +5,43 @@ import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 import type { TrainingLevel } from "@/services/training-level.service";
+
+/**
+ * Single-cell radio-styled toggle. Visually matches shadcn RadioGroupItem
+ * (round border + dot when selected) but acts as a binary on/off toggle
+ * — needed for the Completed column where each row's state is independent.
+ */
+function CompletedRadioToggle({
+  checked,
+  onToggle,
+  ariaLabel,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+  ariaLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      onClick={onToggle}
+      className={cn(
+        "relative inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-background ring-offset-background transition-colors",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "hover:border-primary/80",
+      )}
+    >
+      {checked ? (
+        <span aria-hidden className="block h-2 w-2 rounded-full bg-primary" />
+      ) : null}
+    </button>
+  );
+}
 
 export type ApprovalPackageForm = {
   name: string;
@@ -281,12 +316,13 @@ export function TrainingPackageMatrix({
                 >
                   {showCompletionColumn && (
                     <td className="px-3 py-2 text-center">
-                      <Checkbox
-                        checked={isCompleted}
-                        onCheckedChange={(checked) =>
-                          setLevelCompleted(level, checked === true)
-                        }
-                      />
+                      <div className="flex justify-center">
+                        <CompletedRadioToggle
+                          checked={isCompleted}
+                          onToggle={() => setLevelCompleted(level, !isCompleted)}
+                          ariaLabel={`Mark ${level.name || `Level ${level.displayOrder}`} as completed`}
+                        />
+                      </div>
                     </td>
                   )}
                   <td className="px-3 py-2 font-medium">
@@ -299,13 +335,12 @@ export function TrainingPackageMatrix({
                       key={`level-${level.id}-pkg-${pkg.packageOrder}`}
                       className="px-2 py-2 text-center"
                     >
-                      <div className="flex justify-center">
-                        <Checkbox
-                          checked={pkg.trainingLevelIds.includes(level.id)}
-                          onCheckedChange={() => toggleLevelInMatrix(packageIndex, level.id)}
-                          aria-label={`Assign ${level.name || `Level ${level.displayOrder}`} to ${pkg.code || `Package ${packageIndex + 1}`}`}
-                        />
-                      </div>
+                      <input
+                        type="checkbox"
+                        checked={pkg.trainingLevelIds.includes(level.id)}
+                        onChange={() => toggleLevelInMatrix(packageIndex, level.id)}
+                        className="h-4 w-4"
+                      />
                     </td>
                   ))}
                 </tr>
