@@ -104,6 +104,7 @@ export default function SetupExistingCIDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [franchiseId, setFranchiseId] = useState<string>("");
+  const [programId, setProgramId] = useState<number | null>(null);
   const [ciData, setCiData] = useState<CIPersonal>(emptyCI);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -131,15 +132,22 @@ export default function SetupExistingCIDialog({
     [franchisesQuery.data, franchiseId],
   );
 
-  const programId: number | null = useMemo(() => {
-    const agreementProg = selectedFranchise?.agreements?.[0]?.programId;
-    if (typeof agreementProg === "number") return agreementProg;
-    return null;
-  }, [selectedFranchise]);
-
-  const programName: string | null = useMemo(() => {
-    const a = selectedFranchise?.agreements?.[0] as any;
-    return (a?.programName as string | undefined) ?? (a?.program?.name as string | undefined) ?? null;
+  // Programs the admin can pick — one entry per program the franchise has a
+  // currently valid agreement for (status `Valid` or legacy `Signed`).
+  const programOptions = useMemo<Array<{ id: number; name: string }>>(() => {
+    const agreements = selectedFranchise?.agreements ?? [];
+    const seen = new Map<number, string>();
+    for (const a of agreements) {
+      const status = (a.status ?? "").trim();
+      if (status !== "Valid" && status !== "Signed") continue;
+      const pid = a.programId;
+      if (typeof pid !== "number") continue;
+      if (seen.has(pid)) continue;
+      const pname =
+        a.programName ?? (a as any).program?.name ?? `Program #${pid}`;
+      seen.set(pid, pname);
+    }
+    return [...seen.entries()].map(([id, name]) => ({ id, name }));
   }, [selectedFranchise]);
 
   const levelsQuery = useQuery({
@@ -158,6 +166,19 @@ export default function SetupExistingCIDialog({
     [levelsQuery.data],
   );
 
+  // When the franchise changes, drop the selected program and either auto-pick
+  // (if exactly one option) or force the admin to choose.
+  useEffect(() => {
+    if (programOptions.length === 1) {
+      setProgramId(programOptions[0].id);
+    } else if (
+      programId != null &&
+      !programOptions.some((p) => p.id === programId)
+    ) {
+      setProgramId(null);
+    }
+  }, [programOptions, programId]);
+
   // Reset state when dialog closes
   useEffect(() => {
     if (open) return;
@@ -166,6 +187,7 @@ export default function SetupExistingCIDialog({
     setLoading(false);
     setErrors({});
     setFranchiseId("");
+    setProgramId(null);
     setCiData(emptyCI);
     setValidFrom(today);
     setValidUntil(oneYearLater);
@@ -180,9 +202,13 @@ export default function SetupExistingCIDialog({
   const validateStep = (step: number): boolean => {
     const e: Record<string, string> = {};
     if (step === 1) {
-      if (!franchiseId) e.franchiseId = "Select a franchise";
-      else if (!programId) {
-        e.franchiseId = "Selected franchise has no active program — run Setup Existing Franchise first";
+      if (!franchiseId) {
+        e.franchiseId = "Select a franchise";
+      } else if (programOptions.length === 0) {
+        e.programId =
+          "Selected franchise has no valid program agreements — run Setup Existing Franchise first";
+      } else if (!programId) {
+        e.programId = "Select a program";
       }
     }
     if (step === 2) {
@@ -316,13 +342,49 @@ export default function SetupExistingCIDialog({
             </Select>
           </DialogFormField>
           {selectedFranchise && (
-            <div className="rounded-md border bg-muted/30 p-3 text-sm">
-              <div>
-                <strong>Program:</strong> {programName ?? "(none — pick another franchise)"}
-              </div>
-              <div>
-                <strong>State:</strong> {selectedFranchise.state ?? "—"}
-              </div>
+            <DialogFormField
+              id="programId"
+              label="Program"
+              required
+              error={errors.programId}
+              hint={
+                programOptions.length === 0
+                  ? "This franchise has no valid program agreements. Set one up via Setup Existing Franchise first."
+                  : programOptions.length === 1
+                    ? "Auto-selected — this franchise has one valid program agreement."
+                    : "Pick the program this CI will teach. Only programs the franchise has a Valid agreement for are listed."
+              }
+            >
+              <Select
+                value={programId != null ? String(programId) : ""}
+                onValueChange={(v) => {
+                  setProgramId(v ? Number(v) : null);
+                  if (errors.programId) setErrors((e) => ({ ...e, programId: "" }));
+                }}
+                disabled={programOptions.length === 0}
+              >
+                <SelectTrigger className={cn(errors.programId && errorClass)}>
+                  <SelectValue
+                    placeholder={
+                      programOptions.length === 0
+                        ? "No valid programs"
+                        : "Select program"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {programOptions.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </DialogFormField>
+          )}
+          {selectedFranchise && (
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              <strong>State:</strong> {selectedFranchise.state ?? "—"}
             </div>
           )}
         </div>
