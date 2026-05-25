@@ -1045,31 +1045,57 @@ function ScheduleBCard({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {([
-                  ["Level 1", data.level1],
-                  ["Level 2 onwards", data.level2],
-                ] as const).map(([label, row]) => {
+                {(
+                  [
+                    ["Level 1", data.level1],
+                    ["Level 2 onwards", data.level2],
+                  ] as const
+                ).map(([label, row]) => {
                   const level = row as AgreementScheduleBView["level1"];
+                  const exclusive = !data.gstRoyaltyInclusive;
+                  // When the breakup is GST-exclusive, the displayed cells are
+                  // net values — show "+ 18% GST ₹X" beneath each so the
+                  // franchisee can see the payable build-up at a glance.
+                  const gstFor = (n: number) =>
+                    Math.round(n * 0.18 * 100) / 100;
+                  const renderCell = (value: number) => (
+                    <span className="block tabular-nums">
+                      <span className="block">{money(value)}</span>
+                      {exclusive && value > 0 ? (
+                        <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
+                          + 18% GST {money(gstFor(value))}
+                        </span>
+                      ) : null}
+                    </span>
+                  );
                   return (
                     <TableRow key={label}>
-                      <TableCell className="font-medium">{label}</TableCell>
-                      <TableCell className="text-right">{level.months} months</TableCell>
-                      <TableCell className="text-right">{money(level.termFees)}</TableCell>
-                      <TableCell className="text-right">
-                        {money(level.franchiseShare)}
+                      <TableCell className="font-medium align-top">{label}</TableCell>
+                      <TableCell className="text-right align-top">
+                        {level.months} months
                       </TableCell>
-                      <TableCell className="text-right">{money(level.ciShare)}</TableCell>
-                      <TableCell className="text-right">{money(level.ipaShare)}</TableCell>
+                      <TableCell className="text-right align-top">
+                        {renderCell(level.termFees)}
+                      </TableCell>
+                      <TableCell className="text-right align-top">
+                        {renderCell(level.franchiseShare)}
+                      </TableCell>
+                      <TableCell className="text-right align-top">
+                        {renderCell(level.ciShare)}
+                      </TableCell>
+                      <TableCell className="text-right align-top">
+                        {renderCell(level.ipaShare)}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
               </TableBody>
             </Table>
-            {data.gstRoyaltyInclusive ? (
-              <p className="mt-3 text-xs text-muted-foreground">
-                Royalty breakup is shown with GST-inclusive values.
-              </p>
-            ) : null}
+            <p className="mt-3 text-xs text-muted-foreground">
+              {data.gstRoyaltyInclusive
+                ? "Values shown include 18% GST."
+                : "Values shown exclude GST. 18% GST is added to each amount on payment."}
+            </p>
           </CardContent>
         </Card>
 

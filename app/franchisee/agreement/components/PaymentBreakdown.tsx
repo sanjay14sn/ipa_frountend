@@ -1,3 +1,4 @@
+import { Layers, Wallet } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -7,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
 import type {
   ReceivableCompactSummary,
@@ -36,7 +38,7 @@ function getProgramFromPayroll(payroll: any) {
   return payroll?.program ?? null;
 }
 
-/** Level 1 and first Level 2+ row durations from program streams (matches invoice: royalty × duration per level). */
+/** Level 1 and first Level 2+ row durations from program streams. */
 function getRoyaltyDurationsMonths(program: any): { l1: number; l2: number } {
   const streams = program?.streams;
   if (!Array.isArray(streams) || streams.length === 0) {
@@ -81,41 +83,71 @@ function fmtMoney(x: number) {
   return x.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
-/** Term fees (monthly fee), CI share, franchise share & royalty × level duration — comparison table. */
+function FeeCell({
+  label,
+  value,
+  className = "",
+}: {
+  label: string;
+  value: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {label}
+      </p>
+      <div className="mt-1 text-sm font-semibold tabular-nums text-card-foreground">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+/** Term fees × level duration table — flat, no card wrapper. */
 function LevelRecurringFeesBreakdown({ payroll }: { payroll: any }) {
   const termFees = Number(payroll?.monthlyFee ?? 0);
   const ci = Number(payroll?.ciShare ?? 0);
   const franchise = Number(payroll?.franchiseShare ?? 0);
   const royalty = Number(payroll?.royalty ?? 0);
+  // Only royalty carries a GST flag on the agreement; the other recurring
+  // fees don't get a 1.18 surcharge in the pricing model (see
+  // order-pricing.service: only royalty / materialCost are multiplied).
+  const royaltyGstExclusive = payroll?.gstRoyalty === false;
 
   const program = getProgramFromPayroll(payroll);
   const { l1, l2 } = getRoyaltyDurationsMonths(program);
 
-  const rows: { label: string; amount: number }[] = [
+  const rows: { label: string; amount: number; hasGst?: boolean }[] = [
     { label: "Term fees", amount: termFees },
     { label: "CI share", amount: ci },
     { label: "Franchise share", amount: franchise },
-    { label: "Royalty", amount: royalty },
+    { label: "Royalty", amount: royalty, hasGst: royaltyGstExclusive },
   ];
 
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+
   return (
-    <div className="col-span-2 space-y-2 rounded-xl border border-border bg-accent/30 p-3 text-sm">
-      <p className="font-medium text-card-foreground">Per-level recurring fees</p>
-      <p className="text-xs text-muted-foreground">
-        Term fees (monthly fee), CI share, franchise share and royalty use the monthly rate × the
-        months shown in each column (total for that level period).
+    <div className="space-y-2">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        Per-level recurring fees
       </p>
       <p className="text-xs text-muted-foreground">
-        Level 2 onwards: same per-month amounts for each Level 2+ enrollment over that level&apos;s
-        duration.
+        Term fees (monthly fee), CI share, franchise share and royalty use the
+        monthly rate × the months shown in each column. Level 2 onwards: same
+        per-month amounts for each Level 2+ enrollment.
       </p>
-      <div className="overflow-x-auto rounded-lg border border-border bg-card/70">
+      <div className="overflow-x-auto rounded-lg border border-border">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-[40%] text-card-foreground">Fee</TableHead>
-              <TableHead className="text-right text-card-foreground">Level 1</TableHead>
-              <TableHead className="text-right text-card-foreground">
+              <TableHead className="w-[40%] text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Fee
+              </TableHead>
+              <TableHead className="text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Level 1
+              </TableHead>
+              <TableHead className="text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 Level 2 onwards
               </TableHead>
             </TableRow>
@@ -133,19 +165,81 @@ function LevelRecurringFeesBreakdown({ payroll }: { payroll: any }) {
                 </span>
               </TableCell>
             </TableRow>
-            {rows.map((r) => (
-              <TableRow key={r.label}>
-                <TableCell className="text-muted-foreground">{r.label}</TableCell>
-                <TableCell className="text-right font-semibold text-card-foreground">
-                  ₹{fmtMoney(r.amount * l1)}
-                </TableCell>
-                <TableCell className="text-right font-semibold text-card-foreground">
-                  ₹{fmtMoney(r.amount * l2)}
-                </TableCell>
-              </TableRow>
-            ))}
+            {rows.map((r) => {
+              const l1Net = r.amount * l1;
+              const l2Net = r.amount * l2;
+              const l1Gst = r.hasGst ? round2(l1Net * 0.18) : 0;
+              const l2Gst = r.hasGst ? round2(l2Net * 0.18) : 0;
+              const l1Payable = round2(l1Net + l1Gst);
+              const l2Payable = round2(l2Net + l2Gst);
+              return (
+                <TableRow key={r.label}>
+                  <TableCell className="text-muted-foreground align-top">
+                    {r.label}
+                  </TableCell>
+                  <TableCell className="text-right align-top tabular-nums">
+                    <span className="block font-semibold text-card-foreground">
+                      ₹{fmtMoney(r.hasGst ? l1Payable : l1Net)}
+                    </span>
+                    {r.hasGst ? (
+                      <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
+                        ₹{fmtMoney(l1Net)} + 18% GST ₹{fmtMoney(l1Gst)}
+                      </span>
+                    ) : null}
+                  </TableCell>
+                  <TableCell className="text-right align-top tabular-nums">
+                    <span className="block font-semibold text-card-foreground">
+                      ₹{fmtMoney(r.hasGst ? l2Payable : l2Net)}
+                    </span>
+                    {r.hasGst ? (
+                      <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
+                        ₹{fmtMoney(l2Net)} + 18% GST ₹{fmtMoney(l2Gst)}
+                      </span>
+                    ) : null}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
+      </div>
+    </div>
+  );
+}
+
+/** A single program's fee section. Used inline within the main card. */
+function ProgramSection({
+  program,
+  fmt,
+  isLast,
+}: {
+  program: any;
+  fmt: (n: number | string | undefined | null) => string;
+  isLast: boolean;
+}) {
+  return (
+    <div className={cn("p-4", !isLast && "border-b border-border")}>
+      <div className="mb-3 flex items-center gap-2 text-sm font-medium text-card-foreground">
+        <Layers className="h-4 w-4 text-muted-foreground" />
+        {program.program?.name || "Program"}
+      </div>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <FeeCell label="Franchise Fee" value={`₹${fmt(program.franchiseFee)}`} />
+        <FeeCell label="Kit Cost" value={`₹${fmt(program.kitCost)}`} />
+        <FeeCell label="Material Cost" value={`₹${fmt(program.materialCost)}`} />
+        <FeeCell
+          label="Installment"
+          value={
+            typeof program.installment === "boolean"
+              ? program.installment
+                ? "Yes"
+                : "No"
+              : `₹${fmt(program.installment)}`
+          }
+        />
+      </div>
+      <div className="mt-4 border-t border-border pt-4">
+        <LevelRecurringFeesBreakdown payroll={program} />
       </div>
     </div>
   );
@@ -162,10 +256,8 @@ export default function PaymentBreakdown({
       ? n.toLocaleString()
       : Number(n || 0).toLocaleString();
 
-  // Check if paymentDetails is an array (per-program) or single object (legacy)
   const isPerProgram = Array.isArray(paymentDetails);
 
-  // For summary, only sum the currency values, not percentages
   const installmentAmount = (v: unknown) =>
     typeof v === "number" && Number.isFinite(v) ? v : 0;
 
@@ -178,8 +270,6 @@ export default function PaymentBreakdown({
           materialCost: (acc.materialCost || 0) + (p.materialCost || 0),
           installment:
             (acc.installment || 0) + installmentAmount(p.installment),
-          // A combined payable is only meaningful when every program shares the
-          // same GST treatment; mixed inclusive/exclusive sums would mislead.
           gstFranchiseFee:
             acc.gstFranchiseFee === undefined
               ? p.gstFranchiseFee ?? null
@@ -203,12 +293,9 @@ export default function PaymentBreakdown({
     summary.gstFranchiseFee,
   );
 
-  // Installment-aware "pay now" — when an EMI plan is in place the first
-  // payable is just the down payment (or first installment), not the whole
-  // franchise fee. The full fee + GST stays informational below.
+  // Installment-aware "pay now"
   const isFullSummary =
-    installmentSummary != null &&
-    "items" in (installmentSummary as object);
+    installmentSummary != null && "items" in (installmentSummary as object);
   const hasPlan =
     installmentSummary != null &&
     (!("hasPlan" in installmentSummary) || installmentSummary.hasPlan);
@@ -222,7 +309,8 @@ export default function PaymentBreakdown({
     ? (installmentSummary as ReceivableInstallmentSummary).totals.payableAmount
     : null;
   const installmentCount = isFullSummary
-    ? (installmentSummary as ReceivableInstallmentSummary).totals.installmentCount
+    ? (installmentSummary as ReceivableInstallmentSummary).totals
+        .installmentCount
     : null;
   const showInitialPayable =
     hasPlan && initialPayableItem != null && initialPayableItem.paidAt == null;
@@ -239,125 +327,56 @@ export default function PaymentBreakdown({
     ? (initialPayableItem!.isGstInclusive ?? true)
     : true;
 
+  const programs: any[] = isPerProgram
+    ? paymentDetails
+    : paymentDetails
+      ? [paymentDetails]
+      : [];
+
+  const restEmiCount = showInitialPayable
+    ? Math.max(
+        0,
+        (installmentCount ?? 0) -
+          (initialPayableItem!.kind === "installment" ? 1 : 0),
+      )
+    : 0;
+
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <h3 className="mb-3 border-b border-border pb-2 text-base font-medium text-card-foreground">
-        Payment Breakdown
-      </h3>
-
-      {/* Per-Program Breakdown */}
-      {isPerProgram && paymentDetails.length > 0 ? (
-        <div className="mb-4 space-y-3">
-          <p className="mb-2 text-sm font-medium text-muted-foreground">
-            {paymentDetails.length > 1
-              ? "Program-wise Breakdown:"
-              : "Program Breakdown:"}
-          </p>
-          {paymentDetails.map((program: any, idx: number) => (
-            <div
-              key={idx}
-              className="rounded-xl border border-border bg-accent/30 p-3"
-            >
-              <h4 className="mb-3 text-sm font-medium text-card-foreground">
-                {program.program?.name ||
-                  `Program ${idx + 1}`}
-              </h4>
-              <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Franchise Fee:</span>
-                  <span className="font-semibold text-card-foreground">
-                    ₹{fmt(program.franchiseFee)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Kit Cost:</span>
-                  <span className="font-semibold text-card-foreground">
-                    ₹{fmt(program.kitCost)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Material Cost:</span>
-                  <span className="font-semibold text-card-foreground">
-                    ₹{fmt(program.materialCost)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Installment:</span>
-                  <span className="font-semibold text-card-foreground">
-                    {typeof program.installment === "boolean"
-                      ? program.installment
-                        ? "Yes"
-                        : "No"
-                      : "\u20B9" + fmt(program.installment)}
-                  </span>
-                </div>
-                <LevelRecurringFeesBreakdown payroll={program} />
-              </div>
-            </div>
-          ))}
-          {paymentDetails.length > 1 && (
-            <div className="mt-3 border-t border-border pt-3">
-              <p className="text-sm font-medium text-card-foreground">
-                Combined Summary:
-              </p>
-            </div>
-          )}
-        </div>
-      ) : !isPerProgram && paymentDetails ? (
-        /* Legacy single object breakdown */
-        <div className="mb-4 space-y-3">
-          <p className="mb-2 text-sm font-medium text-muted-foreground">
-            Program Breakdown:
-          </p>
-          <div className="rounded-xl border border-border bg-accent/30 p-3">
-            <h4 className="mb-3 text-sm font-medium text-card-foreground">
-              {paymentDetails.program?.name ||
-                "Program"}
-            </h4>
-            <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Franchise Fee:</span>
-                <span className="font-semibold text-card-foreground">
-                  ₹{fmt(paymentDetails.franchiseFee)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Kit Cost:</span>
-                <span className="font-semibold text-card-foreground">
-                  ₹{fmt(paymentDetails.kitCost)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Material Cost:</span>
-                <span className="font-semibold text-card-foreground">
-                  ₹{fmt(paymentDetails.materialCost)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Installment:</span>
-                <span className="font-semibold text-card-foreground">
-                  {typeof paymentDetails.installment === "boolean"
-                    ? paymentDetails.installment
-                      ? "Yes"
-                      : "No"
-                    : "\u20B9" + fmt(paymentDetails.installment)}
-                </span>
-              </div>
-              <LevelRecurringFeesBreakdown payroll={paymentDetails} />
-            </div>
+    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      {/* Header */}
+      <div className="border-b border-border bg-accent/30 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-base font-medium text-card-foreground">
+            <Wallet className="h-4 w-4" />
+            Payment Breakdown
           </div>
+          {programs.length > 1 ? (
+            <span className="text-xs text-muted-foreground">
+              {programs.length} programs
+            </span>
+          ) : null}
         </div>
-      ) : null}
+      </div>
 
-      {/* Pay-now (installment-aware) */}
+      {/* Program sections — flat, dividers only */}
+      {programs.map((program, idx) => (
+        <ProgramSection
+          key={idx}
+          program={program}
+          fmt={fmt}
+          isLast={idx === programs.length - 1}
+        />
+      ))}
+
+      {/* Pay now — inline footer strip, no nested card */}
       {showInitialPayable ? (
-        <div className="mt-4 flex flex-col gap-3 rounded-xl border-2 border-primary/50 bg-primary/5 p-4">
+        <div className="border-t border-border bg-primary/5 p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
                 Pay now
               </p>
-              <p className="mt-1 text-sm font-medium text-card-foreground">
+              <p className="mt-0.5 text-sm font-medium text-card-foreground">
                 {initialPayableItem!.label}
                 {!initialPayableIsInclusive && initialPayableGst > 0 ? (
                   <span className="ml-2 text-xs font-normal text-muted-foreground">
@@ -366,64 +385,57 @@ export default function PaymentBreakdown({
                   </span>
                 ) : null}
               </p>
+              {planPrincipal != null && initialPayablePrincipal != null ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Balance ₹
+                  {fmt(
+                    (planPayableTotal ?? planPrincipal) -
+                      (initialPayableAmount ?? 0),
+                  )}{" "}
+                  spread across {restEmiCount} monthly installment
+                  {restEmiCount === 1 ? "" : "s"}.
+                </p>
+              ) : null}
             </div>
-            <span className="text-2xl font-semibold text-primary">
+            <span className="text-2xl font-semibold tabular-nums text-primary">
               ₹{fmt(initialPayableAmount)}
             </span>
           </div>
-          {planPrincipal != null && initialPayablePrincipal != null ? (
-            <p className="border-t border-primary/20 pt-2 text-xs text-muted-foreground">
-              Balance ₹{fmt(
-                (planPayableTotal ?? planPrincipal) -
-                  (initialPayableAmount ?? 0),
-              )}{" "}
-              spread across{" "}
-              {Math.max(
-                0,
-                (installmentCount ?? 0) -
-                  (initialPayableItem!.kind === "installment" ? 1 : 0),
-              )}{" "}
-              monthly installment
-              {Math.max(
-                0,
-                (installmentCount ?? 0) -
-                  (initialPayableItem!.kind === "installment" ? 1 : 0),
-              ) === 1
-                ? ""
-                : "s"}
-              .
-            </p>
-          ) : null}
         </div>
       ) : null}
 
-      {/* Total franchise fee — informational */}
-      <div className="mt-4 flex flex-col gap-2 rounded-xl border border-border bg-accent/30 p-3">
+      {/* Total franchise fee — bottom summary strip */}
+      <div className="border-t border-border bg-muted/30 p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-card-foreground">
             {showInitialPayable ? "Total franchise fee" : "Franchise Fee"}
             {feePayable.inclusive ? (
-              <Badge variant="secondary">GST inclusive</Badge>
+              <Badge variant="secondary" className="font-normal">
+                GST inclusive
+              </Badge>
             ) : (
-              <Badge variant="outline">+{GST_RATE_LABEL}</Badge>
+              <Badge variant="outline" className="font-normal">
+                +{GST_RATE_LABEL}
+              </Badge>
             )}
           </span>
           <span
-            className={
+            className={cn(
+              "tabular-nums",
               showInitialPayable
                 ? "text-lg font-semibold text-card-foreground"
-                : "text-xl font-semibold text-primary"
-            }
+                : "text-xl font-semibold text-primary",
+            )}
           >
             ₹{fmt(feePayable.base)}
           </span>
         </div>
         {!feePayable.inclusive && feePayable.base > 0 ? (
-          <div className="flex flex-col gap-1 border-t border-border/60 pt-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-2 flex flex-col gap-1 border-t border-border/60 pt-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <span>
               +{GST_RATE_LABEL} (₹{fmt(feePayable.gst)})
             </span>
-            <span className="font-semibold text-card-foreground">
+            <span className="font-semibold tabular-nums text-card-foreground">
               {showInitialPayable ? "Total payable" : "Payable now"}: ₹
               {fmt(feePayable.payable)}
             </span>
