@@ -161,6 +161,7 @@ export function AgreementSwitcher() {
               </div>
               <LifecycleStatusBadge
                 status={row.lifecycleStatus}
+                signed={row.signed}
                 className="shrink-0"
               />
             </DropdownMenuItem>

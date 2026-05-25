@@ -1,3 +1,5 @@
+import { MapPin } from "lucide-react";
+
 interface LocationDetailsProps {
   franchiseData: any;
 }
@@ -5,27 +7,37 @@ interface LocationDetailsProps {
 export default function LocationDetails({
   franchiseData,
 }: LocationDetailsProps) {
+  const cityLine = [
+    [franchiseData.city, franchiseData.pincode].filter(Boolean).join(" - "),
+    franchiseData.state,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <h3 className="mb-3 border-b border-border pb-2 text-base font-medium text-card-foreground">
+    <section className="p-4">
+      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-card-foreground">
+        <MapPin className="h-4 w-4 text-muted-foreground" />
         Location Details
-      </h3>
-      <div className="space-y-3">
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <span className="mb-1 block text-sm font-medium text-muted-foreground">
-            Centre Address:
-          </span>
-          <p className="text-sm text-card-foreground">{franchiseData.address}</p>
-          <p className="text-sm text-muted-foreground">
-            {franchiseData.city} - {franchiseData.pincode}, {franchiseData.state}
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Centre Address
           </p>
+          <p className="mt-1 text-sm text-card-foreground">
+            {franchiseData.address}
+          </p>
+          {cityLine ? (
+            <p className="text-xs text-muted-foreground">{cityLine}</p>
+          ) : null}
         </div>
         {franchiseData.communicationAddress && (
           <div>
-            <span className="mb-1 block text-sm font-medium text-muted-foreground">
-              Communication Address:
-            </span>
-            <p className="text-sm text-card-foreground">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Communication Address
+            </p>
+            <p className="mt-1 text-sm text-card-foreground">
               {franchiseData.communicationAddress}
             </p>
             {franchiseData.communicationPincode ? (
@@ -36,6 +48,6 @@ export default function LocationDetails({
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }

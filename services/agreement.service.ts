@@ -308,6 +308,13 @@ export interface AgreementRecord extends AgreementTermsSnapshot {
     mail: string;
     phone: string;
     communicationAddress?: string | null;
+    /**
+     * Relative path to the franchisee's on-file signature (e.g.
+     * `agreement-signatures/ag-1-….svg`). Post-refactor the signature lives on
+     * the franchisee row; agreement detail responses join it through so the
+     * admin / franchisee modal can render the actual image.
+     */
+    franchiseeSignature?: string | null;
   } | null;
   payment?: AgreementPaymentDetail | null;
   program?: AgreementProgramDetail | null;
@@ -610,7 +617,10 @@ export async function getAgreementSwitcherAdmin(
 }
 
 export function agreementSignatureSrc(
-  record: Pick<AgreementRecord, "franchiseeSignatureUrl" | "franchiseeSignature">,
+  record: Pick<
+    AgreementRecord,
+    "franchiseeSignatureUrl" | "franchiseeSignature" | "franchisee"
+  >,
 ): string | null {
   const fromUrl = record.franchiseeSignatureUrl?.trim();
   let path: string | null = null;
@@ -622,7 +632,13 @@ export function agreementSignatureSrc(
           ? fromUrl
           : `/${fromUrl}`;
   } else {
-    path = storedSignatureToPublicPath(record.franchiseeSignature);
+    // Resolution order: legacy per-agreement path → joined franchisee.
+    // Post-refactor the signature lives on the franchisee row, so the
+    // franchisee join is the only populated source for newly-signed
+    // agreements.
+    path =
+      storedSignatureToPublicPath(record.franchiseeSignature) ??
+      storedSignatureToPublicPath(record.franchisee?.franchiseeSignature);
   }
   if (!path) return null;
   if (path.startsWith("http://") || path.startsWith("https://")) {

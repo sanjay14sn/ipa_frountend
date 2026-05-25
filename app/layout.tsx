@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Caveat } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { UserProvider } from "@/context/user-context";
@@ -6,6 +7,13 @@ import { NotificationProvider } from "@/context/notification-context";
 import QueryProvider from "@/components/providers/query-provider";
 import { ClientTelemetryProvider } from "@/components/providers/client-telemetry-provider";
 import { PointerEventsGuard } from "@/components/providers/pointer-events-guard";
+
+const caveat = Caveat({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-caveat",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Abacus Portal",
@@ -21,6 +29,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      className={caveat.variable}
       style={
         {
           "--font-fira-sans":

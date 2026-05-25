@@ -5,6 +5,12 @@ import type { AgreementLifecycleStatus } from "@/services/agreement.service";
 
 interface LifecycleStatusBadgeProps {
   status: AgreementLifecycleStatus;
+  /**
+   * The agreement's signed boolean. When `status === 'Approved' && signed`,
+   * the badge renders as "Signed · awaiting payment" (success tone) — a
+   * derived sub-state representing "signing done, payment is the only gate".
+   */
+  signed?: boolean;
   className?: string;
 }
 
@@ -26,7 +32,20 @@ const STATUS_TONE: Record<AgreementLifecycleStatus, StatusTone> = {
   Rejected: "destructive",
 };
 
-export function LifecycleStatusBadge({ status, className }: LifecycleStatusBadgeProps) {
+export function LifecycleStatusBadge({
+  status,
+  signed,
+  className,
+}: LifecycleStatusBadgeProps) {
+  if (status === "Approved" && signed) {
+    return (
+      <StatusBadge
+        tone="success"
+        label="Signed · awaiting payment"
+        className={className}
+      />
+    );
+  }
   return (
     <StatusBadge
       tone={STATUS_TONE[status] ?? "warning"}

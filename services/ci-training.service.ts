@@ -216,9 +216,22 @@ export async function signCIAgreement(agreementId: number, signaturePath: string
   await api.post(`/ci/agreement/${agreementId}/sign`, { signaturePath });
 }
 
-export async function signCIAgreementFile(agreementId: number, file: File): Promise<void> {
+export interface CIESignaturePayload {
+  svg: string;
+  method: "drawn" | "typed";
+  consentVersion: string;
+}
+
+export async function signCIAgreementWithESignature(
+  agreementId: number,
+  payload: CIESignaturePayload,
+): Promise<void> {
+  const blob = new Blob([payload.svg], { type: "image/svg+xml" });
+  const file = new File([blob], "signature.svg", { type: "image/svg+xml" });
   const form = new FormData();
   form.append("signature", file);
+  form.append("signatureMethod", payload.method);
+  form.append("consentVersion", payload.consentVersion);
   await api.post(`/ci/agreement/${agreementId}/sign`, form, {
     headers: { "Content-Type": "multipart/form-data" },
   });

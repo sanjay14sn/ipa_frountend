@@ -37,6 +37,7 @@ interface PaymentBreakdownProps {
    * to false so the franchisee onboarding page keeps the table.
    */
   hideRecurringFeesTable?: boolean;
+  className?: string;
 }
 
 const DEFAULT_L1_MONTHS = 4;
@@ -305,6 +306,7 @@ export default function PaymentBreakdown({
   paymentDetails,
   installmentSummary,
   hideRecurringFeesTable = false,
+  className,
 }: PaymentBreakdownProps) {
   if (!paymentDetails) return null;
 
@@ -399,7 +401,7 @@ export default function PaymentBreakdown({
     : 0;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+    <div className={`overflow-hidden rounded-xl border border-border bg-card shadow-sm${className ? ` ${className}` : ""}`}>
       {/* Header */}
       <div className="border-b border-border bg-accent/30 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">

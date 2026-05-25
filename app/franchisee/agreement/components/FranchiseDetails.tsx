@@ -1,79 +1,75 @@
+import { Building2 } from "lucide-react";
+
 interface FranchiseDetailsProps {
   franchiseData: any;
+}
+
+function Cell({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {label}
+      </p>
+      <div className="mt-1 text-sm text-card-foreground">{children}</div>
+    </div>
+  );
 }
 
 export default function FranchiseDetails({
   franchiseData,
 }: FranchiseDetailsProps) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <h3 className="mb-3 border-b border-border pb-2 text-base font-medium text-card-foreground">
+    <section className="p-4">
+      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-card-foreground">
+        <Building2 className="h-4 w-4 text-muted-foreground" />
         Franchise Details
-      </h3>
-      <div className="space-y-3">
-        <div>
-          <span className="mb-1 block text-sm font-medium text-muted-foreground">
-            Franchise Name:
-          </span>
-          <p className="text-base font-semibold text-card-foreground">
-            {franchiseData.name}
-          </p>
-        </div>
-        <div className="flex items-start justify-between gap-2">
-          <span className="text-sm font-medium text-muted-foreground">Code:</span>
-          <span className="rounded-md bg-muted px-2 py-1 font-mono text-sm text-card-foreground">
-            {franchiseData.franchiseCode}
-          </span>
-        </div>
-        <div className="flex items-start justify-between gap-2">
-          <span className="text-sm font-medium text-muted-foreground">Programs:</span>
-          <span className="text-sm text-card-foreground">{franchiseData.program}</span>
-        </div>
-        {franchiseData.franchiseType && (
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-medium text-muted-foreground">Type:</span>
-            <span className="text-sm text-card-foreground">
-              {franchiseData.franchiseType}
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Cell label="Franchise Name" className="sm:col-span-2 lg:col-span-1">
+          <span className="text-base font-semibold">{franchiseData.name}</span>
+        </Cell>
+        {franchiseData.franchiseCode && (
+          <Cell label="Code" className="sm:col-span-2 lg:col-span-2">
+            <span className="inline-flex max-w-full items-center rounded-md bg-muted px-2 py-0.5 font-mono text-xs">
+              <span className="truncate">{franchiseData.franchiseCode}</span>
             </span>
-          </div>
+          </Cell>
+        )}
+        {franchiseData.program && (
+          <Cell label="Programs">{franchiseData.program}</Cell>
+        )}
+        {franchiseData.franchiseType && (
+          <Cell label="Type">{franchiseData.franchiseType}</Cell>
         )}
         {franchiseData.reference && (
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-medium text-muted-foreground">
-              Reference:
-            </span>
-            <span className="text-sm text-card-foreground">
-              {franchiseData.reference}
-            </span>
-          </div>
+          <Cell label="Reference">{franchiseData.reference}</Cell>
         )}
         {franchiseData.date && (
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-medium text-muted-foreground">Applied:</span>
-            <span className="text-sm text-card-foreground">
-              {new Date(franchiseData.date).toLocaleDateString()}
-            </span>
-          </div>
+          <Cell label="Applied">
+            {new Date(franchiseData.date).toLocaleDateString()}
+          </Cell>
         )}
         {franchiseData.dob && (
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-medium text-muted-foreground">DOB:</span>
-            <span className="text-sm text-card-foreground">
-              {new Date(franchiseData.dob).toLocaleDateString()}
-            </span>
-          </div>
+          <Cell label="DOB">
+            {new Date(franchiseData.dob).toLocaleDateString()}
+          </Cell>
         )}
         {franchiseData.paymentDetails?.dateOfJoining && (
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-medium text-muted-foreground">DOJ:</span>
-            <span className="text-sm text-card-foreground">
-              {new Date(
-                franchiseData.paymentDetails.dateOfJoining,
-              ).toLocaleDateString()}
-            </span>
-          </div>
+          <Cell label="DOJ">
+            {new Date(
+              franchiseData.paymentDetails.dateOfJoining,
+            ).toLocaleDateString()}
+          </Cell>
         )}
       </div>
-    </div>
+    </section>
   );
 }

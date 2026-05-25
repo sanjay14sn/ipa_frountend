@@ -42,15 +42,18 @@ import {
   ArrowRight,
   Building2,
   CalendarDays,
+  Check,
   CreditCard,
   Download,
   ExternalLink,
   FileText,
   IndianRupee,
   Loader2,
+  Mail,
   MapPin,
   Menu,
   PenLine,
+  Phone,
   ShieldCheck,
   User,
 } from "lucide-react";
@@ -362,7 +365,7 @@ export function AgreementRecordDetail({
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-2xl text-card-foreground">
-                    {data.title || `Agreement #${data.id}`}
+                    {(data.title || `Agreement #${data.id}`).replace(/\s+[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i, "").trim()}
                   </h2>
                   {(() => {
                     const badge = agreementStatusBadge(data.status, data.signed);
@@ -443,258 +446,254 @@ export function AgreementRecordDetail({
           ) : null}
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid items-start gap-3 xl:grid-cols-12">
-            <OverviewPanel
-              className="xl:col-span-4"
-              icon={User}
-              title="Franchisee Information"
-              rows={[
-                ["Contact person", String(franchiseData.contactPerson ?? "-")],
-                ["Email", String(franchiseData.email ?? "-")],
-                ["Phone", String(franchiseData.phone ?? "-")],
-              ]}
-            />
-            <OverviewPanel
-              className="xl:col-span-4"
-              icon={MapPin}
-              title="Location Details"
-              rows={[
-                ["Centre address", String(franchiseData.address ?? "-")],
-                [
-                  "City / State",
-                  `${String(franchiseData.city ?? "-")}${
-                    franchiseData.state ? `, ${String(franchiseData.state)}` : ""
-                  }`,
-                ],
-                ["Communication", String(franchiseData.communicationAddress ?? "-")],
-              ]}
-            />
-            <OverviewPanel
-              className="xl:col-span-4"
-              icon={Building2}
-              title="Franchise Details"
-              rows={[
-                ["Franchise name", String(franchiseData.name ?? "-")],
-                ["Code", String(franchiseData.franchiseCode ?? "-")],
-                ["Program", String(franchiseData.program ?? "-")],
-                ["Type", String(franchiseData.franchiseType ?? "-")],
-                ["Applied", fmtDate(String(franchiseData.date ?? ""))],
-              ]}
-            />
-          </div>
+        <TabsContent value="overview" className="space-y-3">
+          {/* ── Top row: Franchisee | Centre | Franchise ── */}
+          {(() => {
+            const franchiseeName = String(data.franchisee?.name ?? franchiseData.contactPerson ?? "-");
+            const nameParts = franchiseeName.split(/\s+/).filter(Boolean);
+            const initials =
+              nameParts.length >= 2
+                ? (nameParts[0]![0]! + nameParts[1]![0]!).toUpperCase()
+                : franchiseeName.slice(0, 2).toUpperCase();
+            const sinceRaw = data.dateOfSigning ?? data.createdAt;
+            const sinceLabel = sinceRaw
+              ? (() => {
+                  try { return format(parseISO(sinceRaw), "MMM yyyy"); } catch { return null; }
+                })()
+              : null;
+            const franchiseStatus = data.franchise?.status;
+            const centreCity = data.franchise?.city ?? "";
+            const centreState = data.franchise?.state ?? "";
+            const centreAddress = [
+              data.franchise?.address ?? franchiseData.address,
+              centreCity,
+              centreState,
+            ].filter(Boolean).join(", ");
+            const commArea = String(data.franchisee?.communicationAddress ?? franchiseData.communicationAddress ?? "-");
+            const programTag = String(data.program?.name ?? data.programName ?? data.programs?.[0]?.name ?? "") || null;
+            const typeTag = String(data.franchise?.type ?? franchiseData.franchiseType ?? "") || null;
+            const lifecycleBadge = agreementStatusBadge(data.status, data.signed);
+            const createdSigned = !!(data.dateOfSigning);
+            const timeLeft = (() => {
+              if (!data.expiresAt) return "-";
+              try {
+                const ms = parseISO(data.expiresAt).getTime() - Date.now();
+                if (ms <= 0) return "Expired";
+                const months = Math.floor(ms / (1000 * 60 * 60 * 24 * 30.44));
+                if (months < 12) return `${months}m`;
+                const y = Math.floor(months / 12);
+                const m = months % 12;
+                return m > 0 ? `~${y}y ${m}m` : `~${y}y`;
+              } catch { return "-"; }
+            })();
+            return (
+              <>
+                {/* ── Top row: Franchise+Centre | Franchisee+Signature ── */}
+                <div className="grid gap-3 md:grid-cols-2">
 
-          <div className="grid items-stretch gap-3 xl:grid-cols-12">
-            <div className="h-full xl:col-span-8">
-              <PaymentBreakdown
-                paymentDetails={franchiseData.paymentDetails}
-                // Same per-level breakdown lives in the Schedule B tab
-                // (IPA share = royalty); skip it here to avoid duplication.
-                hideRecurringFeesTable
-              />
-            </div>
-
-            <div className="flex h-full flex-col gap-3 xl:col-span-4">
-              <Card className="flex flex-1 flex-col rounded-xl">
-                <CardHeader className="p-3 pb-2">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <ShieldCheck className="h-4 w-4" />
-                    Agreement lifecycle
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1 space-y-2 p-3 pt-0 text-sm">
-                  <Row label="Agreement ID" value={String(data.id)} />
-                  <Row label="Created" value={fmtDate(data.createdAt)} />
-                  <Row label="Last updated" value={fmtDate(data.updatedAt)} />
-                  <Row label="Date of signing" value={fmtDate(data.dateOfSigning)} />
-                  <Row
-                    label="Tenure"
-                    value={
-                      data.tenure != null
-                        ? `${data.tenure} month${data.tenure === 1 ? "" : "s"}`
-                        : "-"
-                    }
-                  />
-                  <Row label="Expires" value={fmtDate(data.expiresAt ?? null)} />
-                </CardContent>
-              </Card>
-
-              <Card className="flex flex-1 flex-col rounded-xl">
-                <CardHeader className="p-3 pb-2">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <PenLine className="h-4 w-4" />
-                    Franchisee signature
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-1 flex-col space-y-3 p-3 pt-0">
-                  <Row label="Date of signing" value={fmtDate(data.dateOfSigning)} />
-                  <Row label="Captured at" value={fmtDate(data.franchiseeSignedAt)} />
-                  {sigSrc ? (
-                    <div className="flex flex-1 flex-col space-y-2">
-                      <div className="flex flex-1 items-center justify-center overflow-hidden rounded-lg border bg-muted/30 px-4 py-5">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={sigSrc}
-                          alt="Franchisee signature"
-                          className="mx-auto max-h-32 w-auto max-w-full object-contain"
-                        />
-                      </div>
-                      <a
-                        href={sigSrc}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary inline-flex items-center gap-1 text-sm font-medium hover:underline"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        Open signature file
-                      </a>
-                    </div>
-                  ) : data.signed ? (
-                    <p className="flex flex-1 items-center text-sm text-muted-foreground">
-                      Signature on file (stored on the franchisee profile).
-                    </p>
-                  ) : (
-                    <p className="flex flex-1 items-center text-sm text-muted-foreground">
-                      Signature not yet captured.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          <Card className="rounded-xl">
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <CreditCard className="h-4 w-4" />
-                Payment details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              {!payment && receivablePaymentItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No payment linked.
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {payment ? (
-                    <>
-                      <div className="flex flex-col gap-3 rounded-xl border border-border bg-accent/30 p-4 sm:flex-row sm:items-end sm:justify-between">
-                        <div>
-                          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                            Amount received
-                          </p>
-                          <p className="mt-1.5 text-2xl font-semibold tracking-tight text-card-foreground">
-                            {money(payment.amount)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                              Currency
-                            </p>
-                            <p className="mt-1 text-sm font-medium text-card-foreground">
-                              {payment.currency ?? "-"}
-                            </p>
+                  {/* Left: Franchise + Centre */}
+                  <Card className="rounded-xl">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {/* Franchise */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <FileText className="h-3.5 w-3.5" />
+                            <span className="text-xs font-medium">Franchise</span>
                           </div>
-                          <Badge variant={paymentStatusTone(payment.status)}>
-                            {prettifyToken(payment.status)}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-                        {paymentPrimaryRows.map(([label, value]) => (
-                          <SimpleFactRow key={label} label={label} value={value} />
-                        ))}
-                      </div>
-
-                      {paymentMetaEntries.length > 0 ? (
-                        <div className="border-t border-border pt-4">
-                          <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                            Additional references
-                          </p>
-                          <div className="grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2 xl:grid-cols-3">
-                            {paymentMetaEntries.map(([key, value]) => (
-                              <SimpleFactRow
-                                key={key}
-                                label={PAYMENT_LABELS[key] ?? prettifyToken(key)}
-                                value={String(value)}
-                              />
-                            ))}
+                          <p className="text-lg font-semibold leading-tight">{String(franchiseData.name ?? "")}</p>
+                          <div className="flex flex-wrap gap-1">
+                            {programTag && <Badge variant="secondary" className="text-[10px]">{programTag}</Badge>}
+                            {typeTag && <Badge variant="secondary" className="text-[10px]">{typeTag}</Badge>}
+                            {data.type && <Badge variant="secondary" className="text-[10px]">{data.type}</Badge>}
+                          </div>
+                          <div className="pt-1 space-y-1.5">
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Code</p>
+                              <p className="mt-0.5 rounded bg-muted px-1.5 py-1 font-mono text-xs break-all">{String(franchiseData.franchiseCode ?? "-")}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Applied</p>
+                              <p className="text-xs mt-0.5 text-card-foreground">{fmtDate(String(franchiseData.date ?? ""))}</p>
+                            </div>
                           </div>
                         </div>
-                      ) : null}
-                    </>
-                  ) : null}
-
-                  {receivablePaymentItems.length > 0 ? (
-                    <div className={cn(payment ? "border-t border-border pt-4" : "")}>
-                      <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                        Receivable payment history
-                      </p>
-                      <div className="overflow-x-auto rounded-lg border border-border">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Item</TableHead>
-                              <TableHead>Paid date</TableHead>
-                              <TableHead>Payment ID</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead className="text-right">Amount</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {receivablePaymentItems.map((item) => {
-                              // Show payable (principal + GST) as the primary
-                              // number — matches what was actually charged via
-                              // Razorpay. Mirrors the inline split used in
-                              // InstallmentSummaryCard ItemRows.
-                              const principal =
-                                item.principalAmount ?? item.amount;
-                              const gst = item.gstAmount ?? 0;
-                              const payable =
-                                item.payableAmount ?? item.amount;
-                              const showSplit =
-                                item.isGstInclusive === false && gst > 0;
-                              return (
-                                <TableRow key={item.receivableItemId}>
-                                  <TableCell>
-                                    <div className="font-medium">{item.label}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {prettifyToken(item.kind)}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>{fmtDate(item.paidAt)}</TableCell>
-                                  <TableCell>{item.paymentId ?? "-"}</TableCell>
-                                  <TableCell>
-                                    <Badge variant={statusVariant(item.status)}>
-                                      {prettifyToken(item.status)}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-right font-medium">
-                                    <div className="flex flex-col items-end gap-0.5">
-                                      <span>{money(payable)}</span>
-                                      {showSplit ? (
-                                        <span className="text-[11px] font-normal text-muted-foreground">
-                                          {money(principal)} + {GST_RATE_LABEL}{" "}
-                                          {money(gst)}
-                                        </span>
-                                      ) : null}
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
+                        {/* Centre location */}
+                        <div className="border-t border-border pt-3 space-y-2">
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <MapPin className="h-3.5 w-3.5" />
+                            <span className="text-xs font-medium">Centre location</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Address</p>
+                              <p className="text-xs mt-0.5 text-card-foreground">{centreAddress || "-"}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Communication Area</p>
+                              <p className="text-xs mt-0.5 text-card-foreground">{commArea}</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ) : null}
+                    </CardContent>
+                  </Card>
+
+                  {/* Right: Franchisee + Signature */}
+                  <Card className="rounded-xl">
+                    <CardContent className="p-4 space-y-3">
+                      {/* Franchisee */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
+                            {initials}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm">{franchiseeName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Contact person{sinceLabel ? ` · since ${sinceLabel}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                        {franchiseStatus && (
+                          <Badge variant="secondary" className="shrink-0 text-xs">{franchiseStatus}</Badge>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-border bg-muted/50">
+                            <Phone className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Phone</p>
+                            <p className="text-xs truncate">{String(data.franchisee?.phone ?? franchiseData.phone ?? "—")}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-border bg-muted/50">
+                            <Mail className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Email</p>
+                            <p className="text-xs truncate">{String(data.franchisee?.mail ?? franchiseData.email ?? "—")}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Signature */}
+                      <div className="border-t border-border pt-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <PenLine className="h-3.5 w-3.5 text-muted-foreground" />
+                            <p className="text-xs font-medium">Franchisee signature</p>
+                          </div>
+                          {(sigSrc || data.signed) && (
+                            <Badge variant="outline" className="text-[10px] gap-1 border-emerald-200 text-emerald-700 bg-emerald-50 py-0">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                              On file
+                            </Badge>
+                          )}
+                        </div>
+                        {sigSrc ? (
+                          <div className="flex items-center justify-center rounded-lg border bg-muted/30 py-3">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={sigSrc} alt="Franchisee signature" className="max-h-14 w-auto max-w-full object-contain" />
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center rounded-lg border bg-muted/30 py-3">
+                            <p className="text-xs text-muted-foreground">
+                              {data.signed ? "Stored on the franchisee profile" : "Not yet captured"}
+                            </p>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Date of signing</p>
+                            <p className="text-xs mt-0.5">{fmtDate(data.dateOfSigning)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Captured at</p>
+                            <p className="text-xs mt-0.5">{fmtDate(data.franchiseeSignedAt)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+
+                {/* ── Bottom row: Payment | Lifecycle ── */}
+                <div className="grid gap-3 xl:grid-cols-[3fr,2fr] items-stretch">
+                  <PaymentBreakdown
+                    paymentDetails={franchiseData.paymentDetails}
+                    hideRecurringFeesTable
+                    className="h-full"
+                  />
+
+                  {/* Agreement lifecycle */}
+                  <Card className="rounded-xl h-full">
+                    <CardContent className="p-4 space-y-6 flex flex-col h-full">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                            <p className="font-semibold text-sm">Agreement lifecycle</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Agreement #{data.id}
+                            {data.tenure != null ? ` · ${data.tenure}-month tenure` : ""}
+                          </p>
+                        </div>
+                        <Badge variant={lifecycleBadge.tone} className="shrink-0">
+                          {lifecycleBadge.label}
+                        </Badge>
+                      </div>
+
+                      {/* Timeline */}
+                      <div className="flex items-start">
+                        <div className="flex flex-col items-center">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                            <Check className="h-4 w-4" />
+                          </div>
+                          <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Created</p>
+                          <p className="text-xs font-medium text-center">{fmtShortDate(data.createdAt)}</p>
+                          <p className="text-[11px] text-muted-foreground text-center">
+                            {data.createdAt ? (() => { try { return format(parseISO(data.createdAt), "p"); } catch { return ""; } })() : ""}
+                          </p>
+                        </div>
+                        <div className={cn("mt-4 flex-1 h-px", createdSigned ? "bg-primary" : "bg-border")} />
+                        <div className="flex flex-col items-center">
+                          <div className={cn("flex h-8 w-8 items-center justify-center rounded-full", createdSigned ? "bg-primary text-primary-foreground" : "border-2 border-border bg-background")}>
+                            {createdSigned && <Check className="h-4 w-4" />}
+                          </div>
+                          <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Signed</p>
+                          <p className="text-xs font-medium text-center">{fmtShortDate(data.dateOfSigning)}</p>
+                          <p className="text-[11px] text-muted-foreground text-center">
+                            {data.dateOfSigning ? (() => { try { return format(parseISO(data.dateOfSigning), "p"); } catch { return ""; } })() : ""}
+                          </p>
+                        </div>
+                        <div className="mt-4 flex-1 h-px bg-border" />
+                        <div className="flex flex-col items-center">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-border bg-background" />
+                          <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Expires</p>
+                          <p className="text-xs font-medium text-center">{fmtShortDate(data.expiresAt ?? null)}</p>
+                          <p className="text-[11px] text-muted-foreground text-center">
+                            {data.expiresAt ? (() => { try { return format(parseISO(data.expiresAt), "p"); } catch { return ""; } })() : ""}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex-1" />
+                      <div className="grid grid-cols-3 gap-2 border-t border-border pt-4">
+                        <SimpleFactRow label="Agreement ID" value={String(data.id)} />
+                        <SimpleFactRow label="Last updated" value={data.updatedAt ? fmtShortDate(data.updatedAt) : "—"} />
+                        <SimpleFactRow label="Time remaining" value={timeLeft} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="agreement">
@@ -715,6 +714,7 @@ export function AgreementRecordDetail({
           <ScheduleBCard
             data={data.scheduleB ?? null}
             signatureSrc={sigSrc}
+            executedAt={data.franchiseeSignedAt ?? data.dateOfSigning}
             loading={schedulePdfLoading}
             onDownload={() => void handleDownloadScheduleB()}
           />
@@ -966,14 +966,80 @@ function OverviewPanel({
   );
 }
 
+function LevelRoyaltyCard({
+  label,
+  sublabel,
+  level,
+  gstExclusive,
+}: {
+  label: string;
+  sublabel: string;
+  level: AgreementScheduleBView["level1"];
+  gstExclusive: boolean;
+}) {
+  const ipaGst =
+    gstExclusive && level.ipaShare > 0
+      ? Math.round(level.ipaShare * 0.18 * 100) / 100
+      : 0;
+  const ipaPayable = level.ipaShare + ipaGst;
+
+  const franchiseeTotal = level.franchiseShare * level.months;
+  const ciTotal = level.ciShare * level.months;
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold">{label}</p>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+              {level.months} MO
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">{sublabel}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
+            Term Fee
+          </p>
+          <p className="text-xl font-bold tabular-nums">{money(level.termFees)}</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <p className="text-xs text-muted-foreground">Franchisee</p>
+          <p className="font-semibold tabular-nums text-sm">{money(franchiseeTotal)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">CI</p>
+          <p className="font-semibold tabular-nums text-sm">{money(ciTotal)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">IPA</p>
+          <p className="font-semibold tabular-nums text-sm">
+            {money(gstExclusive ? ipaPayable : level.ipaShare)}
+          </p>
+          {gstExclusive && level.ipaShare > 0 ? (
+            <p className="text-[11px] text-muted-foreground leading-tight">
+              {money(level.ipaShare)} + GST {money(ipaGst)}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ScheduleBCard({
   data,
   signatureSrc,
+  executedAt,
   loading,
   onDownload,
 }: {
   data: AgreementScheduleBView | null;
   signatureSrc: string | null;
+  executedAt?: string | null;
   loading: boolean;
   onDownload: () => void;
 }) {
@@ -987,12 +1053,39 @@ function ScheduleBCard({
     );
   }
 
+  const feePayable = getFranchiseFeePayable(data.franchiseFee, data.gstFranchiseFee);
+  const materialPayable = getFranchiseFeePayable(data.materialCost, false);
+
+  const executedAtFmt = executedAt
+    ? (() => {
+        try {
+          const d = parseISO(executedAt);
+          return format(d, "d MMMM yyyy, h:mm a");
+        } catch {
+          return executedAt;
+        }
+      })()
+    : null;
+
+  const franchiseeInitials = (data.franchiseeName ?? "")
+    .split(" ")
+    .slice(0, 2)
+    .map((w: string) => w[0] ?? "")
+    .join("")
+    .toUpperCase();
+
   return (
     <Card className="overflow-hidden rounded-2xl border-border shadow-sm">
+      {/* Header */}
       <CardHeader className="border-b border-border bg-accent/30 p-4 sm:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <CardTitle className="text-xl font-normal">Schedule B</CardTitle>
+            <div className="flex items-center gap-2 flex-wrap">
+              <CardTitle className="text-xl font-normal">Schedule B</CardTitle>
+              <Badge variant="outline" className="text-[10px] tracking-widest uppercase px-2">
+                Annexure · Commercials
+              </Badge>
+            </div>
             <p className="mt-1 text-sm text-muted-foreground">
               Commercial schedule and royalty breakup for this agreement.
             </p>
@@ -1013,121 +1106,243 @@ function ScheduleBCard({
           </Button>
         </div>
       </CardHeader>
+
       <CardContent className="space-y-4 p-4 sm:p-5">
-        <div className="grid gap-3 md:grid-cols-2">
-          <DetailList
-            title="Agreement details"
-            rows={[
-              ["Effective date", data.effectiveDate],
-              ["Franchise fee", formatFranchiseFee(data)],
-              ["Tenure", `${data.tenureMonths} months`],
-              [
-                "Registration charges",
-                money(data.kitCost),
-              ],
-              ["Material charges", formatMaterialCharges(data)],
-            ]}
-          />
-          <DetailList
-            title="Parties"
-            rows={[
-              ["Franchisee", data.franchiseeName],
-              ["Franchisee address", data.franchiseeAddress],
-              ["Centre", data.centreName],
-              ["Centre address", data.centreAddress],
-            ]}
-          />
+        {/* Commercial terms + Parties */}
+        <div className="grid md:grid-cols-[3fr,2fr] overflow-hidden rounded-xl border border-border">
+          <div className="p-4 space-y-3">
+            <div className="flex items-baseline justify-between">
+              <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                Commercial Terms
+              </p>
+              {data.effectiveDate && (
+                <p className="text-xs text-muted-foreground">
+                  Effective{" "}
+                  <span className="font-medium text-foreground">
+                    {fmtShortDate(data.effectiveDate)}
+                  </span>
+                </p>
+              )}
+            </div>
+            <div>
+              <p className="text-3xl font-bold tabular-nums tracking-tight">
+                {money(data.franchiseFee)}
+              </p>
+              <p className="text-sm text-muted-foreground">franchise fee</p>
+            </div>
+            {!feePayable.inclusive && (
+              <p className="text-sm text-muted-foreground">
+                + 18% GST{" "}
+                <span className="text-foreground font-medium">{money(feePayable.gst)}</span>
+                {" · "}total payable{" "}
+                <span className="text-foreground font-medium">{money(feePayable.payable)}</span>
+              </p>
+            )}
+            <div className="grid grid-cols-3 gap-3 pt-3 border-t border-border">
+              <div>
+                <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Tenure
+                </p>
+                <p className="font-semibold mt-0.5">
+                  {data.tenureMonths}{" "}
+                  <span className="font-normal text-sm text-muted-foreground">months</span>
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Registration
+                </p>
+                <p className="font-semibold mt-0.5 tabular-nums">{money(data.kitCost)}</p>
+                <p className="text-xs text-muted-foreground">one-time</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Material Kit
+                </p>
+                <p className="font-semibold mt-0.5 tabular-nums">{money(data.materialCost)}</p>
+                {!data.gstMaterialCost && (
+                  <p className="text-xs text-muted-foreground">+ GST {money(materialPayable.gst)}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 border-t md:border-t-0 md:border-l border-border bg-muted/20 space-y-2">
+            <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+              Parties
+            </p>
+            <div className="flex items-start gap-3 pt-1">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">
+                IPA
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                  Franchisor
+                </p>
+                <p className="font-medium text-sm">{data.centreName}</p>
+                <p className="text-xs text-muted-foreground">{data.centreAddress}</p>
+              </div>
+            </div>
+            <div className="ml-4 flex items-center gap-2 py-0.5">
+              <div className="w-px h-4 bg-border" />
+              <p className="text-[10px] text-muted-foreground tracking-wide">↕ AGREEMENT</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted border border-border text-xs font-bold text-muted-foreground">
+                {franchiseeInitials || "??"}
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                  Franchisee
+                </p>
+                <p className="font-medium text-sm">{data.franchiseeName}</p>
+                <p className="text-xs text-muted-foreground">{data.franchiseeAddress}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
+        {/* Royalty breakup */}
         <Card className="rounded-xl border-border bg-card shadow-none">
           <CardHeader className="p-3 pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <IndianRupee className="h-4 w-4" />
-              Royalty breakup
-            </CardTitle>
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <IndianRupee className="h-4 w-4" />
+                Royalty breakup
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                How each term fee is split between the three parties
+              </p>
+            </div>
           </CardHeader>
-          <CardContent className="overflow-x-auto p-3 pt-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Level</TableHead>
-                  <TableHead className="text-right">Duration</TableHead>
-                  <TableHead className="text-right">Term fees</TableHead>
-                  <TableHead className="text-right">Franchisee share</TableHead>
-                  <TableHead className="text-right">CI share</TableHead>
-                  <TableHead className="text-right">IPA share</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(
-                  [
-                    ["Level 1", data.level1],
-                    ["Level 2 onwards", data.level2],
-                  ] as const
-                ).map(([label, row]) => {
-                  const level = row as AgreementScheduleBView["level1"];
-                  return (
-                    <TableRow key={label}>
-                      <TableCell className="font-medium">{label}</TableCell>
-                      <TableCell className="text-right">
-                        {level.months} months
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {money(level.termFees)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {money(level.franchiseShare)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {money(level.ciShare)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {money(level.ipaShare)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Term fees, franchisee share, CI share and IPA share are not subject to GST.
+          <CardContent className="p-3 pt-0 space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <LevelRoyaltyCard
+                label="Level 1"
+                sublabel="Initial onboarding tier"
+                level={data.level1}
+                gstExclusive={!data.gstRoyaltyInclusive}
+              />
+              <LevelRoyaltyCard
+                label="Level 2 onwards"
+                sublabel="Steady-state tier"
+                level={data.level2}
+                gstExclusive={!data.gstRoyaltyInclusive}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Term fees, franchisee share and CI share are not subject to GST. The IPA share is
+              shown net of 18% GST; the payable amount adds GST on top.
             </p>
           </CardContent>
         </Card>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          <Card className="rounded-xl border-border shadow-none">
-            <CardHeader className="p-3 pb-2">
-              <CardTitle className="text-base">Franchisor signatory</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 p-3 pt-0 text-sm">
-              <Row label="Name" value={data.franchisorSignatory} />
-              <Row label="Witness" value={data.presenceWitnessName} />
-              <Row label="Witness address" value={data.presenceWitnessAddress} />
-            </CardContent>
-          </Card>
-          <Card className="rounded-xl border-border shadow-none">
-            <CardHeader className="p-3 pb-2">
-              <CardTitle className="text-base">Franchisee signatory</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 p-3 pt-0 text-sm">
-              <Row label="Name" value={data.franchiseeName} />
-              {signatureSrc ? (
-                <div className="overflow-hidden rounded-md border bg-muted/30 p-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={signatureSrc}
-                    alt="Franchisee signature"
-                    className="mx-auto max-h-44 w-auto max-w-full object-contain"
-                  />
+        {/* Execution & signatures */}
+        <div className="space-y-3">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <h3 className="text-base font-semibold">Execution &amp; signatures</h3>
+              <p className="text-sm text-muted-foreground">
+                Both parties have executed this agreement.
+              </p>
+            </div>
+            {executedAtFmt && (
+              <Badge
+                variant="outline"
+                className="text-xs gap-1.5 shrink-0 border-emerald-200 text-emerald-700 bg-emerald-50"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Executed · {executedAtFmt}
+              </Badge>
+            )}
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <Card className="rounded-xl border-border shadow-none">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                    Franchisor Signatory
+                  </p>
+                  <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white text-[10px] px-2 py-0.5">
+                    SIGNED
+                  </Badge>
                 </div>
-              ) : (
-                <p className="text-muted-foreground">
-                  No signature preview available.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+                <div className="min-h-20 rounded-lg border bg-muted/30 flex items-center justify-center p-4">
+                  <p
+                    className="text-2xl italic font-light text-foreground/70"
+                    style={{ fontFamily: "cursive" }}
+                  >
+                    {data.franchisorSignatory?.split(/\s+/).find((w) => w.length > 2) ??
+                      data.franchisorSignatory}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-sm">{data.franchisorSignatory}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Authorised signatory · {data.centreName}
+                  </p>
+                </div>
+                {data.presenceWitnessName ? (
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">
+                      Witness
+                    </p>
+                    <p className="text-sm font-medium">{data.presenceWitnessName}</p>
+                    {data.presenceWitnessAddress && (
+                      <p className="text-xs text-muted-foreground">{data.presenceWitnessAddress}</p>
+                    )}
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-xl border-border shadow-none">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                    Franchisee Signatory
+                  </p>
+                  {signatureSrc && (
+                    <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white text-[10px] px-2 py-0.5">
+                      SIGNED
+                    </Badge>
+                  )}
+                </div>
+                {signatureSrc ? (
+                  <div className="overflow-hidden rounded-lg border bg-muted/30 p-3 min-h-20 flex items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={signatureSrc}
+                      alt="Franchisee signature"
+                      className="mx-auto max-h-20 w-auto max-w-full object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="min-h-20 rounded-lg border bg-muted/30 flex items-center justify-center">
+                    <p className="text-sm text-muted-foreground">No signature preview available.</p>
+                  </div>
+                )}
+                <div>
+                  <p className="font-medium text-sm">{data.franchiseeName}</p>
+                  <p className="text-xs text-muted-foreground">Franchisee</p>
+                </div>
+                <div className="pt-2 border-t border-border grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-0.5">
+                      Address
+                    </p>
+                    <p className="text-sm">{data.franchiseeAddress}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-0.5">
+                      Centre
+                    </p>
+                    <p className="text-sm">{data.centreName}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </CardContent>
     </Card>

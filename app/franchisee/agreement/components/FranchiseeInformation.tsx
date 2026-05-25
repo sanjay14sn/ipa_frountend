@@ -1,75 +1,62 @@
+import { User } from "lucide-react";
+
 interface FranchiseeInformationProps {
   franchiseData: any;
+}
+
+function Cell({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {label}
+      </p>
+      <div className="mt-1 text-sm text-card-foreground">{children}</div>
+    </div>
+  );
 }
 
 export default function FranchiseeInformation({
   franchiseData,
 }: FranchiseeInformationProps) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <h3 className="mb-3 border-b border-border pb-2 text-base font-medium text-card-foreground">
+    <section className="p-4">
+      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-card-foreground">
+        <User className="h-4 w-4 text-muted-foreground" />
         Franchisee Information
-      </h3>
-      <div className="space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <span className="text-sm font-medium text-muted-foreground">
-            Contact Person:
-          </span>
-          <span className="text-sm font-medium text-card-foreground">
-            {franchiseData.contactPerson}
-          </span>
-        </div>
-        <div className="flex items-start justify-between gap-2">
-          <span className="text-sm font-medium text-muted-foreground">Email:</span>
-          <span className="break-all text-right text-sm text-card-foreground">
-            {franchiseData.email}
-          </span>
-        </div>
-        <div className="flex items-start justify-between gap-2">
-          <span className="text-sm font-medium text-muted-foreground">Phone:</span>
-          <span className="text-sm text-card-foreground">{franchiseData.phone}</span>
-        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Cell label="Contact Person">{franchiseData.contactPerson}</Cell>
+        <Cell label="Email" className="sm:col-span-2 lg:col-span-2">
+          <span className="break-all">{franchiseData.email}</span>
+        </Cell>
+        <Cell label="Phone">{franchiseData.phone}</Cell>
         {franchiseData.dob && (
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-medium text-muted-foreground">
-              Date of Birth:
-            </span>
-            <span className="text-sm text-card-foreground">
-              {new Date(franchiseData.dob).toLocaleDateString()}
-            </span>
-          </div>
+          <Cell label="Date of Birth">
+            {new Date(franchiseData.dob).toLocaleDateString()}
+          </Cell>
         )}
         {franchiseData.bloodGroup && (
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-medium text-muted-foreground">
-              Blood Group:
-            </span>
-            <span className="rounded-md bg-muted px-2 py-1 text-sm text-card-foreground">
+          <Cell label="Blood Group">
+            <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium">
               {franchiseData.bloodGroup}
             </span>
-          </div>
+          </Cell>
         )}
         {franchiseData.educationalQualification && (
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-medium text-muted-foreground">
-              Education:
-            </span>
-            <span className="text-right text-sm text-card-foreground">
-              {franchiseData.educationalQualification}
-            </span>
-          </div>
+          <Cell label="Education">{franchiseData.educationalQualification}</Cell>
         )}
         {franchiseData.presentOccupation && (
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-medium text-muted-foreground">
-              Occupation:
-            </span>
-            <span className="text-right text-sm text-card-foreground">
-              {franchiseData.presentOccupation}
-            </span>
-          </div>
+          <Cell label="Occupation">{franchiseData.presentOccupation}</Cell>
         )}
       </div>
-    </div>
+    </section>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -21,15 +21,18 @@ import {
   Clock,
   Loader2,
   PenLine,
-  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   getCIAgreement,
-  signCIAgreementFile,
+  signCIAgreementWithESignature,
   type CIAgreementRecord,
+  type CIESignaturePayload,
 } from "@/services/ci-training.service";
+import {
+  ESignaturePad,
+} from "@/components/esignature/ESignaturePad";
 import { ciAgreementContent } from "@/lib/ciAgreementContent";
 import AgreementTerms from "@/app/franchisee/agreement/components/AgreementTerms";
 import { useCIAuth } from "@/context/ci-auth-context";
@@ -49,8 +52,6 @@ function queryToStep(q: string | null): CIStepIndex | null {
   return i >= 0 ? ((i + 1) as CIStepIndex) : null;
 }
 
-const MAX_SIGNATURE_BYTES = 5 * 1024 * 1024;
-const ACCEPT = "image/png,image/jpeg,image/jpg,image/webp";
 
 // ─── Stepper ──────────────────────────────────────────────────────────────────
 
@@ -271,35 +272,27 @@ function SignatureStep({
   agreement,
   onSigned,
   onGoToPortal,
+  defaultSignerName,
 }: {
   agreement: CIAgreementRecord;
   onSigned: () => void;
   onGoToPortal: () => void;
+  defaultSignerName: string;
 }) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
+  const [signing, setSigning] = useState(false);
+  const [padOpen, setPadOpen] = useState(false);
 
-  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (file.size > MAX_SIGNATURE_BYTES) {
-      toast.error("Signature image must be 5 MB or smaller.");
-      return;
-    }
-    if (!ACCEPT.split(",").some((t) => file.type === t.trim())) {
-      toast.error("Use a PNG, JPEG, or WebP image.");
-      return;
-    }
-    setUploading(true);
+  const handleAdoptESignature = async (payload: CIESignaturePayload) => {
+    setSigning(true);
     try {
-      await signCIAgreementFile(agreement.id, file);
+      await signCIAgreementWithESignature(agreement.id, payload);
+      setPadOpen(false);
       toast.success("Agreement signed successfully.");
       onSigned();
     } catch {
-      toast.error("Could not upload signature. Please try again.");
+      toast.error("Could not save signature. Please try again.");
     } finally {
-      setUploading(false);
+      setSigning(false);
     }
   };
 
@@ -353,29 +346,30 @@ function SignatureStep({
         <h3 className="text-base font-medium text-card-foreground">Your signature</h3>
       </div>
       <p className="mb-4 text-sm text-muted-foreground">
-        Sign on paper and photograph or scan it, or use a clear digital signature image (PNG, JPEG, or WebP).
-        Maximum file size: 5 MB.
+        Draw your signature with your mouse, finger, or stylus — or type your
+        legal name and we&apos;ll render it in a signature script. You&apos;ll
+        confirm before it&apos;s applied to the agreement.
       </p>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={ACCEPT}
-        className="hidden"
-        onChange={onFileChange}
-      />
       <Button
         type="button"
-        disabled={uploading}
-        onClick={() => fileInputRef.current?.click()}
+        disabled={signing}
+        onClick={() => setPadOpen(true)}
         className="w-full rounded-lg sm:w-auto"
       >
-        {uploading ? (
+        {signing ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
-          <Upload className="mr-2 h-4 w-4" />
+          <PenLine className="mr-2 h-4 w-4" />
         )}
-        {uploading ? "Uploading…" : "Upload signature image"}
+        {signing ? "Saving…" : "Sign agreement"}
       </Button>
+      <ESignaturePad
+        open={padOpen}
+        onOpenChange={setPadOpen}
+        defaultName={defaultSignerName}
+        onAdopt={handleAdoptESignature}
+        submitting={signing}
+      />
     </div>
   );
 }
@@ -582,6 +576,7 @@ function CIAgreementContent() {
                   agreement={agreement}
                   onSigned={handleSigned}
                   onGoToPortal={() => router.push("/ci/dashboard")}
+                  defaultSignerName={agreement.instructor?.name ?? ""}
                 />
               </div>
             )}

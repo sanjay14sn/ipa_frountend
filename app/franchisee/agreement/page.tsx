@@ -19,7 +19,6 @@ import AgreementTerms from "./components/AgreementTerms";
 import PaymentAction from "./components/PaymentAction";
 import { EmiTimeline } from "@/components/receivables/EmiTimeline";
 import { getFranchiseFeePayable } from "@/lib/gst";
-import { Zap, Layout, Mail } from "lucide-react";
 import { FranchiseAgreementSignaturePanel } from "./components/FranchiseAgreementSignaturePanel";
 import {
   AgreementStepper,
@@ -910,9 +909,11 @@ function FranchiseAgreementContent() {
                 <p className="text-sm text-muted-foreground">
                   Confirm the information below matches your approved application.
                 </p>
-                <FranchiseeInformation franchiseData={franchiseData} />
-                <LocationDetails franchiseData={franchiseData} />
-                <FranchiseDetails franchiseData={franchiseData} />
+                <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm divide-y divide-border">
+                  <FranchiseeInformation franchiseData={franchiseData} />
+                  <LocationDetails franchiseData={franchiseData} />
+                  <FranchiseDetails franchiseData={franchiseData} />
+                </div>
                 <PaymentBreakdown
                   paymentDetails={franchiseData.paymentDetails}
                   installmentSummary={installmentSummary}
@@ -1015,19 +1016,16 @@ function FranchiseAgreementContent() {
                   </h3>
                   <div className="mt-3 grid gap-3 sm:grid-cols-3">
                     <PostPayStep
-                      icon={Zap}
                       step="Step 1"
                       title="Payment verified"
                       description="Usually within 2 minutes of a successful transaction."
                     />
                     <PostPayStep
-                      icon={Layout}
                       step="Step 2"
                       title="Franchise dashboard opens"
                       description="You'll be redirected automatically — no extra steps."
                     />
                     <PostPayStep
-                      icon={Mail}
                       step="Step 3"
                       title="Welcome email sent"
                       description="Receipt, GST invoice and onboarding playbook."
@@ -1141,26 +1139,19 @@ export default function FranchiseAgreementPage() {
 }
 
 function PostPayStep({
-  icon: Icon,
   step,
   title,
   description,
 }: {
-  icon: typeof Zap;
   step: string;
   title: string;
   description: string;
 }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <div className="flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Icon className="h-4 w-4" />
-        </span>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          {step}
-        </span>
-      </div>
+      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        {step}
+      </span>
       <p className="mt-3 text-sm font-medium text-card-foreground">{title}</p>
       <p className="mt-1 text-xs text-muted-foreground">{description}</p>
     </div>
