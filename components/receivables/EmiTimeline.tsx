@@ -377,17 +377,27 @@ export function EmiTimeline({
 
           <div
             ref={scrollerRef}
-            className="flex snap-x snap-mandatory gap-0 overflow-x-auto px-4 py-5 [scrollbar-width:thin]"
+            className="snap-x snap-mandatory overflow-x-auto [scrollbar-width:thin]"
           >
-            {items.map((item, idx) => (
-              <TimelineStop
-                key={item.receivableItemId}
-                item={item}
-                gstFranchiseFee={gstFranchiseFee}
-                isFirst={idx === 0}
-                isLast={idx === items.length - 1}
-              />
-            ))}
+            {/*
+              Inner flex carries `min-w-full justify-center` so the stops
+              cluster in the middle when there's room (avoiding the awkward
+              left-aligned look in wide modals), and naturally overflow into
+              the outer scroller when the timeline is longer than the card.
+              `snap-x` lives on the outer (scrolling) container so per-stop
+              `snap-start` resolves correctly during scroll.
+            */}
+            <div className="flex min-w-full justify-center gap-0 px-4 py-5">
+              {items.map((item, idx) => (
+                <TimelineStop
+                  key={item.receivableItemId}
+                  item={item}
+                  gstFranchiseFee={gstFranchiseFee}
+                  isFirst={idx === 0}
+                  isLast={idx === items.length - 1}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
