@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   Store,
+  Upload,
   Users,
 } from "lucide-react";
 
@@ -70,6 +71,11 @@ const adminNavigation = {
           title: "Operations",
           url: "/admin/operations",
           icon: ShoppingCart,
+        },
+        {
+          title: "Bulk Import",
+          url: "/admin/bulk-import",
+          icon: Upload,
         },
       ],
     },

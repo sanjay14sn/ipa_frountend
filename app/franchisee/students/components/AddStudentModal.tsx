@@ -38,7 +38,12 @@ import {
 import { useCreateStudentWithRevalidation } from "@/hooks/api/student.hooks";
 import { useUser } from "@/context/user-context";
 import { getAllPrograms, Program } from "@/services/program.service";
-import { getLevelsByStream, Level } from "@/services/level.service";
+import {
+  getEligiblePreviousLevels,
+  getLevelsByStream,
+  Level,
+  type EligiblePreviousLevel,
+} from "@/services/level.service";
 import { getStreamsByProgram, Stream } from "@/services/stream.service";
 import {
   getAllCourseInstructors,
@@ -145,6 +150,11 @@ export default function AddStudentModal({
   const [programs, setPrograms] = useState<Program[]>([]);
   const [streams, setStreams] = useState<Stream[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
+  /** Valid previousLevel candidates for the picked current level — combines
+   *  same-stream predecessors with sources of incoming StreamTransitions. */
+  const [previousLevelCandidates, setPreviousLevelCandidates] = useState<
+    EligiblePreviousLevel[]
+  >([]);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
   const [loadingStreams, setLoadingStreams] = useState(false);
   const [loadingLevels, setLoadingLevels] = useState(false);
@@ -282,37 +292,58 @@ export default function AddStudentModal({
   }, [formData.streamId]);
 
   useEffect(() => {
+    // For existing/transfer students, fetch all valid previous-level
+    // candidates for the picked current level (same-stream predecessors +
+    // any cross-stream transition sources). Default-select the same-stream
+    // immediate predecessor — admin can override via the dropdown.
+    let cancelled = false;
     if (
       !formData.existing ||
       !formData.levelId ||
-      formData.levelId === 0 ||
-      levels.length === 0
+      formData.levelId === 0
     ) {
+      setPreviousLevelCandidates([]);
       return;
     }
-    const current = levels.find((l) => l.id === formData.levelId);
-    if (!current) return;
-    const prev = levels
-      .filter((l) => l.displayOrder < current.displayOrder)
-      .sort((a, b) => b.displayOrder - a.displayOrder)[0];
-    setFormData((p) => {
-      const nextId = prev ? prev.id : 0;
-      if (
-        p.previousLevelId === nextId &&
-        (!prev?.totalMarks ||
-          p.previousTotalMarks === String(prev.totalMarks))
-      ) {
-        return p;
+    (async () => {
+      try {
+        const candidates = await getEligiblePreviousLevels(formData.levelId);
+        if (cancelled) return;
+        setPreviousLevelCandidates(candidates);
+
+        // Pick the default: same-stream candidate with the highest
+        // displayOrder still below the current level. Mirrors prior UX.
+        const defaultCandidate =
+          [...candidates]
+            .filter((c) => !c.viaTransition)
+            .sort((a, b) => b.displayOrder - a.displayOrder)[0] ??
+          candidates[0];
+
+        setFormData((p) => {
+          const nextId = defaultCandidate?.id ?? 0;
+          if (
+            p.previousLevelId === nextId &&
+            (!defaultCandidate?.totalMarks ||
+              p.previousTotalMarks === String(defaultCandidate.totalMarks))
+          ) {
+            return p;
+          }
+          return {
+            ...p,
+            previousLevelId: nextId,
+            previousTotalMarks: defaultCandidate?.totalMarks
+              ? String(defaultCandidate.totalMarks)
+              : p.previousTotalMarks,
+          };
+        });
+      } catch {
+        if (!cancelled) setPreviousLevelCandidates([]);
       }
-      return {
-        ...p,
-        previousLevelId: nextId,
-        previousTotalMarks: prev?.totalMarks
-          ? String(prev.totalMarks)
-          : p.previousTotalMarks,
-      };
-    });
-  }, [formData.existing, formData.levelId, levels]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [formData.existing, formData.levelId]);
 
   useEffect(() => {
     const fetchInstructors = async () => {
@@ -1042,10 +1073,26 @@ export default function AddStudentModal({
                       <Label htmlFor="previousLevelId">Previous Level *</Label>
                       <Select
                         value={formData.previousLevelId.toString()}
-                        onValueChange={() => {
-                          /* auto-derived from current level; read-only */
+                        onValueChange={(value) => {
+                          const picked = previousLevelCandidates.find(
+                            (c) => c.id.toString() === value,
+                          );
+                          handleInputChange("previousLevelId", value);
+                          // Pre-fill `previousTotalMarks` from the picked
+                          // level's totalMarks (parity with the auto-derive
+                          // behaviour we replaced).
+                          if (picked?.totalMarks != null) {
+                            handleInputChange(
+                              "previousTotalMarks",
+                              String(picked.totalMarks),
+                            );
+                          }
                         }}
-                        disabled
+                        disabled={
+                          !formData.levelId ||
+                          formData.levelId === 0 ||
+                          previousLevelCandidates.length === 0
+                        }
                       >
                         <SelectTrigger
                           className={
@@ -1056,25 +1103,29 @@ export default function AddStudentModal({
                             placeholder={
                               !formData.levelId || formData.levelId === 0
                                 ? "Select current level first"
-                                : formData.previousLevelId === 0
-                                ? "No earlier level in this stream"
+                                : previousLevelCandidates.length === 0
+                                ? "No earlier level for this current level"
                                 : "Previous level"
                             }
                           />
                         </SelectTrigger>
                         <SelectContent>
-                          {levels.map((level) => (
+                          {previousLevelCandidates.map((c) => (
                             <SelectItem
-                              key={level.id}
-                              value={level.id.toString()}
+                              key={c.id}
+                              value={c.id.toString()}
                             >
-                              {level.name}
+                              {c.viaTransition
+                                ? `${c.code} — ${c.name}  (via ${c.streamName})`
+                                : `${c.code} — ${c.name}`}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-amber-700">
-                        Auto-selected as the level one order before the current level.
+                        Defaults to the same-stream predecessor. If a stream
+                        transition lands at this level, you can switch to the
+                        source-stream candidate.
                       </p>
                       {errors.previousLevelId && (
                         <p className="text-red-500 text-sm flex items-center gap-1">

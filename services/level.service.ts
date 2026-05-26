@@ -48,6 +48,33 @@ export async function getLevelsByStream(streamId: number): Promise<Level[]> {
   return Array.isArray(data) ? data : [];
 }
 
+/**
+ * Returned by `getEligiblePreviousLevels` — one candidate per row, combining
+ * same-stream predecessors with cross-stream `StreamTransition` sources.
+ * Mirrors backend `EligiblePreviousLevel` from `level.service.ts`.
+ */
+export interface EligiblePreviousLevel {
+  id: number;
+  code: string;
+  name: string;
+  streamId: number;
+  streamName: string;
+  displayOrder: number;
+  totalMarks: number;
+  /** True when the candidate comes from an incoming StreamTransition. */
+  viaTransition: boolean;
+}
+
+export async function getEligiblePreviousLevels(
+  levelId: number,
+): Promise<EligiblePreviousLevel[]> {
+  const response = await api.get(
+    `/catalog/level/${levelId}/eligible-previous-levels`,
+  );
+  const data = unwrapData<EligiblePreviousLevel[]>(response);
+  return Array.isArray(data) ? data : [];
+}
+
 export async function createLevel(data: CreateLevelDto): Promise<Level> {
   const response = await api.post("/catalog/level", data);
   return unwrapData<Level>(response);
