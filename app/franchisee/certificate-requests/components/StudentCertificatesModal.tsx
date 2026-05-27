@@ -14,7 +14,9 @@ import { Badge } from "@/components/ui/badge";
 import { Award, Download, Loader2 } from "lucide-react";
 import {
   getStudentCertificates,
+  getAdminStudentCertificates,
   getFranchiseeCertificatePdfUrl,
+  getAdminCertificatePdfUrl,
   StudentCertificate,
 } from "@/services/student.service";
 import { toast } from "sonner";
@@ -27,6 +29,7 @@ interface StudentCertificatesModalProps {
   studentId: number;
   studentName?: string;
   certificateId?: number;
+  mode?: "franchise" | "admin";
 }
 
 export default function StudentCertificatesModal({
@@ -35,6 +38,7 @@ export default function StudentCertificatesModal({
   studentId,
   studentName,
   certificateId,
+  mode = "franchise",
 }: StudentCertificatesModalProps) {
   const [certificates, setCertificates] = useState<StudentCertificate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,7 +49,11 @@ export default function StudentCertificatesModal({
     let cancelled = false;
     setIsLoading(true);
 
-    getStudentCertificates(studentId)
+    const fetchCerts = mode === "admin"
+      ? getAdminStudentCertificates(studentId)
+      : getStudentCertificates(studentId);
+
+    fetchCerts
       .then((response) => {
         if (cancelled) return;
         const certs = response.result || [];
@@ -66,7 +74,7 @@ export default function StudentCertificatesModal({
     return () => {
       cancelled = true;
     };
-  }, [open, studentId, certificateId]);
+  }, [open, studentId, certificateId, mode]);
 
   const getStatusColor = (_status: string) =>
     "bg-primary/10 text-primary border-primary/20";
@@ -75,7 +83,9 @@ export default function StudentCertificatesModal({
     certificate.totalMarks || certificate.levelTotalMarks || 0;
 
   const handleDownload = (certificate: StudentCertificate) => {
-    const url = getFranchiseeCertificatePdfUrl(certificate.id);
+    const url = mode === "admin"
+      ? getAdminCertificatePdfUrl(certificate.id)
+      : getFranchiseeCertificatePdfUrl(certificate.id);
     window.open(url, "_blank");
   };
 

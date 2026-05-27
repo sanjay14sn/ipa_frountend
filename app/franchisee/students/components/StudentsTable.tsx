@@ -15,7 +15,7 @@ import StudentCertificatesModal from "../../certificate-requests/components/Stud
 import StudentDetails from "./StudentDetails";
 import { StudentLifecycleDetailsDialog } from "@/components/students/student-lifecycle-details-dialog";
 import { getStudentLevelName } from "../utils/student-helpers";
-import { useFranchiseeStudentLifecycle } from "@/hooks/api/student.hooks";
+import { useFranchiseeStudentLifecycle, useAdminStudentLifecycleById } from "@/hooks/api/student.hooks";
 import { formatEntityCodeForDisplay } from "@/lib/format-entity-code";
 
 /**
@@ -50,6 +50,7 @@ interface StudentsTableProps {
   onStudentEdit?: (student: StudentData) => void;
   onRequestIds?: () => void;
   toolbarActions?: ReactNode;
+  mode?: "franchise" | "admin";
 }
 
 function getLevelColor(_level: string) {
@@ -101,6 +102,7 @@ export default function StudentsTable({
   onStudentEdit,
   onRequestIds,
   toolbarActions,
+  mode = "franchise",
 }: StudentsTableProps) {
   const [streamFilter, setStreamFilter] = useState<string>("all");
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(
@@ -109,7 +111,9 @@ export default function StudentsTable({
   const [isCertificatesModalOpen, setIsCertificatesModalOpen] = useState(false);
   const [lifecycleStudentId, setLifecycleStudentId] = useState<number | null>(null);
 
-  const lifecycleQuery = useFranchiseeStudentLifecycle(lifecycleStudentId);
+  const franchiseLifecycleQuery = useFranchiseeStudentLifecycle(mode === "franchise" ? lifecycleStudentId : null);
+  const adminLifecycleQuery = useAdminStudentLifecycleById(mode === "admin" ? lifecycleStudentId : null);
+  const lifecycleQuery = mode === "admin" ? adminLifecycleQuery : franchiseLifecycleQuery;
 
   const uniqueLevelOptions = useMemo(() => {
     const seen = new Map<number, string>();
@@ -360,6 +364,7 @@ export default function StudentsTable({
           }}
           studentId={selectedStudentId}
           studentName={students.find((s) => s.id === selectedStudentId)?.name}
+          mode={mode}
         />
       )}
 
