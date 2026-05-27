@@ -35,6 +35,11 @@ const SEX_OPTIONS: PreviewSelectOption[] = [
   { value: "Female", label: "Female" },
 ];
 
+const YES_NO_OPTIONS: PreviewSelectOption[] = [
+  { value: "true", label: "Yes", payload: true },
+  { value: "false", label: "No", payload: false },
+];
+
 const STANDARD_OPTIONS: PreviewSelectOption[] = STANDARDS.map((standard) => ({
   value: standard,
   label: standard,
@@ -416,6 +421,13 @@ export default function StudentBulkImportPage() {
         options: STANDARD_OPTIONS,
         placeholder: "Select standard",
       },
+      {
+        section: "Student info",
+        key: "idCardIssued",
+        label: "ID card issued",
+        options: YES_NO_OPTIONS,
+        placeholder: "Yes / No",
+      },
       // ── Parents ──────────────────────────────────────────────────────────
       { section: "Father's info", key: "fatherName", label: "Father's name" },
       {
@@ -490,6 +502,20 @@ export default function StudentBulkImportPage() {
       },
       {
         section: "Previous level",
+        key: "materialsOrdered",
+        label: "Materials ordered",
+        options: YES_NO_OPTIONS,
+        placeholder: "Yes / No",
+      },
+      {
+        section: "Previous level",
+        key: "previousCertificateDispatched",
+        label: "Prev. certificate dispatched",
+        options: YES_NO_OPTIONS,
+        placeholder: "Yes / No",
+      },
+      {
+        section: "Previous level",
         key: "previousMarks",
         label: "Prev. marks obtained",
       },
@@ -561,7 +587,7 @@ export default function StudentBulkImportPage() {
           columns,
           derive,
           uploadHelperText:
-            'Existing / transfer students only. Required columns: franchiseName, programCode, streamName, levelCode, name, sex, dateOfBirth, dateOfJoining, standard, fatherName, fatherContactNo, fatherOccupation, fatherQualification, motherName, motherContactNo, motherOccupation, motherQualification, email, residentialAddress, previousMarks, previousCompletedAt, previousInstructorCode. Previous level is auto-derived from the picked level; total marks come from the level itself. IMPORTANT: any field containing a comma (e.g. an address like "123 Main St, Chennai") MUST be wrapped in double quotes — otherwise the comma will split it into separate cells.',
+            'Existing / transfer students only. Required columns: franchiseName, programCode, streamName, levelCode, name, sex, dateOfBirth, dateOfJoining, standard, idCardIssued, fatherName, fatherContactNo, fatherOccupation, fatherQualification, motherName, motherContactNo, motherOccupation, motherQualification, email, residentialAddress, previousMarks, previousCompletedAt, previousInstructorCode, materialsOrdered, previousCertificateDispatched. Boolean columns (idCardIssued, materialsOrdered, previousCertificateDispatched) accept true/false or yes/no. Previous level is auto-derived from the picked level; total marks come from the level itself. IMPORTANT: any field containing a comma (e.g. an address like "123 Main St, Chennai") MUST be wrapped in double quotes — otherwise the comma will split it into separate cells.',
         }}
       />
     </TablePageShell>

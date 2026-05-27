@@ -195,8 +195,10 @@ export function ImportPreviewGrid({
                 const isArrayRef = Array.isArray(rawValue);
 
                 let cellValue: string;
-                if (rawValue == null || rawValue === false || rawValue === "") {
+                if (rawValue == null || rawValue === "") {
                   cellValue = "";
+                } else if (rawValue === false) {
+                  cellValue = "false";
                 } else if (isObjectRef) {
                   cellValue = String((rawValue as { id?: unknown }).id ?? "");
                 } else if (isArrayRef) {
