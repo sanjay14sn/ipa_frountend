@@ -36,11 +36,13 @@ export const queryKeys = {
       }),
     certSummaries: (params?: Record<string, unknown> | null) =>
       listQueryKey("admin-cert-summaries", params ?? undefined),
+    certSummariesPrefix: ["admin-cert-summaries", "list"] as const,
     certDetails: (franchiseId: string, params?: Record<string, unknown> | null) =>
       listQueryKey("admin-cert-details", {
         franchiseId,
         ...(params ?? {}),
       }),
+    certDetailsPrefix: ["admin-cert-details", "list"] as const,
     lifecycle: (params?: Record<string, unknown> | null) =>
       listQueryKey("admin-student-lifecycle", params ?? undefined),
   },
@@ -188,5 +190,9 @@ export const queryKeys = {
         scope: "pending-only",
         ...params,
       }),
+  },
+  certificates: {
+    eligibleInstructors: (levelIds: number[], programId?: number) =>
+      ["certificates", "eligible-instructors", levelIds, programId ?? null] as const,
   },
 } as const;
