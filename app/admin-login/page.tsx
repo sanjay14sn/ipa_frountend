@@ -44,7 +44,7 @@ export default function AdminLoginPage() {
 
       setUser({
         id: String(me.id),
-        email: me.emailId?.trim() || email.trim(),
+        mail: me.emailId?.trim() || email.trim(),
         name: me.name || email.trim(),
         role: "admin" as const,
         adminRole: me.role,

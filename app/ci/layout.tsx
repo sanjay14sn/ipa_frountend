@@ -23,7 +23,7 @@ import { PortalHeaderActions } from "@/components/layout/portal-header-actions";
 const UNLOCKED_PATHS = ["/ci/login", "/ci/agreement", "/ci/change-password"];
 
 function CIShell({ children }: { children: React.ReactNode }) {
-  const { user, loading, agreementPhase } = useCIAuth();
+  const { user, loading, agreementPhase, clear } = useCIAuth();
   const router = useRouter();
   const pathname = usePathname();
 
