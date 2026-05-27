@@ -37,7 +37,6 @@ claude.md
 *.tsbuildinfo
 next-env.d.ts
 
-package-lock.json
 yarn.lock
 bun.lock
 pnpm-lock.yaml

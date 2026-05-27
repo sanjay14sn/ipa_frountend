@@ -221,11 +221,11 @@ See `.env.local.example`:
 - `NEXT_PUBLIC_API_URL` - API base URL (default dev: [http://localhost:5500](http://localhost:5500)). **Required in production.**
 - `NEXT_PUBLIC_CLIENT_TELEMETRY_ENABLED` - set to `true` in production to enable client-side error logging
 
-Run `node scripts/check-env.mjs` before building to validate all required vars are set. In CI, add this step after `pnpm install` and before `next build`.
+Run `node scripts/check-env.mjs` before building to validate all required vars are set. In CI, add this step after `npm ci` and before `next build`.
 
 ### Package manager
 
-This project uses **pnpm** exclusively. The lockfile is `pnpm-lock.yaml`. Do not run `npm install` or `bun install` — use `pnpm install`. The dev server is started with `pnpm dev` (runs `next dev`).
+This project uses **npm**. The lockfile is `package-lock.json`. Do not run `pnpm install` or `bun install` — use `npm install`. The dev server is started with `npm run dev` (runs `next dev`).
 
 ## Real-time Notifications
 

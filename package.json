@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "analyze": "ANALYZE=true next build",
-    "audit:prod": "pnpm audit --prod",
+    "audit:prod": "npm audit --production",
     "build": "next build",
     "test": "vitest run",
     "test:watch": "vitest",
