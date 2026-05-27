@@ -10,16 +10,16 @@ import { useEligibleStudents, useFranchiseeCertificates } from "@/hooks/api/stud
 import { useCourseInstructors } from "@/hooks/api/course-instructor.hooks";
 import { EligibleStudent } from "@/services/student.service";
 import RequestCertificateModal from "@/app/franchisee/certificate-requests/components/RequestCertificateModal";
-import BulkRequestCertificateModal from "@/app/franchisee/certificate-requests/components/BulkRequestCertificateModal";
+import BulkRequestCertificateModal, {
+  GroupForModal,
+} from "@/app/franchisee/certificate-requests/components/BulkRequestCertificateModal";
 import EligibleStudentsTable from "@/app/franchisee/certificate-requests/components/EligibleStudentsTable";
 import FranchiseeCertificatesTable from "@/app/franchisee/certificate-requests/components/FranchiseeCertificatesTable";
 
 export function FranchiseeCertificateRequestsSection() {
   const [selectedStudent, setSelectedStudent] =
     useState<EligibleStudent | null>(null);
-  const [selectedStudentsForBulk, setSelectedStudentsForBulk] = useState<
-    EligibleStudent[]
-  >([]);
+  const [groupsForBulk, setGroupsForBulk] = useState<GroupForModal[]>([]);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isBulkRequestModalOpen, setIsBulkRequestModalOpen] = useState(false);
 
@@ -40,12 +40,28 @@ export function FranchiseeCertificateRequestsSection() {
   const handleSuccess = () => {
     setIsRequestModalOpen(false);
     setIsBulkRequestModalOpen(false);
-    setSelectedStudentsForBulk([]);
+    setGroupsForBulk([]);
     revalidate();
   };
 
+  /** Convert a flat list of selected students into grouped GroupForModal[]. */
   const handleBulkRequest = (students: EligibleStudent[]) => {
-    setSelectedStudentsForBulk(students);
+    const map = new Map<string, GroupForModal>();
+    for (const s of students) {
+      const key = `${s.stream}__${s.levelName}__${s.levelId}__${s.programId}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          stream: s.stream,
+          levelName: s.levelName,
+          levelId: s.levelId,
+          programId: s.programId,
+          students: [],
+        });
+      }
+      map.get(key)!.students.push(s);
+    }
+    setGroupsForBulk([...map.values()]);
     setIsBulkRequestModalOpen(true);
   };
 
@@ -82,12 +98,11 @@ export function FranchiseeCertificateRequestsSection() {
             />
           ) : null}
 
-          {selectedStudentsForBulk.length > 0 ? (
+          {groupsForBulk.length > 0 ? (
             <BulkRequestCertificateModal
               open={isBulkRequestModalOpen}
               onOpenChange={setIsBulkRequestModalOpen}
-              students={selectedStudentsForBulk}
-              courseInstructors={courseInstructors}
+              groups={groupsForBulk}
               onSuccess={handleSuccess}
             />
           ) : null}
