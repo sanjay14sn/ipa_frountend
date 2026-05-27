@@ -298,6 +298,8 @@ export default function StudentBulkImportPage() {
       const sameStream = candidates.find((c) => !c.viaTransition);
       const pick = sameStream ?? candidates[0];
 
+      // `totalMarks` is intrinsic to the Level — no longer stored per
+      // progression, so nothing else to pre-fill alongside previousLevel.
       const patch: Record<string, unknown> = {
         previousLevel: {
           id: pick.id,
@@ -306,17 +308,22 @@ export default function StudentBulkImportPage() {
           streamId: pick.streamId,
         },
       };
-      if (!row.previousTotalMarks && pick.totalMarks != null) {
-        patch.previousTotalMarks = pick.totalMarks;
-      }
       return patch;
     };
   }, [fetchEligibilityFor]);
 
   const columns: PreviewColumn[] = useMemo(
     () => [
-      { key: "franchise", label: "Franchise", options: franchiseOptions, placeholder: "Pick a franchise" },
+      // ── Franchise / Program / Stream / Level ─────────────────────────────
       {
+        section: "Franchise & program",
+        key: "franchise",
+        label: "Franchise",
+        options: franchiseOptions,
+        placeholder: "Pick a franchise",
+      },
+      {
+        section: "Franchise & program",
         key: "program",
         label: "Program",
         options: (row) => {
@@ -329,37 +336,100 @@ export default function StudentBulkImportPage() {
         placeholder: "Pick a program (franchise first)",
       },
       {
+        section: "Franchise & program",
         key: "stream",
         label: "Stream",
         options: (row) => {
           const pid = (row.program as { id?: number } | null)?.id;
-          return pid != null ? (streamOptionsByProgram.get(String(pid)) ?? []) : [];
+          return pid != null
+            ? (streamOptionsByProgram.get(String(pid)) ?? [])
+            : [];
         },
         placeholder: "Pick a stream (program first)",
       },
       {
+        section: "Franchise & program",
         key: "level",
         label: "Level",
         options: (row) => {
           const sid = (row.stream as { id?: number } | null)?.id;
-          return sid != null ? (levelOptionsByStream.get(String(sid)) ?? []) : [];
+          return sid != null
+            ? (levelOptionsByStream.get(String(sid)) ?? [])
+            : [];
         },
         placeholder: "Pick a level (stream first)",
       },
-      { key: "name", label: "Name" },
-      { key: "sex", label: "Sex", options: SEX_OPTIONS, placeholder: "M / F / Other" },
-      { key: "dateOfBirth", label: "DOB (YYYY-MM-DD)" },
-      { key: "dateOfJoining", label: "Date of joining" },
-      { key: "fatherName", label: "Father's name" },
-      { key: "motherName", label: "Mother's name" },
-      { key: "email", label: "Email" },
-      { key: "residentialAddress", label: "Address" },
-      { key: "standard", label: "Standard" },
+      // ── Student basic info ───────────────────────────────────────────────
+      { section: "Student info", key: "name", label: "Name" },
+      {
+        section: "Student info",
+        key: "sex",
+        label: "Sex",
+        options: SEX_OPTIONS,
+        placeholder: "M / F / Other",
+      },
+      {
+        section: "Student info",
+        key: "dateOfBirth",
+        label: "Date of birth",
+        type: "date",
+        placeholder: "DD / MM / YYYY",
+      },
+      {
+        section: "Student info",
+        key: "dateOfJoining",
+        label: "Date of joining",
+        type: "date",
+        placeholder: "DD / MM / YYYY",
+      },
+      { section: "Student info", key: "standard", label: "Standard" },
+      // ── Parents ──────────────────────────────────────────────────────────
+      { section: "Father's info", key: "fatherName", label: "Father's name" },
+      {
+        section: "Father's info",
+        key: "fatherContactNo",
+        label: "Father's contact no",
+      },
+      {
+        section: "Father's info",
+        key: "fatherOccupation",
+        label: "Father's occupation",
+      },
+      {
+        section: "Father's info",
+        key: "fatherQualification",
+        label: "Father's qualification",
+      },
+      { section: "Mother's info", key: "motherName", label: "Mother's name" },
+      {
+        section: "Mother's info",
+        key: "motherContactNo",
+        label: "Mother's contact no",
+      },
+      {
+        section: "Mother's info",
+        key: "motherOccupation",
+        label: "Mother's occupation",
+      },
+      {
+        section: "Mother's info",
+        key: "motherQualification",
+        label: "Mother's qualification",
+      },
+      // ── Contact ──────────────────────────────────────────────────────────
+      { section: "Contact", key: "email", label: "Email" },
+      {
+        section: "Contact",
+        key: "residentialAddress",
+        label: "Residential address",
+      },
+      // ── Previous level (transfer-in) ─────────────────────────────────────
       {
         // Live dropdown — reads from the page's eligibility cache keyed by
         // the row's CURRENT picked level. If the cache is empty for this
         // level, kick off the fetch and return [] (the dropdown will
         // refresh once the data lands).
+        section: "Previous level",
         key: "previousLevel",
         label: "Prev. level",
         placeholder: "Pick a previous level",
@@ -385,11 +455,20 @@ export default function StudentBulkImportPage() {
           }));
         },
       },
-      { key: "previousMarks", label: "Prev. marks" },
-      { key: "previousTheoryMarks", label: "Prev. theory marks" },
-      { key: "previousTotalMarks", label: "Prev. total marks" },
-      { key: "previousCompletedAt", label: "Prev. completed at" },
       {
+        section: "Previous level",
+        key: "previousMarks",
+        label: "Prev. marks obtained",
+      },
+      {
+        section: "Previous level",
+        key: "previousCompletedAt",
+        label: "Prev. completed at",
+        type: "date",
+        placeholder: "DD / MM / YYYY",
+      },
+      {
+        section: "Previous level",
         key: "previousInstructor",
         label: "Prev. course instructor",
         options: (row) => {
@@ -406,6 +485,7 @@ export default function StudentBulkImportPage() {
       streamOptionsByProgram,
       levelOptionsByStream,
       ciOptionsByFranchise,
+      fetchEligibilityFor,
     ],
   );
 
@@ -448,7 +528,7 @@ export default function StudentBulkImportPage() {
           columns,
           derive,
           uploadHelperText:
-            "Existing / transfer students only. Required columns: franchiseName, programCode, streamName, levelCode, name, sex, dateOfBirth, dateOfJoining, fatherName, motherName, email, residentialAddress, standard, previousMarks, previousTheoryMarks, previousTotalMarks, previousCompletedAt, previousInstructorCode. Previous level is auto-derived from the picked level (no `previousLevelCode` column needed).",
+            'Existing / transfer students only. Required columns: franchiseName, programCode, streamName, levelCode, name, sex, dateOfBirth, dateOfJoining, standard, fatherName, fatherContactNo, fatherOccupation, fatherQualification, motherName, motherContactNo, motherOccupation, motherQualification, email, residentialAddress, previousMarks, previousCompletedAt, previousInstructorCode. Previous level is auto-derived from the picked level; total marks come from the level itself. IMPORTANT: any field containing a comma (e.g. an address like "123 Main St, Chennai") MUST be wrapped in double quotes — otherwise the comma will split it into separate cells.',
         }}
       />
     </TablePageShell>

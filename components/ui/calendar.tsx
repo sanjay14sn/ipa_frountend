@@ -20,37 +20,41 @@ function Calendar({
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
       classNames={{
-        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-4",
-        month_caption: "flex justify-center pt-1 relative items-center h-7",
+        // react-day-picker v9 emits `<nav>` as a sibling of `<month_caption>`
+        // under `<month>`, so we anchor `nav` absolutely at the top of the
+        // month and let the caption (label or dropdowns) sit centered in the
+        // same row underneath it.
+        months: "relative flex flex-col gap-4 sm:flex-row sm:gap-4",
+        month: "relative flex flex-col gap-3",
+        month_caption: "flex h-7 items-center justify-center",
         caption_label: "text-sm font-medium",
         // captionLayout="dropdown" styles — visible label inside each
         // dropdown_root, with the real <select> overlaid invisibly.
-        dropdowns: "flex items-center gap-1",
+        dropdowns: "flex items-center gap-1.5",
         dropdown_root:
-          "relative inline-flex items-center rounded-md border border-input bg-background px-2 py-0.5 text-sm font-medium hover:bg-accent",
+          "relative inline-flex h-7 items-center rounded-md border border-input bg-background px-2 text-sm font-medium hover:bg-accent",
         dropdown:
-          "absolute inset-0 z-10 opacity-0 cursor-pointer appearance-none bg-transparent",
+          "absolute inset-0 z-10 cursor-pointer appearance-none bg-transparent opacity-0",
         months_dropdown: "",
         years_dropdown: "",
-        nav: "space-x-1 flex items-center",
+        nav: "absolute inset-x-1 top-0 z-20 flex h-7 items-center justify-between",
         button_previous: cn(
-          buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 absolute left-1",
+          buttonVariants({ variant: "ghost" }),
+          "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100",
         ),
         button_next: cn(
-          buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 absolute right-1",
+          buttonVariants({ variant: "ghost" }),
+          "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100",
         ),
-        month_grid: "w-full border-collapse space-y-1",
+        month_grid: "w-full border-collapse",
         weekdays: "flex",
         weekday:
-          "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-        week: "flex w-full mt-2",
-        day: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].range_end)]:rounded-r-md [&:has([aria-selected].outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+          "text-muted-foreground rounded-md w-8 font-normal text-[0.75rem]",
+        week: "mt-1 flex w-full",
+        day: "h-8 w-8 p-0 text-center text-sm relative [&:has([aria-selected].range_end)]:rounded-r-md [&:has([aria-selected].outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-10",
         day_button: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
+          "h-8 w-8 p-0 font-normal aria-selected:opacity-100",
         ),
         range_end: "range_end",
         selected:

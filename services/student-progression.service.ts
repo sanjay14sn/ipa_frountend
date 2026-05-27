@@ -14,9 +14,9 @@ export interface StudentLevelProgression {
   studentId: number;
   levelId: number;
   status: StudentLevelProgressionStatus;
+  // Progression rows only carry the obtained `marks` — `totalMarks` lives
+  // on the Level entity (it's intrinsic to the level, not the attempt).
   marks: number | null;
-  theoryMarks: number | null;
-  totalMarks: number | null;
   instructorId: number | null;
   materialsOrdered: boolean;
   materialsOrderedAt: string | null;
@@ -33,7 +33,6 @@ export interface StudentLevelProgression {
 export interface UpdateProgressionDto {
   status?: StudentLevelProgressionStatus;
   marks?: number | null;
-  theoryMarks?: number | null;
 }
 
 export async function getStudentProgressions(

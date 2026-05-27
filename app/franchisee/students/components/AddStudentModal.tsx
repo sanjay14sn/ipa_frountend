@@ -49,6 +49,7 @@ import {
   getAllCourseInstructors,
   type CourseInstructorData,
 } from "@/services/course-instructor.service";
+import { sendClientLog } from "@/lib/client-telemetry";
 
 function calculateAge(dob: string): number {
   const birth = new Date(dob);
@@ -130,8 +131,6 @@ interface StudentFormData {
   // Existing-student fields
   previousLevelId: number;
   previousMarks: string;
-  previousTheoryMarks: string;
-  previousTotalMarks: string;
   previousCompletedAt: string;
   previousInstructorId: number;
   idCardIssued: boolean;
@@ -197,8 +196,6 @@ export default function AddStudentModal({
 
     previousLevelId: 0,
     previousMarks: "",
-    previousTheoryMarks: "",
-    previousTotalMarks: "",
     previousCompletedAt: "",
     previousInstructorId: 0,
     idCardIssued: false,
@@ -212,7 +209,7 @@ export default function AddStudentModal({
         const fetchedPrograms = await getAllPrograms();
         setPrograms(fetchedPrograms);
       } catch (error) {
-        console.error("Error fetching programs:", error);
+        sendClientLog({ level: "error", event: "programs-load-error", message: "Error fetching programs", context: { error } });
       } finally {
         setLoadingPrograms(false);
       }
@@ -231,7 +228,7 @@ export default function AddStudentModal({
           const fetchedStreams = await getStreamsByProgram(formData.programId);
           setStreams(fetchedStreams);
         } catch (error) {
-          console.error("Error fetching streams:", error);
+          sendClientLog({ level: "error", event: "streams-load-error", message: "Error fetching streams", context: { error } });
           setStreams([]);
         } finally {
           setLoadingStreams(false);
@@ -271,14 +268,13 @@ export default function AddStudentModal({
                   ...prev,
                   levelId: 0,
                   previousLevelId: 0,
-                  previousTotalMarks: "",
                 };
               }
               return prev;
             });
           }
         } catch (error) {
-          console.error("Error fetching levels:", error);
+          sendClientLog({ level: "error", event: "levels-load-error", message: "Error fetching levels", context: { error } });
           setLevels([]);
         } finally {
           setLoadingLevels(false);
@@ -321,20 +317,8 @@ export default function AddStudentModal({
 
         setFormData((p) => {
           const nextId = defaultCandidate?.id ?? 0;
-          if (
-            p.previousLevelId === nextId &&
-            (!defaultCandidate?.totalMarks ||
-              p.previousTotalMarks === String(defaultCandidate.totalMarks))
-          ) {
-            return p;
-          }
-          return {
-            ...p,
-            previousLevelId: nextId,
-            previousTotalMarks: defaultCandidate?.totalMarks
-              ? String(defaultCandidate.totalMarks)
-              : p.previousTotalMarks,
-          };
+          if (p.previousLevelId === nextId) return p;
+          return { ...p, previousLevelId: nextId };
         });
       } catch {
         if (!cancelled) setPreviousLevelCandidates([]);
@@ -365,7 +349,7 @@ export default function AddStudentModal({
         });
         setInstructors(paginated.result ?? []);
       } catch (error) {
-        console.error("Error fetching instructors:", error);
+        sendClientLog({ level: "error", event: "instructors-load-error", message: "Error fetching instructors", context: { error } });
         setInstructors([]);
       } finally {
         setLoadingInstructors(false);
@@ -419,22 +403,21 @@ export default function AddStudentModal({
               "Previous level must come before the current level";
           }
           const marks = Number(formData.previousMarks);
-          const theory = Number(formData.previousTheoryMarks);
-          const total = Number(formData.previousTotalMarks);
           if (!formData.previousMarks.trim() || Number.isNaN(marks)) {
             newErrors.previousMarks = "Marks obtained is required";
           }
-          if (!formData.previousTheoryMarks.trim() || Number.isNaN(theory)) {
-            newErrors.previousTheoryMarks = "Theory marks is required";
-          }
-          if (!formData.previousTotalMarks.trim() || Number.isNaN(total)) {
-            newErrors.previousTotalMarks = "Total marks is required";
-          }
-          if (!newErrors.previousMarks && !newErrors.previousTotalMarks && marks > total) {
-            newErrors.previousMarks = "Marks cannot exceed total marks";
-          }
-          if (!newErrors.previousTheoryMarks && !newErrors.previousTotalMarks && theory > total) {
-            newErrors.previousTheoryMarks = "Theory marks cannot exceed total marks";
+          // The level's intrinsic totalMarks is the cap — pulled from the
+          // picked candidate when available.
+          const pickedCandidate = previousLevelCandidates.find(
+            (c) => c.id === formData.previousLevelId
+          );
+          const total = pickedCandidate?.totalMarks;
+          if (
+            !newErrors.previousMarks &&
+            total != null &&
+            marks > total
+          ) {
+            newErrors.previousMarks = `Marks cannot exceed level's totalMarks (${total})`;
           }
           if (!formData.previousCompletedAt) {
             newErrors.previousCompletedAt = "Completion date is required";
@@ -599,8 +582,6 @@ export default function AddStudentModal({
           ? {
               levelId: Number(formData.previousLevelId),
               marks: Number(formData.previousMarks),
-              theoryMarks: Number(formData.previousTheoryMarks),
-              totalMarks: Number(formData.previousTotalMarks),
               completedAt: formData.previousCompletedAt,
               instructorId: Number(formData.previousInstructorId),
             }
@@ -640,7 +621,7 @@ export default function AddStudentModal({
       setSubmitted(true);
       onSuccess();
     } catch (error) {
-      console.error("Error registering student:", error);
+      sendClientLog({ level: "error", event: "student-register-error", message: "Error registering student", context: { error } });
       toast.error("Failed to register student. Please try again.");
     } finally {
       setIsLoading(false);
@@ -682,8 +663,6 @@ export default function AddStudentModal({
 
       previousLevelId: 0,
       previousMarks: "",
-      previousTheoryMarks: "",
-      previousTotalMarks: "",
       previousCompletedAt: "",
       previousInstructorId: 0,
       idCardIssued: false,
@@ -721,8 +700,6 @@ export default function AddStudentModal({
                   const clearedExistingFields = {
                     previousLevelId: 0,
                     previousMarks: "",
-                    previousTheoryMarks: "",
-                    previousTotalMarks: "",
                     previousCompletedAt: "",
                     previousInstructorId: 0,
                     idCardIssued: false,
@@ -1074,19 +1051,7 @@ export default function AddStudentModal({
                       <Select
                         value={formData.previousLevelId.toString()}
                         onValueChange={(value) => {
-                          const picked = previousLevelCandidates.find(
-                            (c) => c.id.toString() === value,
-                          );
                           handleInputChange("previousLevelId", value);
-                          // Pre-fill `previousTotalMarks` from the picked
-                          // level's totalMarks (parity with the auto-derive
-                          // behaviour we replaced).
-                          if (picked?.totalMarks != null) {
-                            handleInputChange(
-                              "previousTotalMarks",
-                              String(picked.totalMarks),
-                            );
-                          }
                         }}
                         disabled={
                           !formData.levelId ||
@@ -1183,30 +1148,19 @@ export default function AddStudentModal({
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="previousTotalMarks">Total Marks *</Label>
-                      <Input
-                        id="previousTotalMarks"
-                        type="number"
-                        min={0}
-                        value={formData.previousTotalMarks}
-                        onChange={(e) =>
-                          handleInputChange("previousTotalMarks", e.target.value)
-                        }
-                        className={
-                          errors.previousTotalMarks ? "border-red-500" : ""
-                        }
-                        placeholder="e.g. 100"
-                      />
-                      {errors.previousTotalMarks && (
-                        <p className="text-red-500 text-sm flex items-center gap-1">
-                          <AlertCircle className="w-4 h-4" />
-                          {errors.previousTotalMarks}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="previousMarks">Marks Obtained *</Label>
+                      <Label htmlFor="previousMarks">
+                        Marks Obtained *
+                        {(() => {
+                          const picked = previousLevelCandidates.find(
+                            (c) => c.id === formData.previousLevelId,
+                          );
+                          return picked?.totalMarks != null ? (
+                            <span className="ml-2 text-muted-foreground font-normal">
+                              (out of {picked.totalMarks})
+                            </span>
+                          ) : null;
+                        })()}
+                      </Label>
                       <Input
                         id="previousMarks"
                         type="number"
@@ -1222,29 +1176,6 @@ export default function AddStudentModal({
                         <p className="text-red-500 text-sm flex items-center gap-1">
                           <AlertCircle className="w-4 h-4" />
                           {errors.previousMarks}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="previousTheoryMarks">Theory Marks *</Label>
-                      <Input
-                        id="previousTheoryMarks"
-                        type="number"
-                        min={0}
-                        value={formData.previousTheoryMarks}
-                        onChange={(e) =>
-                          handleInputChange("previousTheoryMarks", e.target.value)
-                        }
-                        className={
-                          errors.previousTheoryMarks ? "border-red-500" : ""
-                        }
-                        placeholder="e.g. 40"
-                      />
-                      {errors.previousTheoryMarks && (
-                        <p className="text-red-500 text-sm flex items-center gap-1">
-                          <AlertCircle className="w-4 h-4" />
-                          {errors.previousTheoryMarks}
                         </p>
                       )}
                     </div>

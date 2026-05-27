@@ -69,9 +69,9 @@ export interface StudentsResponse {
 
 export interface PreviousLevelProgressionInput {
   levelId: number;
+  /** Obtained marks. The level's intrinsic `totalMarks` is the cap and lives
+   *  on the Level — no longer captured per progression. */
   marks: number;
-  theoryMarks: number;
-  totalMarks: number;
   completedAt: string;
   instructorId: number;
 }

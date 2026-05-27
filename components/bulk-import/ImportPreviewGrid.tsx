@@ -3,6 +3,7 @@
 import { AlertCircle, CheckCircle2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
   SelectContent,
@@ -34,6 +35,13 @@ export interface PreviewColumn {
   /** Whether the cell is editable. Defaults to true. */
   editable?: boolean;
   /**
+   * Input type. `"text"` (default) renders a free-text input or a Select
+   * when `options` is provided. `"date"` renders the shared shadcn
+   * `DateInput` picker (display: dd/MM/yyyy, value: ISO yyyy-mm-dd) so
+   * date cells match the single-create modal's UX everywhere in the app.
+   */
+  type?: "text" | "date";
+  /**
    * If provided, the field renders as a dropdown of these options instead
    * of a free-text input. Pass a function to compute options from the row's
    * other values (e.g. levels filtered by the row's program). The function
@@ -46,6 +54,12 @@ export interface PreviewColumn {
     | ((row: Record<string, unknown>) => PreviewSelectOption[]);
   /** Placeholder shown in the dropdown trigger when the cell is empty. */
   placeholder?: string;
+  /**
+   * Optional section label. Columns sharing the same section render under
+   * a single heading. Columns without a section render in a default group
+   * at the top. The render order is determined by the columns array.
+   */
+  section?: string;
 }
 
 interface ImportPreviewGridProps {
@@ -83,7 +97,7 @@ export function ImportPreviewGrid({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       {rows.map((row) => {
         const hasErrors = row.errors.length > 0;
         // Bucket errors per field so we can also surface unmatched-field errors
@@ -104,7 +118,7 @@ export function ImportPreviewGrid({
             )}
           >
             {/* Header strip */}
-            <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-2">
+            <div className="flex items-center justify-between gap-3 border-b border-border/60 px-3 py-1.5">
               <div className="flex items-center gap-2">
                 {hasErrors ? (
                   <AlertCircle className="h-4 w-4 text-red-600" />
@@ -135,12 +149,41 @@ export function ImportPreviewGrid({
               </Button>
             </div>
 
-            {/* Field grid */}
-            <div className="grid grid-cols-1 gap-3 px-4 py-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {columns.map((c) => {
-                const errorMsg = fieldHasError(row.errors, c.key);
-                const dataRow = row.data as Record<string, unknown>;
-                const rawValue = dataRow[c.key];
+            {/* Field grid, grouped by section. Columns without a section
+                fall into an unnamed first group. */}
+            {(() => {
+              // Preserve column order while bucketing into named sections.
+              const groups: Array<{
+                section: string | null;
+                cols: PreviewColumn[];
+              }> = [];
+              for (const col of columns) {
+                const last = groups[groups.length - 1];
+                const colSection = col.section ?? null;
+                if (!last || last.section !== colSection) {
+                  groups.push({ section: colSection, cols: [col] });
+                } else {
+                  last.cols.push(col);
+                }
+              }
+              return groups.map((group, gIdx) => (
+                <div
+                  key={`${row.rowIndex}-section-${gIdx}`}
+                  className={cn(
+                    "px-3 py-1.5",
+                    gIdx > 0 && "border-t border-border/40",
+                  )}
+                >
+                  {group.section && (
+                    <h4 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {group.section}
+                    </h4>
+                  )}
+                  <div className="grid grid-cols-1 gap-x-2 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {group.cols.map((c) => {
+              const errorMsg = fieldHasError(row.errors, c.key);
+              const dataRow = row.data as Record<string, unknown>;
+              const rawValue = dataRow[c.key];
 
                 // For object cells like `{id, name, …}` we use `id` as the
                 // Select value and `name` as the displayed text. For arrays
@@ -205,10 +248,10 @@ export function ImportPreviewGrid({
                 }
 
                 return (
-                  <div key={c.key} className="flex flex-col gap-1">
+                  <div key={c.key} className="flex flex-col gap-0.5">
                     <label
                       htmlFor={inputId}
-                      className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                      className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground leading-tight"
                     >
                       {c.label}
                     </label>
@@ -238,7 +281,7 @@ export function ImportPreviewGrid({
                             value={display}
                             readOnly
                             disabled
-                            className="h-8 cursor-not-allowed text-xs disabled:opacity-100"
+                            className="h-7 cursor-not-allowed text-xs disabled:opacity-100"
                           />
                         );
                       })()
@@ -260,7 +303,7 @@ export function ImportPreviewGrid({
                         <SelectTrigger
                           id={inputId}
                           className={cn(
-                            "h-8 text-xs",
+                            "h-7 text-xs",
                             errorMsg
                               ? "border-red-500 focus:ring-red-300"
                               : "",
@@ -288,6 +331,21 @@ export function ImportPreviewGrid({
                           )}
                         </SelectContent>
                       </Select>
+                    ) : c.type === "date" ? (
+                      // Shared DateInput — calendar popover, displays as
+                      // dd/MM/yyyy. Value flows in/out as ISO yyyy-mm-dd so
+                      // the backend's `IsDateString` validator stays happy.
+                      <DateInput
+                        id={inputId}
+                        value={cellValue}
+                        onChange={(v) => onRowEdit(row.rowIndex, c.key, v)}
+                        placeholder={c.placeholder ?? "DD / MM / YYYY"}
+                        className={cn(
+                          "h-7 text-xs",
+                          errorMsg ? "border-red-500" : "",
+                        )}
+                        aria-invalid={!!errorMsg}
+                      />
                     ) : (
                       <Input
                         id={inputId}
@@ -296,7 +354,7 @@ export function ImportPreviewGrid({
                           onRowEdit(row.rowIndex, c.key, e.target.value)
                         }
                         className={cn(
-                          "h-8 text-xs",
+                          "h-7 text-xs",
                           errorMsg
                             ? "border-red-500 focus-visible:ring-red-300"
                             : "",
@@ -304,21 +362,24 @@ export function ImportPreviewGrid({
                       />
                     )}
                     {errorMsg && (
-                      <p className="text-[11px] leading-tight text-red-600">
+                      <p className="text-[10px] leading-tight text-red-600">
                         {errorMsg}
                       </p>
                     )}
                   </div>
                 );
               })}
-            </div>
+                  </div>
+                </div>
+              ));
+            })()}
 
             {/* Footer: errors that don't map to a visible column
                 (e.g. cross-row consistency, agreement-validity on row-level). */}
             {orphanErrors.length > 0 && (
-              <div className="space-y-1 border-t border-red-200 bg-red-50/40 px-4 py-2">
+              <div className="space-y-0.5 border-t border-red-200 bg-red-50/40 px-3 py-1.5">
                 {orphanErrors.map((e, i) => (
-                  <p key={i} className="text-xs text-red-700">
+                  <p key={i} className="text-[11px] text-red-700">
                     <span className="font-medium">{e.field}:</span> {e.message}
                   </p>
                 ))}
@@ -327,7 +388,7 @@ export function ImportPreviewGrid({
 
             {/* Hint about other field errors when there are many */}
             {hasErrors && fieldErrorKeys.size > 4 && orphanErrors.length === 0 && (
-              <div className="border-t border-red-200 bg-red-50/40 px-4 py-2 text-xs text-red-700">
+              <div className="border-t border-red-200 bg-red-50/40 px-3 py-1.5 text-[11px] text-red-700">
                 {fieldErrorKeys.size} fields need fixing — see red labels above.
               </div>
             )}
