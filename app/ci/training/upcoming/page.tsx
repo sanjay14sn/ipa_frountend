@@ -5,17 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, TableLoadingState, TablePageShell, type DataTableColumn } from "@/components/shared";
 import { getCIUpcomingSessions, type CIUpcomingSession } from "@/services/ci-training.service";
-
-function formatDate(value?: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
+import { formatDate } from "@/lib/date-utils";
 
 function statusBadge(status: string) {
   if (status === "ASSIGNED") return <Badge>Assigned</Badge>;

@@ -14,6 +14,7 @@ export function usePrograms() {
     queryFn: getAllPrograms,
     staleTime: Number.POSITIVE_INFINITY, // never re-fetch automatically
     gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
   const programs = useMemo(
     () => q.data ?? ([] as Program[]),
@@ -38,6 +39,7 @@ export function useProgramsOnDemand() {
     queryFn: getAllPrograms,
     enabled,
     staleTime: Number.POSITIVE_INFINITY,
+    refetchOnWindowFocus: false,
   });
 
   const ensureProgramsRequested = useCallback(() => {

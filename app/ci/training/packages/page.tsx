@@ -16,14 +16,7 @@ import {
 } from "@/services/ci-training.service";
 import { CheckCircle, Layers, ShoppingCart } from "lucide-react";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
-
-function money(value: number | null | undefined): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(Number(value ?? 0));
-}
+import { formatRupees } from "@/lib/currency-utils";
 
 function packageCoverage(pkg: {
   trainingLevelIds: number[];
@@ -339,7 +332,7 @@ export default function CITrainingPackagesPage() {
 
             <div className="mt-auto flex items-end justify-between gap-4 pt-7">
               <div>
-                <span className="text-2xl font-semibold text-card-foreground">{money(pkg.fee)}</span>
+                <span className="text-2xl font-semibold text-card-foreground">{formatRupees(pkg.fee)}</span>
                 <p className="text-xs text-muted-foreground">
                   {pkg.trainingLevelIds.length} levels included
                 </p>

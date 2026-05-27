@@ -6,16 +6,20 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type User } from "../lib/auth";
+import { type User, slimIdentity, getStoredIdentity } from "../lib/auth";
 import {
   switchFranchise as apiSwitchFranchise,
   getFranchiseeProfile,
+  getAdminProfile,
 } from "../services/auth.service";
 import { getEffectiveFranchiseStatus } from "../lib/auth";
 import { queryKeys } from "@/hooks/api/query-keys";
 import { useScopeStore } from "@/lib/stores/scope-store";
+import { toast } from "sonner";
+import { isAxiosError } from "axios";
 
 interface UserContextType {
   user: User | null;
@@ -70,25 +74,15 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      const storedUser = localStorage.getItem("user");
-      if (!storedUser || storedUser === "{}") {
+      const identity = getStoredIdentity();
+      if (!identity) {
         setLoading(false);
         return;
       }
-
-      try {
-        setUserState(JSON.parse(storedUser) as User);
-        // One-shot migration: if the scope store hasn't picked up the
-        // legacy `user.activeAgreementId` yet (first load after upgrade,
-        // or a different browser), pull it in so we don't lose the
-        // selection mid-rollout.
-        useScopeStore.getState().hydrateFromUserBlob();
-      } catch {
-        localStorage.removeItem("user");
-      }
-      setLoading(false);
+      // Set slim identity immediately so queries can fire (role/franchiseId available).
+      // Keep loading=true — profile fetch below will complete the hydration.
+      setUserState(identity as User);
     }, 0);
-
     return () => window.clearTimeout(timeoutId);
   }, []);
 
@@ -128,7 +122,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           const updated = next(prev);
           if (typeof window !== "undefined") {
             if (updated) {
-              localStorage.setItem("user", JSON.stringify(updated));
+              localStorage.setItem("user", JSON.stringify(slimIdentity(updated)));
             } else {
               localStorage.removeItem("user");
             }
@@ -139,7 +133,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         setUserState(next);
         if (typeof window !== "undefined") {
-          localStorage.setItem("user", JSON.stringify(next));
+          localStorage.setItem("user", JSON.stringify(slimIdentity(next)));
         }
         applyScopeFromUser(next);
       }
@@ -149,7 +143,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
   const switchFranchise = async (franchiseId: string) => {
     if (!user) return;
+    // Backend session switch — throws on genuine failure (5xx, network error).
     const data = await apiSwitchFranchise(franchiseId);
+
     let profileData: Record<string, unknown> | null = null;
     try {
       const profileResponse = await getFranchiseeProfile();
@@ -157,9 +153,21 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         (profileResponse as { result?: Record<string, unknown> }).result ??
         (profileResponse as unknown as Record<string, unknown>);
       profileData = raw && typeof raw === "object" ? raw : null;
-    } catch {
-      // Profile fetch may fail for Pending franchises
+    } catch (profileErr) {
+      // 403 is expected for Pending franchises — they can't fetch their full
+      // profile until the agreement is signed. Any other error (5xx, network)
+      // means something went wrong; surface it without blocking the switch.
+      const status = isAxiosError(profileErr)
+        ? profileErr.response?.status
+        : undefined;
+      if (status !== 403) {
+        toast.error(
+          "Switched franchise successfully, but your profile could not be refreshed. " +
+            "Try reloading if data looks stale.",
+        );
+      }
     }
+
     const fetchedProfile = profileData
       ? normalizeFranchiseeProfile(profileData)
       : null;
@@ -213,7 +221,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         resolvedProgramId = matched?.programId ?? null;
         const next = { ...prev, activeAgreementId: agreementId };
         if (typeof window !== "undefined") {
-          localStorage.setItem("user", JSON.stringify(next));
+          localStorage.setItem("user", JSON.stringify(slimIdentity(next)));
         }
         return next;
       });
@@ -227,7 +235,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   );
 
   const profileQuery = useQuery({
-    queryKey: queryKeys.auth.franchiseeProfile(user?.franchiseId),
+    queryKey: queryKeys.auth.franchiseeProfile(),
     queryFn: async () => {
       const res = await getFranchiseeProfile();
       const raw =
@@ -241,8 +249,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     enabled:
       typeof window !== "undefined" &&
       !!user &&
-      user.role === "franchisee" &&
-      !!user.franchiseId,
+      (user.role === "franchisee" || user.role === "franchise"),
     staleTime: 60_000,
   });
 
@@ -342,9 +349,10 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           franchises,
           profile,
         };
-        localStorage.setItem("user", JSON.stringify(next));
+        localStorage.setItem("user", JSON.stringify(slimIdentity(next)));
         return next;
       });
+      setLoading(false);
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
@@ -354,16 +362,53 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     profileQuery.dataUpdatedAt,
   ]);
 
+  const adminProfileQuery = useQuery({
+    queryKey: queryKeys.auth.adminProfile(),
+    queryFn: async () => {
+      const res = await getAdminProfile();
+      return res;
+    },
+    enabled:
+      typeof window !== "undefined" &&
+      !!user &&
+      user.role === "admin",
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (!adminProfileQuery.isSuccess || !adminProfileQuery.data) return;
+    const data = adminProfileQuery.data;
+    setUserState((prev) => {
+      if (!prev || prev.role !== "admin") return prev;
+      return {
+        ...prev,
+        mail: data.emailId,
+        adminRole: data.role,
+        state: data.state ?? prev.state,
+      };
+    });
+    setLoading(false);
+  }, [adminProfileQuery.isSuccess, adminProfileQuery.data]);
+
+  useEffect(() => {
+    if (profileQuery.isError || adminProfileQuery.isError) {
+      setLoading(false);
+    }
+  }, [profileQuery.isError, adminProfileQuery.isError]);
+
+  const contextValue = useMemo(
+    () => ({
+      user,
+      loading,
+      setUser: setUserWithStorage,
+      switchFranchise,
+      switchAgreement,
+    }),
+    [user, loading, setUserWithStorage, switchFranchise, switchAgreement],
+  );
+
   return (
-    <UserContext.Provider
-      value={{
-        user,
-        loading,
-        setUser: setUserWithStorage,
-        switchFranchise,
-        switchAgreement,
-      }}
-    >
+    <UserContext.Provider value={contextValue}>
       {children}
     </UserContext.Provider>
   );

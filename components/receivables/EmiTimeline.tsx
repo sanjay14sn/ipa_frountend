@@ -20,6 +20,7 @@ import type {
   ReceivableSummaryItem,
 } from "@/services/agreement.service";
 import { GST_RATE_LABEL } from "@/lib/gst";
+import { formatRupees } from "@/lib/currency-utils";
 
 export interface EmiTimelineProps {
   summary:
@@ -40,13 +41,6 @@ export interface EmiTimelineProps {
   hideSummaryRow?: boolean;
   className?: string;
 }
-
-const money = (value: number | null | undefined) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(value ?? 0));
 
 function isFullInstallmentSummary(
   summary:
@@ -173,11 +167,11 @@ function TimelineStop({
           {timelineDateLabel(item)}
         </p>
         <p className="mt-1 text-lg font-semibold tabular-nums text-card-foreground">
-          {money(payable)}
+          {formatRupees(payable)}
         </p>
         {showSplit ? (
           <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">
-            {money(principal)} + GST {money(gst)}
+            {formatRupees(principal)} + GST {formatRupees(gst)}
           </p>
         ) : (
           <p className="mt-0.5 text-[11px] text-muted-foreground/70">
@@ -273,8 +267,8 @@ export function EmiTimeline({
           </div>
         </CardHeader>
         <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
-          <SummaryCell label="Paid" value={money(paid)} />
-          <SummaryCell label="Outstanding" value={money(outstanding)} />
+          <SummaryCell label="Paid" value={formatRupees(paid)} />
+          <SummaryCell label="Outstanding" value={formatRupees(outstanding)} />
           <SummaryCell
             label="EMIs paid"
             value={
@@ -316,7 +310,7 @@ export function EmiTimeline({
               {title}
             </div>
             <p className="text-xs text-muted-foreground">
-              Franchise fee · {money(payableTotal)} total ·{" "}
+              Franchise fee · {formatRupees(payableTotal)} total ·{" "}
               {downPaymentCount > 0
                 ? `${downPaymentCount} down payment + ${installmentCount} monthly EMI${
                     installmentCount === 1 ? "" : "s"
@@ -406,11 +400,11 @@ export function EmiTimeline({
           <div className="grid grid-cols-2 gap-3 border-t border-border bg-muted/30 p-4 sm:grid-cols-3">
             <SummaryCell
               label="Principal"
-              value={money(principalTotal)}
+              value={formatRupees(principalTotal)}
             />
             <SummaryCell
               label={isInclusive ? "GST" : `GST (${GST_RATE_LABEL})`}
-              value={money(gstTotal)}
+              value={formatRupees(gstTotal)}
             />
             <SummaryCell
               label="EMIs paid"

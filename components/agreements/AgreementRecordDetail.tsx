@@ -37,6 +37,8 @@ import {
   buildAgreementDetailFranchiseData,
 } from "@/lib/agreement-page-terms";
 import { getErrorMessage } from "@/lib/error-utils";
+import { formatRupees } from "@/lib/currency-utils";
+import { fmtDate } from "@/lib/date-utils";
 import PaymentBreakdown from "@/app/franchisee/agreement/components/PaymentBreakdown";
 import {
   ArrowRight,
@@ -57,17 +59,6 @@ import {
   ShieldCheck,
   User,
 } from "lucide-react";
-
-function fmtDate(value: string | null | undefined): string {
-  if (value == null || value === "") return "-";
-  try {
-    const d = typeof value === "string" ? parseISO(value) : new Date(value);
-    if (Number.isNaN(d.getTime())) return String(value);
-    return format(d, "PPpp");
-  } catch {
-    return String(value);
-  }
-}
 
 function fmtShortDate(value: string | null | undefined): string {
   if (value == null || value === "") return "-";
@@ -103,21 +94,14 @@ const PAYMENT_LABELS: Record<string, string> = {
   subscriptionId: "Subscription ID",
 };
 
-const money = (n: number | undefined | null) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(n ?? 0));
-
 function formatFranchiseFee(
   data: Pick<AgreementScheduleBView, "franchiseFee" | "gstFranchiseFee">,
 ): string {
   const payable = getFranchiseFeePayable(data.franchiseFee, data.gstFranchiseFee);
   if (payable.inclusive) {
-    return `${money(payable.base)} (GST inclusive)`;
+    return `${formatRupees(payable.base)} (GST inclusive)`;
   }
-  return `${money(payable.base)} + ${GST_RATE_LABEL} (${money(payable.payable)} payable)`;
+  return `${formatRupees(payable.base)} + ${GST_RATE_LABEL} (${formatRupees(payable.payable)} payable)`;
 }
 
 /** Same shape as `formatFranchiseFee` but reads the material-cost GST flag. */
@@ -126,10 +110,10 @@ function formatMaterialCharges(
 ): string {
   const inclusive = data.gstMaterialCost !== false;
   if (inclusive) {
-    return `${money(data.materialCost)} (GST inclusive)`;
+    return `${formatRupees(data.materialCost)} (GST inclusive)`;
   }
   const payable = getFranchiseFeePayable(data.materialCost, false);
-  return `${money(payable.base)} + ${GST_RATE_LABEL} (${money(payable.payable)} payable)`;
+  return `${formatRupees(payable.base)} + ${GST_RATE_LABEL} (${formatRupees(payable.payable)} payable)`;
 }
 
 function prettifyToken(value: string | null | undefined): string {
@@ -507,7 +491,7 @@ export function AgreementRecordDetail({
                         {sigSrc ? (
                           <div className="flex items-center justify-center rounded-lg border bg-muted/30 py-3">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={sigSrc} alt="Franchisee signature" className="max-h-14 w-auto max-w-full object-contain" />
+                            <img src={sigSrc} alt="Franchisee signature" className="max-h-14 w-auto max-w-full object-contain" loading="lazy" />
                           </div>
                         ) : (
                           <div className="flex items-center justify-center rounded-lg border bg-muted/30 py-3">
@@ -745,7 +729,7 @@ function AgreementEmiScheduleCard({
             ) : (
               <>
                 <CreditCard className="mr-2 h-4 w-4" />
-                Pay {money(payableAmountToShow)} now
+                Pay {formatRupees(payableAmountToShow)} now
               </>
             )}
           </Button>
@@ -833,7 +817,7 @@ function EmiScheduleRow({ item }: { item: ReceivableSummaryItem }) {
       </TableCell>
       <TableCell>{fmtShortDate(item.dueAt)}</TableCell>
       <TableCell>{fmtShortDate(item.paidAt)}</TableCell>
-      <TableCell className="text-right font-medium">{money(item.amount)}</TableCell>
+      <TableCell className="text-right font-medium">{formatRupees(item.amount)}</TableCell>
     </TableRow>
   );
 }
@@ -912,26 +896,26 @@ function LevelRoyaltyCard({
           <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
             Term Fee
           </p>
-          <p className="text-xl font-bold tabular-nums">{money(level.termFees)}</p>
+          <p className="text-xl font-bold tabular-nums">{formatRupees(level.termFees)}</p>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-2">
         <div>
           <p className="text-xs text-muted-foreground">Franchisee</p>
-          <p className="font-semibold tabular-nums text-sm">{money(franchiseeTotal)}</p>
+          <p className="font-semibold tabular-nums text-sm">{formatRupees(franchiseeTotal)}</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">CI</p>
-          <p className="font-semibold tabular-nums text-sm">{money(ciTotal)}</p>
+          <p className="font-semibold tabular-nums text-sm">{formatRupees(ciTotal)}</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">IPA</p>
           <p className="font-semibold tabular-nums text-sm">
-            {money(gstExclusive ? ipaPayable : level.ipaShare)}
+            {formatRupees(gstExclusive ? ipaPayable : level.ipaShare)}
           </p>
           {gstExclusive && level.ipaShare > 0 ? (
             <p className="text-[11px] text-muted-foreground leading-tight">
-              {money(level.ipaShare)} + GST {money(ipaGst)}
+              {formatRupees(level.ipaShare)} + GST {formatRupees(ipaGst)}
             </p>
           ) : null}
         </div>
@@ -1036,16 +1020,16 @@ function ScheduleBCard({
             </div>
             <div>
               <p className="text-3xl font-bold tabular-nums tracking-tight">
-                {money(data.franchiseFee)}
+                {formatRupees(data.franchiseFee)}
               </p>
               <p className="text-sm text-muted-foreground">franchise fee</p>
             </div>
             {!feePayable.inclusive && (
               <p className="text-sm text-muted-foreground">
                 + 18% GST{" "}
-                <span className="text-foreground font-medium">{money(feePayable.gst)}</span>
+                <span className="text-foreground font-medium">{formatRupees(feePayable.gst)}</span>
                 {" · "}total payable{" "}
-                <span className="text-foreground font-medium">{money(feePayable.payable)}</span>
+                <span className="text-foreground font-medium">{formatRupees(feePayable.payable)}</span>
               </p>
             )}
             <div className="grid grid-cols-3 gap-3 pt-3 border-t border-border">
@@ -1062,16 +1046,16 @@ function ScheduleBCard({
                 <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
                   Registration
                 </p>
-                <p className="font-semibold mt-0.5 tabular-nums">{money(data.kitCost)}</p>
+                <p className="font-semibold mt-0.5 tabular-nums">{formatRupees(data.kitCost)}</p>
                 <p className="text-xs text-muted-foreground">one-time</p>
               </div>
               <div>
                 <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
                   Material Kit
                 </p>
-                <p className="font-semibold mt-0.5 tabular-nums">{money(data.materialCost)}</p>
+                <p className="font-semibold mt-0.5 tabular-nums">{formatRupees(data.materialCost)}</p>
                 {!data.gstMaterialCost && (
-                  <p className="text-xs text-muted-foreground">+ GST {money(materialPayable.gst)}</p>
+                  <p className="text-xs text-muted-foreground">+ GST {formatRupees(materialPayable.gst)}</p>
                 )}
               </div>
             </div>
@@ -1222,6 +1206,7 @@ function ScheduleBCard({
                       src={signatureSrc}
                       alt="Franchisee signature"
                       className="mx-auto max-h-20 w-auto max-w-full object-contain"
+                      loading="lazy"
                     />
                   </div>
                 ) : (

@@ -12,29 +12,12 @@ import { ReceivableCompactLine } from "@/components/receivables/InstallmentSumma
 import { EmiTimeline } from "@/components/receivables/EmiTimeline";
 import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
 import { AgreementKitItemsDialog } from "./AgreementKitItemsDialog";
-
-function formatInr(amount: number | string | null | undefined): string {
-  if (amount == null || amount === "") return "-";
-  const numeric =
-    typeof amount === "string" ? Number.parseFloat(amount) : Number(amount);
-  if (Number.isNaN(numeric)) return "-";
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(numeric);
-}
+import { formatDate } from "@/lib/date-utils";
+import { formatRupees } from "@/lib/currency-utils";
 
 function yesNo(value: boolean | null | undefined): string {
   if (value == null) return "-";
   return value ? "Yes" : "No";
-}
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString();
 }
 
 function agreementLabel(agreement: AgreementRecord) {
@@ -52,9 +35,9 @@ function formatFranchiseFeePayable(
   if (franchiseFee == null) return "-";
   const payable = getFranchiseFeePayable(franchiseFee, gstFranchiseFee);
   if (payable.inclusive) {
-    return `${formatInr(payable.base)} (GST inclusive)`;
+    return `${formatRupees(payable.base)} (GST inclusive)`;
   }
-  return `${formatInr(payable.base)} + ${GST_RATE_LABEL} (${formatInr(payable.payable)} payable)`;
+  return `${formatRupees(payable.base)} + ${GST_RATE_LABEL} (${formatRupees(payable.payable)} payable)`;
 }
 
 function AgreementMoneyGrid({ agreement }: { agreement: AgreementRecord }) {
@@ -66,12 +49,12 @@ function AgreementMoneyGrid({ agreement }: { agreement: AgreementRecord }) {
         agreement.gstFranchiseFee,
       ),
     },
-    { label: "Monthly fee", value: formatInr(agreement.monthlyFee) },
-    { label: "Kit cost", value: formatInr(agreement.kitCost) },
-    { label: "Material cost", value: formatInr(agreement.materialCost) },
-    { label: "Royalty", value: formatInr(agreement.royalty) },
-    { label: "CI share", value: formatInr(agreement.ciShare) },
-    { label: "Franchise share", value: formatInr(agreement.franchiseShare) },
+    { label: "Monthly fee", value: formatRupees(agreement.monthlyFee) },
+    { label: "Kit cost", value: formatRupees(agreement.kitCost) },
+    { label: "Material cost", value: formatRupees(agreement.materialCost) },
+    { label: "Royalty", value: formatRupees(agreement.royalty) },
+    { label: "CI share", value: formatRupees(agreement.ciShare) },
+    { label: "Franchise share", value: formatRupees(agreement.franchiseShare) },
     {
       label: "Tenure (months)",
       value: agreement.tenure != null ? String(agreement.tenure) : "-",

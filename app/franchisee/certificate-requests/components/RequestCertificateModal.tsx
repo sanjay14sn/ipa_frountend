@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -12,17 +12,16 @@ import {
 import { Award } from "lucide-react";
 import { EligibleStudent } from "@/services/student.service";
 import { toast } from "sonner";
-import {
-  CourseInstructorData,
-  getEligibleCourseInstructorsForCertificate,
-} from "@/services/course-instructor.service";
+import { CourseInstructorData } from "@/services/course-instructor.service";
 import { useRequestCertificateForStudent } from "@/hooks/api/student.hooks";
+import { useEligibleCourseInstructorsForCertificate } from "@/hooks/api/certificate.hooks";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 import {
   DialogFormField,
   DialogStateMessage,
   FormDialog,
 } from "@/components/shared/dialog";
+import { sendClientLog } from "@/lib/client-telemetry";
 
 interface RequestCertificateModalProps {
   open: boolean;
@@ -42,35 +41,16 @@ export default function RequestCertificateModal({
     marksObtained: "",
     courseInstructorId: "",
   });
-  const [eligibleInstructors, setEligibleInstructors] = useState<CourseInstructorData[]>([]);
-  const [isLoadingInstructors, setIsLoadingInstructors] = useState(false);
   const requestCert = useRequestCertificateForStudent();
 
-  useEffect(() => {
-    let cancelled = false;
-    async function loadEligible() {
-      if (!open || !student.levelId) return;
-      setIsLoadingInstructors(true);
-      try {
-        const rows = await getEligibleCourseInstructorsForCertificate(
-          [student.levelId],
-          student.programId ?? undefined,
-        );
-        if (!cancelled) setEligibleInstructors(rows);
-      } catch (error) {
-        if (!cancelled) {
-          setEligibleInstructors([]);
-          console.error("Error loading eligible course instructors:", error);
-        }
-      } finally {
-        if (!cancelled) setIsLoadingInstructors(false);
-      }
-    }
-    void loadEligible();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, student.levelId]);
+  const levelIds = student.levelId > 0 ? [student.levelId] : [];
+  const {
+    data: eligibleInstructors = [],
+    isLoading: isLoadingInstructors,
+  } = useEligibleCourseInstructorsForCertificate(
+    levelIds,
+    student.programId ?? undefined,
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +90,7 @@ export default function RequestCertificateModal({
 
       onSuccess();
     } catch (error) {
-      console.error("Error creating certificate request:", error);
+      sendClientLog({ level: "error", event: "certificate-request-error", message: "Error creating certificate request", context: { error } });
       toast.error("Failed to create certificate request. Please try again.");
     }
   };

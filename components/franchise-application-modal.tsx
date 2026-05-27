@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/popover";
 import { Calculator, Check, ChevronsUpDown } from "lucide-react";
 import React from "react";
+import { sendClientLog } from "@/lib/client-telemetry";
 import { applyFranchisee } from "@/services/franchisee.service";
 import { getErrorMessage } from "@/lib/error-utils";
 import { toast } from "sonner";
@@ -183,7 +184,7 @@ export function FranchiseApplicationModal({
         setSubmitted(true);
       }
     } catch (error) {
-      console.error("Error submitting application:", error);
+      sendClientLog({ level: "error", event: "franchise-application-submit-error", message: "Error submitting franchise application", context: { error } });
       toast.error(getErrorMessage(error, "Failed to submit application"));
     } finally {
       setIsLoading(false);

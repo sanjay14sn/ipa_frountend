@@ -2,16 +2,26 @@
 
 import { OrderData, OrderItemData } from "@/services/order.service";
 import { useOrderById } from "@/hooks/api/order.hooks";
-import { Loader2 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import {
-  DetailField,
-  DetailFieldsGrid,
-  ExpandedDetailSection,
+  CalendarDays,
+  CreditCard,
+  IndianRupee,
+  Loader2,
+  Package,
+  Receipt,
+  Users,
+} from "lucide-react";
+import {
   ExpandedDetailSurface,
+  KeyFactCard,
+  KeyFactsGrid,
+  ProfileCard,
+  ProfileCardSection,
   RawTableSurface,
+  StatusBadge,
 } from "@/components/shared";
 import { OrderPaymentDetailsPanel } from "@/components/orders/OrderPaymentDetailsPanel";
+import { money } from "@/lib/ui-helpers";
 
 interface OrderDetailsProps {
   order: OrderData;
@@ -19,9 +29,12 @@ interface OrderDetailsProps {
 }
 
 function clubLineItems(lines: OrderItemData[]) {
-  const map = new Map<number, { inventoryId: number; name: string; sku: string | null; quantity: number }>();
+  const map = new Map<
+    number,
+    { inventoryId: number; name: string; sku: string | null; quantity: number }
+  >();
   for (const line of lines) {
-    const id = line.inventory?.id ?? -(line.id);
+    const id = line.inventory?.id ?? -line.id;
     const existing = map.get(id);
     if (existing) {
       existing.quantity += line.quantity;
@@ -37,22 +50,23 @@ function clubLineItems(lines: OrderItemData[]) {
   return [...map.values()];
 }
 
-export default function OrderDetails({
-  order,
-  lastRow,
-}: OrderDetailsProps) {
+export default function OrderDetails({ order, lastRow }: OrderDetailsProps) {
   const orderQuery = useOrderById(order.id);
   const detailedOrder = orderQuery.data ?? null;
   const loading = orderQuery.isLoading;
 
+  const wrapperClass = lastRow
+    ? "rounded-b-lg border-t border-border/60"
+    : "border-t border-border/60";
+
   if (loading) {
     return (
-      <ExpandedDetailSurface
-        className={lastRow ? "rounded-b-lg border-t border-border/60" : "border-t border-border/60"}
-      >
+      <ExpandedDetailSurface className={wrapperClass}>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Loading order details...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading order details...
+          </p>
         </div>
       </ExpandedDetailSurface>
     );
@@ -60,9 +74,7 @@ export default function OrderDetails({
 
   if (!detailedOrder) {
     return (
-      <ExpandedDetailSurface
-        className={lastRow ? "rounded-b-lg border-t border-border/60" : "border-t border-border/60"}
-      >
+      <ExpandedDetailSurface className={wrapperClass}>
         <div className="flex items-center justify-center py-12">
           <p className="text-sm text-muted-foreground">
             No order details available
@@ -74,77 +86,105 @@ export default function OrderDetails({
 
   const orderItems = detailedOrder.orderItems ?? {};
   const studentKeys = Object.keys(orderItems);
+  const clubbed = clubLineItems(detailedOrder.lineItems ?? []);
 
   return (
-    <ExpandedDetailSurface
-      className={lastRow ? "rounded-b-lg border-t border-border/60" : "border-t border-border/60"}
-    >
-      <ExpandedDetailSection title={`Order #${detailedOrder.id}`}>
-        <DetailFieldsGrid columns={4}>
-          <DetailField
+    <ExpandedDetailSurface className={wrapperClass}>
+      <div className="space-y-3 p-3 md:p-4">
+        <KeyFactsGrid columns={4}>
+          <KeyFactCard
+            icon={CalendarDays}
             label="Order date"
             value={new Date(detailedOrder.createdAt).toLocaleDateString()}
           />
-          <DetailField label="Status" value={detailedOrder.status} />
-          <DetailField
-            label="Total amount"
-            value={`₹${detailedOrder.totalAmount}`}
+          <KeyFactCard
+            icon={Receipt}
+            label="Status"
+            value={<StatusBadge label={detailedOrder.status ?? "Unknown"} />}
           />
-          <DetailField label="Students / CIs" value={studentKeys.length} />
-          {detailedOrder.referenceId ? (
-            <DetailField
-              label="Payment reference ID"
-              value={detailedOrder.referenceId}
-              span={2}
-            />
-          ) : null}
-        </DetailFieldsGrid>
-      </ExpandedDetailSection>
+          <KeyFactCard
+            icon={IndianRupee}
+            label="Total"
+            value={money(detailedOrder.totalAmount)}
+          />
+          <KeyFactCard
+            icon={Users}
+            label="Students / CIs"
+            value={studentKeys.length}
+          />
+        </KeyFactsGrid>
 
-      <Separator />
-      <ExpandedDetailSection title="Items to receive">
-        <RawTableSurface>
-          <table className="min-w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium text-muted-foreground">Item</th>
-                <th className="px-3 py-2 text-left font-medium text-muted-foreground">Qty</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clubLineItems(detailedOrder.lineItems ?? []).map((line) => (
-                <tr key={line.inventoryId} className="border-t">
-                  <td className="px-3 py-2">
-                    <div className="font-medium text-card-foreground">{line.name}</div>
-                    {line.sku && <div className="text-xs text-muted-foreground">{line.sku}</div>}
-                  </td>
-                  <td className="px-3 py-2 text-card-foreground">{line.quantity}</td>
-                </tr>
-              ))}
-              {clubLineItems(detailedOrder.lineItems ?? []).length === 0 && (
-                <tr>
-                  <td colSpan={2} className="px-3 py-4 text-center text-sm text-muted-foreground">
-                    No items
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </RawTableSurface>
-      </ExpandedDetailSection>
-      {detailedOrder.payment != null ? (
-        <>
-          <Separator />
-          <ExpandedDetailSection title="Payment">
-            <OrderPaymentDetailsPanel
-              payment={detailedOrder.payment}
-              hideTitle
-              className="border-0 bg-transparent p-0"
-              fallbackGoodsGstAmount={detailedOrder.gstAmount ?? null}
-            />
-          </ExpandedDetailSection>
-        </>
-      ) : null}
+        {detailedOrder.referenceId ? (
+          <ProfileCard>
+            <ProfileCardSection icon={CreditCard} label="Payment reference">
+              <p className="break-all rounded bg-muted px-2 py-1 font-mono text-xs">
+                {detailedOrder.referenceId}
+              </p>
+            </ProfileCardSection>
+          </ProfileCard>
+        ) : null}
+
+        <ProfileCard>
+          <ProfileCardSection icon={Package} label="Items to receive">
+            <RawTableSurface>
+              <table className="min-w-full text-sm">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+                      Item
+                    </th>
+                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+                      Qty
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clubbed.map((line) => (
+                    <tr key={line.inventoryId} className="border-t">
+                      <td className="px-3 py-2">
+                        <div className="font-medium text-card-foreground">
+                          {line.name}
+                        </div>
+                        {line.sku ? (
+                          <div className="text-xs text-muted-foreground">
+                            {line.sku}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 text-card-foreground">
+                        {line.quantity}
+                      </td>
+                    </tr>
+                  ))}
+                  {clubbed.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={2}
+                        className="px-3 py-4 text-center text-sm text-muted-foreground"
+                      >
+                        No items
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </RawTableSurface>
+          </ProfileCardSection>
+        </ProfileCard>
+
+        {detailedOrder.payment != null ? (
+          <ProfileCard>
+            <ProfileCardSection icon={CreditCard} label="Payment">
+              <OrderPaymentDetailsPanel
+                payment={detailedOrder.payment}
+                hideTitle
+                className="border-0 bg-transparent p-0"
+                fallbackGoodsGstAmount={detailedOrder.gstAmount ?? null}
+              />
+            </ProfileCardSection>
+          </ProfileCard>
+        ) : null}
+      </div>
     </ExpandedDetailSurface>
   );
 }

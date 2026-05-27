@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getOrderByIdAdmin, type OrderData, type OrderItemData } from "@/services/order.service";
+import { formatRupees } from "@/lib/currency-utils";
 
 interface StudentGroup {
   studentId: number;
@@ -37,12 +38,6 @@ function groupByStudent(lineItems: OrderItemData[]): StudentGroup[] {
   }
   return [...map.values()];
 }
-
-const fmt = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 2,
-});
 
 interface OrderBreakdownDialogProps {
   orderId: number | null;
@@ -109,7 +104,7 @@ export function OrderBreakdownDialog({ orderId, onClose }: OrderBreakdownDialogP
                       Student total
                     </span>
                     <span className="text-sm font-semibold text-card-foreground">
-                      {fmt.format(group.subtotal)}
+                      {formatRupees(group.subtotal)}
                     </span>
                   </div>
                 </div>
@@ -119,7 +114,7 @@ export function OrderBreakdownDialog({ orderId, onClose }: OrderBreakdownDialogP
             <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-4 py-3">
               <span className="text-sm text-muted-foreground">Order total</span>
               <span className="text-lg font-semibold text-card-foreground">
-                {fmt.format(Number(order?.totalAmount ?? 0))}
+                {formatRupees(Number(order?.totalAmount ?? 0))}
               </span>
             </div>
           </div>

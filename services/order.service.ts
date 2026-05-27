@@ -6,6 +6,7 @@ import {
   unwrapData,
 } from "@/lib/unwrap-api";
 import { withProgramScope } from "./_scope";
+import { RAZORPAY_KEY_ID } from "@/lib/config";
 
 export interface Response {
   statusCode: number;
@@ -1178,7 +1179,7 @@ export async function initiateOrderPayment(
       franchiseId: createdOrder.franchiseId ?? "",
       franchiseName: createdOrder.franchise?.name ?? "",
       paymentType: "ORDER_PAYMENT",
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
+      key: RAZORPAY_KEY_ID,
       studentIds: paymentData.studentIds ?? [],
       instructorIds: paymentData.instructorIds,
       startingKitItems: paymentData.startingKitItems,
@@ -1218,11 +1219,7 @@ export async function initiateOrderPayment(
     franchiseId: "",
     franchiseName: "",
     paymentType: "ORDER_PAYMENT",
-    key:
-      billing.keyId ||
-      process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
-      process.env.NEXT_PUBLIC_RAZORPAY_KEY ||
-      "",
+    key: billing.keyId || RAZORPAY_KEY_ID,
     studentIds: paymentData.studentIds ?? [],
     instructorIds: paymentData.instructorIds,
     startingKitItems: paymentData.startingKitItems,
@@ -1287,15 +1284,9 @@ export interface CIMaterialsPreview {
   totalAmount: number;
 }
 
-export async function getCIMaterialsPreview(
-  _ciId: number,
-): Promise<CIMaterialsPreview> {
-  throw new Error("CI materials preview not available in ipa-new");
-}
-
-export async function createCIMaterialsOrder(_ciId: number): Promise<OrderData> {
-  throw new Error("CI materials order not available in ipa-new");
-}
+// getCIMaterialsPreview and createCIMaterialsOrder were removed — the feature
+// is not available in this deployment. The RequestMaterialsModal UI has been
+// updated to show an informational banner in their place.
 
 export async function previewCIOrderInvoice(
   instructorIds: number[],

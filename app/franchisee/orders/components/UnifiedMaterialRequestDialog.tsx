@@ -28,6 +28,7 @@ import {
 import UnifiedInvoiceGroupedSummary, {
   studentLineItems,
 } from "./UnifiedInvoiceGroupedSummary";
+import { formatRupees } from "@/lib/currency-utils";
 
 interface UnifiedMaterialRequestDialogProps {
   open: boolean;
@@ -35,12 +36,6 @@ interface UnifiedMaterialRequestDialogProps {
   onPaymentInitiated: (paymentData: unknown) => void;
   eligibleStudents: StudentData[];
 }
-
-const currencyFormatter = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 2,
-});
 
 function getStudentLevelName(student: StudentData): string {
   let raw = "";
@@ -388,7 +383,7 @@ export default function UnifiedMaterialRequestDialog({
                             <div className="flex items-center gap-2">
                               {headerTotal > 0 ? (
                                 <span className="text-sm font-semibold tabular-nums text-card-foreground">
-                                  {currencyFormatter.format(headerTotal)}
+                                  {formatRupees(headerTotal)}
                                 </span>
                               ) : null}
                               <button
@@ -794,7 +789,7 @@ export default function UnifiedMaterialRequestDialog({
               Estimated total
             </span>
             <span className="text-lg font-semibold tabular-nums text-card-foreground">
-              {currencyFormatter.format(preview?.totalAmount ?? 0)}
+              {formatRupees(preview?.totalAmount ?? 0)}
             </span>
           </div>
         }
@@ -804,7 +799,7 @@ export default function UnifiedMaterialRequestDialog({
           disabled: isSubmitting,
         }}
         primary={{
-          label: `Pay ${currencyFormatter.format(preview?.totalAmount ?? 0)}`,
+          label: `Pay ${formatRupees(preview?.totalAmount ?? 0)}`,
           onClick: handleContinue,
           loading: isSubmitting,
           disabled:

@@ -68,6 +68,7 @@ export function useAdminOrderRows(
     queryFn: () => getAdminOrdersFlat(params),
     enabled: options?.enabled ?? true,
     refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
     placeholderData: (prev) =>
       prev as
         | Awaited<ReturnType<typeof getAdminOrdersFlat>>
@@ -95,10 +96,10 @@ export async function invalidateFranchiseeOrders() {
   try {
     const client = getQueryClientBridge();
     await client.invalidateQueries({
-      queryKey: ["orders-franchisee", "list"],
+      queryKey: queryKeys.orders.franchiseeListPrefix,
     });
     await client.invalidateQueries({
-      queryKey: ["orders", "franchisee"],
+      queryKey: queryKeys.orders.franchiseeDetailPrefix,
     });
   } catch {
     /* ignore */
@@ -108,7 +109,7 @@ export async function invalidateFranchiseeOrders() {
 export async function invalidateAdminOrders() {
   try {
     await getQueryClientBridge().invalidateQueries({
-      queryKey: ["orders-admin", "list"],
+      queryKey: queryKeys.orders.adminListPrefix,
     });
   } catch {
     /* ignore */

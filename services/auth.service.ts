@@ -139,13 +139,3 @@ export async function switchFranchise(franchiseId: string): Promise<{
   };
 }
 
-export function getCurrentFranchiseeProfile() {
-  if (typeof window !== "undefined") {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      return user.profile || null;
-    }
-  }
-  return null;
-}

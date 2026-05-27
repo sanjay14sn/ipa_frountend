@@ -18,6 +18,7 @@ import type {
   DataTableSortOption,
 } from "@/components/shared";
 import { FranchiseeCertificate } from "@/services/student.service";
+import { calculateAge } from "@/lib/date-utils";
 import StudentCertificatesModal from "./StudentCertificatesModal";
 
 interface FranchiseeCertificatesTableProps {
@@ -105,22 +106,7 @@ export default function FranchiseeCertificatesTable({
     return "bg-gray-100 text-gray-800 border-gray-200";
   };
 
-  // Helper function to calculate age
-  const calculateAge = (dateOfBirth: string): number => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
 
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
-
-    return age;
-  };
 
 
   // Table configuration

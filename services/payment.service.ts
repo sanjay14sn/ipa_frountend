@@ -243,11 +243,21 @@ export interface CITrainingPaymentOrderResponse {
   message?: string;
 }
 
-// TODO: initiateCITrainingPayment is still imported by MultiLevelTrainingPaymentModal and PaymentCourseInstructorsTable — remove those callers before deleting this stub.
 export async function initiateCITrainingPayment(
-  _ciId: number,
+  ciId: number,
 ): Promise<CITrainingPaymentOrderResponse> {
-  throw new Error("Use billing/payment/initiate with type CI_TRAINING_FEE");
+  const response = await api.post("/billing/payment/initiate", {
+    type: "CI_TRAINING_FEE",
+    ciId,
+  });
+  const raw = unwrapData(response) as Record<string, unknown>;
+  return {
+    key: String(raw.keyId ?? raw.key ?? ""),
+    amount: Number(raw.amount ?? 0),
+    currency: String(raw.currency ?? "INR"),
+    orderId: String(raw.razorpayOrderId ?? raw.orderId ?? ""),
+    message: raw.message != null ? String(raw.message) : undefined,
+  };
 }
 
 export async function verifyCITrainingPayment(data: VerifyPaymentDto) {
@@ -259,12 +269,23 @@ export async function verifyCITrainingPayment(data: VerifyPaymentDto) {
   return unwrapData(response);
 }
 
-// TODO: initiateMultiLevelCITrainingPayment is still imported by MultiLevelTrainingPaymentModal — remove that caller before deleting this stub.
 export async function initiateMultiLevelCITrainingPayment(
-  _ciId: number,
-  _body: { trainingLevelIds: number[] },
+  ciId: number,
+  body: { trainingLevelIds: number[] },
 ): Promise<CITrainingPaymentOrderResponse> {
-  throw new Error("Not implemented for ipa-new");
+  const response = await api.post("/billing/payment/initiate", {
+    type: "CI_TRAINING_FEE",
+    ciId,
+    trainingLevelIds: body.trainingLevelIds,
+  });
+  const raw = unwrapData(response) as Record<string, unknown>;
+  return {
+    key: String(raw.keyId ?? raw.key ?? ""),
+    amount: Number(raw.amount ?? 0),
+    currency: String(raw.currency ?? "INR"),
+    orderId: String(raw.razorpayOrderId ?? raw.orderId ?? ""),
+    message: raw.message != null ? String(raw.message) : undefined,
+  };
 }
 
 export async function verifyMultiLevelCITrainingPayment(data: VerifyPaymentDto) {

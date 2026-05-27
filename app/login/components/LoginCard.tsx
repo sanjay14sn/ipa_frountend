@@ -22,6 +22,7 @@ import { getFranchiseList } from "@/services/franchise.service";
 import { useUser } from "@/context/user-context";
 import { getErrorMessage, getUserFriendlyMessage } from "@/lib/error-utils";
 import { getEffectiveFranchiseStatus, type User } from "@/lib/auth";
+import { sendClientLog } from "@/lib/client-telemetry";
 
 export function LoginCard({
   onStartApplication,
@@ -71,7 +72,7 @@ export function LoginCard({
           profileData = profileResponse.result as Record<string, unknown>;
         }
       } catch (profileError) {
-        console.warn("Failed to fetch profile data:", profileError);
+        sendClientLog({ level: "warn", event: "login-profile-fetch-error", message: "Failed to fetch franchisee profile after login", context: { error: profileError } });
       }
 
       const profile = profileData

@@ -1,5 +1,6 @@
 import { api } from "@/lib/axios";
-import { unwrapData } from "@/lib/unwrap-api";
+import { unwrapData, compactRequestParams } from "@/lib/unwrap-api";
+import type { AxiosResponse } from "axios";
 import type { DispatchOrderItemAdmin } from "@/services/order.service";
 
 export type ShipmentOrderItem = {
@@ -50,19 +51,21 @@ export type ShipmentListResponse = {
 export async function getAdminShipments(
   params?: ShipmentListParams,
 ): Promise<ShipmentListResponse> {
-  const query = new URLSearchParams();
-  if (params?.page != null) query.set("page", String(params.page));
-  if (params?.limit != null) query.set("limit", String(params.limit));
-  if (params?.search) query.set("search", params.search);
-  if (params?.status && params.status !== "all") query.set("status", params.status);
-  if (params?.franchiseId) query.set("franchiseId", params.franchiseId);
-  const qs = query.toString();
-  const response = await api.get(`/admin/fulfillment${qs ? `?${qs}` : ""}`);
+  const response = await api.get("/admin/fulfillment", {
+    params: compactRequestParams({
+      page: params?.page,
+      limit: params?.limit,
+      search: params?.search,
+      // Omit "all" sentinel — backend expects absent key for no filter.
+      status: params?.status !== "all" ? params?.status : undefined,
+      franchiseId: params?.franchiseId,
+    }),
+  });
   return unwrapData(response) as ShipmentListResponse;
 }
 
 export async function downloadChallan(dcPdfPath: string): Promise<void> {
-  const response = await api.get(`/uploads/${dcPdfPath}`, {
+  const response: AxiosResponse<Blob> = await api.get(`/uploads/${dcPdfPath}`, {
     responseType: "blob",
   });
   const blob =

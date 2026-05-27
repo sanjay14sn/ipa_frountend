@@ -45,6 +45,8 @@ import { ShieldPlus, RefreshCw, PencilLine } from "lucide-react";
 import { toast } from "sonner";
 import statesCities from "@/data/indian-states-cities.json";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
+import { sendClientLog } from "@/lib/client-telemetry";
+import { formatDate } from "@/lib/date-utils";
 
 type AdminFormMode = "create" | "edit";
 
@@ -69,17 +71,6 @@ const emptyForm: AdminFormState = {
   state: "",
   isActive: true,
 };
-
-function formatDate(value?: string) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 export function AdminManagementSection() {
   const router = useRouter();
@@ -120,7 +111,7 @@ export function AdminManagementSection() {
 
   useEffect(() => {
     if (!adminListQuery.error) return;
-    console.error("Failed to load admins", adminListQuery.error);
+    sendClientLog({ level: "error", event: "admins-load-error", message: "Failed to load admins", context: { error: adminListQuery.error } });
     toast.error(getUserFriendlyMessage(adminListQuery.error, "Failed to load admins"));
   }, [adminListQuery.error]);
 
@@ -194,7 +185,7 @@ export function AdminManagementSection() {
       }
       resetDialog();
     } catch (error) {
-      console.error("Failed to save admin", error);
+      sendClientLog({ level: "error", event: "admin-save-error", message: "Failed to save admin", context: { error } });
       toast.error(getUserFriendlyMessage(error, "Failed to save admin"));
     }
   };

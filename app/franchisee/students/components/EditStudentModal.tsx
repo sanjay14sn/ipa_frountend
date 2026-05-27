@@ -29,19 +29,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { StudentData, StudentStream, StudentIdStatus } from "@/services/student.service";
-import { updateStudentWithRevalidation } from "@/hooks/api/student.hooks";
+import { updateStudentWithRevalidation, updateStudentAdminWithRevalidation } from "@/hooks/api/student.hooks";
 import { getAllPrograms, Program } from "@/services/program.service";
 import { getLevelsByStream, getLevelsByProgram, Level } from "@/services/level.service";
 import { getStreamsByProgram, Stream } from "@/services/stream.service";
-
-function calculateAge(dob: string): number {
-  const birth = new Date(dob);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-}
+import { sendClientLog } from "@/lib/client-telemetry";
+import { calculateAge } from "@/lib/date-utils";
 
 const STANDARDS = [
   "Pre-KG",
@@ -89,6 +82,7 @@ interface EditStudentModalProps {
   onOpenChange: (open: boolean) => void;
   student: StudentData | null;
   onSuccess: () => void;
+  mode?: "franchise" | "admin";
 }
 
 interface StudentFormData {
@@ -125,6 +119,7 @@ export default function EditStudentModal({
   onOpenChange,
   student,
   onSuccess,
+  mode = "franchise",
 }: EditStudentModalProps) {
   const [activeTab, setActiveTab] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -164,7 +159,7 @@ export default function EditStudentModal({
     if (open && student) {
       const loadStudentData = async () => {
         try {
-          let levelId = (student as any).levelId || 0;
+          let levelId = student.levelId ?? 0;
           let streamId = 0;
 
           // If we have programId, fetch levels to find the matching level and stream
@@ -211,7 +206,7 @@ export default function EditStudentModal({
             mailId: student.mail || "",
           });
         } catch (error) {
-          console.error("Error loading student data:", error);
+          sendClientLog({ level: "error", event: "student-data-load-error", message: "Error loading student data", context: { error } });
           // Set basic data even if level lookup fails
           setFormData({
             studentName: student.name || "",
@@ -255,7 +250,7 @@ export default function EditStudentModal({
         const fetchedPrograms = await getAllPrograms();
         setPrograms(fetchedPrograms);
       } catch (error) {
-        console.error("Error fetching programs:", error);
+        sendClientLog({ level: "error", event: "programs-load-error", message: "Error fetching programs", context: { error } });
       } finally {
         setLoadingPrograms(false);
       }
@@ -275,7 +270,7 @@ export default function EditStudentModal({
           const fetchedStreams = await getStreamsByProgram(formData.programId);
           setStreams(fetchedStreams);
         } catch (error) {
-          console.error("Error fetching streams:", error);
+          sendClientLog({ level: "error", event: "streams-load-error", message: "Error fetching streams", context: { error } });
           setStreams([]);
         } finally {
           setLoadingStreams(false);
@@ -298,7 +293,7 @@ export default function EditStudentModal({
           const fetchedLevels = await getLevelsByStream(formData.streamId);
           setLevels(fetchedLevels);
         } catch (error) {
-          console.error("Error fetching levels:", error);
+          sendClientLog({ level: "error", event: "levels-load-error", message: "Error fetching levels", context: { error } });
           setLevels([]);
         } finally {
           setLoadingLevels(false);
@@ -453,14 +448,18 @@ export default function EditStudentModal({
           break;
       }
 
-      await updateStudentWithRevalidation(student.id, updateData);
+      if (mode === "admin") {
+        await updateStudentAdminWithRevalidation(student.id, updateData);
+      } else {
+        await updateStudentWithRevalidation(student.id, updateData);
+      }
       setSubmitted(true);
       setTimeout(() => {
         onSuccess();
         handleClose();
       }, 1500);
     } catch (error) {
-      console.error("Error updating student:", error);
+      sendClientLog({ level: "error", event: "student-update-error", message: "Error updating student", context: { error } });
       toast.error("Failed to update student. Please try again.");
     } finally {
       setIsLoading(false);
@@ -492,7 +491,13 @@ export default function EditStudentModal({
                   }
                   className={errors.studentName ? "border-red-500" : ""}
                   placeholder="Enter student's full name"
+                  disabled={mode === "franchise"}
                 />
+                {mode === "franchise" && (
+                  <p className="text-muted-foreground text-xs mt-1">
+                    Locked after enrollment — contact admin to change
+                  </p>
+                )}
                 {errors.studentName && (
                   <p className="text-red-500 text-sm flex items-center gap-1">
                     <AlertCircle className="w-4 h-4" />
@@ -514,7 +519,13 @@ export default function EditStudentModal({
                   value={formData.dob}
                   onChange={(v) => handleInputChange("dob", v)}
                   className={errors.dob ? "border-red-500" : ""}
+                  disabled={mode === "franchise"}
                 />
+                {mode === "franchise" && (
+                  <p className="text-muted-foreground text-xs mt-1">
+                    Locked after enrollment — contact admin to change
+                  </p>
+                )}
                 {errors.dob && (
                   <p className="text-red-500 text-sm flex items-center gap-1">
                     <AlertCircle className="w-4 h-4" />
@@ -889,6 +900,7 @@ export default function EditStudentModal({
                   value={formData.levelId.toString()}
                   onValueChange={(value) => handleInputChange("levelId", value)}
                   disabled={
+                    mode === "franchise" ||
                     !formData.streamId ||
                     formData.streamId === 0 ||
                     loadingLevels
@@ -919,6 +931,11 @@ export default function EditStudentModal({
                   <p className="text-red-500 text-sm flex items-center gap-1">
                     <AlertCircle className="w-4 h-4" />
                     {errors.levelId}
+                  </p>
+                )}
+                {mode === "franchise" && (
+                  <p className="text-muted-foreground text-xs mt-1">
+                    Locked after enrollment — contact admin to change
                   </p>
                 )}
               </div>

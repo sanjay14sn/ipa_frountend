@@ -1,16 +1,34 @@
 "use client";
 
 import React from "react";
-import { Separator } from "@/components/ui/separator";
 import {
-  DetailField,
-  DetailFieldsGrid,
-  ExpandedDetailSection,
+  Briefcase,
+  CalendarDays,
+  Droplet,
+  FileText,
+  GraduationCap,
+  IdCard,
+  Mail,
+  MapPin,
+  Phone,
+  User,
+  Users,
+} from "lucide-react";
+import {
+  ContactPill,
+  ContactPillGrid,
+  EqualHeightRow,
   ExpandedDetailSurface,
+  IdentityHeader,
+  KeyFactCard,
+  KeyFactsGrid,
+  LabeledValue,
+  ProfileCard,
+  ProfileCardSection,
+  StatusBadge,
 } from "@/components/shared";
-import {
-  AdminCourseInstructorData,
-} from "@/services/course-instructor.service";
+import { AdminCourseInstructorData } from "@/services/course-instructor.service";
+import { formatDate as fmtDate } from "@/lib/date-utils";
 
 interface CourseInstructorDetailsProps {
   instructors: AdminCourseInstructorData[];
@@ -22,67 +40,113 @@ interface CourseInstructorDetailsProps {
   showActions?: boolean;
 }
 
-function calculateAge(dateOfBirth: string | Date | undefined): string {
-  if (!dateOfBirth) return "N/A";
-  const today = new Date();
-  const birthDate = new Date(dateOfBirth);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-
-  if (
-    monthDiff < 0 ||
-    (monthDiff === 0 && today.getDate() < birthDate.getDate())
-  ) {
-    age--;
-  }
-
-  return `${age} years`;
-}
-
-function fmtDate(value: string | Date | undefined): string {
-  if (!value) return "N/A";
-  return new Date(value).toLocaleDateString();
-}
-
 export default function CourseInstructorDetails({
   instructors,
 }: CourseInstructorDetailsProps) {
   return (
-    <div className="p-4">
-      {instructors.map((instructor) => {
-        return (
-          <div key={instructor.id}>
-            <ExpandedDetailSurface>
-              <ExpandedDetailSection title="Course Instructor Information">
-                <DetailFieldsGrid columns={3}>
-                  <DetailField label="Name" value={instructor.name || "N/A"} />
-                  <DetailField label="Email" value={instructor.mail || "N/A"} />
-                  <DetailField label="Phone" value={instructor.phone || "N/A"} />
-                  <DetailField label="Date of birth" value={fmtDate(instructor.dob)} />
-                  <DetailField label="Blood group" value={instructor.bloodGroup || "N/A"} />
-                  <DetailField label="Address" value={instructor.address || "N/A"} span={3} />
-                  <DetailField label="Education" value={instructor.education || "N/A"} />
-                  <DetailField label="Occupation" value={instructor.occupation || "N/A"} />
-                  <DetailField label="Reference" value={instructor.reference || "N/A"} />
-                </DetailFieldsGrid>
-              </ExpandedDetailSection>
+    <ExpandedDetailSurface className="border-t border-border/60">
+      <div className="space-y-4 p-3 md:p-4">
+        {instructors.map((instructor) => (
+          <div key={instructor.id} className="space-y-3">
+            <EqualHeightRow split="2">
+              <ProfileCard fillHeight>
+                <IdentityHeader
+                  name={instructor.name || "Unnamed instructor"}
+                  subtitle={
+                    instructor.instructorId
+                      ? `Instructor ${instructor.instructorId}`
+                      : `Record #${instructor.id}`
+                  }
+                  badge={
+                    instructor.status ? (
+                      <StatusBadge label={instructor.status} />
+                    ) : undefined
+                  }
+                />
+                <ProfileCardSection icon={User} label="Contact" divider>
+                  <ContactPillGrid columns={2}>
+                    <ContactPill
+                      icon={Mail}
+                      label="Email"
+                      value={instructor.mail || "—"}
+                    />
+                    <ContactPill
+                      icon={Phone}
+                      label="Phone"
+                      value={instructor.phone || "—"}
+                    />
+                    <ContactPill
+                      icon={CalendarDays}
+                      label="Born"
+                      value={fmtDate(instructor.dob)}
+                    />
+                    <ContactPill
+                      icon={Droplet}
+                      label="Blood group"
+                      value={instructor.bloodGroup || "—"}
+                    />
+                  </ContactPillGrid>
+                  <LabeledValue
+                    label="Address"
+                    value={instructor.address || "—"}
+                    className="pt-2"
+                  />
+                </ProfileCardSection>
+              </ProfileCard>
 
-              <Separator />
+              <ProfileCard fillHeight>
+                <ProfileCardSection icon={GraduationCap} label="Background">
+                  <ContactPillGrid columns={1}>
+                    <ContactPill
+                      icon={GraduationCap}
+                      label="Education"
+                      value={instructor.education || "—"}
+                    />
+                    <ContactPill
+                      icon={Briefcase}
+                      label="Occupation"
+                      value={instructor.occupation || "—"}
+                    />
+                    <ContactPill
+                      icon={Users}
+                      label="Reference"
+                      value={instructor.reference || "—"}
+                    />
+                  </ContactPillGrid>
+                </ProfileCardSection>
+              </ProfileCard>
+            </EqualHeightRow>
 
-              <ExpandedDetailSection title="Application Details">
-                <DetailFieldsGrid columns={3}>
-                  <DetailField label="Instructor ID" value={instructor.instructorId || "N/A"} />
-                  <DetailField label="Franchise" value={instructor.franchise?.name || "N/A"} />
-                  <DetailField label="Current status" value={instructor.status || "N/A"} />
-                  <DetailField label="Application date" value={fmtDate(instructor.createdAt)} />
-                  <DetailField label="Last updated" value={fmtDate(instructor.updatedAt)} />
-                  <DetailField label="Record ID" value={String(instructor.id)} />
-                </DetailFieldsGrid>
-              </ExpandedDetailSection>
-            </ExpandedDetailSurface>
+            <KeyFactsGrid columns={3}>
+              <KeyFactCard
+                icon={IdCard}
+                label="Instructor ID"
+                value={instructor.instructorId || "—"}
+              />
+              <KeyFactCard
+                icon={MapPin}
+                label="Franchise"
+                value={instructor.franchise?.name || "—"}
+              />
+              <KeyFactCard
+                icon={FileText}
+                label="Record ID"
+                value={String(instructor.id)}
+              />
+              <KeyFactCard
+                icon={CalendarDays}
+                label="Applied"
+                value={fmtDate(instructor.createdAt)}
+              />
+              <KeyFactCard
+                icon={CalendarDays}
+                label="Last updated"
+                value={fmtDate(instructor.updatedAt)}
+              />
+            </KeyFactsGrid>
           </div>
-        );
-      })}
-    </div>
+        ))}
+      </div>
+    </ExpandedDetailSurface>
   );
 }

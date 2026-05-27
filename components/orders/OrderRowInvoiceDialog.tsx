@@ -14,6 +14,7 @@ import UnifiedInvoiceGroupedSummary from "@/app/franchisee/orders/components/Uni
 import { DispatchRecipientTable } from "@/app/admin/orders/components/DispatchRecipientTable";
 import { isStandaloneDispatchOrderType } from "@/lib/dispatch-order-helpers";
 import { OrderPaymentDetailsPanel } from "@/components/orders/OrderPaymentDetailsPanel";
+import { formatRupees } from "@/lib/currency-utils";
 
 export type OrderRowInvoiceAudience = "admin" | "franchisee";
 
@@ -43,12 +44,6 @@ const COPY: Record<
       "Materials as at checkout. Certificates and IDs follow live dispatch data.",
   },
 };
-
-const currencyFormatter = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 2,
-});
 
 function defaultDispatchTab(certCount: number, idCount: number) {
   if (certCount > 0) return "certificates";
@@ -230,7 +225,7 @@ export function OrderRowInvoiceDialog({
               <div className="flex shrink-0 items-center justify-between gap-6 border-t border-border bg-muted/30 px-6 py-4">
                 <div className="text-sm font-semibold text-card-foreground">Total</div>
                 <div className="shrink-0 text-2xl font-semibold tabular-nums text-card-foreground">
-                  {currencyFormatter.format(snapshot.totalAmount)}
+                  {formatRupees(snapshot.totalAmount)}
                 </div>
               </div>
             ) : null}
@@ -286,7 +281,7 @@ export function OrderRowInvoiceDialog({
           <div className="flex shrink-0 items-center justify-between gap-6 border-t border-border bg-muted/30 px-6 py-4">
             <div className="text-sm font-semibold text-card-foreground">Total</div>
             <div className="shrink-0 text-2xl font-semibold tabular-nums text-card-foreground">
-              {currencyFormatter.format(snapshot.totalAmount)}
+              {formatRupees(snapshot.totalAmount)}
             </div>
           </div>
         ) : null}

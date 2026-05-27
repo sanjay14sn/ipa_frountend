@@ -124,7 +124,43 @@ export function getEffectiveFranchiseStatus(
     ?.status;
 }
 
-/** Full user object persisted by `context/user-context` */
+/** Minimal identity blob stored in localStorage — no PII, no profile. */
+export interface StoredIdentity {
+  id: string;
+  role: UserRole;
+  name: string;
+  franchiseStatus?: string;
+}
+
+/** Write-only: persist slim identity without any profile/PII fields. */
+export function slimIdentity(user: User): StoredIdentity {
+  return {
+    id: user.id,
+    role: user.role,
+    name: user.name,
+    franchiseStatus: user.franchiseStatus,
+  };
+}
+
+/** Read from localStorage; returns null if missing, invalid, or wrong shape. */
+export function getStoredIdentity(): StoredIdentity | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem("user");
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<StoredIdentity>;
+    if (!parsed.id || !parsed.role || !parsed.name) return null;
+    return { id: parsed.id, role: parsed.role, name: parsed.name, franchiseStatus: parsed.franchiseStatus };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @deprecated The localStorage "user" blob no longer stores the full profile (P0-2).
+ * Call sites reading profile, franchiseId, or other fields will get undefined.
+ * Use `getStoredIdentity()` for auth state, or `UserContext` for full user data.
+ */
 export function getUserFromStorage(): User | null {
   if (typeof window === "undefined") return null;
   const raw = localStorage.getItem("user");

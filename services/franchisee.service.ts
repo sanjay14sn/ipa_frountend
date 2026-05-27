@@ -5,6 +5,7 @@ import {
   unwrapData,
 } from "@/lib/unwrap-api";
 import type { AgreementRecord } from "@/services/agreement.service";
+import { RAZORPAY_KEY_ID } from "@/lib/config";
 
 export interface Response {
   statusCode: number;
@@ -791,8 +792,7 @@ export async function initiateAgreementFeePayment(
   const raw = unwrapData(response) as Record<string, unknown>;
   const key =
     String(raw.keyId ?? raw.razorpayKeyId ?? "").trim() ||
-    process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
-    "";
+    RAZORPAY_KEY_ID;
   return {
     orderId: String(raw.razorpayOrderId ?? raw.orderId ?? ""),
     amount: Number(raw.amount ?? 0),
@@ -814,8 +814,7 @@ export async function initiateReceivableItemPayment(
   const raw = unwrapData(response) as Record<string, unknown>;
   const key =
     String(raw.keyId ?? raw.razorpayKeyId ?? "").trim() ||
-    process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
-    "";
+    RAZORPAY_KEY_ID;
   return {
     orderId: String(raw.razorpayOrderId ?? raw.orderId ?? ""),
     amount: Number(raw.amount ?? 0),

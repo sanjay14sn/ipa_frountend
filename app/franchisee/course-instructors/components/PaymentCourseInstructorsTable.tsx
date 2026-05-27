@@ -17,9 +17,13 @@ import {
   CITrainingPaymentOrderResponse,
   VerifyPaymentDto,
 } from "@/services/payment.service";
-import RazorpayPayment, {
-  RazorpaySuccessResponse,
-} from "@/components/RazorpayPayment";
+import dynamic from "next/dynamic";
+import { type RazorpaySuccessResponse } from "@/components/RazorpayPayment";
+
+const RazorpayPayment = dynamic(
+  () => import("@/components/RazorpayPayment"),
+  { ssr: false, loading: () => null },
+);
 import { useUser } from "@/context/user-context";
 import { toast } from "sonner";
 import { MultiLevelTrainingPaymentModal } from "./MultiLevelTrainingPaymentModal";
@@ -27,6 +31,8 @@ import { GraduationHistoryModal } from "./GraduationHistoryModal";
 import { TrainingProgressModal } from "./TrainingProgressModal";
 import { abandonOrderPayment } from "@/services/order.service";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
+import { ComponentErrorBoundary } from "@/components/error/ComponentErrorBoundary";
+import { sendClientLog } from "@/lib/client-telemetry";
 
 interface PaymentCourseInstructorsTableProps {
   courseInstructors?: CourseInstructorData[];
@@ -150,7 +156,7 @@ export default function PaymentCourseInstructorsTable({
       });
       toast.info("Redirecting to payment gateway...");
     } catch (error: any) {
-      console.error("Error initiating payment:", error);
+      sendClientLog({ level: "error", event: "ci-payment-initiate-error", message: "Error initiating CI training payment", context: { error } });
       toast.error(
         getUserFriendlyMessage(error, "Failed to initiate payment. Please try again."),
       );
@@ -185,7 +191,7 @@ export default function PaymentCourseInstructorsTable({
       setProcessingPayment(null);
       setIsProcessingPayment(false);
     } catch (error: any) {
-      console.error("Error verifying payment:", error);
+      sendClientLog({ level: "error", event: "ci-payment-verify-error", message: "Error verifying CI training payment", context: { error } });
       toast.error(
         getUserFriendlyMessage(
           error,
@@ -199,7 +205,7 @@ export default function PaymentCourseInstructorsTable({
   };
 
   const handlePaymentFailure = async (error: any) => {
-    console.error("Payment failed:", error);
+    sendClientLog({ level: "error", event: "ci-payment-failure", message: "CI training payment failed", context: { error } });
     toast.error(getUserFriendlyMessage(error, "Payment failed. Please try again."));
 
     setPaymentData(null);
@@ -380,26 +386,28 @@ export default function PaymentCourseInstructorsTable({
 
       {/* Razorpay Payment Component */}
       {paymentData && user && (
-        <RazorpayPayment
-          orderId={paymentData.orderData.orderId}
-          amount={paymentData.orderData.amount}
-          currency={paymentData.orderData.currency}
-          franchiseName={user.franchiseName || "Franchise"}
-          razorpayKey={paymentData.orderData.key}
-          onSuccess={handlePaymentSuccess}
-          onFailure={handlePaymentFailure}
-          onAbandon={async ({ orderId, reason }) => {
-            await abandonOrderPayment({
-              razorpayOrderId: orderId,
-              note: reason,
-            });
-          }}
-          userDetails={{
-            name: user.name || "",
-            email: user.profile?.mail || "",
-            phone: user.profile?.phone || "",
-          }}
-        />
+        <ComponentErrorBoundary componentName="RazorpayPayment">
+          <RazorpayPayment
+            orderId={paymentData.orderData.orderId}
+            amount={paymentData.orderData.amount}
+            currency={paymentData.orderData.currency}
+            franchiseName={user.franchiseName || "Franchise"}
+            razorpayKey={paymentData.orderData.key}
+            onSuccess={handlePaymentSuccess}
+            onFailure={handlePaymentFailure}
+            onAbandon={async ({ orderId, reason }) => {
+              await abandonOrderPayment({
+                razorpayOrderId: orderId,
+                note: reason,
+              });
+            }}
+            userDetails={{
+              name: user.name || "",
+              email: user.profile?.mail || "",
+              phone: user.profile?.phone || "",
+            }}
+          />
+        </ComponentErrorBoundary>
       )}
 
       {/* Multi-Level Training Payment Modal */}

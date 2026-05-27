@@ -13,6 +13,7 @@ import {
   DialogStateMessage,
   FormDialog,
 } from "@/components/shared/dialog";
+import { formatDate } from "@/lib/date-utils";
 
 interface CompleteTrainingConfirmationProps {
   open: boolean;
@@ -46,15 +47,6 @@ export default function CompleteTrainingConfirmation({
   const handleOpenChange = (open: boolean) => {
     if (!open) setMarksObtained("");
     onOpenChange(open);
-  };
-
-  const formatDate = (dateStr: string | undefined) => {
-    if (!dateStr) return "N/A";
-    return new Date(dateStr).toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
   };
 
   const getDurationTillDate = () => {

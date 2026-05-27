@@ -9,6 +9,7 @@ import { getAllPrograms, Program } from "@/services/program.service";
 import { toast } from "sonner";
 import { TablePageShell, TableSectionSurface } from "@/components/shared";
 import { Building2, Download, RefreshCw, Upload } from "lucide-react";
+import { sendClientLog } from "@/lib/client-telemetry";
 
 export function FranchiseManagementSection() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -24,7 +25,7 @@ export function FranchiseManagementSection() {
       setPrograms(programsData);
       setProgramsLoaded(true);
     } catch (error) {
-      console.error("Error fetching programs:", error);
+      sendClientLog({ level: "error", event: "programs-load-error", message: "Error fetching programs", context: { error } });
       toast.error("Failed to load programs");
     }
   };
@@ -79,7 +80,7 @@ export function FranchiseManagementSection() {
       window.URL.revokeObjectURL(url);
       toast.success("Template downloaded");
     } catch (error) {
-      console.error("Error generating template:", error);
+      sendClientLog({ level: "error", event: "template-generate-error", message: "Error generating franchise upload template", context: { error } });
       toast.error("Failed to generate template");
     }
   };
@@ -96,7 +97,7 @@ export function FranchiseManagementSection() {
       toast.success("Franchises uploaded successfully");
       triggerRefresh();
     } catch (error) {
-      console.error("Bulk upload failed:", error);
+      sendClientLog({ level: "error", event: "franchise-bulk-upload-error", message: "Franchise bulk upload failed", context: { error } });
       toast.error("Bulk upload failed");
     } finally {
       // Reset the input so the same file can be selected again if needed

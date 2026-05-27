@@ -144,7 +144,9 @@ export default function SetupExistingCIDialog({
       if (typeof pid !== "number") continue;
       if (seen.has(pid)) continue;
       const pname =
-        a.programName ?? (a as any).program?.name ?? `Program #${pid}`;
+        a.programName ??
+        (a as { program?: { name?: string } }).program?.name ??
+        `Program #${pid}`;
       seen.set(pid, pname);
     }
     return [...seen.entries()].map(([id, name]) => ({ id, name }));

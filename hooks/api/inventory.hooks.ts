@@ -15,6 +15,18 @@ import {
 import { queryKeys } from "./query-keys";
 import { getQueryClientBridge } from "./query-client-bridge";
 
+/**
+ * Reference-data queries that almost never change (programs, kits, level kits).
+ * Infinite stale-time means React Query never considers the data stale on its
+ * own; 30-minute GC time keeps it in memory for a full working session without
+ * leaking indefinitely.
+ */
+const STATIC_REFERENCE_OPTIONS = {
+  staleTime: Number.POSITIVE_INFINITY,
+  gcTime: 30 * 60 * 1000,
+  refetchOnWindowFocus: false,
+} as const;
+
 export type InventoryPaginatedFilters = {
   page: number;
   limit: number;
@@ -72,8 +84,7 @@ export function useInventoryPaginatedQuery(filters: InventoryPaginatedFilters) {
         sortBy: filters.sortBy ?? "name",
         sortOrder: filters.sortOrder ?? "ASC",
       }),
-    staleTime: Number.POSITIVE_INFINITY,
-    gcTime: 30 * 60 * 1000,
+    ...STATIC_REFERENCE_OPTIONS,
     placeholderData: (prev) => prev,
   });
 
@@ -97,8 +108,7 @@ export function useAllInventory(enabled = true) {
     queryKey: queryKeys.inventory.all,
     queryFn: getAllInventory,
     enabled,
-    staleTime: Number.POSITIVE_INFINITY,
-    gcTime: 30 * 60 * 1000,
+    ...STATIC_REFERENCE_OPTIONS,
   });
 }
 
@@ -107,8 +117,7 @@ export function useKitCatalog(enabled = true) {
     queryKey: queryKeys.inventory.kitCatalog,
     queryFn: getKitCatalogItems,
     enabled,
-    staleTime: Number.POSITIVE_INFINITY,
-    gcTime: 30 * 60 * 1000,
+    ...STATIC_REFERENCE_OPTIONS,
   });
 }
 
@@ -117,8 +126,7 @@ export function useProgramKitItems(programId: number | undefined, enabled = true
     queryKey: queryKeys.inventory.programKitItems(programId ?? 0),
     queryFn: () => getProgramKitItems(programId!),
     enabled: enabled && programId != null && programId > 0,
-    staleTime: Number.POSITIVE_INFINITY,
-    gcTime: 30 * 60 * 1000,
+    ...STATIC_REFERENCE_OPTIONS,
   });
 }
 
@@ -130,8 +138,7 @@ export function useInventoryItemsForLevel(
     queryKey: queryKeys.inventory.levelItems(levelId ?? 0),
     queryFn: () => getInventoryItemsForLevel(levelId!),
     enabled: enabled && levelId != null && levelId > 0,
-    staleTime: Number.POSITIVE_INFINITY,
-    gcTime: 30 * 60 * 1000,
+    ...STATIC_REFERENCE_OPTIONS,
   });
 }
 
@@ -143,15 +150,14 @@ export function useInventoryItemsForTrainingLevel(
     queryKey: queryKeys.inventory.trainingLevelItems(trainingLevelId ?? 0),
     queryFn: () => getInventoryItemsForTrainingLevel(trainingLevelId!),
     enabled: enabled && trainingLevelId != null && trainingLevelId > 0,
-    staleTime: Number.POSITIVE_INFINITY,
-    gcTime: 30 * 60 * 1000,
+    ...STATIC_REFERENCE_OPTIONS,
   });
 }
 
 export async function invalidateInventoryAdminLists() {
   try {
     const qc = getQueryClientBridge();
-    await qc.invalidateQueries({ queryKey: ["inventory", "list"] });
+    await qc.invalidateQueries({ queryKey: queryKeys.inventory.listPrefix });
     await qc.invalidateQueries({ queryKey: queryKeys.inventory.monitoring });
   } catch {
     /* ignore */
@@ -160,24 +166,50 @@ export async function invalidateInventoryAdminLists() {
 
 /**
  * Invalidate the caches that can change as a side-effect of a manual
- * stock adjustment. A positive adjustment can flip backordered order
- * lines to ALLOCATED (which also flips CI material orders attached to
- * CI training sessions), so we need to refresh the inventory list AND
- * any view of orders / CI training that the user might switch to.
+ * stock adjustment.
+ *
+ * @param materialId  The inventory item that was adjusted. Its detail cache
+ *   is invalidated first (most targeted). If omitted, only the broad list
+ *   keys are refreshed.
+ *
+ * Cross-domain ripples (intentional):
+ *   - Orders: a positive adjustment can flip backordered order lines to
+ *     ALLOCATED, changing `allocationStatus` visible in admin/franchisee order
+ *     lists and detail pages.
+ *   - CI training: CI-material orders are linked to training sessions, so their
+ *     allocation state changes too.
+ *   - Operations monitoring: shows backorder counts which change on adjustment.
+ *
+ * These cannot be scoped narrower without a backend change that returns the
+ * affected order/session IDs in the stock-adjustment response.
  */
-export async function invalidateAfterStockAdjustment() {
+export async function invalidateAfterStockAdjustment(materialId?: number) {
   try {
     const qc = getQueryClientBridge();
-    await Promise.all([
-      qc.invalidateQueries({ queryKey: ["inventory", "list"] }),
+    const tasks: Promise<void>[] = [
+      // --- Inventory-scoped (most targeted) ---
+      qc.invalidateQueries({ queryKey: queryKeys.inventory.listPrefix }),
       qc.invalidateQueries({ queryKey: queryKeys.inventory.monitoring }),
       qc.invalidateQueries({ queryKey: queryKeys.inventory.all }),
-      // Admin & franchisee order lists / details — backorder fulfillment
-      // changes allocationStatus on affected orders.
-      qc.invalidateQueries({ queryKey: ["orders-admin", "list"] }),
-      qc.invalidateQueries({ queryKey: ["orders-franchisee", "list"] }),
-      qc.invalidateQueries({ queryKey: ["orders", "admin"] }),
-      qc.invalidateQueries({ queryKey: ["orders", "franchisee"] }),
+    ];
+
+    // Invalidate the specific item's detail cache when we know which item
+    // was adjusted — avoids re-fetching every detail page on the next render.
+    if (materialId != null) {
+      tasks.push(
+        qc.invalidateQueries({
+          queryKey: queryKeys.inventory.detail(materialId),
+        }),
+      );
+    }
+
+    // --- Cross-domain (see JSDoc above) ---
+    tasks.push(
+      // Admin & franchisee order lists / details.
+      qc.invalidateQueries({ queryKey: queryKeys.orders.adminListPrefix }),
+      qc.invalidateQueries({ queryKey: queryKeys.orders.franchiseeListPrefix }),
+      qc.invalidateQueries({ queryKey: queryKeys.orders.adminDetailPrefix }),
+      qc.invalidateQueries({ queryKey: queryKeys.orders.franchiseeDetailPrefix }),
       // CI training views surface CI-material order allocation state.
       qc.invalidateQueries({ queryKey: queryKeys.courseInstructors.ciTraining }),
       qc.invalidateQueries({
@@ -185,7 +217,9 @@ export async function invalidateAfterStockAdjustment() {
       }),
       // Operations monitoring may show backorder counts.
       qc.invalidateQueries({ queryKey: queryKeys.operations.monitoring }),
-    ]);
+    );
+
+    await Promise.all(tasks);
   } catch {
     /* ignore */
   }

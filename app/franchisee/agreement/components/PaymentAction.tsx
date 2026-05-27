@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { CreditCard, Lock, ShieldCheck } from "lucide-react";
 import { GST_RATE_LABEL } from "@/lib/gst";
+import { formatRupees } from "@/lib/currency-utils";
 
 interface PaymentActionProps {
   agreementAccepted: boolean;
@@ -24,13 +25,6 @@ interface PaymentActionProps {
   /** Friendly description for what's being paid (e.g. "Down payment", "Installment 1"). */
   payableLabel?: string | null;
 }
-
-const money = (n: number | null | undefined) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(n ?? 0));
 
 export default function PaymentAction({
   agreementAccepted,
@@ -62,14 +56,14 @@ export default function PaymentAction({
               Amount due now
             </p>
             <p className="mt-0.5 text-2xl font-semibold tabular-nums text-card-foreground">
-              {money(payableAmount)}
+              {formatRupees(payableAmount)}
             </p>
             {payableLabel || showGstSplit ? (
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {payableLabel ?? ""}
                 {payableLabel && showGstSplit ? " · " : ""}
                 {showGstSplit
-                  ? `${money(payablePrincipal)} + ${GST_RATE_LABEL} ${money(
+                  ? `${formatRupees(payablePrincipal)} + ${GST_RATE_LABEL} ${formatRupees(
                       payableGst,
                     )}`
                   : ""}
@@ -95,7 +89,7 @@ export default function PaymentAction({
               ) : (
                 <>
                   <Lock className="mr-2 h-3.5 w-3.5" />
-                  Pay {money(payableAmount)}
+                  Pay {formatRupees(payableAmount)}
                 </>
               )}
             </Button>
@@ -135,12 +129,12 @@ export default function PaymentAction({
               ) : null}
               {showGstSplit ? (
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {money(payablePrincipal)} + {GST_RATE_LABEL} {money(payableGst)}
+                  {formatRupees(payablePrincipal)} + {GST_RATE_LABEL} {formatRupees(payableGst)}
                 </p>
               ) : null}
             </div>
             <span className="text-3xl font-semibold text-primary">
-              {money(payableAmount)}
+              {formatRupees(payableAmount)}
             </span>
           </div>
         ) : null}
@@ -182,7 +176,7 @@ export default function PaymentAction({
               ) : (
                 <>
                   <CreditCard className="mr-2 h-5 w-5" />
-                  {showPayableHeadline ? `Pay ${money(payableAmount)}` : "Complete Payment"}
+                  {showPayableHeadline ? `Pay ${formatRupees(payableAmount)}` : "Complete Payment"}
                 </>
               )}
             </Button>

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable, type DataTableColumn } from "@/components/shared";
 import { CheckCircle } from "lucide-react";
 import { CITrainingData } from "@/services/course-instructor.service";
+import { formatRupees } from "@/lib/currency-utils";
 
 interface InstructorDetailsProps {
   instructors: CITrainingData[];
@@ -53,14 +54,6 @@ export default function InstructorDetails({
     return colors[(order - 1) % colors.length] || "bg-gray-50 text-gray-700 border-gray-200";
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
   const columns: DataTableColumn<CITrainingData>[] = [
     {
       key: "trainingLevel",
@@ -93,7 +86,7 @@ export default function InstructorDetails({
       key: "amount",
       header: "Amount",
       className: "text-center",
-      render: (instructor) => formatCurrency(instructor.amount ?? 0),
+      render: (instructor) => formatRupees(instructor.amount ?? 0),
     },
     {
       key: "status",

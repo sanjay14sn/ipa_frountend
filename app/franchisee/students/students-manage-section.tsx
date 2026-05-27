@@ -16,6 +16,7 @@ import AddStudentModal from "./components/AddStudentModal";
 import EditStudentModal from "./components/EditStudentModal";
 import RequestIdModal from "./components/RequestIdModal";
 import StudentsTable from "./components/StudentsTable";
+import { sendClientLog } from "@/lib/client-telemetry";
 
 export function StudentsManageSection() {
   const { user } = useUser();
@@ -134,7 +135,7 @@ export function StudentsManageSection() {
             setDeleteStudentId(null);
             void revalidate();
           } catch (error) {
-            console.error("Error deleting student:", error);
+            sendClientLog({ level: "error", event: "student-delete-error", message: "Error deleting student", context: { error } });
             toast.error("Failed to delete student");
           }
         }}

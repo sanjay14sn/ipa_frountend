@@ -29,15 +29,20 @@ import {
 import { getErrorMessage } from "@/lib/error-utils";
 import { useAgreementMine, useAgreementsMine } from "@/hooks/api/agreement.hooks";
 import { useUser } from "@/context/user-context";
-import RazorpayPayment, {
-  type RazorpaySuccessResponse,
-} from "@/components/RazorpayPayment";
+import dynamic from "next/dynamic";
+import { type RazorpaySuccessResponse } from "@/components/RazorpayPayment";
+
+const RazorpayPayment = dynamic(
+  () => import("@/components/RazorpayPayment"),
+  { ssr: false, loading: () => <Loader2 className="h-5 w-5 animate-spin" /> },
+);
 import {
   initiateReceivableItemPayment,
   verifyFranchiseFeePayment,
   type PaymentOrderResponse,
 } from "@/services/franchisee.service";
 import { abandonOrderPayment } from "@/services/order.service";
+import { ComponentErrorBoundary } from "@/components/error/ComponentErrorBoundary";
 
 function FranchiseeAgreementViewDialog({
   agreementId,
@@ -284,27 +289,29 @@ export function MyAgreementsSection() {
       />
 
       {paymentDetails && user?.profile ? (
-        <RazorpayPayment
-          key={paymentDetails.orderId}
-          orderId={paymentDetails.orderId}
-          amount={paymentDetails.amount}
-          currency={paymentDetails.currency}
-          franchiseName={paymentDetails.franchiseName || "Franchise"}
-          razorpayKey={paymentDetails.key}
-          onSuccess={handlePaymentSuccess}
-          onFailure={handlePaymentFailure}
-          onAbandon={async ({ orderId, reason }) => {
-            await abandonOrderPayment({
-              razorpayOrderId: orderId,
-              note: reason,
-            });
-          }}
-          userDetails={{
-            name: user.profile.name,
-            email: user.profile.mail,
-            phone: user.profile.phone,
-          }}
-        />
+        <ComponentErrorBoundary componentName="RazorpayPayment">
+          <RazorpayPayment
+            key={paymentDetails.orderId}
+            orderId={paymentDetails.orderId}
+            amount={paymentDetails.amount}
+            currency={paymentDetails.currency}
+            franchiseName={paymentDetails.franchiseName || "Franchise"}
+            razorpayKey={paymentDetails.key}
+            onSuccess={handlePaymentSuccess}
+            onFailure={handlePaymentFailure}
+            onAbandon={async ({ orderId, reason }) => {
+              await abandonOrderPayment({
+                razorpayOrderId: orderId,
+                note: reason,
+              });
+            }}
+            userDetails={{
+              name: user.profile.name,
+              email: user.profile.mail,
+              phone: user.profile.phone,
+            }}
+          />
+        </ComponentErrorBoundary>
       ) : null}
     </TablePageShell>
   );

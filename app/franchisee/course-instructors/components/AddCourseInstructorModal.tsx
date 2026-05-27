@@ -27,6 +27,8 @@ import {
   type StepDef,
 } from "@/components/shared/dialog";
 import { cn } from "@/lib/utils";
+import { sendClientLog } from "@/lib/client-telemetry";
+import { calculateAge } from "@/lib/date-utils";
 
 const FORM_STEPS: StepDef[] = [
   { id: 1, title: "Basic Information" },
@@ -68,15 +70,6 @@ interface CourseInstructorFormData {
   additionalDetails: string;
 }
 
-function calculateAge(dob: string): number {
-  const birth = new Date(dob);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-}
-
 const errorClass = "border-destructive focus-visible:ring-destructive";
 
 export default function AddCourseInstructorModal({
@@ -100,7 +93,7 @@ export default function AddCourseInstructorModal({
       const data = await getAllPrograms();
       setPrograms(data);
     } catch (error) {
-      console.error("Error fetching programs:", error);
+      sendClientLog({ level: "error", event: "programs-load-error", message: "Error fetching programs", context: { error } });
     } finally {
       setLoadingPrograms(false);
     }
@@ -227,7 +220,7 @@ export default function AddCourseInstructorModal({
       setSubmitted(true);
       onSuccess();
     } catch (error) {
-      console.error("Error registering course instructor:", error);
+      sendClientLog({ level: "error", event: "course-instructor-register-error", message: "Error registering course instructor", context: { error } });
       toast.error("Failed to register course instructor. Please try again.");
     } finally {
       setIsLoading(false);

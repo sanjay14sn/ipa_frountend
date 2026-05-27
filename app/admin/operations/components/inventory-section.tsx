@@ -487,7 +487,7 @@ export function InventorySection() {
       // CI-material orders), so refresh the full set of caches that show
       // order / CI training allocation state, not just inventory.
       if (deltaQty > 0) {
-        await invalidateAfterStockAdjustment();
+        await invalidateAfterStockAdjustment(adjustingItem.id);
       }
       await refreshInventoryViews();
     } catch (error) {

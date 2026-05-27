@@ -29,6 +29,7 @@ import { ciAgreementContent } from "@/lib/ciAgreementContent";
 import AgreementTerms from "@/app/franchisee/agreement/components/AgreementTerms";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { CIAgreementDetail } from "@/components/agreements/CIAgreementDetail";
+import { fmtDate } from "@/lib/date-utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -93,17 +94,6 @@ function CIAgreementStepper({ currentStep }: { currentStep: CIStepIndex }) {
       </div>
     </div>
   );
-}
-
-// ─── Date helpers ─────────────────────────────────────────────────────────────
-
-function fmtDate(d: string | null) {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 // ─── Signature Step ───────────────────────────────────────────────────────────

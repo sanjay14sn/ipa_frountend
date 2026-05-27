@@ -7,6 +7,9 @@ import {
 import { api } from "@/lib/axios";
 export { mapApiNotificationRow } from "@/lib/notification-content";
 import { mapApiNotificationRow } from "@/lib/notification-content";
+import { validateSchema } from "@/lib/schemas/validate";
+import { NotificationRowSchema } from "@/lib/schemas/notification.schema";
+import { z } from "zod";
 
 // ipa-new: `GET /notification` (franchisee) and `GET /admin/notification` (admin)
 function getNotificationBasePath(userType: UserType): string {
@@ -41,7 +44,12 @@ export async function getNotifications(
   });
   const raw = response.data.result;
   const rows = normalizeNotificationListResult(raw);
-  return rows.map((r) =>
+  const validated = validateSchema(
+    z.array(NotificationRowSchema),
+    rows,
+    { service: "getNotifications" },
+  );
+  return validated.map((r) =>
     mapApiNotificationRow(
       r && typeof r === "object" ? (r as Record<string, unknown>) : {},
     ),

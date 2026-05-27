@@ -29,13 +29,13 @@ npm run lint             # Run ESLint checks
 - **Styling**: Tailwind CSS with custom brand colors (green: #064e3b, white: #fafafa)
 - **UI Components**: shadcn/ui (Radix UI primitives)
 - **State Management**: React Context API (UserContext, NotificationContext)
-- **Data Fetching**: Axios with SWR for some endpoints
+- **Data Fetching**: Axios with React Query (TanStack Query v5)
 - **Forms**: React Hook Form + Zod validation
 - **Real-time**: Socket.io for notifications
 
 ### Backend Integration
 
-- **Base API URL**: `http://localhost:5000` (hardcoded in service files)
+- **Base API URL**: configured via `NEXT_PUBLIC_API_URL` env var (default dev: `http://localhost:5500`). Validated at startup by `lib/config.ts`.
 - **Authentication**: Cookie-based with credentials
 - **API Structure**: Separate endpoints for `/admin/`* and `/franchisee/*`
 
@@ -131,6 +131,20 @@ Uses shadcn/ui components from `components/ui/`:
 - `TreeConnector.tsx` - Visual tree connector lines for hierarchical data
 - `notification-bell.tsx` - Real-time notification bell with WebSocket integration
 
+### Dialog Wrappers
+
+Three wrappers in `components/shared/dialog/` cover all dialog use-cases. Pick the correct one:
+
+| Wrapper | When to use |
+|---------|-------------|
+| `AppDialog` | Default for any dialog with a single "page" of content. Pass a single `<AppDialogBody>` child. |
+| `MultiStepDialog` | Multi-step forms with 3+ distinct steps. Takes a `steps: StepDef[]` prop, a `currentStep` index, and navigation callbacks. All step bodies share a single React Hook Form context defined in the parent. |
+| Raw Radix `Dialog` | **Avoid for business logic.** Only acceptable for very thin UI wrappers where the standard header/footer layout doesn't apply (e.g., full-screen previews). |
+
+**Never use raw Radix `Dialog` for forms or multi-step flows** — it bypasses the standard header/footer layout and focus management provided by `AppDialog`.
+
+Step definitions belong in `lib/constants/education.ts` (`STUDENT_FORM_STEPS`, `CI_FORM_STEPS`, `FRANCHISE_FORM_STEPS`) to avoid duplicate `StepDef[]` arrays in component files.
+
 ## Important Patterns to Follow
 
 ### When Adding New Admin Pages
@@ -161,13 +175,10 @@ const form = useForm<FormSchema>({
 
 ### API Service Pattern
 
-```typescript
-import axios from "axios";
+All services import the shared `api` instance from `lib/axios.ts` — **do not create new axios instances**. The base URL comes from `lib/config.ts` → `NEXT_PUBLIC_API_URL`.
 
-const api = axios.create({
-  baseURL: "http://localhost:5000",
-  withCredentials: true,
-});
+```typescript
+import { api } from "@/lib/axios";
 
 export async function someAction(params) {
   const response = await api.post("/endpoint", params);
@@ -187,11 +198,8 @@ export async function someAction(params) {
 
 `next.config.mjs` has:
 
-- `eslint.ignoreDuringBuilds: true`
-- `typescript.ignoreBuildErrors: true`
-- `images.unoptimized: true`
-
-This means TypeScript/ESLint errors won't block builds, but should still be fixed.
+- `images.unoptimized: true` (swap `<img>` → `<Image>` + set to `false` when LCP images need optimization)
+- TypeScript and ESLint errors **do** block builds — fix them before committing.
 
 ### Path Aliases
 
@@ -210,13 +218,20 @@ Always use `@/` imports for project files.
 See `.env.local.example`:
 
 - `NEXT_PUBLIC_RAZORPAY_KEY_ID` - Razorpay integration
-- `NEXT_PUBLIC_API_URL` - API base URL (default: [http://localhost:5000](http://localhost:5000))
+- `NEXT_PUBLIC_API_URL` - API base URL (default dev: [http://localhost:5500](http://localhost:5500)). **Required in production.**
+- `NEXT_PUBLIC_CLIENT_TELEMETRY_ENABLED` - set to `true` in production to enable client-side error logging
+
+Run `node scripts/check-env.mjs` before building to validate all required vars are set. In CI, add this step after `pnpm install` and before `next build`.
+
+### Package manager
+
+This project uses **pnpm** exclusively. The lockfile is `pnpm-lock.yaml`. Do not run `npm install` or `bun install` — use `pnpm install`. The dev server is started with `pnpm dev` (runs `next dev`).
 
 ## Real-time Notifications
 
 The app uses Socket.io for real-time notifications:
 
-- WebSocket namespace: `/notifications` on port 5000
+- WebSocket namespace: `/notifications` on the same port as `NEXT_PUBLIC_API_URL` (default dev: 5500)
 - Hook: `useNotificationSocket` handles connection and registration
 - User registers with `userId` and `userType` on connect
 - Notifications appear in `NotificationBell` component
@@ -237,7 +252,7 @@ List pages use the unified `DataTable` component (`components/shared/data-table.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Abacus** (6994 symbols, 14472 relationships, 298 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Abacus** (7208 symbols, 14745 relationships, 292 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

@@ -29,6 +29,7 @@ import { useAgreementsMine } from "@/hooks/api/agreement.hooks";
 import { useFranchiseeOrders } from "@/hooks/api/order.hooks";
 import { cn } from "@/lib/utils";
 import { getEffectiveFranchiseStatus } from "@/lib/auth";
+import { formatRupees } from "@/lib/currency-utils";
 import type {
   AgreementRecord,
   ReceivableCompactSummary,
@@ -172,14 +173,6 @@ function DashboardPanel({
   );
 }
 
-function money(value: number | null | undefined): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(Number(value ?? 0));
-}
-
 function shortDate(value: string | null | undefined): string {
   if (!value) return "-";
   const date = new Date(value);
@@ -307,9 +300,9 @@ export default function FranchiseeDashboard() {
   const statCards: StatCardProps[] = [
     {
       label: "EMI Pending",
-      value: emiSummary ? money(emiOutstanding) : "-",
+      value: emiSummary ? formatRupees(emiOutstanding) : "-",
       sub: emiSummary
-        ? `Next ${emiNextAmount != null ? money(emiNextAmount) : "-"}${
+        ? `Next ${emiNextAmount != null ? formatRupees(emiNextAmount) : "-"}${
             emiNextDate ? ` due ${shortDate(emiNextDate)}` : ""
           }${
             emiPaidCount != null && emiTotalCount != null

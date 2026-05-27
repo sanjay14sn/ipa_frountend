@@ -2,16 +2,26 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { DataTable, StatusBadge } from "@/components/shared";
+import {
+  DataTable,
+  ExpandedDetailSurface,
+  KeyFactCard,
+  KeyFactsGrid,
+  ProfileCard,
+  ProfileCardSection,
+  StatusBadge,
+  TableMainCell,
+} from "@/components/shared";
 import type { DataTableColumn, DataTableSortOption } from "@/components/shared";
 import {
-  DetailField,
-  DetailFieldsGrid,
-  ExpandedDetailSection,
-  ExpandedDetailSurface,
-} from "@/components/shared";
-import { Separator } from "@/components/ui/separator";
-import { Check, X } from "lucide-react";
+  Building2,
+  Check,
+  CheckCircle2,
+  Clock,
+  Users,
+  X,
+  XCircle,
+} from "lucide-react";
 import { useAdminCIDetails } from "@/hooks/api/course-instructor.hooks";
 import type { AdminCourseInstructorData } from "@/services/course-instructor.service";
 import CourseInstructorDetails from "./CourseInstructorDetails";
@@ -112,64 +122,71 @@ export default function FranchiseCiDetails({
 
   return (
     <ExpandedDetailSurface className="border-t border-border/60">
-      <ExpandedDetailSection title="CI approval summary">
-        <DetailFieldsGrid columns={4}>
-          <DetailField label="Franchise" value={franchiseName} />
-          <DetailField label="Pending" value={totalPending} />
-          <DetailField label="Approved" value={totalApproved} />
-          <DetailField label="Rejected" value={totalRejected} />
-        </DetailFieldsGrid>
-      </ExpandedDetailSection>
+      <div className="space-y-3 p-3 md:p-4">
+        <KeyFactsGrid columns={4}>
+          <KeyFactCard
+            icon={Building2}
+            label="Franchise"
+            value={franchiseName}
+          />
+          <KeyFactCard icon={Clock} label="Pending" value={totalPending} />
+          <KeyFactCard
+            icon={CheckCircle2}
+            label="Approved"
+            value={totalApproved}
+          />
+          <KeyFactCard
+            icon={XCircle}
+            label="Rejected"
+            value={totalRejected}
+          />
+        </KeyFactsGrid>
 
-      <Separator />
-
-      <ExpandedDetailSection title="Pending applications">
-        <DataTable
-          data={instructors}
-          loading={loading}
-          columns={columns}
-          getRowId={(ci) => ci.id.toString()}
-          renderMainCell={(ci) => (
-            <span className="font-medium text-card-foreground">
-              {ci.name}
-              {ci.instructorId ? (
-                <span className="ml-2 text-xs text-muted-foreground">
-                  · {ci.instructorId}
-                </span>
-              ) : null}
-            </span>
-          )}
-          renderExpandedContent={(ci) => (
-            <CourseInstructorDetails
-              instructors={[ci]}
-              lastRow={false}
-              expandedRows={new Set([ci.id.toString()])}
-              onToggleRow={() => {}}
-              onApprove={onApprove}
-              onReject={onReject}
-              showActions
+        <ProfileCard contentClassName="space-y-2 p-3 md:p-4">
+          <ProfileCardSection icon={Users} label="Pending applications">
+            <DataTable
+              data={instructors}
+              loading={loading}
+              columns={columns}
+              getRowId={(ci) => ci.id.toString()}
+              renderMainCell={(ci) => (
+                <TableMainCell title={ci.name} subtitle={ci.instructorId} />
+              )}
+              renderExpandedContent={(ci) => (
+                <CourseInstructorDetails
+                  instructors={[ci]}
+                  lastRow={false}
+                  expandedRows={new Set([ci.id.toString()])}
+                  onToggleRow={() => {}}
+                  onApprove={onApprove}
+                  onReject={onReject}
+                  showActions
+                />
+              )}
+              searchPlaceholder="Search instructors or instructor IDs..."
+              onSearchChange={(value) => {
+                setSearchTerm(value);
+                setPage(1);
+              }}
+              sortOptions={sortOptions}
+              defaultSortBy="createdAt"
+              defaultSortOrder="DESC"
+              onSortChange={(by, order) => {
+                setSortBy(by);
+                setSortOrder(order);
+              }}
+              pagination={{ total: totalInstructors, totalPages }}
+              currentPage={page}
+              onPageChange={setPage}
+              itemsPerPage={limit}
+              emptyMessage="No pending applications for this franchise"
+              resultsText={(count, t) =>
+                `Showing ${count} of ${t} pending applications`
+              }
             />
-          )}
-          searchPlaceholder="Search instructors or instructor IDs..."
-          onSearchChange={(value) => {
-            setSearchTerm(value);
-            setPage(1);
-          }}
-          sortOptions={sortOptions}
-          defaultSortBy="createdAt"
-          defaultSortOrder="DESC"
-          onSortChange={(by, order) => {
-            setSortBy(by);
-            setSortOrder(order);
-          }}
-          pagination={{ total: totalInstructors, totalPages }}
-          currentPage={page}
-          onPageChange={setPage}
-          itemsPerPage={limit}
-          emptyMessage="No pending applications for this franchise"
-          resultsText={(count, t) => `Showing ${count} of ${t} pending applications`}
-        />
-      </ExpandedDetailSection>
+          </ProfileCardSection>
+        </ProfileCard>
+      </div>
     </ExpandedDetailSurface>
   );
 }

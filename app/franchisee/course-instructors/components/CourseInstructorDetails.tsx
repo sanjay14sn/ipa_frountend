@@ -2,29 +2,28 @@
 
 import React from "react";
 import {
-  DetailField,
-  DetailFieldsGrid,
-  ExpandedDetailSection,
+  Briefcase,
+  Building2,
+  CalendarDays,
+  Droplet,
+  GraduationCap,
+  IdCard,
+  Mail,
+  Phone,
+  User,
+} from "lucide-react";
+import {
+  ContactPill,
+  ContactPillGrid,
   ExpandedDetailSurface,
+  IdentityHeader,
+  LabeledValue,
+  ProfileCard,
+  ProfileCardSection,
+  StatusBadge,
 } from "@/components/shared";
 import { CourseInstructorData } from "@/services/course-instructor.service";
-
-function calculateAge(dob: Date | string | undefined): string {
-  if (!dob) return "N/A";
-  const today = new Date();
-  const birthDate = new Date(dob);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return `${age} years`;
-}
-
-function fmtDate(value: Date | string | undefined): string {
-  if (!value) return "N/A";
-  return new Date(value).toLocaleDateString();
-}
+import { calculateAge, formatDate as fmtDate } from "@/lib/date-utils";
 
 interface CourseInstructorDetailsProps {
   courseInstructor: CourseInstructorData;
@@ -34,24 +33,88 @@ export default function CourseInstructorDetails({
   courseInstructor,
 }: CourseInstructorDetailsProps) {
   return (
-    <div className="p-4">
-      <ExpandedDetailSurface>
-        <ExpandedDetailSection title="Course Instructor Information">
-          <DetailFieldsGrid columns={3}>
-            <DetailField label="Instructor ID" value={courseInstructor.instructorId || "N/A"} />
-            <DetailField label="Date of birth" value={fmtDate(courseInstructor.dob)} />
-            <DetailField label="Age"           value={calculateAge(courseInstructor.dob)} />
-            <DetailField label="Blood group"   value={courseInstructor.bloodGroup || "N/A"} />
-            <DetailField label="City"          value={courseInstructor.city || "N/A"} />
-            <DetailField label="Email"         value={courseInstructor.mail || "N/A"} />
-            <DetailField label="Phone"         value={courseInstructor.phone || "N/A"} />
-            <DetailField label="Education"     value={courseInstructor.education || "N/A"} />
-            <DetailField label="Occupation"    value={courseInstructor.occupation || "N/A"} />
-            <DetailField label="Status"        value={courseInstructor.status || "N/A"} />
-            <DetailField label="Address"       value={courseInstructor.address || "N/A"} span={3} />
-          </DetailFieldsGrid>
-        </ExpandedDetailSection>
-      </ExpandedDetailSurface>
-    </div>
+    <ExpandedDetailSurface className="border-t border-border/60">
+      <div className="space-y-3 p-3 md:p-4">
+        <ProfileCard>
+          <IdentityHeader
+            name={courseInstructor.name || "Unnamed instructor"}
+            subtitle={
+              courseInstructor.instructorId
+                ? `Instructor ${courseInstructor.instructorId}`
+                : undefined
+            }
+            badge={
+              courseInstructor.status ? (
+                <StatusBadge label={courseInstructor.status} />
+              ) : undefined
+            }
+          />
+          <ProfileCardSection icon={User} label="Personal" divider>
+            <ContactPillGrid columns={2}>
+              <ContactPill
+                icon={IdCard}
+                label="Instructor ID"
+                value={courseInstructor.instructorId || "—"}
+              />
+              <ContactPill
+                icon={CalendarDays}
+                label="Born"
+                value={fmtDate(courseInstructor.dob)}
+              />
+              <ContactPill
+                icon={CalendarDays}
+                label="Age"
+                value={calculateAge(courseInstructor.dob)}
+              />
+              <ContactPill
+                icon={Droplet}
+                label="Blood group"
+                value={courseInstructor.bloodGroup || "—"}
+              />
+            </ContactPillGrid>
+          </ProfileCardSection>
+
+          <ProfileCardSection icon={Mail} label="Contact" divider>
+            <ContactPillGrid columns={2}>
+              <ContactPill
+                icon={Mail}
+                label="Email"
+                value={courseInstructor.mail || "—"}
+              />
+              <ContactPill
+                icon={Phone}
+                label="Phone"
+                value={courseInstructor.phone || "—"}
+              />
+              <ContactPill
+                icon={Building2}
+                label="City"
+                value={courseInstructor.city || "—"}
+              />
+            </ContactPillGrid>
+            <LabeledValue
+              label="Address"
+              value={courseInstructor.address || "—"}
+              className="pt-2"
+            />
+          </ProfileCardSection>
+
+          <ProfileCardSection icon={GraduationCap} label="Background" divider>
+            <ContactPillGrid columns={2}>
+              <ContactPill
+                icon={GraduationCap}
+                label="Education"
+                value={courseInstructor.education || "—"}
+              />
+              <ContactPill
+                icon={Briefcase}
+                label="Occupation"
+                value={courseInstructor.occupation || "—"}
+              />
+            </ContactPillGrid>
+          </ProfileCardSection>
+        </ProfileCard>
+      </div>
+    </ExpandedDetailSurface>
   );
 }

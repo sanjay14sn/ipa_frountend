@@ -4,6 +4,8 @@ import {
   normalizePaginatedResult,
   unwrapData,
 } from "@/lib/unwrap-api";
+import { API_BASE_URL } from "@/lib/config";
+import { isAbsoluteUrl } from "@/lib/url-utils";
 
 /** Sequelize/plain shape for payment linked to an agreement */
 export interface AgreementPaymentDetail {
@@ -490,15 +492,12 @@ export async function voidAgreementAdmin(
 }
 
 
-const DEFAULT_API_PUBLIC_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5500";
-
 function storedSignatureToPublicPath(
   stored: string | null | undefined,
 ): string | null {
   if (stored == null || String(stored).trim() === "") return null;
   const s = String(stored).trim();
-  if (s.startsWith("http://") || s.startsWith("https://")) return s;
+  if (isAbsoluteUrl(s)) return s;
   if (s.startsWith("data:")) return null;
   const rel = s.replace(/^\/+/, "");
   if (!rel) return null;
@@ -514,8 +513,8 @@ export function franchiseeProfileSignatureSrc(
 ): string | null {
   const path = storedSignatureToPublicPath(storedPath);
   if (!path) return null;
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  const base = DEFAULT_API_PUBLIC_BASE.replace(/\/$/, "");
+  if (isAbsoluteUrl(path)) return path;
+  const base = API_BASE_URL.replace(/\/$/, "");
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
@@ -625,12 +624,11 @@ export function agreementSignatureSrc(
   const fromUrl = record.franchiseeSignatureUrl?.trim();
   let path: string | null = null;
   if (fromUrl) {
-    path =
-      fromUrl.startsWith("http://") || fromUrl.startsWith("https://")
+    path = isAbsoluteUrl(fromUrl)
+      ? fromUrl
+      : fromUrl.startsWith("/")
         ? fromUrl
-        : fromUrl.startsWith("/")
-          ? fromUrl
-          : `/${fromUrl}`;
+        : `/${fromUrl}`;
   } else {
     // Resolution order: legacy per-agreement path → joined franchisee.
     // Post-refactor the signature lives on the franchisee row, so the
@@ -641,9 +639,7 @@ export function agreementSignatureSrc(
       storedSignatureToPublicPath(record.franchisee?.franchiseeSignature);
   }
   if (!path) return null;
-  if (path.startsWith("http://") || path.startsWith("https://")) {
-    return path;
-  }
-  const base = DEFAULT_API_PUBLIC_BASE.replace(/\/$/, "");
+  if (isAbsoluteUrl(path)) return path;
+  const base = API_BASE_URL.replace(/\/$/, "");
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }

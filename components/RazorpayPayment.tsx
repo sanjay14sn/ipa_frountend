@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { RAZORPAY_KEY_ID } from "@/lib/config";
+import { sendClientLog } from "@/lib/client-telemetry";
+import { toast } from "sonner";
 
 interface RazorpayPaymentProps {
   orderId: string;
@@ -122,7 +125,7 @@ export default function RazorpayPayment({
 
     const launch = () => {
       if (typeof window.Razorpay === "undefined") {
-        console.error("Razorpay SDK not loaded");
+        sendClientLog({ level: "error", event: "razorpay-sdk-missing", message: "Razorpay SDK not loaded" });
         onFailureRef.current({ error: "Razorpay SDK not loaded" });
         return;
       }
@@ -130,12 +133,10 @@ export default function RazorpayPayment({
       const amountPaise = Math.round(Number(amountRef.current) * 100);
       const effectiveKey =
         razorpayKeyRef.current ||
-        process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
-        (process.env.NEXT_PUBLIC_RAZORPAY_KEY as string) ||
-        "";
+        RAZORPAY_KEY_ID;
 
       if (!effectiveKey) {
-        console.error("Razorpay Key ID is missing from backend response and env");
+        sendClientLog({ level: "error", event: "razorpay-key-missing", message: "Razorpay Key ID missing from backend response and env" });
         onFailureRef.current({
           error:
             "Payment configuration error. Razorpay key is missing. Please contact support.",
@@ -157,11 +158,11 @@ export default function RazorpayPayment({
         },
         prefill: {
           name: currentUserDetails.name,
-          email:
-            (currentUserDetails as any).email ||
-            (currentUserDetails as any).mail ||
-            "",
-          contact: currentUserDetails.phone,
+          // `email` is required by the prop interface; the `.mail` fallback
+          // guarded against legacy callers that used the old field name.
+          // The interface enforces `email` today, so the cast is gone.
+          email: currentUserDetails.email || "",
+          contact: currentUserDetails.phone || "",
         },
         theme: {
           color: "#2563eb",
@@ -182,11 +183,12 @@ export default function RazorpayPayment({
         paymentObject.on("payment.failed", function (response: any) {
           // Do not abandon here — Razorpay allows retrying another payment method
           // within the same order/modal. ondismiss will handle the final failure.
-          console.error("Payment attempt failed:", response);
+          sendClientLog({ level: "error", event: "razorpay-payment-failed", message: "Payment attempt failed", context: { response } });
+          toast.error("Payment failed. Please try a different payment method or try again.");
         });
         paymentObject.open();
       } catch (error) {
-        console.error("Error initializing Razorpay:", error);
+        sendClientLog({ level: "error", event: "razorpay-init-error", message: error instanceof Error ? error.message : "Failed to initialize payment gateway", context: { error } });
         onFailureRef.current({ error: "Failed to initialize payment gateway" });
       }
     };
@@ -201,7 +203,7 @@ export default function RazorpayPayment({
     script.async = true;
     script.onload = launch;
     script.onerror = () => {
-      console.error("Failed to load Razorpay SDK");
+      sendClientLog({ level: "error", event: "razorpay-sdk-load-error", message: "Failed to load Razorpay checkout.js script" });
       onFailureRef.current({ error: "Failed to load Razorpay SDK" });
     };
     document.body.appendChild(script);

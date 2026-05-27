@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { RequestedIdDetail } from "@/services/student.service";
 import { issueIdCardWithRevalidation } from "@/hooks/api/student.hooks";
+import { sendClientLog } from "@/lib/client-telemetry";
 
 interface IdCardPreviewModalProps {
   open: boolean;
@@ -60,7 +61,7 @@ export default function IdCardPreviewModal({
       setIssued(true);
       onSuccess();
     } catch (error) {
-      console.error("Error issuing ID:", error);
+      sendClientLog({ level: "error", event: "id-card-issue-error", message: "Error issuing ID card", context: { error } });
       toast.error("Failed to issue ID card. Please try again.");
     } finally {
       setIsIssuing(false);

@@ -21,6 +21,8 @@ import {
 import { toast } from "sonner";
 import { CITrainingData } from "@/services/course-instructor.service";
 import { completeTrainingWithRevalidation } from "@/hooks/api/course-instructor.hooks";
+import { sendClientLog } from "@/lib/client-telemetry";
+import { formatRupees } from "@/lib/currency-utils";
 
 interface TrainingPreviewModalProps {
   open: boolean;
@@ -45,7 +47,7 @@ export default function TrainingPreviewModal({
       setApproved(true);
       onSuccess();
     } catch (error) {
-      console.error("Error completing training:", error);
+      sendClientLog({ level: "error", event: "training-complete-error", message: "Error completing training", context: { error } });
       toast.error("Failed to complete training. Please try again.");
     } finally {
       setIsApproving(false);
@@ -56,14 +58,6 @@ export default function TrainingPreviewModal({
     setApproved(false);
     setIsApproving(false);
     onOpenChange(false);
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(amount);
   };
 
   const getTrainingTypeColor = (type: string) => {
@@ -150,7 +144,7 @@ export default function TrainingPreviewModal({
                 <div className="flex justify-between items-center">
                   <span className="opacity-80">Amount:</span>
                   <span className="font-semibold">
-                    {formatCurrency(instructor.amount ?? 0)}
+                    {formatRupees(instructor.amount ?? 0)}
                   </span>
                 </div>
                 {instructor.installmentCount && (
@@ -165,7 +159,7 @@ export default function TrainingPreviewModal({
                   <div className="flex justify-between items-center">
                     <span className="opacity-80">Monthly:</span>
                     <span className="font-semibold">
-                      {formatCurrency(instructor.installmentAmount ?? 0)}
+                      {formatRupees(instructor.installmentAmount ?? 0)}
                     </span>
                   </div>
                 )}

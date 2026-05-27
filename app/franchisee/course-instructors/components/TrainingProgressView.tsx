@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { StatusBadge } from "@/components/shared";
 import { Loader2, AlertCircle } from "lucide-react";
 import {
   getCITrainingProgress,
@@ -133,25 +133,13 @@ export function TrainingProgressView({
               )}
             </div>
             <div className="flex shrink-0 items-center gap-1">
-              {training.paid ? (
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs px-1.5 py-0">
-                  Paid
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="bg-muted text-muted-foreground border-border text-xs px-1.5 py-0">
-                  Unpaid
-                </Badge>
-              )}
-              {training.isCompleted && (
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs px-1.5 py-0">
-                  Completed
-                </Badge>
-              )}
-              {training.isActive && !training.isCompleted && (
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs px-1.5 py-0">
-                  Active
-                </Badge>
-              )}
+              <StatusBadge label={training.paid ? "Paid" : "Unpaid"} />
+              {training.isCompleted ? (
+                <StatusBadge label="Completed" />
+              ) : null}
+              {training.isActive && !training.isCompleted ? (
+                <StatusBadge label="Active" tone="warning" />
+              ) : null}
             </div>
           </div>
         ))}

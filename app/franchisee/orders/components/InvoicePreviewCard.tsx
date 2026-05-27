@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { type InvoicePreview } from "@/services/order.service";
+import { formatRupees } from "@/lib/currency-utils";
 
 export interface InvoicePreviewCardProps {
   loading: boolean;
@@ -21,12 +22,6 @@ export interface InvoicePreviewCardProps {
    */
   copyVariant?: "preview" | "finalized";
 }
-
-const currencyFormatter = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 2,
-});
 
 function stripStudentPrefix(description: string) {
   const idx = description.indexOf(' - ');
@@ -113,7 +108,7 @@ export default function InvoicePreviewCard({
                         {isFeeOnly ? (
                           <div className="flex items-center justify-between px-4 py-2.5">
                             <span className="text-sm font-medium text-card-foreground">Program Fees</span>
-                            <span className="text-sm tabular-nums text-card-foreground">{currencyFormatter.format(student.totalPrice)}</span>
+                            <span className="text-sm tabular-nums text-card-foreground">{formatRupees(student.totalPrice)}</span>
                           </div>
                         ) : (
                           <>
@@ -123,11 +118,11 @@ export default function InvoicePreviewCard({
                                   Material Cost
                                   {(student.materialCostGst ?? 0) > 0 ? (
                                     <span className="ml-1 text-[11px] font-normal text-muted-foreground">
-                                      (incl. 18% GST {currencyFormatter.format(student.materialCostGst ?? 0)})
+                                      (incl. 18% GST {formatRupees(student.materialCostGst ?? 0)})
                                     </span>
                                   ) : null}
                                 </span>
-                                <span className="text-sm tabular-nums text-card-foreground">{currencyFormatter.format(student.materialCost)}</span>
+                                <span className="text-sm tabular-nums text-card-foreground">{formatRupees(student.materialCost)}</span>
                               </div>
                               {levelItems.length > 0 && (
                                 <div className="space-y-0.5 px-4 pb-2.5">
@@ -145,7 +140,7 @@ export default function InvoicePreviewCard({
                               <div>
                                 <div className="flex items-center justify-between px-4 py-2.5">
                                   <span className="text-sm font-medium text-card-foreground">Starting Kit</span>
-                                  <span className="text-sm tabular-nums text-card-foreground">{currencyFormatter.format(student.kitCost)}</span>
+                                  <span className="text-sm tabular-nums text-card-foreground">{formatRupees(student.kitCost)}</span>
                                 </div>
                                 {kitItems.length > 0 && (
                                   <div className="space-y-0.5 px-4 pb-2.5">
@@ -165,18 +160,18 @@ export default function InvoicePreviewCard({
                                 Royalty
                                 {(student.royaltyGst ?? 0) > 0 ? (
                                   <span className="ml-1 text-[11px] font-normal text-muted-foreground">
-                                    (incl. 18% GST {currencyFormatter.format(student.royaltyGst ?? 0)})
+                                    (incl. 18% GST {formatRupees(student.royaltyGst ?? 0)})
                                   </span>
                                 ) : null}
                               </span>
-                              <span className="text-sm tabular-nums text-card-foreground">{currencyFormatter.format(student.royalty)}</span>
+                              <span className="text-sm tabular-nums text-card-foreground">{formatRupees(student.royalty)}</span>
                             </div>
                           </>
                         )}
 
                         <div className="flex items-center justify-between bg-muted/25 px-4 py-2.5">
                           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Student total</span>
-                          <span className="text-sm font-semibold tabular-nums text-card-foreground">{currencyFormatter.format(student.totalPrice)}</span>
+                          <span className="text-sm font-semibold tabular-nums text-card-foreground">{formatRupees(student.totalPrice)}</span>
                         </div>
                       </div>
                     </div>
@@ -202,7 +197,7 @@ export default function InvoicePreviewCard({
                         </td>
                         <td className="px-4 py-2.5 text-card-foreground">{line.quantity}</td>
                         <td className="px-4 py-2.5 text-right tabular-nums text-card-foreground">
-                          {currencyFormatter.format(line.totalPrice)}
+                          {formatRupees(line.totalPrice)}
                         </td>
                       </tr>
                     ))}
@@ -224,13 +219,13 @@ export default function InvoicePreviewCard({
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span className="tabular-nums text-card-foreground">
-                      {currencyFormatter.format(preview.subtotalAmount)}
+                      {formatRupees(preview.subtotalAmount)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">GST (18%)</span>
                     <span className="tabular-nums text-card-foreground">
-                      {currencyFormatter.format(preview.gstAmount)}
+                      {formatRupees(preview.gstAmount)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between border-t border-border pt-1.5 text-sm">
@@ -238,7 +233,7 @@ export default function InvoicePreviewCard({
                       {isFinalized ? "Total" : "Estimated total"}
                     </span>
                     <span className="text-lg font-semibold tabular-nums text-card-foreground">
-                      {currencyFormatter.format(preview.totalAmount)}
+                      {formatRupees(preview.totalAmount)}
                     </span>
                   </div>
                 </div>
@@ -248,7 +243,7 @@ export default function InvoicePreviewCard({
                     {isFinalized ? "Total" : "Estimated total"}
                   </span>
                   <span className="text-lg font-semibold tabular-nums text-card-foreground">
-                    {currencyFormatter.format(preview.totalAmount)}
+                    {formatRupees(preview.totalAmount)}
                   </span>
                 </div>
               )}

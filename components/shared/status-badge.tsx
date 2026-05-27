@@ -103,6 +103,31 @@ function toCapitalized(raw: string): string {
     .join(" ");
 }
 
+interface OnFileBadgeProps {
+  label?: string;
+  className?: string;
+}
+
+/**
+ * Soft emerald outline pill used for "attached / captured / uploaded" cues
+ * (signatures on file, document captured, etc.). Distinct from full status —
+ * this is for binary "present vs absent" indicators inside detail cards.
+ */
+export function OnFileBadge({ label = "On file", className }: OnFileBadgeProps) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "gap-1 border-emerald-200 bg-emerald-50 py-0 text-[10px] text-emerald-700",
+        className,
+      )}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+      {label}
+    </Badge>
+  );
+}
+
 export function StatusBadge({
   label,
   tone,

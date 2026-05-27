@@ -17,9 +17,13 @@ import {
 import { TablePageShell } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import OrdersTable from "./components/OrdersTable";
-import RazorpayPayment, {
-  type RazorpaySuccessResponse,
-} from "@/components/RazorpayPayment";
+import dynamic from "next/dynamic";
+import { type RazorpaySuccessResponse } from "@/components/RazorpayPayment";
+
+const RazorpayPayment = dynamic(
+  () => import("@/components/RazorpayPayment"),
+  { ssr: false, loading: () => null },
+);
 import {
   abandonOrderPayment,
   cancelOrderFranchisee,
@@ -31,6 +35,7 @@ import {
 } from "@/services/order.service";
 import UnifiedMaterialRequestDialog from "./components/UnifiedMaterialRequestDialog";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
+import { ComponentErrorBoundary } from "@/components/error/ComponentErrorBoundary";
 
 export default function FranchiseeOrdersPage() {
   const { user } = useUser();
@@ -275,28 +280,30 @@ export default function FranchiseeOrdersPage() {
       />
 
       {unifiedPaymentData && !unifiedPaymentData.isZeroAmount && unifiedPaymentData.amount > 0 ? (
-        <RazorpayPayment
-          key={unifiedPaymentData.orderId}
-          orderId={unifiedPaymentData.orderId}
-          amount={unifiedPaymentData.amount}
-          currency={unifiedPaymentData.currency}
-          franchiseName={unifiedPaymentData.franchiseName}
-          razorpayKey={unifiedPaymentData.key}
-          onSuccess={handlePaymentSuccess}
-          onFailure={handlePaymentFailure}
-          onAbandon={async ({ orderId, reason }) => {
-            await abandonOrderPayment({
-              paymentId: unifiedPaymentData.paymentRecordId,
-              razorpayOrderId: orderId || undefined,
-              note: reason,
-            });
-          }}
-          userDetails={{
-            name: user.profile?.name || "",
-            email: user.profile?.mail || "",
-            phone: user.profile?.phone || "",
-          }}
-        />
+        <ComponentErrorBoundary componentName="RazorpayPayment">
+          <RazorpayPayment
+            key={unifiedPaymentData.orderId}
+            orderId={unifiedPaymentData.orderId}
+            amount={unifiedPaymentData.amount}
+            currency={unifiedPaymentData.currency}
+            franchiseName={unifiedPaymentData.franchiseName}
+            razorpayKey={unifiedPaymentData.key}
+            onSuccess={handlePaymentSuccess}
+            onFailure={handlePaymentFailure}
+            onAbandon={async ({ orderId, reason }) => {
+              await abandonOrderPayment({
+                paymentId: unifiedPaymentData.paymentRecordId,
+                razorpayOrderId: orderId || undefined,
+                note: reason,
+              });
+            }}
+            userDetails={{
+              name: user.profile?.name || "",
+              email: user.profile?.mail || "",
+              phone: user.profile?.phone || "",
+            }}
+          />
+        </ComponentErrorBoundary>
       ) : null}
     </TablePageShell>
   );

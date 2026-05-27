@@ -2,7 +2,6 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { getUserFromStorage } from "@/lib/auth";
 
 type ScopeState = {
   franchiseId: string | null;
@@ -15,6 +14,15 @@ type ScopeActions = {
   setFranchise: (franchiseId: string | null) => void;
   clear: () => void;
   hydrateFromUserBlob: () => void;
+};
+
+const noopStorage: Storage = {
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
+  clear: () => {},
+  key: () => null,
+  length: 0,
 };
 
 const initialState: ScopeState = {
@@ -45,57 +53,22 @@ export const useScopeStore = create<ScopeState & ScopeActions>()(
 
       clear: () => set({ ...initialState }),
 
+      /**
+       * @deprecated P0-2: localStorage no longer stores profile or
+       * activeAgreementId — this function is a no-op. Scope hydration now
+       * happens inside UserContext once the profile API response resolves.
+       * Kept as a stub so any lingering call sites don't throw at runtime.
+       */
       hydrateFromUserBlob: () => {
-        const user = getUserFromStorage();
-        if (!user) return;
-
-        const nextFranchiseId = user.franchiseId ?? null;
-        const legacyAgreementId = user.activeAgreementId ?? null;
-        const activePrograms = user.profile?.franchise?.activePrograms ?? [];
-
-        const candidates = activePrograms.filter(
-          (row) => row.type !== "CI_AGREEMENT" && row.id != null,
-        );
-
-        // Prefer the legacy persisted selection; fall back to the newest
-        // candidate so a freshly-logged-in user always has a valid scope
-        // before any data query fires. This is what was previously delegated
-        // to AgreementContext / useScopeAgreements, but those only run when
-        // the switcher renders (>1 agreement) — single-agreement franchisees
-        // would otherwise sit with programId=null and the backend would
-        // return all data unscoped.
-        const matchingProgram =
-          legacyAgreementId != null
-            ? candidates.find((row) => row.id === legacyAgreementId)
-            : undefined;
-        const fallbackProgram = candidates[0];
-        const picked = matchingProgram ?? fallbackProgram ?? null;
-
-        const nextAgreementId = picked?.id ?? null;
-        const nextProgramId = picked?.programId ?? null;
-        const current = get();
-
-        if (
-          current.franchiseId === nextFranchiseId &&
-          current.agreementId === nextAgreementId &&
-          current.programId === nextProgramId
-        ) {
-          return;
-        }
-
-        set({
-          franchiseId: nextFranchiseId,
-          agreementId: nextAgreementId,
-          programId: nextProgramId,
-        });
+        // No-op: the slim localStorage blob contains only id/role/name/
+        // franchiseStatus. Scope is hydrated by UserContext after the profile
+        // query succeeds. See context/user-context.tsx setUserWithStorage.
       },
     }),
     {
       name: "ipa-scope",
       storage: createJSONStorage(() =>
-        typeof window !== "undefined"
-          ? window.localStorage
-          : (undefined as unknown as Storage),
+        typeof window !== "undefined" ? window.localStorage : noopStorage
       ),
       partialize: (state) => ({
         franchiseId: state.franchiseId,

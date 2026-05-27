@@ -12,6 +12,7 @@ import type {
 } from "@/components/shared";
 import { TrainingCourseInstructorData } from "@/services/course-instructor.service";
 import TrainingCourseInstructorDetails from "./TrainingCourseInstructorDetails";
+import { formatRupees } from "@/lib/currency-utils";
 
 interface TrainingCourseInstructorsTableProps {
   courseInstructors?: TrainingCourseInstructorData[];
@@ -101,15 +102,6 @@ export default function TrainingCourseInstructorsTable({
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
-  // Helper function to format currency
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
   // Table configuration
   const columns: DataTableColumn<TrainingCourseInstructorData>[] = [
     {
@@ -145,12 +137,12 @@ export default function TrainingCourseInstructorsTable({
         <div className="text-sm space-y-1">
           <div>
             <strong>Total:</strong>{" "}
-            {formatCurrency(courseInstructor.amount ?? 0)}
+            {formatRupees(courseInstructor.amount ?? 0)}
           </div>
           {courseInstructor.paidAmount && (
             <div className="text-green-600">
               <strong>Paid:</strong>{" "}
-              {formatCurrency(courseInstructor.paidAmount)}
+              {formatRupees(courseInstructor.paidAmount)}
             </div>
           )}
         </div>

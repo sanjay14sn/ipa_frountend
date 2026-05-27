@@ -17,6 +17,7 @@ import {
 } from "@/components/shared";
 import type { StudentLifecycleRow, StudentLifecycleStatus } from "@/services/student.service";
 import { formatEntityCodeForDisplay } from "@/lib/format-entity-code";
+import { formatDate } from "@/lib/date-utils";
 
 const statusLabels: Record<StudentLifecycleStatus, string> = {
   ACTIVE: "Active",
@@ -30,11 +31,6 @@ const reasonLabels: Record<string, string> = {
   CERTIFICATE_NOT_ISSUED_AFTER_LEVEL_DURATION_GRACE:
     "Certificate was not issued within the level duration and grace period.",
 };
-
-function formatDate(value?: string | null) {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString();
-}
 
 function formatReason(value?: string | null) {
   if (!value) return "—";

@@ -23,23 +23,8 @@ import type {
   ReceivableSummaryItem,
 } from "@/services/agreement.service";
 import { GST_RATE_LABEL } from "@/lib/gst";
-
-function money(value: number | null | undefined): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(value ?? 0));
-}
-
-function fmtDate(value: string | null | undefined): string {
-  if (!value) return "-";
-  try {
-    return format(parseISO(value), "PP");
-  } catch {
-    return String(value);
-  }
-}
+import { fmtDate } from "@/lib/date-utils";
+import { formatRupees } from "@/lib/currency-utils";
 
 function prettify(value: string | null | undefined): string {
   if (!value) return "-";
@@ -135,7 +120,7 @@ export function ReceivableCompactLine({
 
   return (
     <span className="text-sm text-muted-foreground">
-      Paid {money(paid)}{" · "}Outstanding {money(outstanding)}
+      Paid {formatRupees(paid)}{" · "}Outstanding {formatRupees(outstanding)}
       {paidCount != null && totalCount != null
         ? ` · ${paidCount} of ${totalCount} EMIs paid`
         : ""}
@@ -189,7 +174,7 @@ export function ReceivableCompactProgress({
         <Progress value={progressValue} className="h-3 bg-[#dceee6]" />
       </div>
       <span className="text-sm text-muted-foreground">
-        Paid {money(paid)}{" · "}Outstanding {money(outstanding)}
+        Paid {formatRupees(paid)}{" · "}Outstanding {formatRupees(outstanding)}
         {paidCount != null && totalCount != null
           ? ` · ${paidCount} of ${totalCount} EMIs paid`
           : ""}
@@ -249,10 +234,10 @@ function ItemRows({
               <TableCell>{fmtDate(item.paidAt)}</TableCell>
               <TableCell className="text-right font-medium">
                 <div className="flex flex-col items-end gap-0.5">
-                  <span>{money(payable)}</span>
+                  <span>{formatRupees(payable)}</span>
                   {showSplit ? (
                     <span className="text-[11px] font-normal text-muted-foreground">
-                      {money(principal)} + {GST_RATE_LABEL} {money(gst)}
+                      {formatRupees(principal)} + {GST_RATE_LABEL} {formatRupees(gst)}
                     </span>
                   ) : null}
                 </div>
@@ -333,17 +318,17 @@ export function InstallmentSummaryCard({
           </CardHeader>
           <CardContent className="space-y-4 p-4">
             <div className="grid gap-3 md:grid-cols-4">
-              <Fact icon={IndianRupee} label="Paid" value={money(compactPaid)} />
+              <Fact icon={IndianRupee} label="Paid" value={formatRupees(compactPaid)} />
               <Fact
                 icon={IndianRupee}
                 label="Outstanding"
-                value={money(compactOutstanding)}
+                value={formatRupees(compactOutstanding)}
               />
               {compactGst > 0 ? (
                 <Fact
                   icon={IndianRupee}
                   label={`GST included (${GST_RATE_LABEL})`}
-                  value={money(compactGst)}
+                  value={formatRupees(compactGst)}
                 />
               ) : null}
               <Fact
@@ -351,7 +336,7 @@ export function InstallmentSummaryCard({
                 label="Next due"
                 value={
                   nextDueAt
-                    ? `${money(nextDueAmount)} on ${fmtDate(nextDueAt)}`
+                    ? `${formatRupees(nextDueAmount)} on ${fmtDate(nextDueAt)}`
                     : "-"
                 }
               />
@@ -440,19 +425,19 @@ export function InstallmentSummaryCard({
           <Fact
             icon={IndianRupee}
             label="Franchise fee"
-            value={money(summary.totals.payableAmount ?? summary.principal)}
+            value={formatRupees(summary.totals.payableAmount ?? summary.principal)}
           />
           <Fact
             icon={IndianRupee}
             label="Paid"
-            value={money(
+            value={formatRupees(
               summary.totals.payablePaidAmount ?? summary.totals.paidAmount,
             )}
           />
           <Fact
             icon={IndianRupee}
             label="Outstanding"
-            value={money(
+            value={formatRupees(
               summary.totals.payableOutstandingAmount ??
                 summary.totals.outstandingAmount,
             )}
@@ -461,7 +446,7 @@ export function InstallmentSummaryCard({
             <Fact
               icon={IndianRupee}
               label={`GST included (${GST_RATE_LABEL})`}
-              value={money(summary.totals.gstAmount)}
+              value={formatRupees(summary.totals.gstAmount)}
             />
           ) : null}
           <Fact
@@ -469,7 +454,7 @@ export function InstallmentSummaryCard({
             label="Next due"
             value={
               summary.nextDueItem
-                ? `${money(summary.nextDueItem.payableAmount ?? summary.nextDueItem.amount)} on ${fmtDate(summary.nextDueItem.dueAt)}`
+                ? `${formatRupees(summary.nextDueItem.payableAmount ?? summary.nextDueItem.amount)} on ${fmtDate(summary.nextDueItem.dueAt)}`
                 : "-"
             }
           />
@@ -482,7 +467,7 @@ export function InstallmentSummaryCard({
               label="Down payment"
               value={
                 summary.downPayment
-                  ? money(
+                  ? formatRupees(
                       summary.downPayment.payableAmount ??
                         summary.downPayment.amount,
                     )
@@ -493,7 +478,7 @@ export function InstallmentSummaryCard({
                 summary.downPayment.gstAmount != null &&
                 summary.downPayment.gstAmount > 0 ? (
                   <span className="text-[11px] text-muted-foreground">
-                    incl. {GST_RATE_LABEL} {money(summary.downPayment.gstAmount)}
+                    incl. {GST_RATE_LABEL} {formatRupees(summary.downPayment.gstAmount)}
                   </span>
                 ) : null
               }

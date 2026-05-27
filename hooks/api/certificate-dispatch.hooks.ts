@@ -1,5 +1,7 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { extractErrorMessage } from "@/lib/error-utils";
 import {
   previewBulkDispatchPdf,
   confirmBulkDispatch,
@@ -7,9 +9,15 @@ import {
   approveSubsetForDispatch,
   getApproveAndDispatchEligibleCertificates,
 } from "@/services/student.service";
+import { queryKeys } from "./query-keys";
 
 export function usePreviewBulkDispatch() {
-  return useMutation({ mutationFn: (ids: number[]) => previewBulkDispatchPdf(ids) });
+  return useMutation({
+    mutationFn: (ids: number[]) => previewBulkDispatchPdf(ids),
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
 }
 
 export function useConfirmBulkDispatch() {
@@ -19,11 +27,14 @@ export function useConfirmBulkDispatch() {
       confirmBulkDispatch(vars.ids, vars.orderId),
     onSuccess: () => {
       // Match the keys invalidated by useBulkApproveCertificates so cert lists refresh.
-      void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
-      void qc.invalidateQueries({ queryKey: ["admin-cert-details"] });
-      void qc.invalidateQueries({ queryKey: ["dispatch-eligible-certs"] });
-      void qc.invalidateQueries({ queryKey: ["approve-and-dispatch-eligible-certs"] });
-      void qc.invalidateQueries({ queryKey: ["franchisee-certificates"] });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certSummariesPrefix });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certDetailsPrefix });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.dispatchEligible() });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.approveAndDispatchEligible() });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.franchiseeCerts() });
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
     },
   });
 }
@@ -33,7 +44,7 @@ export function useDispatchEligibleCertificates(
   enabled = true,
 ) {
   return useQuery({
-    queryKey: ["dispatch-eligible-certs", params],
+    queryKey: queryKeys.studentAdmin.dispatchEligible(params as Record<string, unknown>),
     queryFn: () => getDispatchEligibleCertificates(params),
     enabled,
     placeholderData: (prev) => prev,
@@ -46,11 +57,14 @@ export function useApproveSubsetForDispatch() {
     mutationFn: (ids: number[]) => approveSubsetForDispatch(ids),
     onSuccess: () => {
       // Approval changes cert state -> invalidate every cert list.
-      void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
-      void qc.invalidateQueries({ queryKey: ["admin-cert-details"] });
-      void qc.invalidateQueries({ queryKey: ["dispatch-eligible-certs"] });
-      void qc.invalidateQueries({ queryKey: ["approve-and-dispatch-eligible-certs"] });
-      void qc.invalidateQueries({ queryKey: ["franchisee-certificates"] });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certSummariesPrefix });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certDetailsPrefix });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.dispatchEligible() });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.approveAndDispatchEligible() });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.franchiseeCerts() });
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
     },
   });
 }
@@ -60,7 +74,7 @@ export function useApproveAndDispatchEligibleCertificates(
   enabled = true,
 ) {
   return useQuery({
-    queryKey: ["approve-and-dispatch-eligible-certs", params],
+    queryKey: queryKeys.studentAdmin.approveAndDispatchEligible(params as Record<string, unknown>),
     queryFn: () => getApproveAndDispatchEligibleCertificates(params),
     enabled,
     placeholderData: (prev) => prev,

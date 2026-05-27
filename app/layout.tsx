@@ -7,6 +7,7 @@ import { NotificationProvider } from "@/context/notification-context";
 import QueryProvider from "@/components/providers/query-provider";
 import { ClientTelemetryProvider } from "@/components/providers/client-telemetry-provider";
 import { PointerEventsGuard } from "@/components/providers/pointer-events-guard";
+import { WebVitalsReporter } from "@/components/providers/web-vitals-reporter";
 
 const caveat = Caveat({
   subsets: ["latin"],
@@ -16,9 +17,14 @@ const caveat = Caveat({
 });
 
 export const metadata: Metadata = {
-  title: "Abacus Portal",
+  title: {
+    default: "Abacus Portal",
+    template: "%s | Abacus Portal",
+  },
   description: "Franchise management portal for Abacus education centers",
   generator: "Next.js",
+  // Private portal — no search-engine indexing.
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({
@@ -39,6 +45,7 @@ export default function RootLayout({
     >
       <body>
         <PointerEventsGuard />
+        <WebVitalsReporter />
         <ClientTelemetryProvider>
           <QueryProvider>
             <UserProvider>

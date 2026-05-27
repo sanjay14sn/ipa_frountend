@@ -2,18 +2,21 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 /**
- * middleware.ts — Server-side authentication gate.
+ * proxy.ts — Server-side routing gate (Next.js 16 convention).
+ *
+ * Renamed from middleware.ts per Next.js 16 migration (`middleware` → `proxy`).
+ * @see https://nextjs.org/docs/messages/middleware-to-proxy
  *
  * Runs before any HTML is rendered. Inspects the httpOnly session cookie set
  * by the backend and redirects unauthenticated requests to the appropriate
  * login page. This prevents a flash of protected UI content and reduces the
  * number of round-trips needed to discover an expired session.
  *
- * NOTE: This is a "soft" gate — it checks cookie *presence* only, not
- * signature validity (that is the backend's job on every API call). If the
- * backend rejects the cookie the page will still redirect via the existing
- * client-side auth checks (layout useEffect redirects). The middleware just
- * makes the common case (unauthenticated user) instant and zero-flash.
+ * SECURITY NOTE (CVE-2025-29927): proxy.ts is a "soft" UX gate only — it
+ * checks cookie *presence*, not signature validity. Every layout and Route
+ * Handler must still verify the session server-side. If the backend rejects
+ * the cookie the existing client-side auth checks handle the redirect.
+ * @see https://nextjs.org/docs/app/getting-started/proxy
  *
  * Cookie names (ipa-new): admin + franchisee + course-instructor use JWT pair
  * cookies (`*AccessToken` / `*RefreshToken`). Legacy `session` / `auth_token`

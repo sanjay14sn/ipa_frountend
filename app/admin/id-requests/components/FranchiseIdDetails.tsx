@@ -1,10 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Eye } from "lucide-react";
+import {
+  Building2,
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  Eye,
+  IdCard,
+  MapPin,
+  Phone,
+  User,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
-import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -13,11 +23,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  ContactPill,
+  ContactPillGrid,
   DataTable,
-  DetailField,
-  DetailFieldsGrid,
-  ExpandedDetailSection,
   ExpandedDetailSurface,
+  IdentityHeader,
+  KeyFactCard,
+  KeyFactsGrid,
+  LabeledValue,
+  ProfileCard,
+  ProfileCardSection,
+  TableMainCell,
   type DataTableColumn,
   type DataTableFilter,
 } from "@/components/shared";
@@ -76,54 +92,76 @@ function StudentIdRequestDetailContent({
           Full information for this ID request
         </DialogDescription>
       </DialogHeader>
-      <div className="space-y-4 py-2">
-        <DetailFieldsGrid columns={2}>
-          <DetailField label="Student name" value={student.name || "N/A"} />
-          <DetailField label="Roll number" value={student.rollNo || "N/A"} />
-          <DetailField
-            label="Date of birth"
-            value={
-              student.dateOfBirth
-                ? new Date(student.dateOfBirth).toLocaleDateString()
-                : "N/A"
+      <div className="space-y-3 py-2">
+        <ProfileCard>
+          <IdentityHeader
+            name={student.name || "Unnamed student"}
+            subtitle={
+              student.rollNo ? `Roll ${student.rollNo}` : "Roll number not set"
             }
           />
-          <DetailField
-            label="ID status"
-            value={student.idIssued?.trim() ? student.idIssued : "N/A"}
-          />
-          <DetailField
-            label="Issue date"
-            value={
-              student.idIssueDate
-                ? new Date(student.idIssueDate).toLocaleDateString()
-                : "N/A"
-            }
-          />
-          <DetailField
-            label="Franchise"
-            value={student.franchise?.name || student.franchiseName || "N/A"}
-          />
-          <DetailField
-            span={2}
-            label="Residential address"
-            value={student.residentialAddress || "N/A"}
-          />
-          <DetailField
-            label="Franchise address"
-            value={
-              student.franchise?.address || student.franchiseeAddress || "N/A"
-            }
-          />
-          <DetailField
-            label="Father contact"
-            value={student.fatherContactNo || "N/A"}
-          />
-          <DetailField
-            label="Mother contact"
-            value={student.motherContactNo || "N/A"}
-          />
-        </DetailFieldsGrid>
+          <ProfileCardSection icon={User} label="Identity" divider>
+            <ContactPillGrid columns={2}>
+              <ContactPill
+                icon={CalendarDays}
+                label="Born"
+                value={
+                  student.dateOfBirth
+                    ? new Date(student.dateOfBirth).toLocaleDateString()
+                    : "—"
+                }
+              />
+              <ContactPill
+                icon={IdCard}
+                label="ID status"
+                value={student.idIssued?.trim() || "—"}
+              />
+              <ContactPill
+                icon={CalendarDays}
+                label="Issue date"
+                value={
+                  student.idIssueDate
+                    ? new Date(student.idIssueDate).toLocaleDateString()
+                    : "—"
+                }
+              />
+              <ContactPill
+                icon={Building2}
+                label="Franchise"
+                value={
+                  student.franchise?.name || student.franchiseName || "—"
+                }
+              />
+            </ContactPillGrid>
+          </ProfileCardSection>
+          <ProfileCardSection icon={MapPin} label="Addresses" divider>
+            <LabeledValue
+              label="Residential address"
+              value={student.residentialAddress || "—"}
+            />
+            <LabeledValue
+              label="Franchise address"
+              value={
+                student.franchise?.address || student.franchiseeAddress || "—"
+              }
+              className="pt-2"
+            />
+          </ProfileCardSection>
+          <ProfileCardSection icon={Phone} label="Parent contacts" divider>
+            <ContactPillGrid columns={2}>
+              <ContactPill
+                icon={Phone}
+                label="Father"
+                value={student.fatherContactNo || "—"}
+              />
+              <ContactPill
+                icon={Phone}
+                label="Mother"
+                value={student.motherContactNo || "—"}
+              />
+            </ContactPillGrid>
+          </ProfileCardSection>
+        </ProfileCard>
         {canIssue ? (
           <div className="flex justify-end gap-2 border-t pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
@@ -291,64 +329,80 @@ export default function FranchiseIdDetails({
 
   return (
     <ExpandedDetailSurface className="border-t border-border/60">
-      <ExpandedDetailSection title="ID request summary">
-        <DetailFieldsGrid columns={4}>
-          <DetailField label="Franchise" value={franchiseName} />
-          <DetailField label="Requested" value={totalRequested} />
-          <DetailField label="Issued" value={totalIssued} />
-          <DetailField label="Students on page" value={students.length} />
-        </DetailFieldsGrid>
-      </ExpandedDetailSection>
-
-      <Separator />
-
-      <ExpandedDetailSection title="Students">
-        {!franchiseId?.trim() ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            No franchise selected.
-          </p>
-        ) : (
-          <DataTable
-            data={students}
-            loading={loading}
-            columns={columns}
-            getRowId={(student) =>
-              student.id != null
-                ? `id-${student.id}`
-                : `${student.name}-${student.rollNo}-${student.dateOfBirth ?? ""}`
-            }
-            renderMainCell={(student) => (
-              <span className="font-medium text-gray-900">
-                {student.name}
-                {student.rollNo ? (
-                  <span className="ml-2 font-mono text-xs text-muted-foreground">
-                    · {formatEntityCodeForDisplay(student.rollNo)}
-                  </span>
-                ) : null}
-              </span>
-            )}
-            searchPlaceholder="Search by name, roll number, or franchise..."
-            onSearchChange={(value) => {
-              setSearchTerm(value);
-              setPage(1);
-            }}
-            filters={filters}
-            onFilterChange={(key, value) => {
-              if (key === "status") setStatusFilter(value as string);
-              setPage(1);
-            }}
-            toolbarActions={toolbarActions}
-            pagination={{ total: totalStudents, totalPages }}
-            currentPage={page}
-            onPageChange={setPage}
-            itemsPerPage={limit}
-            emptyMessage="No students found for this filter"
-            resultsText={(count, total) =>
-              `Showing ${count} of ${total} students`
-            }
+      <div className="space-y-3 p-3 md:p-4">
+        <KeyFactsGrid columns={4}>
+          <KeyFactCard
+            icon={Building2}
+            label="Franchise"
+            value={franchiseName}
           />
-        )}
-      </ExpandedDetailSection>
+          <KeyFactCard
+            icon={Clock}
+            label="Requested"
+            value={totalRequested}
+          />
+          <KeyFactCard
+            icon={CheckCircle2}
+            label="Issued"
+            value={totalIssued}
+          />
+          <KeyFactCard
+            icon={Users}
+            label="On page"
+            value={students.length}
+          />
+        </KeyFactsGrid>
+
+        <ProfileCard contentClassName="space-y-2 p-3 md:p-4">
+          <ProfileCardSection icon={Users} label="Students">
+            {!franchiseId?.trim() ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                No franchise selected.
+              </p>
+            ) : (
+              <DataTable
+                data={students}
+                loading={loading}
+                columns={columns}
+                getRowId={(student) =>
+                  student.id != null
+                    ? `id-${student.id}`
+                    : `${student.name}-${student.rollNo}-${student.dateOfBirth ?? ""}`
+                }
+                renderMainCell={(student) => (
+                  <TableMainCell
+                    title={student.name}
+                    subtitle={
+                      student.rollNo
+                        ? formatEntityCodeForDisplay(student.rollNo)
+                        : undefined
+                    }
+                  />
+                )}
+                searchPlaceholder="Search by name, roll number, or franchise..."
+                onSearchChange={(value) => {
+                  setSearchTerm(value);
+                  setPage(1);
+                }}
+                filters={filters}
+                onFilterChange={(key, value) => {
+                  if (key === "status") setStatusFilter(value as string);
+                  setPage(1);
+                }}
+                toolbarActions={toolbarActions}
+                pagination={{ total: totalStudents, totalPages }}
+                currentPage={page}
+                onPageChange={setPage}
+                itemsPerPage={limit}
+                emptyMessage="No students found for this filter"
+                resultsText={(count, total) =>
+                  `Showing ${count} of ${total} students`
+                }
+              />
+            )}
+          </ProfileCardSection>
+        </ProfileCard>
+      </div>
 
       {selectedStudent && (
         <IdCardPreviewModal

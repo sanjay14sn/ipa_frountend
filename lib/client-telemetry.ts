@@ -1,3 +1,5 @@
+import { CLIENT_TELEMETRY_ENABLED } from "@/lib/config";
+
 export type ClientLogLevel = "error" | "warn" | "info";
 
 export interface ClientLogPayload {
@@ -24,7 +26,7 @@ function stripQuery(value: string | undefined): string | undefined {
 
 export function sendClientLog(payload: ClientLogPayload): void {
   if (typeof window === "undefined") return;
-  if (process.env.NEXT_PUBLIC_CLIENT_TELEMETRY_ENABLED === "false") return;
+  if (!CLIENT_TELEMETRY_ENABLED) return;
 
   const body = JSON.stringify({
     ...payload,

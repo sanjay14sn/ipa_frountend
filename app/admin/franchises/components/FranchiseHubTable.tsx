@@ -23,6 +23,7 @@ import type { FranchiseData } from "@/services/franchisee.service";
 import { Edit, Eye, Trash2, Check, X } from "lucide-react";
 import { FranchiseTableExpanded } from "./FranchiseTableExpanded";
 import { ReceivableCompactLine } from "@/components/receivables/InstallmentSummaryCard";
+import { formatDate } from "@/lib/date-utils";
 
 type FranchiseHubVariant = "franchises" | "applications";
 
@@ -55,12 +56,6 @@ function franchiseeMail(fe: FranchiseData["franchisee"]): string {
   const raw = fe as FranchiseData["franchisee"] & { email?: string };
   return raw.mail || raw.email || "—";
 }
-
-function formatDate(value: string | Date | null | undefined): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString();
-}
-
 
 function requestedPrograms(item: FranchiseData): string[] {
   const names = [

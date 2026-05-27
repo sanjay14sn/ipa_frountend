@@ -19,6 +19,7 @@ import { useScopeStore } from "@/lib/stores/scope-store";
 import { usePathname, useRouter } from "next/navigation";
 import { franchiseeLogout, logout } from "@/services/auth.service";
 import { logoutCI } from "@/services/ci-auth.service";
+import { sendClientLog } from "@/lib/client-telemetry";
 
 function headerEmail(user: ReturnType<typeof useUser>["user"]): string {
   if (!user) return "";
@@ -53,7 +54,7 @@ export function PortalHeaderActions() {
         await franchiseeLogout();
       }
     } catch (e) {
-      console.error(e);
+      sendClientLog({ level: "error", event: "logout-error", message: "Error during logout", context: { error: e } });
     }
     localStorage.removeItem("user");
     // Drop the previous user's scope so a different franchisee logging in

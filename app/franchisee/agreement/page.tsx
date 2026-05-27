@@ -26,7 +26,8 @@ import {
   stepToQuery,
   type AgreementStepIndex,
 } from "./components/AgreementStepper";
-import RazorpayPayment, {
+import dynamic from "next/dynamic";
+import {
   type RazorpaySuccessResponse,
 } from "@/components/RazorpayPayment";
 import {
@@ -44,7 +45,15 @@ import {
   type ESignaturePayload,
   type ReceivableInstallmentSummary,
 } from "@/services/agreement.service";
-import { ESignaturePad } from "@/components/esignature/ESignaturePad";
+
+const RazorpayPayment = dynamic(
+  () => import("@/components/RazorpayPayment"),
+  { ssr: false, loading: () => <Loader2 className="h-5 w-5 animate-spin" /> },
+);
+const ESignaturePad = dynamic(
+  () => import("@/components/esignature/ESignaturePad").then((m) => ({ default: m.ESignaturePad })),
+  { ssr: false, loading: () => <Loader2 className="h-5 w-5 animate-spin" /> },
+);
 import { getFranchiseeProfile } from "@/services/auth.service";
 import { getErrorMessage } from "@/lib/error-utils";
 import {
@@ -58,6 +67,8 @@ import { cn } from "@/lib/utils";
 import type { User } from "@/lib/auth";
 import { getEffectiveFranchiseStatus } from "@/lib/auth";
 import { abandonOrderPayment } from "@/services/order.service";
+import { ComponentErrorBoundary } from "@/components/error/ComponentErrorBoundary";
+import { sendClientLog } from "@/lib/client-telemetry";
 
 function normalizeFranchiseeProfile(
   profileData: Record<string, unknown>,
@@ -85,6 +96,14 @@ function normalizeFranchiseeProfile(
   };
 }
 
+/**
+ * Pauses execution for `ms` milliseconds.
+ *
+ * Used by `waitForActivation()` to poll the backend every 1.5 s (up to 6
+ * attempts) after a franchise-fee payment, waiting for the franchise status
+ * to flip to "Active" before redirecting to the dashboard. This is intentional
+ * and not leftover debug code.
+ */
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -172,17 +191,27 @@ function FranchiseAgreementContent() {
   // agreements this is the initial payable (down payment or first EMI); for
   // non-installment agreements we fall back to the full franchise fee + GST.
   const installmentInitialPayable = (() => {
-    const summary = installmentSummary as any;
+    type InstallmentItem = {
+      paidAt?: string | null;
+      label: string;
+      payableAmount?: number;
+      amount?: number;
+      principalAmount?: number;
+      gstAmount?: number;
+      kind: "down-payment" | "installment";
+    };
+    type SummaryWithItem = { initialPayableItem?: InstallmentItem | null };
+    const summary = installmentSummary as SummaryWithItem | null | undefined;
     if (!summary) return null;
     if ("initialPayableItem" in summary && summary.initialPayableItem) {
       const item = summary.initialPayableItem;
       if (item.paidAt) return null;
       return {
-        label: item.label as string,
+        label: item.label,
         amount: Number(item.payableAmount ?? item.amount ?? 0),
         principal: Number(item.principalAmount ?? item.amount ?? 0),
         gst: Number(item.gstAmount ?? 0),
-        kind: item.kind as "down-payment" | "installment",
+        kind: item.kind,
       };
     }
     return null;
@@ -338,7 +367,7 @@ function FranchiseAgreementContent() {
 
     if (franchiseIdParam && franchiseIdParam !== user?.franchiseId) {
       void switchFranchise(franchiseIdParam).catch((err) => {
-        console.error("switchFranchise failed:", err);
+        sendClientLog({ level: "error", event: "switch-franchise-error", message: "switchFranchise failed", context: { error: err } });
         setPageLoading(false);
       });
     }
@@ -466,7 +495,7 @@ function FranchiseAgreementContent() {
       setAgreementContent(getProcessedAgreementContent(franchiseData));
       setExpandedSections(new Set(["basic-terms", "financial-terms"]));
     } catch (error) {
-      console.error("Failed to build agreement content:", error);
+      sendClientLog({ level: "error", event: "agreement-content-build-error", message: "Failed to build agreement content", context: { error } });
       setAgreementContent(null);
     } finally {
       setPageLoading(false);
@@ -627,7 +656,7 @@ function FranchiseAgreementContent() {
       });
       activePaymentOrderIdRef.current = paymentOrder.orderId;
     } catch (error) {
-      console.error("Error initiating payment:", error);
+      sendClientLog({ level: "error", event: "agreement-payment-initiate-error", message: "Error initiating agreement payment", context: { error } });
       toast.error(getErrorMessage(error, "Failed to initiate payment."));
     } finally {
       setIsProcessingPayment(false);
@@ -708,7 +737,7 @@ function FranchiseAgreementContent() {
         router.push("/franchisee/dashboard");
       }, 3000);
     } catch (error) {
-      console.error("Error verifying payment:", error);
+      sendClientLog({ level: "error", event: "agreement-payment-verify-error", message: "Error verifying agreement payment", context: { error } });
       toast.error(getErrorMessage(error, "Payment verification failed."));
     } finally {
       setActivationSyncing(false);
@@ -719,7 +748,7 @@ function FranchiseAgreementContent() {
   };
 
   const handlePaymentFailure = async (error: unknown) => {
-    console.error("Payment failed:", error);
+    sendClientLog({ level: "error", event: "agreement-payment-failure", message: "Agreement payment failed", context: { error } });
     toast.error("Payment failed. Please try again.");
     setActivationSyncing(false);
     setIsProcessingPayment(false);
@@ -858,24 +887,26 @@ function FranchiseAgreementContent() {
   return (
     <div className="min-h-screen bg-background px-4 py-5 sm:px-5 lg:px-6">
       {currentStep === 4 && paymentDetails ? (
-        <RazorpayPayment
-          key={paymentDetails.orderId}
-          orderId={paymentDetails.orderId}
-          amount={paymentDetails.amount}
-          currency={paymentDetails.currency}
-          franchiseName={paymentDetails.franchiseName}
-          razorpayKey={paymentDetails.key}
-          onSuccess={handlePaymentSuccess}
-          onFailure={handlePaymentFailure}
-          onAbandon={async ({ reason }) => {
-            await abandonActiveAgreementPayment(reason);
-          }}
-          userDetails={{
-            name: user.profile.name,
-            email: user.profile.mail,
-            phone: user.profile.phone,
-          }}
-        />
+        <ComponentErrorBoundary componentName="RazorpayPayment">
+          <RazorpayPayment
+            key={paymentDetails.orderId}
+            orderId={paymentDetails.orderId}
+            amount={paymentDetails.amount}
+            currency={paymentDetails.currency}
+            franchiseName={paymentDetails.franchiseName}
+            razorpayKey={paymentDetails.key}
+            onSuccess={handlePaymentSuccess}
+            onFailure={handlePaymentFailure}
+            onAbandon={async ({ reason }) => {
+              await abandonActiveAgreementPayment(reason);
+            }}
+            userDetails={{
+              name: user.profile.name,
+              email: user.profile.mail,
+              phone: user.profile.phone,
+            }}
+          />
+        </ComponentErrorBoundary>
       ) : null}
 
       <div className="mx-auto w-full max-w-5xl">

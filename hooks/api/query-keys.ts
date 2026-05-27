@@ -36,13 +36,21 @@ export const queryKeys = {
       }),
     certSummaries: (params?: Record<string, unknown> | null) =>
       listQueryKey("admin-cert-summaries", params ?? undefined),
+    /** Partial invalidation key — hits all admin-cert-summaries variants. */
     certSummariesPrefix: ["admin-cert-summaries", "list"] as const,
     certDetails: (franchiseId: string, params?: Record<string, unknown> | null) =>
       listQueryKey("admin-cert-details", {
         franchiseId,
         ...(params ?? {}),
       }),
+    /** Partial invalidation key — hits all admin-cert-details variants. */
     certDetailsPrefix: ["admin-cert-details", "list"] as const,
+    /** Certs eligible for dispatch, with filter params. */
+    dispatchEligible: (params?: Record<string, unknown> | null) =>
+      listQueryKey("dispatch-eligible-certs", params ?? undefined),
+    /** Certs eligible for approve-and-dispatch, with filter params. */
+    approveAndDispatchEligible: (params?: Record<string, unknown> | null) =>
+      listQueryKey("approve-and-dispatch-eligible-certs", params ?? undefined),
     lifecycle: (params?: Record<string, unknown> | null) =>
       listQueryKey("admin-student-lifecycle", params ?? undefined),
   },
@@ -57,10 +65,28 @@ export const queryKeys = {
     trainingList: ["course-instructors", "training-list"] as const,
     franchiseeSessions: (params?: Record<string, unknown> | null) =>
       listQueryKey("course-instructors", { role: "franchisee-sessions", ...params }),
+    /** Per-session waiting-room (unassigned attendees) detail key. */
+    waitingSession: (sessionId: number) =>
+      ["ci-training-waiting-session", sessionId] as const,
+    /** Per-session assigned-attendees detail key. */
+    sessionAssignments: (sessionId: number) =>
+      ["ci-training-session-assignments", sessionId] as const,
+    /** Admin summary view for a list of CIs (refreshed on demand). */
+    adminSummary: (params: Record<string, unknown>, refreshKey?: string) =>
+      ["course-instructors", "admin", "summary", params, refreshKey ?? ""] as const,
+    /** Admin detail view for a specific franchise's CIs. */
+    adminDetails: (franchiseId: string | null, params?: Record<string, unknown> | null) =>
+      ["course-instructors", "admin", "details", franchiseId, params ?? null] as const,
   },
   franchises: {
     list: (params?: Record<string, unknown> | null) =>
       listQueryKey("franchises", params ?? undefined),
+    /** Admin flat list of all franchises. */
+    adminAll: (params?: Record<string, unknown> | null) =>
+      listQueryKey("franchises-admin", params ?? undefined),
+    /** Admin grouped view — franchisees with their franchises. */
+    groupedByFranchisee: (params?: Record<string, unknown> | null) =>
+      listQueryKey("franchises-grouped", params ?? undefined),
     startingKits: (franchiseId: string) =>
       ["franchises", franchiseId, "starting-kits"] as const,
   },
@@ -78,12 +104,20 @@ export const queryKeys = {
       ["agreements", "switcher", "admin", franchiseId] as const,
   },
   orders: {
-    /** Invalidate all franchisee order lists: `["orders-franchisee", "list"]`. */
+    /** Full list query key (includes serialized params). */
     franchisee: (params?: Record<string, unknown> | null) =>
       listQueryKey("orders-franchisee", params ?? undefined),
-    /** Invalidate all admin order lists: `["orders-admin", "list"]`. */
+    /** Full list query key (includes serialized params). */
     admin: (params?: Record<string, unknown> | null) =>
       listQueryKey("orders-admin", params ?? undefined),
+    /** 2-element partial prefix — use with `invalidateQueries` to bust ALL franchisee order list variants. */
+    franchiseeListPrefix: ["orders-franchisee", "list"] as const,
+    /** 2-element partial prefix — use with `invalidateQueries` to bust ALL admin order list variants. */
+    adminListPrefix: ["orders-admin", "list"] as const,
+    /** 2-element partial prefix — use to bust all franchisee order detail queries. */
+    franchiseeDetailPrefix: ["orders", "franchisee"] as const,
+    /** 2-element partial prefix — use to bust all admin order detail queries. */
+    adminDetailPrefix: ["orders", "admin"] as const,
     adminDetail: (id: number) => ["orders", "admin", id] as const,
     franchiseeDetail: (id: number) =>
       ["orders", "franchisee", "detail", id] as const,
@@ -103,6 +137,8 @@ export const queryKeys = {
   },
   admin: {
     dashboard: ["admin", "dashboard"] as const,
+    /** Partial invalidation key — matches all admin-user list variants. */
+    listPrefix: ["admin-users", "list"] as const,
     list: (params?: Record<string, unknown> | null) =>
       listQueryKey("admin-users", params ?? undefined),
     detail: (id: number) => ["admin", "detail", id] as const,
@@ -159,6 +195,10 @@ export const queryKeys = {
   inventory: {
     adminList: (params?: Record<string, unknown> | null) =>
       listQueryKey("inventory", params ?? undefined),
+    /** 2-element partial prefix — use with `invalidateQueries` to bust ALL inventory list variants. */
+    listPrefix: ["inventory", "list"] as const,
+    detail: (materialId: number) =>
+      ["inventory", "detail", materialId] as const,
     all: ["inventory", "all"] as const,
     kitCatalog: ["inventory", "kit-catalog"] as const,
     programKitItems: (programId: number) =>
@@ -181,6 +221,7 @@ export const queryKeys = {
   auth: {
     franchiseeProfile: (franchiseId?: string) =>
       ["auth", "franchisee-profile", franchiseId ?? ""] as const,
+    adminProfile: () => ["auth", "admin-profile"] as const,
   },
   franchiseApplications: {
     list: (params?: Record<string, unknown> | null) =>
@@ -192,7 +233,8 @@ export const queryKeys = {
       }),
   },
   certificates: {
-    eligibleInstructors: (levelIds: number[], programId?: number) =>
-      ["certificates", "eligible-instructors", levelIds, programId ?? null] as const,
+    /** Eligible course instructors for a certificate request, keyed by levelIds + programId. */
+    eligibleInstructors: (levelIds?: number[], programId?: number) =>
+      ["certificates", "eligible-instructors", levelIds ?? null, programId ?? null] as const,
   },
 } as const;

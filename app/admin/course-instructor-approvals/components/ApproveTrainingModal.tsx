@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { sendClientLog } from "@/lib/client-telemetry";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -117,7 +118,7 @@ export default function ApproveTrainingModal({
         installmentAmount: "",
       });
     } catch (error) {
-      console.error("Error approving training:", error);
+      sendClientLog({ level: "error", event: "training-approve-error", message: "Error approving training", context: { error } });
       toast.error("Failed to approve training. Please try again.");
     } finally {
       setIsLoading(false);

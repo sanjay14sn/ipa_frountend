@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { CIUser, getCIMe } from "@/services/ci-auth.service";
 import { getCIAgreement, CIAgreementPhase } from "@/services/ci-training.service";
 
@@ -48,8 +48,13 @@ export function CIAuthProvider({ children }: { children: React.ReactNode }) {
     void refresh();
   }, [refresh]);
 
+  const ciContextValue = useMemo(
+    () => ({ user, loading, agreementPhase, refresh, clear }),
+    [user, loading, agreementPhase, refresh, clear],
+  );
+
   return (
-    <CIAuthContext.Provider value={{ user, loading, agreementPhase, refresh, clear }}>
+    <CIAuthContext.Provider value={ciContextValue}>
       {children}
     </CIAuthContext.Provider>
   );

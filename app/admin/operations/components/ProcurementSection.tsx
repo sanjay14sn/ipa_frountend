@@ -59,6 +59,7 @@ import {
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { getAllInventory } from "@/services/inventory.service";
+import { formatDate, formatDateTime } from "@/lib/date-utils";
 import { ProcurementBulkLinePicker } from "@/components/procurement/ProcurementBulkLinePicker";
 import type { BulkSourcingLineSubmit } from "@/components/procurement/ProcurementBulkLinePicker";
 import {
@@ -147,23 +148,6 @@ function formatCurrency(value: number) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
-}
-
-function formatDate(value?: string | null) {
-  if (!value) return "Not set";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(parsed);
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "Not posted";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(parsed);
 }
 
 function formatStatusLabel(value: string) {

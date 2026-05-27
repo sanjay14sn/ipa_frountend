@@ -38,12 +38,8 @@ export function usePaginatedFranchisesAdmin(
   params: PaginationParams,
   enabled = true,
 ) {
-  const keyPayload: Record<string, unknown> = {
-    route: "admin-franchise-all",
-    ...params,
-  };
   return useQuery({
-    queryKey: queryKeys.franchises.list(keyPayload),
+    queryKey: queryKeys.franchises.adminAll(params as Record<string, unknown>),
     queryFn: () => getPaginatedFranchises(params),
     enabled,
     placeholderData: (prev) => prev as PaginatedFranchisesResponse | undefined,
@@ -54,12 +50,8 @@ export function usePaginatedFranchiseApplicationsAdmin(
   params: PaginationParams,
   enabled = true,
 ) {
-  const keyPayload: Record<string, unknown> = {
-    route: 'admin-franchise-applications',
-    ...params,
-  };
   return useQuery({
-    queryKey: queryKeys.franchiseApplications.list(keyPayload),
+    queryKey: queryKeys.franchiseApplications.list(params as Record<string, unknown>),
     queryFn: () => getPaginatedFranchiseApplications(params),
     enabled,
     placeholderData: (prev) => prev as PaginatedFranchisesResponse | undefined,
@@ -70,12 +62,8 @@ export function usePaginatedFranchiseesGrouped(
   params: PaginationParams,
   enabled = true,
 ) {
-  const keyPayload: Record<string, unknown> = {
-    route: "admin-franchise-by-franchisee",
-    ...params,
-  };
   return useQuery({
-    queryKey: queryKeys.franchises.list(keyPayload),
+    queryKey: queryKeys.franchises.groupedByFranchisee(params as Record<string, unknown>),
     queryFn: () => getPaginatedFranchiseesGrouped(params),
     enabled,
     placeholderData: (prev) =>

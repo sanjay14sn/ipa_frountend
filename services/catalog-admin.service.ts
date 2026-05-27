@@ -36,6 +36,9 @@ export async function listCITrainingPackages(params: {
   const res = await api.get(
     `/catalog/ci-training-package/by-program/${params.programId}`,
   );
+  // Defensive guard: unwrapData types T but can return undefined/null at
+  // runtime when the backend returns an unexpected shape. Return [] rather
+  // than letting callers crash on `.map()` / `.length`.
   const payload = unwrapData<CITrainingPackage[]>(res);
   return Array.isArray(payload) ? payload : [];
 }
@@ -72,6 +75,7 @@ export async function generateDefaultPackages(programId: number): Promise<CITrai
     null,
     { params: { programId } },
   );
+  // Same defensive guard as listCITrainingPackages — see comment above.
   const payload = unwrapData<CITrainingPackage[]>(res);
   return Array.isArray(payload) ? payload : [];
 }

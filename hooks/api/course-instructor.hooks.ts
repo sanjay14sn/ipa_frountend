@@ -31,6 +31,8 @@ import {
 import { useProgramId } from "@/hooks/use-scope";
 import { queryKeys } from "./query-keys";
 import { getQueryClientBridge } from "./query-client-bridge";
+import { toast } from "sonner";
+import { extractErrorMessage } from "@/lib/error-utils";
 import {
   listFranchiseeTrainingSessions,
   listWaitingForSession,
@@ -265,6 +267,9 @@ export function useCreateCourseInstructor() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: CI_LIST_PREFIX });
     },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
   });
 }
 
@@ -291,7 +296,7 @@ export function useFranchiseeTrainingSessions(params?: {
 
 export function useWaitingForSession(sessionId: number | null) {
   const q = useQuery({
-    queryKey: ["ci-training-waiting-session", sessionId],
+    queryKey: queryKeys.courseInstructors.waitingSession(sessionId as number),
     queryFn: () => listWaitingForSession(sessionId!),
     enabled: sessionId != null,
     placeholderData: (prev) => prev,
@@ -306,7 +311,7 @@ export function useWaitingForSession(sessionId: number | null) {
 
 export function useSessionAssignments(sessionId: number | null) {
   const q = useQuery({
-    queryKey: ["ci-training-session-assignments", sessionId],
+    queryKey: queryKeys.courseInstructors.sessionAssignments(sessionId as number),
     queryFn: () => listSessionAssignments(sessionId!),
     enabled: sessionId != null,
     placeholderData: (prev) => prev,
@@ -330,10 +335,10 @@ export async function bulkAssignToSessionWithRevalidation(
       queryKey: queryKeys.courseInstructors.franchiseeSessions(),
     });
     void qc.invalidateQueries({
-      queryKey: ["ci-training-waiting-session", sessionId],
+      queryKey: queryKeys.courseInstructors.waitingSession(sessionId),
     });
     void qc.invalidateQueries({
-      queryKey: ["ci-training-session-assignments", sessionId],
+      queryKey: queryKeys.courseInstructors.sessionAssignments(sessionId),
     });
   } catch {
     /* ignore */
@@ -346,7 +351,7 @@ export function useAdminCISummaries(
   refreshKey = 0,
 ) {
   return useQuery({
-    queryKey: ["course-instructors", "admin", "summary", params, refreshKey],
+    queryKey: queryKeys.courseInstructors.adminSummary(params as Record<string, unknown>, String(refreshKey)),
     queryFn: () => getAdminCISummaries(params),
     placeholderData: (prev) => prev,
   });
@@ -359,7 +364,7 @@ export function useAdminCIDetails(
   params: { status?: string; page?: number; limit?: number; search?: string },
 ) {
   return useQuery({
-    queryKey: ["course-instructors", "admin", "details", franchiseId, params],
+    queryKey: queryKeys.courseInstructors.adminDetails(franchiseId, params as Record<string, unknown>),
     queryFn: () =>
       getAdminCIDetails(
         franchiseId,

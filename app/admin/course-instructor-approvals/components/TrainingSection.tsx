@@ -12,6 +12,7 @@ import {
 import React, { useEffect, useState, useRef } from "react";
 import ApproveTrainingModal from "./ApproveTrainingModal";
 import { Loader2 } from "lucide-react";
+import { sendClientLog } from "@/lib/client-telemetry";
 
 interface TrainingSectionProps {
   instructor: AdminCourseInstructorData;
@@ -58,7 +59,7 @@ export default function TrainingSection({
       const progress = await getCITrainingProgress(instructor.id);
       setTrainingProgress(progress);
     } catch (error) {
-      console.error("Failed to load training progress:", error);
+      sendClientLog({ level: "error", event: "training-progress-load-error", message: "Failed to load training progress", context: { error } });
       setTrainingProgress(null);
     } finally {
       setLoadingProgress(false);

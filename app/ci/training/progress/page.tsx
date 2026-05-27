@@ -6,17 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { BarChart2 } from "lucide-react";
 import { DataTable, TableLoadingState, TablePageShell, type DataTableColumn } from "@/components/shared";
 import { getCIProgress, type CIProgressItem } from "@/services/ci-training.service";
-
-function formatDate(value?: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
+import { formatDate } from "@/lib/date-utils";
 
 function statusBadge(status: string) {
   if (status === "COMPLETED") return <Badge>Completed</Badge>;

@@ -17,6 +17,7 @@ import type { StudentLifecycleRow, StudentLifecycleStatus } from "@/services/stu
 import { StudentLifecycleActions } from "./student-lifecycle-actions";
 import { StudentLifecycleDetailsDialog } from "@/components/students/student-lifecycle-details-dialog";
 import { formatEntityCodeForDisplay } from "@/lib/format-entity-code";
+import { formatDate } from "@/lib/date-utils";
 
 const LIFECYCLE_TABLE_COL_GROUP_WIDTHS: string[] = [
   "8.5rem",
@@ -36,11 +37,6 @@ const statusLabels: Record<StudentLifecycleStatus, string> = {
   INVALIDATED: "Invalidated",
   REACTIVATED: "Reactivated",
 };
-
-function formatDate(value?: string | null) {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString();
-}
 
 function getLifecycleTone(status: StudentLifecycleStatus): StatusTone {
   switch (status) {

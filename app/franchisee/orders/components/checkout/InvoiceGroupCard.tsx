@@ -2,12 +2,7 @@
 
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const currencyFormatter = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 2,
-});
+import { formatRupees } from "@/lib/currency-utils";
 
 export type CheckoutGroupKind = "KIT" | "STUDENT" | "CI";
 
@@ -104,11 +99,11 @@ export default function InvoiceGroupCard({
         </div>
         {free ? (
           <span className="shrink-0 text-sm font-semibold tabular-nums text-muted-foreground">
-            {currencyFormatter.format(0)}
+            {formatRupees(0)}
           </span>
         ) : (
           <span className="shrink-0 text-sm font-semibold tabular-nums text-card-foreground">
-            {currencyFormatter.format(totalAmount)}
+            {formatRupees(totalAmount)}
           </span>
         )}
         {showRemove ? (
@@ -147,17 +142,17 @@ export default function InvoiceGroupCard({
                   <span className="text-muted-foreground">{c.label}</span>
                   {rowGst > 0 ? (
                     <span className="text-[11px] text-muted-foreground/80">
-                      incl. 18% GST {currencyFormatter.format(rowGst)}
+                      incl. 18% GST {formatRupees(rowGst)}
                     </span>
                   ) : null}
                 </div>
                 <span className="text-right tabular-nums text-muted-foreground">
                   {isUnit
-                    ? `${currencyFormatter.format(c.unit!)} × ${qty}`
-                    : currencyFormatter.format(c.amount ?? 0)}
+                    ? `${formatRupees(c.unit!)} × ${qty}`
+                    : formatRupees(c.amount ?? 0)}
                 </span>
                 <span className="w-24 text-right font-medium tabular-nums text-card-foreground">
-                  {currencyFormatter.format(rowAmount)}
+                  {formatRupees(rowAmount)}
                 </span>
               </div>
             );

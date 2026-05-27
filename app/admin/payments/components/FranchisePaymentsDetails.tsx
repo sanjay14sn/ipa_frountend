@@ -1,8 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Eye } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import {
+  CheckCircle2,
+  Clock,
+  CreditCard,
+  Eye,
+  IndianRupee,
+  Receipt,
+  Wallet,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,13 +20,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  ContactPill,
+  ContactPillGrid,
   DataTable,
-  DetailField,
-  DetailFieldsGrid,
-  ExpandedDetailSection,
   ExpandedDetailSurface,
-  SummaryStatCard,
-  SummaryStatGrid,
+  KeyFactCard,
+  KeyFactsGrid,
+  LabeledValue,
+  ProfileCard,
+  ProfileCardSection,
+  StatusBadge,
+  TableMainCell,
   type DataTableColumn,
   type DataTableFilter,
 } from "@/components/shared";
@@ -107,7 +118,7 @@ export default function FranchisePaymentsDetails({
     {
       key: "status",
       header: "Status",
-      render: (payment) => <Badge variant="outline">{payment.status}</Badge>,
+      render: (payment) => <StatusBadge label={payment.status ?? "Unknown"} />,
     },
     {
       key: "date",
@@ -158,76 +169,78 @@ export default function FranchisePaymentsDetails({
 
   return (
     <ExpandedDetailSurface className="border-t border-border/60">
-      <ExpandedDetailSection title="Franchise payment summary">
-        <SummaryStatGrid>
-          <SummaryStatCard
+      <div className="space-y-3 p-3 md:p-4">
+        <KeyFactsGrid columns={4}>
+          <KeyFactCard
+            icon={Receipt}
             label="Total payments"
             value={totalPaymentsCount}
-            description="All transactions"
           />
-          <SummaryStatCard
+          <KeyFactCard
+            icon={IndianRupee}
             label="Completed amount"
             value={
               totalAmount != null
-                ? `Rs. ${totalAmount.toLocaleString("en-IN")}`
-                : "N/A"
+                ? formatRsAmount(totalAmount, "INR")
+                : "—"
             }
-            description="Captured to date"
           />
-          <SummaryStatCard
-            label="Completed payments"
-            value={totalCompleted ?? "N/A"}
-            description="Successful captures"
+          <KeyFactCard
+            icon={CheckCircle2}
+            label="Completed"
+            value={totalCompleted ?? "—"}
           />
-          <SummaryStatCard
-            label="Pending payments"
-            value={totalPending ?? "N/A"}
-            description="Awaiting capture"
+          <KeyFactCard
+            icon={Clock}
+            label="Pending"
+            value={totalPending ?? "—"}
           />
-        </SummaryStatGrid>
-      </ExpandedDetailSection>
+        </KeyFactsGrid>
 
-      <Separator />
-
-      <ExpandedDetailSection title="Payments">
-        {!franchiseId ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">
-            Payments not scoped to a specific franchise.
-          </p>
-        ) : (
-          <DataTable
-            data={payments}
-            loading={loading}
-            columns={columns}
-            getRowId={(payment) => String(payment.id)}
-            renderMainCell={(payment) => (
-              <div className="font-medium text-gray-900">
-                {payment.razorpayPaymentId ||
-                  payment.razorpayOrderId ||
-                  `#${payment.id}`}
-              </div>
+        <ProfileCard contentClassName="space-y-2 p-3 md:p-4">
+          <ProfileCardSection icon={Wallet} label="Payments">
+            {!franchiseId ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                Payments not scoped to a specific franchise.
+              </p>
+            ) : (
+              <DataTable
+                data={payments}
+                loading={loading}
+                columns={columns}
+                getRowId={(payment) => String(payment.id)}
+                renderMainCell={(payment) => (
+                  <TableMainCell
+                    title={
+                      payment.razorpayPaymentId ||
+                      payment.razorpayOrderId ||
+                      `#${payment.id}`
+                    }
+                  />
+                )}
+                searchPlaceholder="Search by order or payment ID..."
+                onSearchChange={(value) => {
+                  setSearchTerm(value);
+                  setPaymentsPage(1);
+                }}
+                filters={filters}
+                onFilterChange={(key, value) => {
+                  if (key === "status") setStatusFilter(value as string);
+                  setPaymentsPage(1);
+                }}
+                pagination={{ total: totalPaymentsCount, totalPages }}
+                currentPage={paymentsPage}
+                onPageChange={setPaymentsPage}
+                itemsPerPage={paymentsLimit}
+                emptyMessage="No payments found"
+                resultsText={(count, total) =>
+                  `Showing ${count} of ${total} payments`
+                }
+              />
             )}
-            searchPlaceholder="Search by order or payment ID..."
-            onSearchChange={(value) => {
-              setSearchTerm(value);
-              setPaymentsPage(1);
-            }}
-            filters={filters}
-            onFilterChange={(key, value) => {
-              if (key === "status") setStatusFilter(value as string);
-              setPaymentsPage(1);
-            }}
-            pagination={{ total: totalPaymentsCount, totalPages }}
-            currentPage={paymentsPage}
-            onPageChange={setPaymentsPage}
-            itemsPerPage={paymentsLimit}
-            emptyMessage="No payments found"
-            resultsText={(count, total) =>
-              `Showing ${count} of ${total} payments`
-            }
-          />
-        )}
-      </ExpandedDetailSection>
+          </ProfileCardSection>
+        </ProfileCard>
+      </div>
 
       <Dialog
         open={selectedPayment != null}
@@ -249,123 +262,148 @@ export default function FranchisePaymentsDetails({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4">
-              <DetailFieldsGrid columns={3}>
-                <DetailField label="Franchise" value={franchiseName} />
-                <DetailField
-                  label="Franchisee"
-                  value={selectedPayment.franchisee?.name || "N/A"}
-                />
-                <DetailField
-                  label="Payment Type"
-                  value={selectedPayment.type || "Payment"}
-                />
-                <DetailField
-                  label="Status"
-                  value={
-                    <Badge variant="outline">{selectedPayment.status}</Badge>
-                  }
-                />
-                <DetailField
-                  label="Method"
-                  value={
-                    selectedPayment.method ? (
+            <div className="space-y-3">
+              <ProfileCard>
+                <ProfileCardSection icon={Receipt} label="Overview">
+                  <ContactPillGrid columns={3}>
+                    <ContactPill
+                      icon={Receipt}
+                      label="Franchise"
+                      value={franchiseName}
+                    />
+                    <ContactPill
+                      icon={Receipt}
+                      label="Franchisee"
+                      value={selectedPayment.franchisee?.name || "—"}
+                    />
+                    <ContactPill
+                      icon={Wallet}
+                      label="Type"
+                      value={selectedPayment.type || "Payment"}
+                    />
+                  </ContactPillGrid>
+                  <div className="flex flex-wrap items-center gap-3 pt-2">
+                    <StatusBadge label={selectedPayment.status ?? "—"} />
+                    {selectedPayment.method ? (
                       <Badge
                         variant="outline"
                         className={methodBadgeClass(selectedPayment.method)}
                       >
                         {methodLabel(selectedPayment.method)}
                       </Badge>
-                    ) : (
-                      "N/A"
-                    )
-                  }
-                />
-                <DetailField
-                  label="Date"
-                  value={formatPaymentDateTime(selectedPayment.createdAt)}
-                />
-                <DetailField
-                  label="Amount"
-                  value={formatRsAmount(
-                    selectedPayment.amount,
-                    selectedPayment.currency ?? "INR",
-                  )}
-                />
-                <DetailField
-                  label="Fee"
-                  value={formatRsAmount(
-                    selectedPayment.fee,
-                    selectedPayment.currency ?? "INR",
-                  )}
-                />
-                <DetailField
-                  label="Gateway fee tax"
-                  value={formatRsAmount(
-                    selectedPayment.gatewayFeeTaxAmount ?? selectedPayment.tax,
-                    selectedPayment.currency ?? "INR",
-                  )}
-                />
-                {selectedPayment.goodsGstAmount != null &&
-                Number(selectedPayment.goodsGstAmount) > 0 ? (
-                  <DetailField
-                    label="GST (18%)"
-                    value={formatRsAmount(
-                      selectedPayment.goodsGstAmount,
-                      selectedPayment.currency ?? "INR",
-                    )}
-                  />
-                ) : null}
-                <DetailField
-                  label="Order ID"
-                  value={selectedPayment.razorpayOrderId || "N/A"}
-                />
-                <DetailField
-                  label="Payment ID"
-                  value={selectedPayment.razorpayPaymentId || "N/A"}
-                />
-                <DetailField
-                  label="Payer Email"
-                  value={
-                    selectedPayment.email ||
-                    selectedPayment.franchisee?.mail ||
-                    "N/A"
-                  }
-                />
-                <DetailField
-                  label="Payer Contact"
-                  value={
-                    selectedPayment.contact ||
-                    selectedPayment.franchisee?.phone ||
-                    "N/A"
-                  }
-                />
-              </DetailFieldsGrid>
-
-              <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
-                <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                  Details
-                </div>
-                <DetailFieldsGrid columns={3}>
-                  {selectedPaymentMethodFields.map((field) => (
-                    <DetailField
-                      key={`${field.label}-${field.value}`}
-                      label={field.label}
-                      value={field.value}
+                    ) : null}
+                    <span className="text-xs text-muted-foreground">
+                      {formatPaymentDateTime(selectedPayment.createdAt)}
+                    </span>
+                  </div>
+                </ProfileCardSection>
+                <ProfileCardSection icon={IndianRupee} label="Amounts" divider>
+                  <ContactPillGrid columns={4}>
+                    <ContactPill
+                      icon={IndianRupee}
+                      label="Amount"
+                      value={formatRsAmount(
+                        selectedPayment.amount,
+                        selectedPayment.currency ?? "INR",
+                      )}
                     />
-                  ))}
-                </DetailFieldsGrid>
-              </div>
+                    <ContactPill
+                      icon={IndianRupee}
+                      label="Fee"
+                      value={formatRsAmount(
+                        selectedPayment.fee,
+                        selectedPayment.currency ?? "INR",
+                      )}
+                    />
+                    <ContactPill
+                      icon={IndianRupee}
+                      label="Gateway fee tax"
+                      value={formatRsAmount(
+                        selectedPayment.gatewayFeeTaxAmount ??
+                          selectedPayment.tax,
+                        selectedPayment.currency ?? "INR",
+                      )}
+                    />
+                    {selectedPayment.goodsGstAmount != null &&
+                    Number(selectedPayment.goodsGstAmount) > 0 ? (
+                      <ContactPill
+                        icon={IndianRupee}
+                        label="GST (18%)"
+                        value={formatRsAmount(
+                          selectedPayment.goodsGstAmount,
+                          selectedPayment.currency ?? "INR",
+                        )}
+                      />
+                    ) : null}
+                  </ContactPillGrid>
+                </ProfileCardSection>
+                <ProfileCardSection icon={CreditCard} label="Identifiers" divider>
+                  <ContactPillGrid columns={2}>
+                    <ContactPill
+                      icon={Receipt}
+                      label="Order ID"
+                      value={selectedPayment.razorpayOrderId || "—"}
+                    />
+                    <ContactPill
+                      icon={Receipt}
+                      label="Payment ID"
+                      value={selectedPayment.razorpayPaymentId || "—"}
+                    />
+                    <ContactPill
+                      icon={Receipt}
+                      label="Payer email"
+                      value={
+                        selectedPayment.email ||
+                        selectedPayment.franchisee?.mail ||
+                        "—"
+                      }
+                    />
+                    <ContactPill
+                      icon={Receipt}
+                      label="Payer contact"
+                      value={
+                        selectedPayment.contact ||
+                        selectedPayment.franchisee?.phone ||
+                        "—"
+                      }
+                    />
+                  </ContactPillGrid>
+                </ProfileCardSection>
+              </ProfileCard>
+
+              {selectedPaymentMethodFields.length > 0 ? (
+                <ProfileCard>
+                  <ProfileCardSection icon={CreditCard} label="Method details">
+                    <ContactPillGrid columns={3}>
+                      {selectedPaymentMethodFields.map((field) => (
+                        <ContactPill
+                          key={`${field.label}-${field.value}`}
+                          icon={CreditCard}
+                          label={field.label}
+                          value={field.value}
+                        />
+                      ))}
+                    </ContactPillGrid>
+                  </ProfileCardSection>
+                </ProfileCard>
+              ) : null}
 
               {selectedPayment.acquirerData ? (
-                <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-3">
-                  <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                    Captured Gateway Payload
-                  </div>
-                  <pre className="max-h-56 overflow-auto rounded bg-card p-3 text-xs text-foreground">
-                    {JSON.stringify(selectedPayment.acquirerData, null, 2)}
-                  </pre>
-                </div>
+                <ProfileCard>
+                  <ProfileCardSection
+                    icon={Receipt}
+                    label="Captured gateway payload"
+                  >
+                    <LabeledValue
+                      label="Raw response"
+                      value={
+                        <pre className="max-h-56 overflow-auto rounded bg-muted p-3 text-xs text-foreground">
+                          {JSON.stringify(selectedPayment.acquirerData, null, 2)}
+                        </pre>
+                      }
+                    />
+                  </ProfileCardSection>
+                </ProfileCard>
               ) : null}
             </div>
           </DialogContent>

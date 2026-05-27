@@ -5,7 +5,7 @@
  * pagination, expandable rows. Built on `@/components/ui/table` primitives.
  */
 
-import React, { useState, useEffect, useRef, Fragment, ReactNode, useMemo } from "react";
+import React, { useState, useEffect, useRef, Fragment, ReactNode, useMemo, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -274,39 +274,44 @@ export default function DataTable<T>({
     }
   };
 
-  const toggleRow = (id: string) => {
-    const isParentRow = data.some((item) => getRowId(item) === id);
+  const toggleRow = useCallback(
+    (id: string) => {
+      const isParentRow = data.some((item) => getRowId(item) === id);
 
-    if (isParentRow) {
-      if (multiExpand) {
-        setExpandedRowSet((prev) => {
-          const next = new Set(prev);
-          if (next.has(id)) next.delete(id);
-          else next.add(id);
-          return next;
-        });
-      } else {
-        if (expandedRow === id) {
-          setExpandedRow(null);
-          setExpandedChildren(new Set());
+      if (isParentRow) {
+        if (multiExpand) {
+          setExpandedRowSet((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+          });
         } else {
-          setExpandedRow(id);
-          setExpandedChildren(new Set());
+          if (expandedRow === id) {
+            setExpandedRow(null);
+            setExpandedChildren(new Set());
+          } else {
+            setExpandedRow(id);
+            setExpandedChildren(new Set());
+          }
         }
-      }
-    } else {
-      const newExpandedChildren = new Set(expandedChildren);
-      if (newExpandedChildren.has(id)) {
-        newExpandedChildren.delete(id);
       } else {
-        newExpandedChildren.add(id);
+        const newExpandedChildren = new Set(expandedChildren);
+        if (newExpandedChildren.has(id)) {
+          newExpandedChildren.delete(id);
+        } else {
+          newExpandedChildren.add(id);
+        }
+        setExpandedChildren(newExpandedChildren);
       }
-      setExpandedChildren(newExpandedChildren);
-    }
-  };
+    },
+    [data, getRowId, multiExpand, expandedRow, expandedChildren],
+  );
 
-  const isRowExpanded = (rowId: string) =>
-    multiExpand ? expandedRowSet.has(rowId) : expandedRow === rowId;
+  const isRowExpanded = useCallback(
+    (rowId: string) => (multiExpand ? expandedRowSet.has(rowId) : expandedRow === rowId),
+    [multiExpand, expandedRowSet, expandedRow],
+  );
 
   const hasToolbarActions = toolbarActions !== undefined && toolbarActions !== null;
   const showToolbar =

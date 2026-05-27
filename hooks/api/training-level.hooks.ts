@@ -15,6 +15,7 @@ export function useTrainingLevelsForProgram(programId: number | undefined) {
     enabled: programId != null && programId > 0,
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 

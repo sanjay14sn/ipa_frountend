@@ -9,16 +9,12 @@ import {
 } from "@/components/shared";
 import type { FranchiseData } from "@/services/franchisee.service";
 import { FranchiseAgreementsWorkspace } from "@/app/admin/franchise/components/FranchiseAgreementsWorkspace";
+import { formatDate } from "@/lib/date-utils";
 
 function franchiseeMail(fe: FranchiseData["franchisee"]): string {
   if (!fe) return "-";
   const raw = fe as { mail?: string; email?: string };
   return raw.mail || raw.email || "-";
-}
-
-function formatDate(value: string | Date | null | undefined): string {
-  if (!value) return "-";
-  return new Date(value).toLocaleDateString();
 }
 
 function programLabels(agreements: FranchiseData["agreements"]): string {

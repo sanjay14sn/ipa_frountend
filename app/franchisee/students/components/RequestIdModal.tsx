@@ -16,6 +16,7 @@ import {
   DialogStateMessage,
   SuccessDialog,
 } from "@/components/shared/dialog";
+import { sendClientLog } from "@/lib/client-telemetry";
 
 interface RequestIdModalProps {
   open: boolean;
@@ -68,7 +69,7 @@ export default function RequestIdModal({
       setSubmitted(true);
       onSuccess();
     } catch (error) {
-      console.error("Error requesting IDs:", error);
+      sendClientLog({ level: "error", event: "student-id-request-error", message: "Error requesting student IDs", context: { error } });
       toast.error("Failed to request IDs. Please try again.");
     } finally {
       setIsLoading(false);

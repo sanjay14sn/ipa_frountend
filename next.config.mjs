@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import withBundleAnalyzerFactory from "@next/bundle-analyzer";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -127,4 +128,10 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+// Run `ANALYZE=true pnpm build` to open bundle analysis in the browser.
+const withBundleAnalyzer = withBundleAnalyzerFactory({
+  enabled: process.env.ANALYZE === "true",
+  openAnalyzer: true,
+});
+
+export default withBundleAnalyzer(nextConfig);

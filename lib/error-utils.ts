@@ -1,4 +1,5 @@
 import { AxiosError } from 'axios';
+import { sendClientLog } from '@/lib/client-telemetry';
 
 export interface BackendErrorResponse {
   code?: string;
@@ -106,6 +107,14 @@ export function extractErrorMessage(
         if ('code' in errorData && typeof errorData.code === 'string') {
           const mapped = friendlyMessages[errorData.code];
           if (mapped) return mapped;
+          // Unmapped error code — log for visibility so the map can be extended.
+          sendClientLog({
+            level: 'warn',
+            event: 'unmapped-error-code',
+            message: `Unmapped error code: ${errorData.code}`,
+            statusCode: axiosError.response?.status,
+            context: { code: errorData.code },
+          });
         }
 
         const friendlyTitle = safeMessage((errorData as { title?: unknown }).title);

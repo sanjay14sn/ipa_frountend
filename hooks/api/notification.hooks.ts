@@ -10,6 +10,8 @@ import {
 } from "@/services/notification.service";
 import type { UserType } from "@/lib/notification.types";
 import { queryKeys } from "./query-keys";
+import { toast } from "sonner";
+import { extractErrorMessage } from "@/lib/error-utils";
 
 const NOTIFICATIONS_LIST_PREFIX = ["notifications", "list"] as const;
 
@@ -57,6 +59,9 @@ export function useMarkNotificationRead(userType: UserType) {
         queryKey: queryKeys.notifications.unreadFranchisee,
       });
     },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
   });
 }
 
@@ -70,6 +75,9 @@ export function useMarkAllNotificationsRead(userType: UserType) {
       void qc.invalidateQueries({
         queryKey: queryKeys.notifications.unreadFranchisee,
       });
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
     },
   });
 }
@@ -85,6 +93,9 @@ export function useDeleteNotification(userType: UserType) {
       void qc.invalidateQueries({
         queryKey: queryKeys.notifications.unreadFranchisee,
       });
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
     },
   });
 }

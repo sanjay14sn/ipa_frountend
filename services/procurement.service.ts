@@ -513,17 +513,6 @@ export async function getReplenishmentDrafts(
   return page.rows;
 }
 
-export async function updateSupplier(
-  _id: number,
-  _body: Partial<CreateSupplierDto>,
-): Promise<Supplier> {
-  throw new Error("Supplier update not available in this cutover");
-}
-
-export async function deleteSupplier(_id: number): Promise<void> {
-  throw new Error("Supplier delete not available in this cutover");
-}
-
 export async function createSupplierOrder(body: {
   supplierId: number;
   referenceNo?: string;

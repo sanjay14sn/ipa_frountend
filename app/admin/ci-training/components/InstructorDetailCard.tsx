@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { CITrainingData } from "@/services/course-instructor.service";
+import { formatRupees } from "@/lib/currency-utils";
 
 interface InstructorDetailCardProps {
   instructor: CITrainingData;
@@ -34,14 +35,6 @@ export default function InstructorDetailCard({
 
     return () => clearTimeout(timeoutId);
   }, [instructor]);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const getTrainingLevelColor = (order: number) => {
     const colors = [
@@ -115,7 +108,7 @@ export default function InstructorDetailCard({
                 <div>
                   <span className="text-gray-500">Amount</span>
                   <p className="text-gray-900 mt-1 font-medium">
-                    {formatCurrency(instructor.amount ?? 0)}
+                    {formatRupees(instructor.amount ?? 0)}
                   </p>
                 </div>
 
@@ -132,7 +125,7 @@ export default function InstructorDetailCard({
                   <div>
                     <span className="text-gray-500">Monthly Installment</span>
                     <p className="text-gray-900 mt-1 font-medium">
-                      {formatCurrency(instructor.installmentAmount ?? 0)}
+                      {formatRupees(instructor.installmentAmount ?? 0)}
                     </p>
                   </div>
                 )}

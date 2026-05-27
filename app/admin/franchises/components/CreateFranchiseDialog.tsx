@@ -56,6 +56,7 @@ import {
 } from "@/services/franchisee.service";
 import { Checkbox } from "@/components/ui/checkbox";
 import React from "react";
+import { sendClientLog } from "@/lib/client-telemetry";
 
 const FORM_STEPS: StepDef[] = [
   { id: 1, title: "Personal Info" },
@@ -450,7 +451,7 @@ export function CreateFranchiseDialog({
         handleClose();
       }, 2000);
     } catch (error: any) {
-      console.error("Failed to create franchise:", error);
+      sendClientLog({ level: "error", event: "franchise-create-error", message: "Failed to create franchise", context: { error } });
       toast.error(getErrorMessage(error, "Failed to create franchise"));
     } finally {
       setLoading(false);

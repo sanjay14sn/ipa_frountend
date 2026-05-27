@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ciAgreementContent } from "@/lib/ciAgreementContent";
 import type { CIAgreementRecord } from "@/services/ci-training.service";
+import { formatRupees } from "@/lib/currency-utils";
 
 function fmtDate(value?: string | null): string {
   if (!value) return "-";
@@ -56,14 +57,6 @@ function fmtTime(value?: string | null): string {
   } catch {
     return "";
   }
-}
-
-function fmtMoney(value?: number | null): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(value ?? 0));
 }
 
 function packageCoverage(ids: number[]) {
@@ -261,7 +254,7 @@ export function CIAgreementDetail({
               {sigSrc ? (
                 <div className="flex items-center justify-center rounded-lg border bg-muted/30 py-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={sigSrc} alt="CI signature" className="max-h-14 w-auto max-w-full object-contain" />
+                  <img src={sigSrc} alt="CI signature" className="max-h-14 w-auto max-w-full object-contain" loading="lazy" />
                 </div>
               ) : (
                 <div className="flex items-center justify-center rounded-lg border bg-muted/30 py-3">
@@ -299,7 +292,7 @@ export function CIAgreementDetail({
               <p className="font-semibold text-sm">Commercial terms</p>
             </div>
             <p className="text-xs text-muted-foreground">
-              CI earns <span className="font-medium text-foreground">{fmtMoney(share)}</span> per month for the duration of each level.
+              CI earns <span className="font-medium text-foreground">{formatRupees(share)}</span> per month for the duration of each level.
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
               <LevelEarningCard label="Level 1" months={l1} share={share} hint="Initial onboarding tier" />
@@ -401,7 +394,7 @@ export function CIAgreementDetail({
                         <TableCell className="text-muted-foreground">
                           {packageCoverage(pkg.trainingLevelIds)}
                         </TableCell>
-                        <TableCell className="text-right">{fmtMoney(pkg.fee)}</TableCell>
+                        <TableCell className="text-right">{formatRupees(pkg.fee)}</TableCell>
                         <TableCell className="text-right">
                           {pkg.purchaseStatus === "PAID"
                             ? "Purchased"
@@ -507,11 +500,11 @@ function LevelEarningCard({
           <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
             Total
           </p>
-          <p className="text-xl font-bold tabular-nums">{fmtMoney(total)}</p>
+          <p className="text-xl font-bold tabular-nums">{formatRupees(total)}</p>
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        {fmtMoney(share)} × {months} {months === 1 ? "month" : "months"}
+        {formatRupees(share)} × {months} {months === 1 ? "month" : "months"}
       </p>
     </div>
   );

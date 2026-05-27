@@ -1,6 +1,6 @@
 "use client";
 
-import React, {
+import {
   createContext,
   useContext,
   useCallback,
@@ -9,7 +9,7 @@ import React, {
 import { usePathname } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Notification, UserType } from "../lib/notification.types";
-import { useNotificationSse } from "../hooks/useNotificationSse";
+import { useNotificationSse } from "../hooks/use-notification-sse";
 import {
   getNotifications,
   getUnreadCount,
@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { useUser } from "./user-context";
 import { queryKeys } from "@/hooks/api/query-keys";
+import { sendClientLog } from "@/lib/client-telemetry";
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -77,14 +78,17 @@ export function NotificationProvider({
   }, [effectiveUserType]);
 
   const notificationsQuery = useQuery({
-    queryKey: notificationsListKey ?? ["notifications", "disabled"],
+    // Fallback to a real key so React Query doesn't get a null key;
+    // the `enabled` guard prevents fetching when notificationsListKey is null.
+    queryKey: notificationsListKey ?? queryKeys.notifications.admin(),
     queryFn: () => getNotifications(effectiveUserType!, false),
     enabled: notificationsEnabled && notificationsListKey != null,
     staleTime: 60 * 1000,
   });
 
   const unreadQuery = useQuery({
-    queryKey: unreadKey ?? ["notifications", "unread", "disabled"],
+    // Same pattern — real key as placeholder, guarded by `enabled`.
+    queryKey: unreadKey ?? queryKeys.notifications.unreadAdmin,
     queryFn: () => getUnreadCount(effectiveUserType!),
     enabled: notificationsEnabled && unreadKey != null,
     staleTime: 60 * 1000,
@@ -150,7 +154,7 @@ export function NotificationProvider({
           Math.max(0, (c ?? 0) - 1),
         );
       } catch (error) {
-        console.error("Error marking notification as read:", error);
+        sendClientLog({ level: "error", event: "notification-mark-read-error", message: "Error marking notification as read", context: { error } });
         toast.error("Failed to mark notification as read");
       }
     },
@@ -174,28 +178,41 @@ export function NotificationProvider({
       queryClient.setQueryData<number>(unreadKey, 0);
       toast.success("All notifications marked as read");
     } catch (error) {
-      console.error("Error marking all as read:", error);
+      sendClientLog({ level: "error", event: "notification-mark-all-read-error", message: "Error marking all notifications as read", context: { error } });
       toast.error("Failed to mark all notifications as read");
     }
   }, [effectiveUserType, notificationsListKey, unreadKey, queryClient]);
 
+  const notificationContextValue = useMemo(
+    () => ({
+      notifications: notificationsEnabled
+        ? Array.isArray(notificationsQuery.data)
+          ? notificationsQuery.data
+          : []
+        : [],
+      unreadCount: notificationsEnabled ? (unreadQuery.data ?? 0) : 0,
+      isLoading: notificationsEnabled ? notificationsQuery.isLoading : false,
+      isConnected,
+      fetchNotifications,
+      markNotificationAsRead,
+      markAllNotificationsAsRead,
+      refreshUnreadCount,
+    }),
+    [
+      notificationsEnabled,
+      notificationsQuery.data,
+      notificationsQuery.isLoading,
+      unreadQuery.data,
+      isConnected,
+      fetchNotifications,
+      markNotificationAsRead,
+      markAllNotificationsAsRead,
+      refreshUnreadCount,
+    ],
+  );
+
   return (
-    <NotificationContext.Provider
-      value={{
-        notifications: notificationsEnabled
-          ? Array.isArray(notificationsQuery.data)
-            ? notificationsQuery.data
-            : []
-          : [],
-        unreadCount: notificationsEnabled ? (unreadQuery.data ?? 0) : 0,
-        isLoading: notificationsEnabled ? notificationsQuery.isLoading : false,
-        isConnected,
-        fetchNotifications,
-        markNotificationAsRead,
-        markAllNotificationsAsRead,
-        refreshUnreadCount,
-      }}
-    >
+    <NotificationContext.Provider value={notificationContextValue}>
       {children}
     </NotificationContext.Provider>
   );

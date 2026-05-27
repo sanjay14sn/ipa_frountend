@@ -10,8 +10,8 @@ import {
   type UpdateAdminRequest,
 } from "@/services/admin.service";
 import { queryKeys } from "./query-keys";
-
-export const ADMIN_LIST_PREFIX = ["admin-users", "list"] as const;
+import { toast } from "sonner";
+import { extractErrorMessage } from "@/lib/error-utils";
 
 export function usePaginatedAdmins(
   params?: AdminListParams,
@@ -31,7 +31,10 @@ export function useCreateAdmin() {
   return useMutation({
     mutationFn: (payload: CreateAdminRequest) => createAdmin(payload),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ADMIN_LIST_PREFIX });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.admin.listPrefix });
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
     },
   });
 }
@@ -48,10 +51,13 @@ export function useUpdateAdmin() {
       payload: UpdateAdminRequest;
     }) => updateAdmin(adminId, payload),
     onSuccess: (admin) => {
-      void queryClient.invalidateQueries({ queryKey: ADMIN_LIST_PREFIX });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.admin.listPrefix });
       void queryClient.invalidateQueries({
         queryKey: queryKeys.admin.detail(admin.id),
       });
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
     },
   });
 }

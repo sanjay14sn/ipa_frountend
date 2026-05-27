@@ -18,6 +18,8 @@ import {
   StudentCertificate,
 } from "@/services/student.service";
 import { toast } from "sonner";
+import { sendClientLog } from "@/lib/client-telemetry";
+import { formatDate } from "@/lib/date-utils";
 
 interface StudentCertificatesModalProps {
   open: boolean;
@@ -54,7 +56,7 @@ export default function StudentCertificatesModal({
       })
       .catch((error) => {
         if (cancelled) return;
-        console.error("Error loading certificates:", error);
+        sendClientLog({ level: "error", event: "certificates-load-error", message: "Error loading student certificates", context: { error } });
         toast.error("Failed to load certificates");
       })
       .finally(() => {
@@ -68,15 +70,6 @@ export default function StudentCertificatesModal({
 
   const getStatusColor = (_status: string) =>
     "bg-primary/10 text-primary border-primary/20";
-
-  const formatDate = (date?: string) => {
-    if (!date) return "";
-    return new Date(date).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  };
 
   const getTotalMarks = (certificate: StudentCertificate) =>
     certificate.totalMarks || certificate.levelTotalMarks || 0;

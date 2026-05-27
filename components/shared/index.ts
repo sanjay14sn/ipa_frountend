@@ -33,7 +33,12 @@ export {
 export { MultiSelectDropdown } from "./MultiSelectDropdown";
 export type { MultiSelectOption } from "./MultiSelectDropdown";
 
-export { StatusBadge } from "./status-badge";
+export { StatusBadge, OnFileBadge } from "./status-badge";
 export type { StatusTone } from "./status-badge";
 
 export { SummaryStatCard, SummaryStatGrid } from "./summary-stat-card";
+
+export { TableMainCell } from "./table-main-cell";
+export { TableFilterToolbar } from "./table-filter-toolbar";
+
+export * from "./profile";

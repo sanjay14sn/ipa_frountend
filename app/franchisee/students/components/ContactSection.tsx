@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { StudentData } from "@/services/student.service";
 import React, { useEffect, useState, useRef } from "react";
+import { calculateAge } from "@/lib/date-utils";
 
 interface ContactSectionProps {
   student: StudentData;
@@ -22,23 +23,6 @@ export default function ContactSection({
   const sectionId = `${studentId}-contact`;
   const containerRef = useRef<HTMLDivElement>(null);
   const [lineHeight, setLineHeight] = useState(0);
-
-  // Helper function to calculate age
-  const calculateAge = (dateOfBirth: Date): number => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
-
-    return age;
-  };
 
   useEffect(() => {
     if (containerRef.current && contactInternalDotRef.current && isExpanded) {

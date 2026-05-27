@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,17 +13,16 @@ import {
 import { Award, Users } from "lucide-react";
 import { EligibleStudent } from "@/services/student.service";
 import { toast } from "sonner";
-import {
-  CourseInstructorData,
-  getEligibleCourseInstructorsForCertificate,
-} from "@/services/course-instructor.service";
+import { CourseInstructorData } from "@/services/course-instructor.service";
 import { useBulkRequestCertificates } from "@/hooks/api/student.hooks";
+import { useEligibleCourseInstructorsForCertificate } from "@/hooks/api/certificate.hooks";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 import {
   DialogFormField,
   DialogStateMessage,
   FormDialog,
 } from "@/components/shared/dialog";
+import { sendClientLog } from "@/lib/client-telemetry";
 
 interface BulkRequestCertificateModalProps {
   open: boolean;
@@ -42,8 +41,6 @@ export default function BulkRequestCertificateModal({
   const [courseInstructorId, setCourseInstructorId] = useState<string>("");
   const [marksMap, setMarksMap] = useState<Record<number, string>>({});
   const [applyToAllMarks, setApplyToAllMarks] = useState<string>("");
-  const [eligibleInstructors, setEligibleInstructors] = useState<CourseInstructorData[]>([]);
-  const [isLoadingInstructors, setIsLoadingInstructors] = useState(false);
   const bulkCert = useBulkRequestCertificates();
   const requestedLevelIds = useMemo(
     () => [...new Set(students.map((student) => student.levelId).filter((id) => id > 0))],
@@ -54,31 +51,10 @@ export default function BulkRequestCertificateModal({
     [students],
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    async function loadEligible() {
-      if (!open || requestedLevelIds.length === 0) return;
-      setIsLoadingInstructors(true);
-      try {
-        const rows = await getEligibleCourseInstructorsForCertificate(
-          requestedLevelIds,
-          programId,
-        );
-        if (!cancelled) setEligibleInstructors(rows);
-      } catch (error) {
-        if (!cancelled) {
-          setEligibleInstructors([]);
-          console.error("Error loading eligible course instructors:", error);
-        }
-      } finally {
-        if (!cancelled) setIsLoadingInstructors(false);
-      }
-    }
-    void loadEligible();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, requestedLevelIds]);
+  const {
+    data: eligibleInstructors = [],
+    isLoading: isLoadingInstructors,
+  } = useEligibleCourseInstructorsForCertificate(requestedLevelIds, programId);
 
   const handleApplyToAll = () => {
     if (!applyToAllMarks) return;
@@ -153,7 +129,7 @@ export default function BulkRequestCertificateModal({
 
       onSuccess();
     } catch (error: unknown) {
-      console.error("Error creating bulk certificate requests:", error);
+      sendClientLog({ level: "error", event: "bulk-certificate-request-error", message: "Error creating bulk certificate requests", context: { error } });
       let description = "Failed to create certificate requests. Please try again.";
       if (
         error &&

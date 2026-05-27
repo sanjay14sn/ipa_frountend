@@ -13,14 +13,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Check, X, FileText, ExternalLink } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import {
+  Award,
+  Building2,
+  CheckCircle2,
+  Clock,
+  XCircle,
+} from "lucide-react";
 import {
   DataTable,
-  DetailField,
-  DetailFieldsGrid,
-  ExpandedDetailSection,
   ExpandedDetailSurface,
+  KeyFactCard,
+  KeyFactsGrid,
+  ProfileCard,
+  ProfileCardSection,
   StatusBadge,
+  TableMainCell,
   type DataTableColumn,
   type DataTableFilter,
 } from "@/components/shared";
@@ -266,18 +274,28 @@ export default function FranchiseCertificateDetails({
   return (
     <>
       <ExpandedDetailSurface className="border-t border-border/60">
-        <ExpandedDetailSection title="Certificate request summary">
-          <DetailFieldsGrid columns={4}>
-            <DetailField label="Franchise" value={franchiseName} />
-            <DetailField label="Pending" value={totalPending} />
-            <DetailField label="Issued" value={totalIssued} />
-            <DetailField label="Rejected" value={totalRejected} />
-          </DetailFieldsGrid>
-        </ExpandedDetailSection>
+        <div className="space-y-3 p-3 md:p-4">
+          <KeyFactsGrid columns={4}>
+            <KeyFactCard
+              icon={Building2}
+              label="Franchise"
+              value={franchiseName}
+            />
+            <KeyFactCard icon={Clock} label="Pending" value={totalPending} />
+            <KeyFactCard
+              icon={CheckCircle2}
+              label="Issued"
+              value={totalIssued}
+            />
+            <KeyFactCard
+              icon={XCircle}
+              label="Rejected"
+              value={totalRejected}
+            />
+          </KeyFactsGrid>
 
-        <Separator />
-
-        <ExpandedDetailSection title={sectionTitle}>
+          <ProfileCard contentClassName="space-y-2 p-3 md:p-4">
+            <ProfileCardSection icon={Award} label={sectionTitle}>
           {!franchiseId?.trim() ? (
             <p className="py-4 text-center text-sm text-muted-foreground">
               No franchise selected.
@@ -289,14 +307,10 @@ export default function FranchiseCertificateDetails({
               columns={columns}
               getRowId={(req) => String(req.id)}
               renderMainCell={(req) => (
-                <span className="font-medium text-gray-900">
-                  {req.studentName}
-                  {req.studentRollNo ? (
-                    <span className="ml-2 font-mono text-xs text-muted-foreground">
-                      · {req.studentRollNo}
-                    </span>
-                  ) : null}
-                </span>
+                <TableMainCell
+                  title={req.studentName}
+                  subtitle={req.studentRollNo}
+                />
               )}
               searchPlaceholder="Search by student, roll number, or instructor..."
               onSearchChange={(value) => {
@@ -319,7 +333,9 @@ export default function FranchiseCertificateDetails({
               }
             />
           )}
-        </ExpandedDetailSection>
+            </ProfileCardSection>
+          </ProfileCard>
+        </div>
       </ExpandedDetailSurface>
 
       <Dialog

@@ -23,15 +23,9 @@ import { FranchiseCiListTable } from "./components/FranchiseCiListTable";
 import { FranchiseOrdersSummary } from "./components/FranchiseOrdersSummary";
 import { FranchisePaymentsTab } from "./components/FranchisePaymentsTab";
 import { FranchiseAgreementsWorkspace } from "@/app/admin/franchise/components/FranchiseAgreementsWorkspace";
+import { formatDate } from "@/lib/date-utils";
 
 const TABS = ["students", "ci", "orders", "payments", "agreements"] as const;
-
-function formatDate(value: string | Date | null | undefined) {
-  if (!value) return "-";
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleDateString();
-}
 
 function compactText(value: unknown) {
   if (value == null || value === "") return "-";

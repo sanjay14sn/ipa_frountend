@@ -21,6 +21,7 @@ import PendingApprovalsTable from "./PendingApprovalsTable";
 import { TablePageShell, TableSectionSurface } from "@/components/shared";
 import { type KitRow } from "./StartingKitEditor";
 import { PayrollTermsDialog } from "./PayrollTermsDialog";
+import { sendClientLog } from "@/lib/client-telemetry";
 
 const emptyProgramPayroll = (): ProgramPayroll => ({
   programId: 0,
@@ -110,7 +111,7 @@ export function PendingApprovalsSection() {
       });
       setShowPayrollDialog(true);
     } catch (error) {
-      console.error("Error loading franchise application detail:", error);
+      sendClientLog({ level: "error", event: "franchise-application-detail-load-error", message: "Error loading franchise application detail", context: { error } });
       toast.error(
         getErrorMessage(
           error,
@@ -135,7 +136,7 @@ export function PendingApprovalsSection() {
       triggerRefresh();
       toast.success("Application rejected");
     } catch (error) {
-      console.error("Error rejecting franchise:", error);
+      sendClientLog({ level: "error", event: "franchise-reject-error", message: "Error rejecting franchise", context: { error } });
       toast.error(
         getErrorMessage(
           error,
@@ -205,7 +206,7 @@ export function PendingApprovalsSection() {
       triggerRefresh();
       toast.success("Agreement terms saved and application approved");
     } catch (error) {
-      console.error("Error submitting approval terms:", error);
+      sendClientLog({ level: "error", event: "franchise-approval-terms-error", message: "Error submitting approval terms", context: { error } });
       toast.error(
         getErrorMessage(
           error,

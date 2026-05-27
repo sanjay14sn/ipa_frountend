@@ -1,12 +1,12 @@
 import axios from "axios";
 import type { UserRole } from "@/lib/auth";
+import { getStoredIdentity } from "@/lib/auth";
 import { extractErrorCode, extractErrorMessage } from "@/lib/error-utils";
 import { sendClientLog } from "@/lib/client-telemetry";
-
-const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5500";
+import { API_BASE_URL } from "@/lib/config";
 
 export const api = axios.create({
-  baseURL: baseUrl,
+  baseURL: API_BASE_URL,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
@@ -81,15 +81,10 @@ function isAuthFlowRequest(url: string | undefined): boolean {
 }
 
 function parseStoredRole(): UserRole | "" {
-  if (typeof window === "undefined") return "";
-  const userStr = localStorage.getItem("user");
-  if (!userStr) return "";
-  try {
-    const user = JSON.parse(userStr) as { role?: UserRole };
-    return user.role ?? "";
-  } catch {
-    return "";
-  }
+  const identity = getStoredIdentity();
+  if (!identity) return "";
+  const validRoles: UserRole[] = ["admin", "franchisee", "franchise"];
+  return validRoles.includes(identity.role) ? identity.role : "";
 }
 
 type Portal = "franchisee" | "ci" | "admin";
@@ -135,22 +130,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (v?: unknown) => void;
-  reject: (e?: unknown) => void;
-}> = [];
-
-const processQueue = (error: unknown, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
-};
+let refreshPromise: Promise<void> | null = null;
 
 api.interceptors.response.use(
   (response) => {
@@ -179,72 +159,69 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then(() => api(originalRequest))
-          .catch((err) => Promise.reject(err));
-      }
-
       originalRequest._retry = true;
-      isRefreshing = true;
 
-      const role = parseStoredRole();
-      const portal = getPortal(role);
-
-      try {
+      if (!refreshPromise) {
+        const role = parseStoredRole();
+        const portal = getPortal(role);
         const refreshUrl =
           portal === "franchisee" ? "/franchisee/auth/refresh" :
           portal === "ci" ? "/ci/refresh" :
           "/admin/auth/refresh";
 
-        await api.post(refreshUrl, {});
+        refreshPromise = api.post(refreshUrl, {})
+          .then(() => { /* success — nothing to return */ })
+          .catch(async (refreshError) => {
+            const role = parseStoredRole();
+            const portal = getPortal(role);
+            const logoutUrl =
+              portal === "franchisee" ? "/franchisee/auth/logout" :
+              portal === "ci" ? "/ci/logout" :
+              "/admin/auth/logout";
 
-        processQueue(null, null);
+            try {
+              await api.post(logoutUrl);
+            } catch (logoutErr) {
+              console.error("Logout failed", logoutErr);
+            }
+
+            if (typeof window !== "undefined") {
+              localStorage.removeItem("user");
+              // Lazy import to avoid a load-time circular dep (axios → store → axios).
+              try {
+                const { useScopeStore } = await import("@/lib/stores/scope-store");
+                useScopeStore.getState().clear();
+              } catch {
+                /* ignore */
+              }
+              try {
+                const { getQueryClientBridge } = await import(
+                  "@/hooks/api/query-client-bridge"
+                );
+                getQueryClientBridge().clear();
+              } catch {
+                /* bridge not mounted yet — nothing to clear */
+              }
+              const loginPath = loginPathForSession(role);
+              const already = loginPath === "/ci/login" && window.location.pathname.startsWith("/ci");
+              if (!already) {
+                window.location.href = loginPath;
+              }
+            }
+
+            reportApiFailure(refreshError);
+            throw refreshError; // re-throw so awaiting callers get the rejection
+          })
+          .finally(() => {
+            refreshPromise = null;
+          });
+      }
+
+      try {
+        await refreshPromise;
         return api(originalRequest);
-      } catch (refreshError) {
-        processQueue(refreshError, null);
-
-        const logoutUrl =
-          portal === "franchisee" ? "/franchisee/auth/logout" :
-          portal === "ci" ? "/ci/logout" :
-          "/admin/auth/logout";
-
-        try {
-          await api.post(logoutUrl);
-        } catch (logoutErr) {
-          console.error("Logout failed", logoutErr);
-        }
-
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("user");
-          // Lazy import to avoid a load-time circular dep (axios → store → axios).
-          try {
-            const { useScopeStore } = await import("@/lib/stores/scope-store");
-            useScopeStore.getState().clear();
-          } catch {
-            /* ignore */
-          }
-          try {
-            const { getQueryClientBridge } = await import(
-              "@/hooks/api/query-client-bridge"
-            );
-            getQueryClientBridge().clear();
-          } catch {
-            /* bridge not mounted yet — nothing to clear */
-          }
-          const loginPath = loginPathForSession(role);
-          const already = loginPath === "/ci/login" && window.location.pathname.startsWith("/ci");
-          if (!already) {
-            window.location.href = loginPath;
-          }
-        }
-
-        reportApiFailure(refreshError);
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
+      } catch (err) {
+        return Promise.reject(err);
       }
     }
 

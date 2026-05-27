@@ -16,17 +16,7 @@ import {
 import { getCIAgreement, getCIProgress, getCIUpcomingSessions, listCIPackages } from "@/services/ci-training.service";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { CIDashboardPanel, CIStatCard, ModulePill } from "../components/ci-dashboard-cards";
-
-function formatDate(value?: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
+import { formatDate } from "@/lib/date-utils";
 
 function phaseLabel(phase?: string | null): string {
   if (!phase) return "No agreement";
