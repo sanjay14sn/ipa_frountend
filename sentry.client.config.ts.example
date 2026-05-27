@@ -1,0 +1,30 @@
+/**
+ * sentry.client.config.ts — Sentry client-side configuration.
+ *
+ * SETUP STEPS:
+ *  1. `pnpm add @sentry/nextjs`
+ *  2. Rename this file to `sentry.client.config.ts`
+ *  3. Set `NEXT_PUBLIC_SENTRY_DSN` in your .env.local (and production env)
+ *  4. Create `sentry.server.config.ts` with the same DSN for server errors
+ *  5. Wire into `lib/client-telemetry.ts:sendClientLog` (forward to
+ *     `Sentry.captureMessage` / `Sentry.captureException`)
+ *  6. Add alert rules:
+ *       - Any event with `event.startsWith("razorpay-")` → PagerDuty P1
+ *       - auth flow error rate > 5/hour → Slack alert
+ *       - 5xx rate > 1% over 5 min → Slack alert
+ *
+ * @see https://docs.sentry.io/platforms/javascript/guides/nextjs/
+ */
+
+// import * as Sentry from "@sentry/nextjs";
+//
+// Sentry.init({
+//   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+//   environment: process.env.NODE_ENV,
+//   tracesSampleRate: 0.1,
+//   replaysSessionSampleRate: 0.0,
+//   replaysOnErrorSampleRate: 0.1,
+//   integrations: [
+//     Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true }),
+//   ],
+// });
