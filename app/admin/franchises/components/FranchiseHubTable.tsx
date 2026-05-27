@@ -238,15 +238,16 @@ export function FranchiseHubTable({
                   size="sm"
                   asChild
                   title="View franchise hub"
+                  aria-label="View franchise hub"
                 >
                   <Link href={`/admin/franchise/${item.id}`}>
                     <Eye className="h-4 w-4" />
                   </Link>
                 </Button>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" aria-label="Edit franchise">
                   <Edit className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" aria-label="Delete franchise">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -288,6 +289,7 @@ export function FranchiseHubTable({
                         disabled={disableApproveActions}
                         className="h-8 w-8 p-0"
                         title="Approve application"
+                        aria-label="Approve application"
                       >
                         <Check className="h-4 w-4" />
                       </Button>
@@ -297,6 +299,7 @@ export function FranchiseHubTable({
                         onClick={() => onReject?.(item)}
                         className="h-8 w-8 p-0"
                         title="Reject application"
+                        aria-label="Reject application"
                       >
                         <X className="h-4 w-4" />
                       </Button>

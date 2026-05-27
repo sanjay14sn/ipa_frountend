@@ -292,6 +292,7 @@ export function TrainingLevelsSection() {
             size="icon"
             className="h-8 w-8"
             title="Edit level"
+            aria-label="Edit level"
             onClick={() => openEditDialog(level)}
           >
             <Pencil className="h-4 w-4" />
@@ -301,6 +302,7 @@ export function TrainingLevelsSection() {
             size="icon"
             className="h-8 w-8"
             title="Delete level"
+            aria-label="Delete level"
             onClick={() => {
               setDeletingLevel(level);
               setIsDeleteDialogOpen(true);

@@ -69,6 +69,7 @@ export function buildInventoryColumns(
             size="sm"
             onClick={() => callbacks.onAdjust(item)}
             title="Adjust on-hand stock"
+            aria-label="Adjust on-hand stock"
           >
             <Boxes className="h-4 w-4" />
           </Button>
@@ -77,6 +78,7 @@ export function buildInventoryColumns(
             size="sm"
             onClick={() => callbacks.onProcurement(item.id)}
             title="Manage sourcing in procurement"
+            aria-label="Manage sourcing in procurement"
           >
             <ArrowRightLeft className="h-4 w-4" />
           </Button>
@@ -85,6 +87,7 @@ export function buildInventoryColumns(
             size="sm"
             onClick={() => callbacks.onEdit(item)}
             title="Edit item"
+            aria-label="Edit item"
           >
             <Edit2 className="h-4 w-4" />
           </Button>
@@ -94,6 +97,7 @@ export function buildInventoryColumns(
             className="text-destructive"
             onClick={() => callbacks.onDelete(item)}
             title="Delete item"
+            aria-label="Delete item"
           >
             <Trash2 className="h-4 w-4" />
           </Button>

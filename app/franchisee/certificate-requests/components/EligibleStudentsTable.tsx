@@ -217,6 +217,7 @@ export default function EligibleStudentsTable({
           variant="ghost"
           className="h-8 w-8"
           title="Request Certificate"
+          aria-label="Request Certificate"
           onClick={() => onRequestCertificate?.(student)}
         >
           <Award className="h-4 w-4 text-primary" />

@@ -172,6 +172,7 @@ export function ProgramList({
                     className="h-8 w-8 rounded-md p-0"
                     onClick={() => onEditProgram(program)}
                     title="Rename program"
+                    aria-label="Rename program"
                   >
                     <Edit2 className="w-4 h-4" />
                   </Button>
@@ -181,6 +182,7 @@ export function ProgramList({
                     className="h-8 w-8 rounded-md p-0"
                     onClick={() => onDeleteProgram(program)}
                     title="Delete program"
+                    aria-label="Delete program"
                   >
                     <Trash2 className="w-4 h-4 text-destructive" />
                   </Button>

@@ -145,6 +145,7 @@ export default function FranchisePaymentsDetails({
           size="icon"
           className="h-8 w-8"
           title="View payment"
+          aria-label="View payment"
           onClick={() => setSelectedPayment(payment)}
         >
           <Eye className="h-4 w-4" />

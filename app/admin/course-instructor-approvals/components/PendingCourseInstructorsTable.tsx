@@ -92,6 +92,7 @@ export default function PendingCourseInstructorsTable({
             size="sm"
             onClick={() => onApprove(instructor)}
             title="Approve"
+            aria-label="Approve"
           >
             <Check className="h-4 w-4" />
           </Button>
@@ -101,6 +102,7 @@ export default function PendingCourseInstructorsTable({
             size="sm"
             onClick={() => onReject(instructor)}
             title="Reject"
+            aria-label="Reject"
           >
             <X className="h-4 w-4" />
           </Button>

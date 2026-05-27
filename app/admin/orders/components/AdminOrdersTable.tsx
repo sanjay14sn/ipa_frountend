@@ -331,6 +331,7 @@ export default function AdminOrdersTable({
                 size="icon"
                 className="h-8 w-8 p-0"
                 title="View details"
+                aria-label="View details"
                 onClick={() => setDetailOrderId(order.id)}
               >
                 <Eye className="h-4 w-4" />
@@ -341,6 +342,7 @@ export default function AdminOrdersTable({
                   size="icon"
                   className="h-8 w-8 p-0"
                   title="Refresh allocation (reconcile backordered items against current inventory)"
+                  aria-label="Refresh allocation"
                   disabled={busyOrderId === order.id}
                   onClick={() => void handleRefreshAllocation(order.id)}
                 >
@@ -357,6 +359,7 @@ export default function AdminOrdersTable({
                   size="icon"
                   className="h-8 w-8 p-0"
                   title="Mark as paid"
+                  aria-label="Mark as paid"
                   disabled={busyOrderId === order.id}
                   onClick={() => void handleMarkPaid(order.id)}
                 >
@@ -369,6 +372,7 @@ export default function AdminOrdersTable({
                   size="icon"
                   className="h-8 w-8 p-0"
                   title="Verify shipment"
+                  aria-label="Verify shipment"
                   disabled={busyOrderId === order.id}
                   onClick={() => setVerifyDialogOrderId(order.id)}
                 >
@@ -381,6 +385,7 @@ export default function AdminOrdersTable({
                   size="icon"
                   className="h-8 w-8 p-0"
                   title="Download delivery challan"
+                  aria-label="Download delivery challan"
                   onClick={() => void downloadChallan(order.shipment!.dcPdfPath!)}
                 >
                   <Download className="h-4 w-4" />
@@ -392,6 +397,7 @@ export default function AdminOrdersTable({
                   size="icon"
                   className="h-8 w-8 p-0"
                   title="Regenerate delivery challan"
+                  aria-label="Regenerate delivery challan"
                   disabled={busyOrderId === order.id}
                   onClick={() => void handleRegenerateDc(order.id)}
                 >
@@ -408,6 +414,7 @@ export default function AdminOrdersTable({
                   size="icon"
                   className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                   title="Cancel order"
+                  aria-label="Cancel order"
                   disabled={busyOrderId === order.id}
                   onClick={() => handleOpenCancelDialog(order)}
                 >

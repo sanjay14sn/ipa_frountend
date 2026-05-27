@@ -203,6 +203,7 @@ export default function FranchiseCertificateDetails({
               onClick={() => handleApprove(req.id)}
               className="h-8 w-8"
               title="Issue Certificate"
+              aria-label="Issue Certificate"
             >
               <Check className="h-4 w-4 text-green-600" />
             </Button>
@@ -212,6 +213,7 @@ export default function FranchiseCertificateDetails({
               onClick={() => handleReject(req.id)}
               className="h-8 w-8"
               title="Reject"
+              aria-label="Reject"
             >
               <X className="h-4 w-4 text-destructive" />
             </Button>

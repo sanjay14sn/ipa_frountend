@@ -146,6 +146,7 @@ export function AdminAgreementsSection({
             size="icon"
             className="h-8 w-8 p-0"
             title="View agreement"
+            aria-label="View agreement"
             onClick={() => setViewAgreementId(record.id)}
           >
             <Eye className="h-4 w-4" />
@@ -156,6 +157,7 @@ export function AdminAgreementsSection({
             size="icon"
             className="h-8 w-8 p-0"
             title="Download Schedule B PDF"
+            aria-label="Download Schedule B PDF"
             onClick={async () => {
               try {
                 await downloadScheduleBPdfAdmin(record.id);

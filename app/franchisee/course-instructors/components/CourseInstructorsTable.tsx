@@ -155,6 +155,7 @@ export default function CourseInstructorsTable({
             size="icon"
             className="h-8 w-8"
             title="View training progress"
+            aria-label="View training progress"
             onClick={() => setProgressModal({ id: ci.id, name: ci.name })}
           >
             <BarChart2 className="w-4 h-4" />
@@ -163,6 +164,7 @@ export default function CourseInstructorsTable({
             variant="ghost"
             size="icon"
             className="h-8 w-8"
+            aria-label="Edit course instructor"
             onClick={() => onCourseInstructorEdit?.(ci)}
           >
             <Edit className="w-4 h-4" />
@@ -171,6 +173,7 @@ export default function CourseInstructorsTable({
             variant="ghost"
             size="icon"
             className="h-8 w-8"
+            aria-label="Delete course instructor"
             onClick={() => onCourseInstructorDelete?.(ci.id.toString())}
           >
             <Trash2 className="w-4 h-4" />

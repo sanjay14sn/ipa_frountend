@@ -231,6 +231,7 @@ export function AdminManagementSection() {
             size="icon"
             className="h-8 w-8"
             title="Edit admin"
+            aria-label="Edit admin"
             onClick={(event) => {
               event.stopPropagation();
               openEdit(admin);

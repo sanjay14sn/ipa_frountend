@@ -160,6 +160,7 @@ export default function AdminShippingTable() {
                   size="icon"
                   className="h-8 w-8 p-0"
                   title="Mark as shipped"
+                  aria-label="Mark as shipped"
                   disabled={busyOrderId === row.orderId}
                   onClick={() => setShipDialogOrderId(row.orderId)}
                 >
@@ -172,6 +173,7 @@ export default function AdminShippingTable() {
                   size="icon"
                   className="h-8 w-8 p-0"
                   title="Mark as delivered"
+                  aria-label="Mark as delivered"
                   disabled={busyOrderId === row.orderId}
                   onClick={() =>
                     void runAction(
@@ -190,6 +192,7 @@ export default function AdminShippingTable() {
                   size="icon"
                   className="h-8 w-8 p-0"
                   title="Download delivery challan"
+                  aria-label="Download delivery challan"
                   onClick={() => void downloadChallan(row.dcPdfPath!)}
                 >
                   <Download className="h-4 w-4" />
@@ -201,6 +204,7 @@ export default function AdminShippingTable() {
                   size="icon"
                   className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                   title="Cancel shipment"
+                  aria-label="Cancel shipment"
                   disabled={busyOrderId === row.orderId}
                   onClick={() =>
                     void runAction(

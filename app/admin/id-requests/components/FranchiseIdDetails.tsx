@@ -283,6 +283,7 @@ export default function FranchiseIdDetails({
           size="icon"
           className="h-8 w-8"
           title="View student details"
+          aria-label="View student details"
           onClick={() => setDetailStudent(student)}
         >
           <Eye className="h-4 w-4" />

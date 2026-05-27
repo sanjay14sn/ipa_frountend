@@ -157,6 +157,7 @@ export default function FranchiseeCertificatesTable({
           variant="ghost"
           className="h-8 w-8"
           title="View certificate"
+          aria-label="View certificate"
           onClick={() => {
             setSelectedStudentId(certificate.studentId);
             setSelectedCertificateId(certificate.id);
