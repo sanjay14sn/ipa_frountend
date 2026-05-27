@@ -335,13 +335,16 @@ export function ImportPreviewGrid({
                       // Shared DateInput — calendar popover, displays as
                       // dd/MM/yyyy. Value flows in/out as ISO yyyy-mm-dd so
                       // the backend's `IsDateString` validator stays happy.
+                      // Tight `px-2 py-0 leading-none` overrides the
+                      // component's default `px-3 py-2 text-sm` so the cell
+                      // matches the row's other h-7 inputs/selects.
                       <DateInput
                         id={inputId}
                         value={cellValue}
                         onChange={(v) => onRowEdit(row.rowIndex, c.key, v)}
                         placeholder={c.placeholder ?? "DD / MM / YYYY"}
                         className={cn(
-                          "h-7 text-xs",
+                          "h-7 px-2 py-0 text-xs leading-none [&>span]:text-xs [&_svg]:h-3.5 [&_svg]:w-3.5",
                           errorMsg ? "border-red-500" : "",
                         )}
                         aria-invalid={!!errorMsg}

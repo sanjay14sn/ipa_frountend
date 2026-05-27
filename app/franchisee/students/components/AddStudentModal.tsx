@@ -50,15 +50,7 @@ import {
   type CourseInstructorData,
 } from "@/services/course-instructor.service";
 import { sendClientLog } from "@/lib/client-telemetry";
-
-function calculateAge(dob: string): number {
-  const birth = new Date(dob);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-}
+import { calculateAge } from "@/lib/date-utils";
 
 const FORM_STEPS: StepDef[] = [
   { id: 1, title: "Basic Information" },

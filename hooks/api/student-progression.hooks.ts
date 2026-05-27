@@ -1,6 +1,8 @@
 "use client";
 
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { extractErrorMessage } from "@/lib/error-utils";
 import {
   getStudentProgressions,
   updateStudentProgression,
@@ -31,6 +33,9 @@ export function useUpdateStudentProgression(studentId: number) {
       updateStudentProgression(studentId, progressionId, dto),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: PROGRESSION_KEY(studentId) });
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
     },
   });
 }
