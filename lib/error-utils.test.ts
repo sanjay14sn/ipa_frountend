@@ -1,43 +1,40 @@
-import assert from "node:assert/strict";
-import test from "node:test";
+import { describe, it, expect } from "vitest";
 import {
   extractErrorMessage,
   getUserFriendlyMessage,
-} from "./error-utils.ts";
+} from "./error-utils";
 
-test("maps raw backend error codes to friendly messages", () => {
-  const error = {
-    response: {
-      data: {
-        code: "INVALID_PASSWORD",
-        message: "INVALID_PASSWORD",
+describe("getUserFriendlyMessage", () => {
+  it("maps raw backend error codes to friendly messages", () => {
+    const error = {
+      response: {
+        data: {
+          code: "INVALID_PASSWORD",
+          message: "INVALID_PASSWORD",
+        },
       },
-    },
-  };
+    };
+    expect(getUserFriendlyMessage(error)).toBe("Invalid username or password.");
+  });
 
-  assert.equal(
-    getUserFriendlyMessage(error),
-    "Invalid username or password.",
-  );
+  it("keeps backend public messages when they are already friendly", () => {
+    const error = {
+      response: {
+        data: {
+          code: "UNKNOWN_CODE",
+          title: "Upload failed",
+          message: "Please upload a CSV file.",
+        },
+      },
+    };
+    expect(getUserFriendlyMessage(error)).toBe("Upload failed");
+  });
 });
 
-test("does not display raw constant messages", () => {
-  assert.equal(
-    extractErrorMessage("STUDENT_NOT_FOUND", "Fallback message"),
-    "Fallback message",
-  );
-});
-
-test("keeps backend public messages when they are already friendly", () => {
-  const error = {
-    response: {
-      data: {
-        code: "UNKNOWN_CODE",
-        title: "Upload failed",
-        message: "Please upload a CSV file.",
-      },
-    },
-  };
-
-  assert.equal(getUserFriendlyMessage(error), "Upload failed");
+describe("extractErrorMessage", () => {
+  it("does not display raw constant messages", () => {
+    expect(extractErrorMessage("STUDENT_NOT_FOUND", "Fallback message")).toBe(
+      "Fallback message",
+    );
+  });
 });
