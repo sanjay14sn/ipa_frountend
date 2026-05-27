@@ -406,7 +406,7 @@ export function DynamicSidebar({
                             : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-primary",
                         )}
                       >
-                        <Link href={navItem.url}>
+                        <Link href={navItem.url} aria-current={active ? "page" : undefined}>
                           <navItem.icon
                             className={cn(
                               "shrink-0",

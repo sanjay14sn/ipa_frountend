@@ -24,9 +24,9 @@ export interface CITrainingPurchaseInitiateResponse {
   paymentId?: number;
 }
 
-export function buildCITrainingPurchasePayload(packageId: number) {
+export function buildCITrainingPurchasePayload(packageId: number | number[]) {
   return {
-    packageId,
+    packageIds: Array.isArray(packageId) ? packageId : [packageId],
   };
 }
 

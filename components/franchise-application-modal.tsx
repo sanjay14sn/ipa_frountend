@@ -206,7 +206,7 @@ export function FranchiseApplicationModal({
       return {
         ...prev,
         [object]: {
-          ...(prev[object as keyof FranchiseeApplication] as any),
+          ...(prev[object as keyof FranchiseeApplication] as unknown as Record<string, unknown>),
           [property]: convertedValue,
         },
       };

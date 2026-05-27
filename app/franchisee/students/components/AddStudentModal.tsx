@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button as _Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
@@ -16,13 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ToggleField } from "@/components/shared/toggle-field";
-import {
-  User,
-  Users,
-  Save,
-  AlertCircle,
-  CheckCircle,
-} from "lucide-react";
+import { User, Save as _Save, AlertCircle, CheckCircle } from "lucide-react";
 import React from "react";
 import {
   MultiStepDialog,
@@ -32,25 +26,18 @@ import {
 import {
   StudentStream,
   StudentIdStatus,
-  type StudentData,
   type CreateStudentInput,
 } from "@/services/student.service";
 import { useCreateStudentWithRevalidation } from "@/hooks/api/student.hooks";
 import { useUser } from "@/context/user-context";
-import { getAllPrograms, Program } from "@/services/program.service";
-import {
-  getEligiblePreviousLevels,
-  getLevelsByStream,
-  Level,
-  type EligiblePreviousLevel,
-} from "@/services/level.service";
-import { getStreamsByProgram, Stream } from "@/services/stream.service";
-import {
-  getAllCourseInstructors,
-  type CourseInstructorData,
-} from "@/services/course-instructor.service";
 import { sendClientLog } from "@/lib/client-telemetry";
-import { calculateAge } from "@/lib/date-utils";
+import {
+  PersonalInfoFields,
+  ParentInfoFields,
+  ContactInfoFields,
+  ProgramSelectionFields,
+  useCascadingSelects,
+} from "./student-form";
 
 const FORM_STEPS: StepDef[] = [
   { id: 1, title: "Basic Information" },
@@ -58,25 +45,6 @@ const FORM_STEPS: StepDef[] = [
   { id: 3, title: "Contact & Address" },
   { id: 4, title: "Academic Details" },
 ];
-
-const STANDARDS = [
-  "Pre-KG",
-  "LKG",
-  "UKG",
-  "1st",
-  "2nd",
-  "3rd",
-  "4th",
-  "5th",
-  "6th",
-  "7th",
-  "8th",
-  "9th",
-  "10th",
-  "11th",
-  "12th",
-];
-
 
 interface AddStudentModalProps {
   open: boolean;
@@ -129,6 +97,40 @@ interface StudentFormData {
   idCardIssueDate: string;
 }
 
+const INITIAL_FORM_DATA: StudentFormData = {
+  existing: false,
+  studentName: "",
+  rollNo: "",
+  dob: "",
+  dateOfJoining: new Date().toISOString().split("T")[0],
+  sex: "",
+  standard: "",
+  streamId: 0,
+  levelId: 0,
+  stream: "regular",
+  status: "active",
+  photoImage: null,
+  programId: 0,
+  fatherName: "",
+  fatherQualification: "",
+  fatherOccupation: "",
+  fatherContactNo: "",
+  motherName: "",
+  motherQualification: "",
+  motherOccupation: "",
+  motherContactNo: "",
+  residentialAddress: "",
+  mailId: "",
+  isDiscontinued: false,
+  discontinueReason: "",
+  previousLevelId: 0,
+  previousMarks: "",
+  previousCompletedAt: "",
+  previousInstructorId: 0,
+  idCardIssued: false,
+  idCardIssueDate: "",
+};
+
 export default function AddStudentModal({
   open,
   onOpenChange,
@@ -138,217 +140,34 @@ export default function AddStudentModal({
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [streams, setStreams] = useState<Stream[]>([]);
-  const [levels, setLevels] = useState<Level[]>([]);
-  /** Valid previousLevel candidates for the picked current level — combines
-   *  same-stream predecessors with sources of incoming StreamTransitions. */
-  const [previousLevelCandidates, setPreviousLevelCandidates] = useState<
-    EligiblePreviousLevel[]
-  >([]);
-  const [loadingPrograms, setLoadingPrograms] = useState(false);
-  const [loadingStreams, setLoadingStreams] = useState(false);
-  const [loadingLevels, setLoadingLevels] = useState(false);
-  const [instructors, setInstructors] = useState<CourseInstructorData[]>([]);
-  const [loadingInstructors, setLoadingInstructors] = useState(false);
+  const [formData, setFormData] = useState<StudentFormData>(INITIAL_FORM_DATA);
 
   const { user } = useUser();
   const createStudentMutation = useCreateStudentWithRevalidation();
 
-  const [formData, setFormData] = useState<StudentFormData>({
-    existing: false,
-
-    studentName: "",
-    rollNo: "",
-    dob: "",
-    dateOfJoining: new Date().toISOString().split("T")[0],
-    sex: "",
-    standard: "",
-    streamId: 0,
-    levelId: 0,
-    stream: "regular",
-    status: "active",
-    photoImage: null,
-    programId: 0,
-
-    fatherName: "",
-    fatherQualification: "",
-    fatherOccupation: "",
-    fatherContactNo: "",
-    motherName: "",
-    motherQualification: "",
-    motherOccupation: "",
-    motherContactNo: "",
-
-    residentialAddress: "",
-    mailId: "",
-
-    isDiscontinued: false,
-    discontinueReason: "",
-
-    previousLevelId: 0,
-    previousMarks: "",
-    previousCompletedAt: "",
-    previousInstructorId: 0,
-    idCardIssued: false,
-    idCardIssueDate: "",
+  const {
+    programs,
+    streams,
+    levels,
+    previousLevelCandidates,
+    instructors,
+    loadingPrograms,
+    loadingStreams,
+    loadingLevels,
+    loadingInstructors,
+  } = useCascadingSelects({
+    open,
+    programId: formData.programId,
+    streamId: formData.streamId,
+    autoSelectFirstLevel: !formData.existing,
+    levelId: formData.levelId,
+    onLevelIdChange: (id) =>
+      setFormData((prev) => ({ ...prev, levelId: id })),
+    onPreviousLevelIdChange: (id) =>
+      setFormData((prev) => ({ ...prev, previousLevelId: id })),
+    existing: formData.existing,
+    franchiseId: user?.franchiseId ?? undefined,
   });
-
-  useEffect(() => {
-    const fetchPrograms = async () => {
-      setLoadingPrograms(true);
-      try {
-        const fetchedPrograms = await getAllPrograms();
-        setPrograms(fetchedPrograms);
-      } catch (error) {
-        sendClientLog({ level: "error", event: "programs-load-error", message: "Error fetching programs", context: { error } });
-      } finally {
-        setLoadingPrograms(false);
-      }
-    };
-
-    if (open) {
-      fetchPrograms();
-    }
-  }, [open]);
-
-  useEffect(() => {
-    const fetchStreams = async () => {
-      if (formData.programId && formData.programId > 0) {
-        setLoadingStreams(true);
-        try {
-          const fetchedStreams = await getStreamsByProgram(formData.programId);
-          setStreams(fetchedStreams);
-        } catch (error) {
-          sendClientLog({ level: "error", event: "streams-load-error", message: "Error fetching streams", context: { error } });
-          setStreams([]);
-        } finally {
-          setLoadingStreams(false);
-        }
-      } else {
-        setStreams([]);
-        setLevels([]);
-      }
-    };
-
-    fetchStreams();
-  }, [formData.programId]);
-
-  useEffect(() => {
-    const fetchLevels = async () => {
-      if (formData.streamId && formData.streamId > 0) {
-        setLoadingLevels(true);
-        try {
-          const fetchedLevels = await getLevelsByStream(formData.streamId);
-          setLevels(fetchedLevels);
-          if (fetchedLevels.length > 0) {
-            setFormData((prev) => {
-              if (!prev.existing) {
-                const firstLevel = fetchedLevels[0];
-                return {
-                  ...prev,
-                  levelId: firstLevel.id,
-                };
-              }
-              // Existing student: preserve current pick if still valid;
-              // otherwise reset to 0 so the user must choose freely.
-              const currentLevelExists = fetchedLevels.some(
-                (level) => level.id === prev.levelId
-              );
-              if (!currentLevelExists) {
-                return {
-                  ...prev,
-                  levelId: 0,
-                  previousLevelId: 0,
-                };
-              }
-              return prev;
-            });
-          }
-        } catch (error) {
-          sendClientLog({ level: "error", event: "levels-load-error", message: "Error fetching levels", context: { error } });
-          setLevels([]);
-        } finally {
-          setLoadingLevels(false);
-        }
-      } else {
-        setLevels([]);
-      }
-    };
-
-    fetchLevels();
-  }, [formData.streamId]);
-
-  useEffect(() => {
-    // For existing/transfer students, fetch all valid previous-level
-    // candidates for the picked current level (same-stream predecessors +
-    // any cross-stream transition sources). Default-select the same-stream
-    // immediate predecessor — admin can override via the dropdown.
-    let cancelled = false;
-    if (
-      !formData.existing ||
-      !formData.levelId ||
-      formData.levelId === 0
-    ) {
-      setPreviousLevelCandidates([]);
-      return;
-    }
-    (async () => {
-      try {
-        const candidates = await getEligiblePreviousLevels(formData.levelId);
-        if (cancelled) return;
-        setPreviousLevelCandidates(candidates);
-
-        // Pick the default: same-stream candidate with the highest
-        // displayOrder still below the current level. Mirrors prior UX.
-        const defaultCandidate =
-          [...candidates]
-            .filter((c) => !c.viaTransition)
-            .sort((a, b) => b.displayOrder - a.displayOrder)[0] ??
-          candidates[0];
-
-        setFormData((p) => {
-          const nextId = defaultCandidate?.id ?? 0;
-          if (p.previousLevelId === nextId) return p;
-          return { ...p, previousLevelId: nextId };
-        });
-      } catch {
-        if (!cancelled) setPreviousLevelCandidates([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [formData.existing, formData.levelId]);
-
-  useEffect(() => {
-    const fetchInstructors = async () => {
-      if (
-        !formData.existing ||
-        !formData.programId ||
-        formData.programId === 0 ||
-        !user?.franchiseId
-      ) {
-        setInstructors([]);
-        return;
-      }
-      setLoadingInstructors(true);
-      try {
-        const paginated = await getAllCourseInstructors({
-          franchiseId: user.franchiseId,
-          programId: formData.programId,
-          limit: 200,
-        });
-        setInstructors(paginated.result ?? []);
-      } catch (error) {
-        sendClientLog({ level: "error", event: "instructors-load-error", message: "Error fetching instructors", context: { error } });
-        setInstructors([]);
-      } finally {
-        setLoadingInstructors(false);
-      }
-    };
-    fetchInstructors();
-  }, [formData.existing, formData.programId, user?.franchiseId]);
 
   const validateCurrentStep = () => {
     const newErrors: Record<string, string> = {};
@@ -398,23 +217,18 @@ export default function AddStudentModal({
           if (!formData.previousMarks.trim() || Number.isNaN(marks)) {
             newErrors.previousMarks = "Marks obtained is required";
           }
-          // The level's intrinsic totalMarks is the cap — pulled from the
-          // picked candidate when available.
           const pickedCandidate = previousLevelCandidates.find(
             (c) => c.id === formData.previousLevelId
           );
           const total = pickedCandidate?.totalMarks;
-          if (
-            !newErrors.previousMarks &&
-            total != null &&
-            marks > total
-          ) {
+          if (!newErrors.previousMarks && total != null && marks > total) {
             newErrors.previousMarks = `Marks cannot exceed level's totalMarks (${total})`;
           }
           if (!formData.previousCompletedAt) {
             newErrors.previousCompletedAt = "Completion date is required";
           } else if (new Date(formData.previousCompletedAt) > new Date()) {
-            newErrors.previousCompletedAt = "Completion date cannot be in the future";
+            newErrors.previousCompletedAt =
+              "Completion date cannot be in the future";
           }
           if (
             !formData.previousInstructorId ||
@@ -423,7 +237,8 @@ export default function AddStudentModal({
             newErrors.previousInstructorId = "Instructor is required";
           }
           if (formData.idCardIssued && !formData.idCardIssueDate) {
-            newErrors.idCardIssueDate = "Issue date is required when ID card is issued";
+            newErrors.idCardIssueDate =
+              "Issue date is required when ID card is issued";
           }
         }
         break;
@@ -483,7 +298,7 @@ export default function AddStudentModal({
   };
 
   const handleInputChange = (field: string, value: string | boolean) => {
-    let convertedValue: any = value;
+    let convertedValue: string | boolean | number = value;
 
     if (
       (field === "programId" ||
@@ -501,28 +316,21 @@ export default function AddStudentModal({
       [field]: convertedValue,
     }));
 
-    // Clear error when user starts typing
     if (errors[field]) {
-      setErrors((prev) => ({
-        ...prev,
-        [field]: "",
-      }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file size and type
       if (file.size > 5 * 1024 * 1024) {
-        // 5MB limit
         setErrors((prev) => ({
           ...prev,
           photoImage: "File size should be less than 5MB",
         }));
         return;
       }
-
       if (!file.type.startsWith("image/")) {
         setErrors((prev) => ({
           ...prev,
@@ -530,13 +338,7 @@ export default function AddStudentModal({
         }));
         return;
       }
-
-      setFormData((prev) => ({
-        ...prev,
-        photoImage: file,
-      }));
-
-      // Clear error
+      setFormData((prev) => ({ ...prev, photoImage: file }));
       setErrors((prev) => ({ ...prev, photoImage: "" }));
     }
   };
@@ -544,15 +346,12 @@ export default function AddStudentModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateCurrentStep()) {
-      return;
-    }
+    if (!validateCurrentStep()) return;
 
     if (!user) {
       toast.error("User not found. Please log in again.");
       return;
     }
-
     if (!user.franchiseId) {
       toast.error("Franchise ID not found. Please contact support.");
       return;
@@ -609,11 +408,15 @@ export default function AddStudentModal({
       };
 
       await createStudentMutation.mutateAsync(studentData);
-
       setSubmitted(true);
       onSuccess();
     } catch (error) {
-      sendClientLog({ level: "error", event: "student-register-error", message: "Error registering student", context: { error } });
+      sendClientLog({
+        level: "error",
+        event: "student-register-error",
+        message: "Error registering student",
+        context: { error },
+      });
       toast.error("Failed to register student. Please try again.");
     } finally {
       setIsLoading(false);
@@ -622,55 +425,18 @@ export default function AddStudentModal({
 
   const handleClose = () => {
     setCurrentStep(1);
-    setFormData({
-      existing: false,
-
-      studentName: "",
-      rollNo: "",
-      dob: "",
-      dateOfJoining: new Date().toISOString().split("T")[0],
-      sex: "",
-      standard: "",
-      streamId: 0,
-      levelId: 0,
-      stream: "regular",
-      status: "active",
-      photoImage: null,
-      programId: 0,
-
-      fatherName: "",
-      fatherQualification: "",
-      fatherOccupation: "",
-      fatherContactNo: "",
-      motherName: "",
-      motherQualification: "",
-      motherOccupation: "",
-      motherContactNo: "",
-
-      residentialAddress: "",
-      mailId: "",
-
-      isDiscontinued: false,
-      discontinueReason: "",
-
-      previousLevelId: 0,
-      previousMarks: "",
-      previousCompletedAt: "",
-      previousInstructorId: 0,
-      idCardIssued: false,
-      idCardIssueDate: "",
-    });
+    setFormData({ ...INITIAL_FORM_DATA, dateOfJoining: new Date().toISOString().split("T")[0] });
     setErrors({});
     setSubmitted(false);
     setIsLoading(false);
     onOpenChange(false);
   };
 
-  const handleModalOpenChange = (open: boolean) => {
-    if (!open) {
+  const handleModalOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
       handleClose();
     } else {
-      onOpenChange(open);
+      onOpenChange(isOpen);
     }
   };
 
@@ -729,264 +495,34 @@ export default function AddStudentModal({
               ]}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="studentName">Student Name *</Label>
-                <Input
-                  id="studentName"
-                  type="text"
-                  value={formData.studentName}
-                  onChange={(e) =>
-                    handleInputChange("studentName", e.target.value)
-                  }
-                  className={errors.studentName ? "border-red-500" : ""}
-                  placeholder="Enter student's full name"
-                />
-                {errors.studentName && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.studentName}
-                  </p>
-                )}
-              </div>
+            <PersonalInfoFields
+              formData={formData}
+              errors={errors}
+              onFieldChange={handleInputChange}
+              dateOfJoiningRequired
+            />
 
-              <div className="space-y-2">
-                <Label htmlFor="rollNo">Roll Number</Label>
-                <Input
-                  id="rollNo"
-                  type="text"
-                  value="Auto-generated upon submission"
-                  disabled
-                  className="bg-gray-100"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Roll number will be automatically generated
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dob">
-                  Date of Birth *{formData.dob && (
-                    <span className="ml-2 text-muted-foreground font-normal">
-                      ({calculateAge(formData.dob)} yrs old)
-                    </span>
-                  )}
-                </Label>
-                <DateInput
-                  id="dob"
-                  value={formData.dob}
-                  onChange={(v) => handleInputChange("dob", v)}
-                  className={errors.dob ? "border-red-500" : ""}
-                />
-                {errors.dob && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.dob}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dateOfJoining">Date of Joining *</Label>
-                <DateInput
-                  id="dateOfJoining"
-                  value={formData.dateOfJoining}
-                  onChange={(v) =>
-                    handleInputChange("dateOfJoining", v)
-                  }
-                  className={errors.dateOfJoining ? "border-red-500" : ""}
-                />
-                {errors.dateOfJoining && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.dateOfJoining}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="sex">Gender *</Label>
-                <Select
-                  value={formData.sex}
-                  onValueChange={(value) => handleInputChange("sex", value)}
-                >
-                  <SelectTrigger className={errors.sex ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.sex && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.sex}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="standard">Standard *</Label>
-                <Select
-                  value={formData.standard}
-                  onValueChange={(value) =>
-                    handleInputChange("standard", value)
-                  }
-                >
-                  <SelectTrigger
-                    className={errors.standard ? "border-red-500" : ""}
-                  >
-                    <SelectValue placeholder="Select standard" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STANDARDS.map((standard) => (
-                      <SelectItem key={standard} value={standard}>
-                        {standard}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.standard && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.standard}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="programId">Program *</Label>
-                <Select
-                  value={formData.programId.toString()}
-                  onValueChange={(value) => {
-                    handleInputChange("programId", value);
-                    // Reset streamId and levelId when program changes
-                    setFormData((prev) => ({
-                      ...prev,
-                      streamId: 0,
-                      levelId: 0,
-                    }));
-                  }}
-                  disabled={loadingPrograms}
-                >
-                  <SelectTrigger
-                    className={errors.programId ? "border-red-500" : ""}
-                  >
-                    <SelectValue
-                      placeholder={
-                        loadingPrograms
-                          ? "Loading programs..."
-                          : "Select program"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {programs.map((program) => (
-                      <SelectItem
-                        key={program.id}
-                        value={program.id.toString()}
-                      >
-                        {program.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.programId && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.programId}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="streamId">Stream *</Label>
-                <Select
-                  value={formData.streamId.toString()}
-                  onValueChange={(value) => {
-                    handleInputChange("streamId", value);
-                    // Reset levelId when stream changes
-                    setFormData((prev) => ({ ...prev, levelId: 0 }));
-                  }}
-                  disabled={
-                    !formData.programId ||
-                    formData.programId === 0 ||
-                    loadingStreams
-                  }
-                >
-                  <SelectTrigger
-                    className={errors.streamId ? "border-red-500" : ""}
-                  >
-                    <SelectValue
-                      placeholder={
-                        loadingStreams
-                          ? "Loading streams..."
-                          : formData.programId === 0
-                          ? "Select program first"
-                          : "Select stream"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {streams.map((stream) => (
-                      <SelectItem key={stream.id} value={stream.id.toString()}>
-                        {stream.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.streamId && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.streamId}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="levelId">Level *</Label>
-                <Select
-                  value={formData.levelId.toString()}
-                  onValueChange={(value) => handleInputChange("levelId", value)}
-                  disabled={
-                    !formData.streamId ||
-                    formData.streamId === 0 ||
-                    loadingLevels ||
-                    !formData.existing
-                  }
-                >
-                  <SelectTrigger
-                    className={errors.levelId ? "border-red-500" : ""}
-                  >
-                    <SelectValue
-                      placeholder={
-                        loadingLevels
-                          ? "Loading levels..."
-                          : formData.streamId === 0
-                          ? "Select stream first"
-                          : !formData.existing
-                          ? "Auto-set to first level"
-                          : "Select level"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {levels.map((level) => (
-                      <SelectItem key={level.id} value={level.id.toString()}>
-                        {level.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.levelId && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.levelId}
-                  </p>
-                )}
-              </div>
-            </div>
+            <ProgramSelectionFields
+              formData={formData}
+              errors={errors}
+              onFieldChange={handleInputChange}
+              onProgramChange={(value) => {
+                handleInputChange("programId", value);
+                setFormData((prev) => ({ ...prev, streamId: 0, levelId: 0 }));
+              }}
+              onStreamChange={(value) => {
+                handleInputChange("streamId", value);
+                setFormData((prev) => ({ ...prev, levelId: 0 }));
+              }}
+              programs={programs}
+              streams={streams}
+              levels={levels}
+              loadingPrograms={loadingPrograms}
+              loadingStreams={loadingStreams}
+              loadingLevels={loadingLevels}
+              levelEditable={formData.existing}
+              levelAutoSet={!formData.existing}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -1021,7 +557,7 @@ export default function AddStudentModal({
                   </p>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  Upload student's photo (max 5MB)
+                  Upload student&apos;s photo (max 5MB)
                 </p>
               </div>
             </div>
@@ -1042,9 +578,9 @@ export default function AddStudentModal({
                       <Label htmlFor="previousLevelId">Previous Level *</Label>
                       <Select
                         value={formData.previousLevelId.toString()}
-                        onValueChange={(value) => {
-                          handleInputChange("previousLevelId", value);
-                        }}
+                        onValueChange={(value) =>
+                          handleInputChange("previousLevelId", value)
+                        }
                         disabled={
                           !formData.levelId ||
                           formData.levelId === 0 ||
@@ -1068,10 +604,7 @@ export default function AddStudentModal({
                         </SelectTrigger>
                         <SelectContent>
                           {previousLevelCandidates.map((c) => (
-                            <SelectItem
-                              key={c.id}
-                              value={c.id.toString()}
-                            >
+                            <SelectItem key={c.id} value={c.id.toString()}>
                               {c.viaTransition
                                 ? `${c.code} — ${c.name}  (via ${c.streamName})`
                                 : `${c.code} — ${c.name}`}
@@ -1144,7 +677,7 @@ export default function AddStudentModal({
                         Marks Obtained *
                         {(() => {
                           const picked = previousLevelCandidates.find(
-                            (c) => c.id === formData.previousLevelId,
+                            (c) => c.id === formData.previousLevelId
                           );
                           return picked?.totalMarks != null ? (
                             <span className="ml-2 text-muted-foreground font-normal">
@@ -1260,208 +793,20 @@ export default function AddStudentModal({
 
       case 2:
         return (
-          <div className="space-y-6">
-            {/* Father's Information */}
-            <div>
-              <h4 className="font-semibold mb-4 flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Father's Information
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fatherName">Father's Name *</Label>
-                  <Input
-                    id="fatherName"
-                    type="text"
-                    value={formData.fatherName}
-                    onChange={(e) =>
-                      handleInputChange("fatherName", e.target.value)
-                    }
-                    className={errors.fatherName ? "border-red-500" : ""}
-                    placeholder="Enter father's full name"
-                  />
-                  {errors.fatherName && (
-                    <p className="text-red-500 text-sm flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.fatherName}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fatherContactNo">
-                    Father's Contact Number *
-                  </Label>
-                  <Input
-                    id="fatherContactNo"
-                    type="tel"
-                    value={formData.fatherContactNo}
-                    onChange={(e) =>
-                      handleInputChange("fatherContactNo", e.target.value)
-                    }
-                    className={errors.fatherContactNo ? "border-red-500" : ""}
-                    placeholder="Enter 10-digit contact number"
-                  />
-                  {errors.fatherContactNo && (
-                    <p className="text-red-500 text-sm flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.fatherContactNo}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fatherQualification">
-                    Father's Qualification
-                  </Label>
-                  <Input
-                    id="fatherQualification"
-                    type="text"
-                    value={formData.fatherQualification}
-                    onChange={(e) =>
-                      handleInputChange("fatherQualification", e.target.value)
-                    }
-                    placeholder="e.g., B.Tech, MBA, etc."
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fatherOccupation">Father's Occupation</Label>
-                  <Input
-                    id="fatherOccupation"
-                    type="text"
-                    value={formData.fatherOccupation}
-                    onChange={(e) =>
-                      handleInputChange("fatherOccupation", e.target.value)
-                    }
-                    placeholder="e.g., Software Engineer, Teacher, etc."
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Mother's Information */}
-            <div>
-              <h4 className="font-semibold mb-4 flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Mother's Information
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="motherName">Mother's Name *</Label>
-                  <Input
-                    id="motherName"
-                    type="text"
-                    value={formData.motherName}
-                    onChange={(e) =>
-                      handleInputChange("motherName", e.target.value)
-                    }
-                    className={errors.motherName ? "border-red-500" : ""}
-                    placeholder="Enter mother's full name"
-                  />
-                  {errors.motherName && (
-                    <p className="text-red-500 text-sm flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.motherName}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="motherContactNo">
-                    Mother's Contact Number *
-                  </Label>
-                  <Input
-                    id="motherContactNo"
-                    type="tel"
-                    value={formData.motherContactNo}
-                    onChange={(e) =>
-                      handleInputChange("motherContactNo", e.target.value)
-                    }
-                    className={errors.motherContactNo ? "border-red-500" : ""}
-                    placeholder="Enter 10-digit contact number"
-                  />
-                  {errors.motherContactNo && (
-                    <p className="text-red-500 text-sm flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.motherContactNo}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="motherQualification">
-                    Mother's Qualification
-                  </Label>
-                  <Input
-                    id="motherQualification"
-                    type="text"
-                    value={formData.motherQualification}
-                    onChange={(e) =>
-                      handleInputChange("motherQualification", e.target.value)
-                    }
-                    placeholder="e.g., B.A., M.Sc., etc."
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="motherOccupation">Mother's Occupation</Label>
-                  <Input
-                    id="motherOccupation"
-                    type="text"
-                    value={formData.motherOccupation}
-                    onChange={(e) =>
-                      handleInputChange("motherOccupation", e.target.value)
-                    }
-                    placeholder="e.g., Homemaker, Doctor, etc."
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+          <ParentInfoFields
+            formData={formData}
+            errors={errors}
+            onFieldChange={handleInputChange}
+          />
         );
 
       case 3:
         return (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="residentialAddress">Residential Address *</Label>
-              <Textarea
-                id="residentialAddress"
-                value={formData.residentialAddress}
-                onChange={(e) =>
-                  handleInputChange("residentialAddress", e.target.value)
-                }
-                className={errors.residentialAddress ? "border-red-500" : ""}
-                placeholder="Enter complete residential address"
-                rows={3}
-              />
-              {errors.residentialAddress && (
-                <p className="text-red-500 text-sm flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.residentialAddress}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="mailId">Email Address *</Label>
-              <Input
-                id="mailId"
-                type="email"
-                value={formData.mailId}
-                onChange={(e) => handleInputChange("mailId", e.target.value)}
-                className={errors.mailId ? "border-red-500" : ""}
-                placeholder="Enter email address"
-              />
-              {errors.mailId && (
-                <p className="text-red-500 text-sm flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.mailId}
-                </p>
-              )}
-            </div>
-          </div>
+          <ContactInfoFields
+            formData={formData}
+            errors={errors}
+            onFieldChange={handleInputChange}
+          />
         );
 
       case 4:
@@ -1481,10 +826,7 @@ export default function AddStudentModal({
                       handleInputChange("isDiscontinued", checked as boolean)
                     }
                   />
-                  <Label
-                    htmlFor="isDiscontinued"
-                    className="text-sm font-medium"
-                  >
+                  <Label htmlFor="isDiscontinued" className="text-sm font-medium">
                     Mark as discontinued
                   </Label>
                 </div>
@@ -1553,7 +895,9 @@ export default function AddStudentModal({
       currentStep={currentStep}
       onBack={handlePrevious}
       onNext={handleNext}
-      onSubmit={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
+      onSubmit={() =>
+        handleSubmit({ preventDefault: () => {} } as React.FormEvent)
+      }
       isSubmitting={isLoading}
       submitLabel="Register Student"
     >

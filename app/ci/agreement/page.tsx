@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -22,9 +23,15 @@ import {
   type CIAgreementRecord,
   type CIESignaturePayload,
 } from "@/services/ci-training.service";
-import {
-  ESignaturePad,
-} from "@/components/esignature/ESignaturePad";
+import type { ESignaturePadProps } from "@/components/esignature/ESignaturePad";
+
+const ESignaturePad = dynamic<ESignaturePadProps>(
+  () =>
+    import("@/components/esignature/ESignaturePad").then((m) => ({
+      default: m.ESignaturePad,
+    })),
+  { ssr: false, loading: () => null },
+);
 import { ciAgreementContent } from "@/lib/ciAgreementContent";
 import AgreementTerms from "@/app/franchisee/agreement/components/AgreementTerms";
 import { useCIAuth } from "@/context/ci-auth-context";

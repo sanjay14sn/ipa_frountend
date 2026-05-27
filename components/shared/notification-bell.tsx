@@ -135,6 +135,7 @@ export function NotificationBell() {
         <Button
           variant="ghost"
           size="icon"
+          aria-label="Open notifications"
           className="relative text-primary hover:bg-accent hover:text-primary"
         >
           <Bell className="h-5 w-5" />

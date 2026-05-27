@@ -44,6 +44,7 @@ const config: Config = {
           "Courier New",
           "monospace",
         ],
+        signature: ["cursive"],
       },
       colors: {
         brand: {

@@ -52,6 +52,8 @@ import { toast } from "sonner";
 import { extractErrorMessage } from "@/lib/error-utils";
 import { getQueryClientBridge } from "./query-client-bridge";
 
+const STUDENTS_LIST_PREFIX = ["students", "list"] as const;
+
 export {
   type StudentData,
   type RequestedIdDetailsByFranchise,
@@ -76,14 +78,6 @@ function wantsStudentPagination(params?: StudentPaginationParams): boolean {
     params.programId != null
   );
 }
-
-/** Prefix for invalidating all student list cache variants. */
-export const STUDENTS_LIST_PREFIX = ["students", "list"] as const;
-export const REQUESTED_IDS_KEY = queryKeys.studentAdmin.requestedIds;
-export const ISSUED_IDS_KEY = queryKeys.studentAdmin.issuedIds;
-export const REQUESTED_CERTIFICATES_KEY = queryKeys.studentAdmin.requestedCerts;
-export const ISSUED_CERTIFICATES_KEY = queryKeys.studentAdmin.issuedCerts;
-export const ELIGIBLE_STUDENTS_KEY = queryKeys.studentAdmin.eligible;
 
 export function useStudents(params?: StudentPaginationParams) {
   const programId = useProgramId();

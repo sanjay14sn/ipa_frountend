@@ -97,9 +97,28 @@ export function agreementToPaymentBreakdownRows(
   ];
 }
 
+export interface AgreementDetailFranchiseData {
+  name: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  communicationAddress: string | null;
+  franchiseCode: string;
+  program: string;
+  franchiseType: string | null;
+  date: string | null | undefined;
+  paymentDetails: Record<string, unknown>[];
+  tenure: number | string | null | undefined;
+  expiryDate: string | null | undefined;
+}
+
 export function buildAgreementDetailFranchiseData(
   agreement: AgreementRecord,
-): Record<string, unknown> {
+): AgreementDetailFranchiseData {
   const programName =
     agreement.program?.name ??
     agreement.programName ??

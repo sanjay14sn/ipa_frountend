@@ -29,6 +29,12 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Type check
+        run: pnpm exec tsc --noEmit
+
+      - name: Unit tests
+        run: pnpm test
+
       - name: Validate required env vars
         run: node scripts/check-env.mjs
         env:

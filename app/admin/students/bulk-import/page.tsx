@@ -1,9 +1,17 @@
 "use client";
 
 import { useCallback, useMemo, useReducer, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { TablePageShell } from "@/components/shared";
-import { BulkImportPanel } from "@/components/bulk-import/BulkImportPanel";
+
+const BulkImportPanel = dynamic(
+  () =>
+    import("@/components/bulk-import/BulkImportPanel").then((m) => ({
+      default: m.BulkImportPanel,
+    })),
+  { ssr: false, loading: () => null },
+);
 import type {
   PreviewColumn,
   PreviewSelectOption,

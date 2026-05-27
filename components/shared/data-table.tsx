@@ -352,6 +352,7 @@ export default function DataTable<T>({
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           placeholder={searchPlaceholder}
+                          aria-label={searchPlaceholder ?? "Search"}
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           className="h-9 pl-9 text-sm"
@@ -596,6 +597,7 @@ export default function DataTable<T>({
                               }}
                               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-primary hover:bg-accent"
                               aria-expanded={isExpanded}
+                              aria-label={isExpanded ? "Collapse row" : "Expand row"}
                             >
                               <ChevronRight
                                 className={cn(

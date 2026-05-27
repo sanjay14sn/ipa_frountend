@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -8,8 +7,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getOrderByIdAdmin, type OrderData, type OrderItemData } from "@/services/order.service";
+import { type OrderData, type OrderItemData } from "@/services/order.service";
 import { formatRupees } from "@/lib/currency-utils";
+import { useOrderByIdAdmin } from "@/hooks/api/order.hooks";
 
 interface StudentGroup {
   studentId: number;
@@ -45,23 +45,7 @@ interface OrderBreakdownDialogProps {
 }
 
 export function OrderBreakdownDialog({ orderId, onClose }: OrderBreakdownDialogProps) {
-  const [order, setOrder] = useState<OrderData | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (orderId == null) {
-      setOrder(null);
-      return;
-    }
-    let cancelled = false;
-    setOrder(null);
-    setLoading(true);
-    getOrderByIdAdmin(orderId)
-      .then((data) => { if (!cancelled) setOrder(data); })
-      .catch(() => { if (!cancelled) setOrder(null); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [orderId]);
+  const { data: order, isLoading: loading } = useOrderByIdAdmin(orderId ?? undefined);
 
   const groups = order ? groupByStudent(order.lineItems ?? []) : [];
 

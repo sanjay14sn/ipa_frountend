@@ -1,10 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { DateInput } from "@/components/ui/date-input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   AppDialog,
   AppDialogHeader,
@@ -18,63 +14,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import {
   User,
   Users,
   MapPin,
   BookOpen,
-  AlertCircle,
+  AlertCircle as _AlertCircle,
   CheckCircle,
   Edit2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { StudentData, StudentStream, StudentIdStatus } from "@/services/student.service";
-import { updateStudentWithRevalidation, updateStudentAdminWithRevalidation } from "@/hooks/api/student.hooks";
-import { getAllPrograms, Program } from "@/services/program.service";
-import { getLevelsByStream, getLevelsByProgram, Level } from "@/services/level.service";
-import { getStreamsByProgram, Stream } from "@/services/stream.service";
+import { StudentData } from "@/services/student.service";
+import {
+  updateStudentWithRevalidation,
+  updateStudentAdminWithRevalidation,
+} from "@/hooks/api/student.hooks";
+import { getLevelsByProgram } from "@/services/level.service";
 import { sendClientLog } from "@/lib/client-telemetry";
-import { calculateAge } from "@/lib/date-utils";
-
-const STANDARDS = [
-  "Pre-KG",
-  "LKG",
-  "UKG",
-  "1st",
-  "2nd",
-  "3rd",
-  "4th",
-  "5th",
-  "6th",
-  "7th",
-  "8th",
-  "9th",
-  "10th",
-  "11th",
-  "12th",
-];
+import {
+  PersonalInfoFields,
+  ParentInfoFields,
+  ContactInfoFields,
+  ProgramSelectionFields,
+  useCascadingSelects,
+} from "./student-form";
 
 const TABS = [
-  {
-    id: 1,
-    title: "Basic Information",
-    icon: User,
-  },
-  {
-    id: 2,
-    title: "Parent Details",
-    icon: Users,
-  },
-  {
-    id: 3,
-    title: "Contact & Address",
-    icon: MapPin,
-  },
-  {
-    id: 4,
-    title: "Academic Details",
-    icon: BookOpen,
-  },
+  { id: 1, title: "Basic Information", icon: User },
+  { id: 2, title: "Parent Details", icon: Users },
+  { id: 3, title: "Contact & Address", icon: MapPin },
+  { id: 4, title: "Academic Details", icon: BookOpen },
 ];
 
 interface EditStudentModalProps {
@@ -114,6 +84,28 @@ interface StudentFormData {
   mailId: string;
 }
 
+const EMPTY_FORM_DATA: StudentFormData = {
+  studentName: "",
+  dob: "",
+  dateOfJoining: "",
+  sex: "",
+  standard: "",
+  programId: 0,
+  streamId: 0,
+  levelId: 0,
+  status: "active",
+  fatherName: "",
+  fatherQualification: "",
+  fatherOccupation: "",
+  fatherContactNo: "",
+  motherName: "",
+  motherQualification: "",
+  motherOccupation: "",
+  motherContactNo: "",
+  residentialAddress: "",
+  mailId: "",
+};
+
 export default function EditStudentModal({
   open,
   onOpenChange,
@@ -125,34 +117,18 @@ export default function EditStudentModal({
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [streams, setStreams] = useState<Stream[]>([]);
-  const [levels, setLevels] = useState<Level[]>([]);
-  const [loadingPrograms, setLoadingPrograms] = useState(false);
-  const [loadingStreams, setLoadingStreams] = useState(false);
-  const [loadingLevels, setLoadingLevels] = useState(false);
+  const [formData, setFormData] = useState<StudentFormData>(EMPTY_FORM_DATA);
 
-  const [formData, setFormData] = useState<StudentFormData>({
-    studentName: "",
-    dob: "",
-    dateOfJoining: "",
-    sex: "",
-    standard: "",
-    programId: 0,
-    streamId: 0,
-    levelId: 0,
-    status: "active",
-    fatherName: "",
-    fatherQualification: "",
-    fatherOccupation: "",
-    fatherContactNo: "",
-    motherName: "",
-    motherQualification: "",
-    motherOccupation: "",
-    motherContactNo: "",
-    residentialAddress: "",
-    mailId: "",
-  });
+  const { programs, streams, levels, loadingPrograms, loadingStreams, loadingLevels } =
+    useCascadingSelects({
+      open,
+      programId: formData.programId,
+      streamId: formData.streamId,
+      autoSelectFirstLevel: false,
+      levelId: formData.levelId,
+      onLevelIdChange: (id) =>
+        setFormData((prev) => ({ ...prev, levelId: id })),
+    });
 
   // Load student data when modal opens
   useEffect(() => {
@@ -162,15 +138,16 @@ export default function EditStudentModal({
           let levelId = student.levelId ?? 0;
           let streamId = 0;
 
-          // If we have programId, fetch levels to find the matching level and stream
           if (student.programId) {
             const programLevels = await getLevelsByProgram(student.programId);
-            // Try to find level by matching level name/code with student.level
-            const studentLevelName = typeof student.level === 'object' && student.level !== null && 'name' in student.level
-              ? student.level.name
-              : typeof student.level === 'string'
-              ? student.level
-              : '';
+            const studentLevelName =
+              typeof student.level === "object" &&
+              student.level !== null &&
+              "name" in student.level
+                ? (student.level as { name: string }).name
+                : typeof student.level === "string"
+                ? student.level
+                : "";
             const matchingLevel = programLevels.find(
               (l) => l.name === studentLevelName || l.code === studentLevelName
             );
@@ -191,8 +168,8 @@ export default function EditStudentModal({
             sex: student.sex || "",
             standard: student.standard || "",
             programId: student.programId || 0,
-            streamId: streamId,
-            levelId: levelId,
+            streamId,
+            levelId,
             status: student.isActive ? "active" : "inactive",
             fatherName: student.fatherName || "",
             fatherQualification: student.fatherQualification || "",
@@ -206,8 +183,12 @@ export default function EditStudentModal({
             mailId: student.mail || "",
           });
         } catch (error) {
-          sendClientLog({ level: "error", event: "student-data-load-error", message: "Error loading student data", context: { error } });
-          // Set basic data even if level lookup fails
+          sendClientLog({
+            level: "error",
+            event: "student-data-load-error",
+            message: "Error loading student data",
+            context: { error },
+          });
           setFormData({
             studentName: student.name || "",
             dob: student.dateOfBirth
@@ -242,75 +223,16 @@ export default function EditStudentModal({
     }
   }, [open, student]);
 
-  // Fetch programs on mount
-  useEffect(() => {
-    const fetchPrograms = async () => {
-      setLoadingPrograms(true);
-      try {
-        const fetchedPrograms = await getAllPrograms();
-        setPrograms(fetchedPrograms);
-      } catch (error) {
-        sendClientLog({ level: "error", event: "programs-load-error", message: "Error fetching programs", context: { error } });
-      } finally {
-        setLoadingPrograms(false);
-      }
-    };
-
-    if (open) {
-      fetchPrograms();
-    }
-  }, [open]);
-
-  // Fetch streams when program is selected
-  useEffect(() => {
-    const fetchStreams = async () => {
-      if (formData.programId && formData.programId > 0) {
-        setLoadingStreams(true);
-        try {
-          const fetchedStreams = await getStreamsByProgram(formData.programId);
-          setStreams(fetchedStreams);
-        } catch (error) {
-          sendClientLog({ level: "error", event: "streams-load-error", message: "Error fetching streams", context: { error } });
-          setStreams([]);
-        } finally {
-          setLoadingStreams(false);
-        }
-      } else {
-        setStreams([]);
-        setLevels([]);
-      }
-    };
-
-    fetchStreams();
-  }, [formData.programId]);
-
-  // Fetch levels when stream is selected
-  useEffect(() => {
-    const fetchLevels = async () => {
-      if (formData.streamId && formData.streamId > 0) {
-        setLoadingLevels(true);
-        try {
-          const fetchedLevels = await getLevelsByStream(formData.streamId);
-          setLevels(fetchedLevels);
-        } catch (error) {
-          sendClientLog({ level: "error", event: "levels-load-error", message: "Error fetching levels", context: { error } });
-          setLevels([]);
-        } finally {
-          setLoadingLevels(false);
-        }
-      } else {
-        setLevels([]);
-      }
-    };
-
-    fetchLevels();
-  }, [formData.streamId]);
-
-  const handleInputChange = (field: string, value: string | boolean | number) => {
-    let convertedValue: any = value;
+  const handleInputChange = (
+    field: string,
+    value: string | boolean | number
+  ) => {
+    let convertedValue: string | boolean | number = value;
 
     if (
-      (field === "programId" || field === "streamId" || field === "levelId") &&
+      (field === "programId" ||
+        field === "streamId" ||
+        field === "levelId") &&
       typeof value === "string"
     ) {
       convertedValue = parseInt(value, 10) || 0;
@@ -321,12 +243,8 @@ export default function EditStudentModal({
       [field]: convertedValue,
     }));
 
-    // Clear error when user starts typing
     if (errors[field]) {
-      setErrors((prev) => ({
-        ...prev,
-        [field]: "",
-      }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
@@ -401,9 +319,7 @@ export default function EditStudentModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateCurrentTab()) {
-      return;
-    }
+    if (!validateCurrentTab()) return;
 
     if (!student) {
       toast.error("Student not found. Please try again.");
@@ -415,7 +331,6 @@ export default function EditStudentModal({
     try {
       const updateData: Partial<StudentData> = {};
 
-      // Only include fields from the current tab
       switch (activeTab) {
         case 1:
           updateData.name = formData.studentName;
@@ -459,7 +374,12 @@ export default function EditStudentModal({
         handleClose();
       }, 1500);
     } catch (error) {
-      sendClientLog({ level: "error", event: "student-update-error", message: "Error updating student", context: { error } });
+      sendClientLog({
+        level: "error",
+        event: "student-update-error",
+        message: "Error updating student",
+        context: { error },
+      });
       toast.error("Failed to update student. Please try again.");
     } finally {
       setIsLoading(false);
@@ -478,468 +398,57 @@ export default function EditStudentModal({
     switch (activeTab) {
       case 1:
         return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="studentName">Student Name *</Label>
-                <Input
-                  id="studentName"
-                  type="text"
-                  value={formData.studentName}
-                  onChange={(e) =>
-                    handleInputChange("studentName", e.target.value)
-                  }
-                  className={errors.studentName ? "border-red-500" : ""}
-                  placeholder="Enter student's full name"
-                  disabled={mode === "franchise"}
-                />
-                {mode === "franchise" && (
-                  <p className="text-muted-foreground text-xs mt-1">
-                    Locked after enrollment — contact admin to change
-                  </p>
-                )}
-                {errors.studentName && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.studentName}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dob">
-                  Date of Birth *{formData.dob && (
-                    <span className="ml-2 text-muted-foreground font-normal">
-                      ({calculateAge(formData.dob)} yrs old)
-                    </span>
-                  )}
-                </Label>
-                <DateInput
-                  id="dob"
-                  value={formData.dob}
-                  onChange={(v) => handleInputChange("dob", v)}
-                  className={errors.dob ? "border-red-500" : ""}
-                  disabled={mode === "franchise"}
-                />
-                {mode === "franchise" && (
-                  <p className="text-muted-foreground text-xs mt-1">
-                    Locked after enrollment — contact admin to change
-                  </p>
-                )}
-                {errors.dob && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.dob}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dateOfJoining">Date of Joining</Label>
-                <DateInput
-                  id="dateOfJoining"
-                  value={formData.dateOfJoining}
-                  onChange={(v) =>
-                    handleInputChange("dateOfJoining", v)
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="sex">Gender *</Label>
-                <Select
-                  value={formData.sex}
-                  onValueChange={(value) => handleInputChange("sex", value)}
-                >
-                  <SelectTrigger className={errors.sex ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.sex && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.sex}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="standard">Standard *</Label>
-                <Select
-                  value={formData.standard}
-                  onValueChange={(value) =>
-                    handleInputChange("standard", value)
-                  }
-                >
-                  <SelectTrigger
-                    className={errors.standard ? "border-red-500" : ""}
-                  >
-                    <SelectValue placeholder="Select standard" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STANDARDS.map((standard) => (
-                      <SelectItem key={standard} value={standard}>
-                        {standard}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.standard && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.standard}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
+          <PersonalInfoFields
+            formData={formData}
+            errors={errors}
+            onFieldChange={handleInputChange}
+            lockIdentityFields={mode === "franchise"}
+          />
         );
 
       case 2:
         return (
-          <div className="space-y-6">
-            <div>
-              <h4 className="font-semibold mb-4 flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Father's Information
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fatherName">Father's Name *</Label>
-                  <Input
-                    id="fatherName"
-                    type="text"
-                    value={formData.fatherName}
-                    onChange={(e) =>
-                      handleInputChange("fatherName", e.target.value)
-                    }
-                    className={errors.fatherName ? "border-red-500" : ""}
-                    placeholder="Enter father's full name"
-                  />
-                  {errors.fatherName && (
-                    <p className="text-red-500 text-sm flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.fatherName}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fatherContactNo">
-                    Father's Contact Number *
-                  </Label>
-                  <Input
-                    id="fatherContactNo"
-                    type="tel"
-                    value={formData.fatherContactNo}
-                    onChange={(e) =>
-                      handleInputChange("fatherContactNo", e.target.value)
-                    }
-                    className={errors.fatherContactNo ? "border-red-500" : ""}
-                    placeholder="Enter 10-digit contact number"
-                  />
-                  {errors.fatherContactNo && (
-                    <p className="text-red-500 text-sm flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.fatherContactNo}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fatherQualification">
-                    Father's Qualification
-                  </Label>
-                  <Input
-                    id="fatherQualification"
-                    type="text"
-                    value={formData.fatherQualification}
-                    onChange={(e) =>
-                      handleInputChange("fatherQualification", e.target.value)
-                    }
-                    placeholder="e.g., B.Tech, MBA, etc."
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fatherOccupation">Father's Occupation</Label>
-                  <Input
-                    id="fatherOccupation"
-                    type="text"
-                    value={formData.fatherOccupation}
-                    onChange={(e) =>
-                      handleInputChange("fatherOccupation", e.target.value)
-                    }
-                    placeholder="e.g., Software Engineer, Teacher, etc."
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4 flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Mother's Information
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="motherName">Mother's Name *</Label>
-                  <Input
-                    id="motherName"
-                    type="text"
-                    value={formData.motherName}
-                    onChange={(e) =>
-                      handleInputChange("motherName", e.target.value)
-                    }
-                    className={errors.motherName ? "border-red-500" : ""}
-                    placeholder="Enter mother's full name"
-                  />
-                  {errors.motherName && (
-                    <p className="text-red-500 text-sm flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.motherName}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="motherContactNo">
-                    Mother's Contact Number *
-                  </Label>
-                  <Input
-                    id="motherContactNo"
-                    type="tel"
-                    value={formData.motherContactNo}
-                    onChange={(e) =>
-                      handleInputChange("motherContactNo", e.target.value)
-                    }
-                    className={errors.motherContactNo ? "border-red-500" : ""}
-                    placeholder="Enter 10-digit contact number"
-                  />
-                  {errors.motherContactNo && (
-                    <p className="text-red-500 text-sm flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.motherContactNo}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="motherQualification">
-                    Mother's Qualification
-                  </Label>
-                  <Input
-                    id="motherQualification"
-                    type="text"
-                    value={formData.motherQualification}
-                    onChange={(e) =>
-                      handleInputChange("motherQualification", e.target.value)
-                    }
-                    placeholder="e.g., B.A., M.Sc., etc."
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="motherOccupation">Mother's Occupation</Label>
-                  <Input
-                    id="motherOccupation"
-                    type="text"
-                    value={formData.motherOccupation}
-                    onChange={(e) =>
-                      handleInputChange("motherOccupation", e.target.value)
-                    }
-                    placeholder="e.g., Homemaker, Doctor, etc."
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+          <ParentInfoFields
+            formData={formData}
+            errors={errors}
+            onFieldChange={handleInputChange}
+          />
         );
 
       case 3:
         return (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="residentialAddress">Residential Address *</Label>
-              <Textarea
-                id="residentialAddress"
-                value={formData.residentialAddress}
-                onChange={(e) =>
-                  handleInputChange("residentialAddress", e.target.value)
-                }
-                className={errors.residentialAddress ? "border-red-500" : ""}
-                placeholder="Enter complete residential address"
-                rows={3}
-              />
-              {errors.residentialAddress && (
-                <p className="text-red-500 text-sm flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.residentialAddress}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="mailId">Email Address *</Label>
-              <Input
-                id="mailId"
-                type="email"
-                value={formData.mailId}
-                onChange={(e) => handleInputChange("mailId", e.target.value)}
-                className={errors.mailId ? "border-red-500" : ""}
-                placeholder="Enter email address"
-              />
-              {errors.mailId && (
-                <p className="text-red-500 text-sm flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.mailId}
-                </p>
-              )}
-            </div>
-          </div>
+          <ContactInfoFields
+            formData={formData}
+            errors={errors}
+            onFieldChange={handleInputChange}
+          />
         );
 
       case 4:
         return (
           <div className="space-y-4">
+            <ProgramSelectionFields
+              formData={formData}
+              errors={errors}
+              onFieldChange={handleInputChange}
+              onProgramChange={(value) => {
+                handleInputChange("programId", value);
+                setFormData((prev) => ({ ...prev, streamId: 0, levelId: 0 }));
+              }}
+              onStreamChange={(value) => {
+                handleInputChange("streamId", value);
+                setFormData((prev) => ({ ...prev, levelId: 0 }));
+              }}
+              programs={programs}
+              streams={streams}
+              levels={levels}
+              loadingPrograms={loadingPrograms}
+              loadingStreams={loadingStreams}
+              loadingLevels={loadingLevels}
+              levelEditable={mode !== "franchise"}
+            />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="programId">Program *</Label>
-                <Select
-                  value={formData.programId.toString()}
-                  onValueChange={(value) => {
-                    handleInputChange("programId", value);
-                    setFormData((prev) => ({
-                      ...prev,
-                      streamId: 0,
-                      levelId: 0,
-                    }));
-                  }}
-                  disabled={loadingPrograms}
-                >
-                  <SelectTrigger
-                    className={errors.programId ? "border-red-500" : ""}
-                  >
-                    <SelectValue
-                      placeholder={
-                        loadingPrograms
-                          ? "Loading programs..."
-                          : "Select program"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {programs.map((program) => (
-                      <SelectItem
-                        key={program.id}
-                        value={program.id.toString()}
-                      >
-                        {program.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.programId && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.programId}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="streamId">Stream *</Label>
-                <Select
-                  value={formData.streamId.toString()}
-                  onValueChange={(value) => {
-                    handleInputChange("streamId", value);
-                    setFormData((prev) => ({ ...prev, levelId: 0 }));
-                  }}
-                  disabled={
-                    !formData.programId ||
-                    formData.programId === 0 ||
-                    loadingStreams
-                  }
-                >
-                  <SelectTrigger
-                    className={errors.streamId ? "border-red-500" : ""}
-                  >
-                    <SelectValue
-                      placeholder={
-                        loadingStreams
-                          ? "Loading streams..."
-                          : formData.programId === 0
-                          ? "Select program first"
-                          : "Select stream"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {streams.map((stream) => (
-                      <SelectItem key={stream.id} value={stream.id.toString()}>
-                        {stream.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.streamId && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.streamId}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="levelId">Level *</Label>
-                <Select
-                  value={formData.levelId.toString()}
-                  onValueChange={(value) => handleInputChange("levelId", value)}
-                  disabled={
-                    mode === "franchise" ||
-                    !formData.streamId ||
-                    formData.streamId === 0 ||
-                    loadingLevels
-                  }
-                >
-                  <SelectTrigger
-                    className={errors.levelId ? "border-red-500" : ""}
-                  >
-                    <SelectValue
-                      placeholder={
-                        loadingLevels
-                          ? "Loading levels..."
-                          : formData.streamId === 0
-                          ? "Select stream first"
-                          : "Select level"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {levels.map((level) => (
-                      <SelectItem key={level.id} value={level.id.toString()}>
-                        {level.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.levelId && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.levelId}
-                  </p>
-                )}
-                {mode === "franchise" && (
-                  <p className="text-muted-foreground text-xs mt-1">
-                    Locked after enrollment — contact admin to change
-                  </p>
-                )}
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select
@@ -978,10 +487,7 @@ export default function EditStudentModal({
           </div>
         </AppDialogBody>
         <AppDialogFooter
-          primary={{
-            label: "Close",
-            onClick: handleClose,
-          }}
+          primary={{ label: "Close", onClick: handleClose }}
         />
       </AppDialog>
     );
@@ -999,7 +505,11 @@ export default function EditStudentModal({
         description="Update student information section by section"
       />
       <AppDialogBody>
-        <form id="edit-student-form" onSubmit={handleSubmit} className="space-y-6">
+        <form
+          id="edit-student-form"
+          onSubmit={handleSubmit}
+          className="space-y-6"
+        >
           {/* Tabs */}
           <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
             <div className="flex gap-2">
@@ -1079,4 +589,3 @@ export default function EditStudentModal({
     </AppDialog>
   );
 }
-

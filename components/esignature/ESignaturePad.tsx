@@ -32,7 +32,7 @@ export interface ESignatureResult {
   consentVersion: string;
 }
 
-interface ESignaturePadProps {
+export interface ESignaturePadProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultName?: string;
