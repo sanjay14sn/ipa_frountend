@@ -248,9 +248,9 @@ function mapStudentDataToUpdateBody(data: Partial<StudentData>): Record<string, 
   for (const [key, value] of Object.entries(data)) {
     if (drop.has(key) || value === undefined) continue;
     if (key === "level" && typeof value === "object" && value !== null) continue; // drop nested level object
-    if (key === "stream" && typeof value === "string") continue; // drop stream string (backend doesn't accept)
+    if (key === "stream") continue; // always drop; backend derives stream from levelId
     if (key === "mail") {
-      if (value !== undefined) out["email"] = value; // alias mail → email
+      out["email"] = value; // alias mail → email
       continue;
     }
     if ((key === "dateOfBirth" || key === "dateOfJoining") && value != null) {
