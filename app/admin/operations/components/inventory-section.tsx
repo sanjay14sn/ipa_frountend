@@ -82,27 +82,18 @@ export function InventorySection() {
   const [adjustForm, setAdjustForm] = useState<AdjustmentFormState>(EMPTY_ADJUSTMENT);
   const [isAdjustSubmitting, setIsAdjustSubmitting] = useState(false);
 
-  const programIdNum =
-    programFilter === "" || programFilter === 0 ? undefined : Number(programFilter);
-  const levelIdNum =
-    levelFilter === "" || levelFilter === 0 ? undefined : Number(levelFilter);
+  const programIdNum = programFilter === "" || programFilter === 0 ? undefined : Number(programFilter);
+  const levelIdNum = levelFilter === "" || levelFilter === 0 ? undefined : Number(levelFilter);
 
-  const programsQuery = useQuery({
-    queryKey: ["programs", "all", "inventory"],
-    queryFn: getAllPrograms,
-  });
+  const { data: programs = [] } = useQuery({ queryKey: ["programs", "all", "inventory"], queryFn: getAllPrograms });
   const assignedItemsQuery = useQuery({
     queryKey: ["inventory", "level-items", levelIdNum ?? "none"],
     queryFn: () => getInventoryItemsForLevel(levelIdNum!),
     enabled: Boolean(levelIdNum),
   });
-  const levelsQuery = useLevelsByProgram(programIdNum);
-  const streamsQuery = useStreamsByProgram(programIdNum);
-
-  const programs = programsQuery.data ?? [];
   const assignedItems = assignedItemsQuery.data ?? [];
-  const levels = levelsQuery.data ?? [];
-  const streams = streamsQuery.data ?? [];
+  const levels = useLevelsByProgram(programIdNum).data ?? [];
+  const streams = useStreamsByProgram(programIdNum).data ?? [];
 
   const inventoryQuery = useInventoryPaginatedQuery({
     page: currentPage,
@@ -117,10 +108,7 @@ export function InventorySection() {
     sortOrder,
   });
 
-  const inventory = inventoryQuery.rows;
-  const total = inventoryQuery.total;
-  const totalPages = inventoryQuery.totalPages;
-  const loading = inventoryQuery.isPending;
+  const { rows: inventory, total, totalPages, isPending: loading } = inventoryQuery;
 
   useEffect(() => {
     setCurrentPage(1);
@@ -137,9 +125,7 @@ export function InventorySection() {
 
   async function refreshInventoryViews() {
     await invalidateInventoryAdminLists();
-    if (levelIdNum) {
-      await assignedItemsQuery.refetch();
-    }
+    if (levelIdNum) await assignedItemsQuery.refetch();
   }
 
   async function handleAdd() {
@@ -219,13 +205,13 @@ export function InventorySection() {
 
   async function handleAdjust() {
     if (!adjustingItem) return;
-    const trimmedQty = adjustForm.quantity.trim();
     const trimmedReason = adjustForm.reason.trim();
     const trimmedCost = adjustForm.unitCost.trim();
 
-    const qtyNum = Number(trimmedQty);
-    if (!Number.isFinite(qtyNum) || !Number.isInteger(qtyNum) || qtyNum <= 0) {
-      toast.error("Enter a positive whole-number quantity.");
+    // Re-use the preview logic for the final submit validation.
+    const preview = deriveAdjustmentPreview(adjustingItem, adjustForm);
+    if (preview.error) {
+      toast.error(preview.error);
       return;
     }
     if (!trimmedReason) {
@@ -237,14 +223,7 @@ export function InventorySection() {
       return;
     }
 
-    const deltaQty = adjustForm.direction === "INCREASE" ? qtyNum : -qtyNum;
-    if (adjustingItem.onHandQty + deltaQty < 0) {
-      toast.error(
-        `Cannot remove ${qtyNum} — only ${adjustingItem.onHandQty} on hand.`,
-      );
-      return;
-    }
-
+    const { deltaQty } = preview;
     let unitCost: number | undefined;
     if (adjustForm.direction === "INCREASE" && trimmedCost) {
       const costNum = Number(trimmedCost);
@@ -265,15 +244,13 @@ export function InventorySection() {
       });
       toast.success(
         deltaQty > 0
-          ? `Added ${qtyNum} to stock. Backorders for this item are being replenished.`
-          : `Removed ${qtyNum} from stock.`,
+          ? `Added ${Math.abs(deltaQty)} to stock. Backorders for this item are being replenished.`
+          : `Removed ${Math.abs(deltaQty)} from stock.`,
       );
       setIsAdjustOpen(false);
       setAdjustingItem(null);
       setAdjustForm(EMPTY_ADJUSTMENT);
-      if (deltaQty > 0) {
-        await invalidateAfterStockAdjustment(adjustingItem.id);
-      }
+      if (deltaQty > 0) await invalidateAfterStockAdjustment(adjustingItem.id);
       await refreshInventoryViews();
     } catch (error) {
       toast.error(getUserFriendlyMessage(error));
@@ -293,22 +270,6 @@ export function InventorySection() {
       setIsDeleteOpen(true);
     },
   });
-
-  function handleFilterChange(key: string, value: string | string[]) {
-    const v = Array.isArray(value) ? value[0] ?? "" : value;
-    if (key === "category") {
-      setCategoryFilter(v === "all" ? "" : v);
-    } else if (key === "status") {
-      setStatusFilter(v === "all" ? "" : v);
-    } else if (key === "lowStock") {
-      setLowStockOnly(v === "true");
-    }
-  }
-
-  function handleSortChange(nextSortBy: string, nextSortOrder: "ASC" | "DESC") {
-    setSortBy(nextSortBy);
-    setSortOrder(nextSortOrder);
-  }
 
   const toolbarActions = (
     <InventoryTableToolbar
@@ -374,11 +335,19 @@ export function InventorySection() {
             searchPlaceholder="Name, SKU, legacy code..."
             onSearchChange={setSearchTerm}
             filters={INVENTORY_TABLE_FILTERS}
-            onFilterChange={handleFilterChange}
+            onFilterChange={(key, value) => {
+              const v = Array.isArray(value) ? value[0] ?? "" : value;
+              if (key === "category") setCategoryFilter(v === "all" ? "" : v);
+              else if (key === "status") setStatusFilter(v === "all" ? "" : v);
+              else if (key === "lowStock") setLowStockOnly(v === "true");
+            }}
             sortOptions={INVENTORY_SORT_OPTIONS}
             defaultSortBy={sortBy}
             defaultSortOrder={sortOrder}
-            onSortChange={handleSortChange}
+            onSortChange={(nextSortBy, nextSortOrder) => {
+              setSortBy(nextSortBy);
+              setSortOrder(nextSortOrder);
+            }}
             toolbarActions={toolbarActions}
             pagination={{ total, totalPages }}
             currentPage={currentPage}
