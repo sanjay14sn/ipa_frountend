@@ -26,11 +26,9 @@ const isDev = process.env.NODE_ENV !== "production";
    "http://localhost:5500"
  );
  
- export const RAZORPAY_KEY_ID = requireEnv(
-   "NEXT_PUBLIC_RAZORPAY_KEY_ID",
-   process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-   ""
- );
+// Optional at build time — only needed at runtime when opening a payment modal.
+export const RAZORPAY_KEY_ID =
+  process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID?.trim() ?? "";
 
 export const CLIENT_TELEMETRY_ENABLED =
   process.env.NEXT_PUBLIC_CLIENT_TELEMETRY_ENABLED === "true";
