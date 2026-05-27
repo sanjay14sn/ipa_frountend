@@ -12,29 +12,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.2.2
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Setup Node
         uses: actions/setup-node@v4.4.0
         with:
           node-version: 22
-          cache: 'npm'
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: npm run lint
+        run: pnpm lint
 
-      - name: Validate NEXT_PUBLIC_API_URL secret
-        run: |
-          if [ -z "${{ secrets.NEXT_PUBLIC_API_URL }}" ]; then
-            echo "::error::Missing required secret: NEXT_PUBLIC_API_URL"
-            exit 1
-          fi
-
-      - name: Build
-        run: npm run build
+      - name: Validate required env vars
+        run: node scripts/check-env.mjs
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_RAZORPAY_KEY_ID: ${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID }}
+
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_RAZORPAY_KEY_ID: ${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID }}
+          NEXT_PUBLIC_CLIENT_TELEMETRY_ENABLED: "true"
 
   deploy:
     runs-on: ubuntu-latest
@@ -65,4 +71,4 @@ jobs:
       - name: Deploy to server
         run: |
           ssh -o ConnectTimeout=30 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "set -e; source ~/.nvm/nvm.sh; cd /home/ashwin/ipa/ipa-front && git pull origin main && npm ci && NEXT_PUBLIC_API_URL='${{ secrets.NEXT_PUBLIC_API_URL }}' npm run build && pm2 reload ipa-front"
+            "set -e; source ~/.nvm/nvm.sh; cd /home/ashwin/ipa/ipa-front && git pull origin main && pnpm install --frozen-lockfile && NEXT_PUBLIC_API_URL='${{ secrets.NEXT_PUBLIC_API_URL }}' NEXT_PUBLIC_RAZORPAY_KEY_ID='${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID }}' pnpm build && pm2 reload ipa-front"
