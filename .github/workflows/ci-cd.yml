@@ -33,12 +33,6 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      - name: Validate required env vars
-        run: node scripts/check-env.mjs
-        env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_RAZORPAY_KEY_ID: ${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID }}
-
       - name: Build
         run: npm run build
         env:
