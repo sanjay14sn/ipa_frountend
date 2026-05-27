@@ -179,14 +179,20 @@ export interface ApproveAndDispatchClassification {
   ineligible: Array<{ id: number; reason: string }>;
 }
 
-export interface BulkCertificateRequestItem {
+export interface BulkCertificateRequestStudentEntry {
   studentId: number;
   marksObtained: number;
 }
 
-export interface BulkCertificateRequestDto {
+export interface BulkCertificateRequestGroup {
+  programId: number;
+  levelId: number;
   courseInstructorId: number;
-  students: BulkCertificateRequestItem[];
+  students: BulkCertificateRequestStudentEntry[];
+}
+
+export interface BulkCertificateRequestDto {
+  groups: BulkCertificateRequestGroup[];
 }
 
 // ---------------------------------------------------------------------------
@@ -516,23 +522,9 @@ export function getFranchiseeCertificatePdfUrl(certificateId: number): string {
 
 export async function bulkRequestCertificates(
   data: BulkCertificateRequestDto,
-): Promise<unknown[]> {
-  const out: unknown[] = [];
-  const students = await getAllStudents();
-  const byId = new Map((students.result ?? []).map((s) => [s.id, s]));
-  for (const s of data.students) {
-    const st = byId.get(s.studentId);
-    if (!st) continue;
-    const res = await api.post("/certification/request", {
-      studentId: s.studentId,
-      programId: st.programId,
-      levelId: st.levelId,
-      marksObtained: s.marksObtained,
-      courseInstructorId: data.courseInstructorId,
-    });
-    out.push(unwrapData(res));
-  }
-  return out;
+): Promise<unknown> {
+  const response = await api.post("/certification/bulk-request", data);
+  return unwrapData(response);
 }
 
 export async function requestCertificateForStudent(body: {
