@@ -36,6 +36,9 @@ import {
   reactivateStudentLifecycle,
   bulkApproveCertificates,
   bulkDispatchIdCards,
+  getPaginatedStudentsAdmin,
+  updateStudentAdmin,
+  getAdminStudentLifecycleById,
   type StudentData,
   type StudentPaginationParams,
   type CertificatePaginationParams,
@@ -45,6 +48,8 @@ import {
 import { getDispatchEligibleOrders } from "@/services/order.service";
 import { useProgramId } from "@/hooks/use-scope";
 import { queryKeys } from "./query-keys";
+import { toast } from "sonner";
+import { extractErrorMessage } from "@/lib/error-utils";
 import { getQueryClientBridge } from "./query-client-bridge";
 
 export {
@@ -79,13 +84,6 @@ export const ISSUED_IDS_KEY = queryKeys.studentAdmin.issuedIds;
 export const REQUESTED_CERTIFICATES_KEY = queryKeys.studentAdmin.requestedCerts;
 export const ISSUED_CERTIFICATES_KEY = queryKeys.studentAdmin.issuedCerts;
 export const ELIGIBLE_STUDENTS_KEY = queryKeys.studentAdmin.eligible;
-/** @deprecated Use queryKeys.studentAdmin.adminCertRequests(params) or invalidate certification lists. */
-export const ADMIN_CERTIFICATE_REQUESTS_KEY =
-  queryKeys.studentAdmin.adminCertRequests();
-/** @deprecated Use queryKeys.studentAdmin.franchiseeCerts(params) or invalidate certification lists. */
-export const FRANCHISEE_CERTIFICATES_KEY = queryKeys.studentAdmin.franchiseeCerts();
-/** @deprecated Use STUDENTS_LIST_PREFIX or queryKeys.students.list(params). */
-export const STUDENTS_KEY = queryKeys.students.list();
 
 export function useStudents(params?: StudentPaginationParams) {
   const programId = useProgramId();
@@ -267,6 +265,16 @@ export function useFranchiseeStudentLifecycle(studentId: number | null) {
   });
 }
 
+export function useAdminStudentLifecycleById(studentId: number | null) {
+  return useQuery({
+    queryKey: studentId != null
+      ? ["students", studentId, "admin-lifecycle"]
+      : ["students", "admin-lifecycle", "idle"],
+    queryFn: () => getAdminStudentLifecycleById(studentId!),
+    enabled: studentId != null,
+  });
+}
+
 export function useFranchiseeCertificates(
   params?: CertificatePaginationParams,
 ) {
@@ -311,6 +319,9 @@ export function useCreateStudentWithRevalidation() {
   return useMutation({
     mutationFn: createStudent,
     onSuccess: () => invalidateStudentLists(qc),
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
   });
 }
 
@@ -323,6 +334,22 @@ export async function updateStudentWithRevalidation(
     invalidateStudentLists(getQueryClientBridge());
   } catch {
     /* ignore */
+  }
+  return result;
+}
+
+export async function updateStudentAdminWithRevalidation(
+  studentId: number,
+  studentData: Partial<StudentData>,
+) {
+  const result = await updateStudentAdmin(studentId, studentData);
+  try {
+    const qc = getQueryClientBridge();
+    void qc.invalidateQueries({ queryKey: STUDENTS_LIST_PREFIX });
+    void qc.invalidateQueries({ queryKey: ["students", studentId] });
+    void qc.invalidateQueries({ queryKey: ["admin-students"] });
+  } catch {
+    /* bridge not mounted */
   }
   return result;
 }
@@ -365,8 +392,8 @@ export async function approveCertificateRequestWithRevalidation(
   try {
     const qc = getQueryClientBridge();
     void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
-    void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
-    void qc.invalidateQueries({ queryKey: ["admin-cert-details", "list"] });
+    void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certSummariesPrefix });
+    void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certDetailsPrefix });
   } catch {
     /* ignore */
   }
@@ -380,8 +407,8 @@ export async function rejectCertificateRequestWithRevalidation(
   try {
     const qc = getQueryClientBridge();
     void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
-    void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
-    void qc.invalidateQueries({ queryKey: ["admin-cert-details", "list"] });
+    void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certSummariesPrefix });
+    void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certDetailsPrefix });
   } catch {
     /* ignore */
   }
@@ -403,8 +430,11 @@ export function useApproveCertificateRequest() {
     mutationFn: approveCertificateRequest,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
-      void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
-      void qc.invalidateQueries({ queryKey: ["admin-cert-details", "list"] });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certSummariesPrefix });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certDetailsPrefix });
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
     },
   });
 }
@@ -416,8 +446,11 @@ export function useRejectCertificateRequest() {
       rejectCertificateRequest(certificateRequestId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
-      void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
-      void qc.invalidateQueries({ queryKey: ["admin-cert-details", "list"] });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certSummariesPrefix });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certDetailsPrefix });
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
     },
   });
 }
@@ -426,16 +459,16 @@ function invalidateCertificateRequestDomains(qc: QueryClient) {
   void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
   void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.eligible });
   void qc.invalidateQueries({ queryKey: STUDENTS_LIST_PREFIX });
-  void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
-  void qc.invalidateQueries({ queryKey: ["admin-cert-details", "list"] });
+  void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certSummariesPrefix });
+  void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certDetailsPrefix });
 }
 
 function invalidateStudentLifecycleDomains(qc: QueryClient) {
   void qc.invalidateQueries({ queryKey: ["admin-student-lifecycle", "list"] });
   void qc.invalidateQueries({ queryKey: STUDENTS_LIST_PREFIX });
   void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
-  void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
-  void qc.invalidateQueries({ queryKey: ["admin-cert-details", "list"] });
+  void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certSummariesPrefix });
+  void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certDetailsPrefix });
 }
 
 export function useRunStudentLifecycleInvalidation() {
@@ -443,6 +476,9 @@ export function useRunStudentLifecycleInvalidation() {
   return useMutation({
     mutationFn: runStudentLifecycleInvalidation,
     onSuccess: () => invalidateStudentLifecycleDomains(qc),
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
   });
 }
 
@@ -451,6 +487,9 @@ export function useExtendStudentLifecycle() {
   return useMutation({
     mutationFn: extendStudentLifecycle,
     onSuccess: () => invalidateStudentLifecycleDomains(qc),
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
   });
 }
 
@@ -459,6 +498,9 @@ export function useReactivateStudentLifecycle() {
   return useMutation({
     mutationFn: reactivateStudentLifecycle,
     onSuccess: () => invalidateStudentLifecycleDomains(qc),
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
   });
 }
 
@@ -467,6 +509,9 @@ export function useRequestCertificateForStudent() {
   return useMutation({
     mutationFn: requestCertificateForStudent,
     onSuccess: () => invalidateCertificateRequestDomains(qc),
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
   });
 }
 
@@ -475,6 +520,9 @@ export function useBulkRequestCertificates() {
   return useMutation({
     mutationFn: bulkRequestCertificates,
     onSuccess: () => invalidateCertificateRequestDomains(qc),
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
   });
 }
 
@@ -492,12 +540,15 @@ export function useBulkApproveCertificates() {
     mutationFn: (vars: { ids: number[] }) => bulkApproveCertificates(vars),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
-      void qc.invalidateQueries({ queryKey: ["admin-cert-summaries"] });
-      void qc.invalidateQueries({ queryKey: ["admin-cert-details", "list"] });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certSummariesPrefix });
+      void qc.invalidateQueries({ queryKey: queryKeys.studentAdmin.certDetailsPrefix });
       void qc.invalidateQueries({ queryKey: queryKeys.orders.admin() });
       void qc.invalidateQueries({
         queryKey: ["orders", "dispatch-eligible"],
       });
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
     },
   });
 }
@@ -516,5 +567,20 @@ export function useBulkDispatchIdCards() {
         queryKey: ["orders", "dispatch-eligible"],
       });
     },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
+}
+
+export function useAdminStudentsByFranchise(
+  franchiseId: string | null,
+  params?: Omit<StudentPaginationParams, "franchiseId">,
+) {
+  return useQuery({
+    queryKey: ["admin-students", "by-franchise", franchiseId, params ?? null],
+    queryFn: () => getPaginatedStudentsAdmin({ ...params, franchiseId: franchiseId! }),
+    enabled: franchiseId != null && franchiseId !== "",
+    placeholderData: (prev) => prev,
   });
 }

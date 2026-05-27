@@ -242,11 +242,35 @@ export async function createStudent(
   return mapStudentRow(row);
 }
 
+function mapStudentDataToUpdateBody(data: Partial<StudentData>): Record<string, unknown> {
+  const drop = new Set(["id", "franchiseId", "rollNo", "createdAt", "updatedAt", "createdBy", "updatedBy", "materialsOrdered"]);
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (drop.has(key) || value === undefined) continue;
+    if (key === "level" && typeof value === "object" && value !== null) continue; // drop nested level object
+    if (key === "stream" && typeof value === "string") continue; // drop stream string (backend doesn't accept)
+    if (key === "mail") {
+      if (value !== undefined) out["email"] = value; // alias mail → email
+      continue;
+    }
+    if ((key === "dateOfBirth" || key === "dateOfJoining") && value != null) {
+      // format as YYYY-MM-DD
+      const d = value instanceof Date ? value : new Date(String(value));
+      out[key] = isNaN(d.getTime()) ? String(value).slice(0, 10) : d.toISOString().slice(0, 10);
+      continue;
+    }
+    out[key] = value;
+  }
+  return out;
+}
+
 export async function updateStudent(
-  _studentId: number,
-  _studentData: Partial<StudentData>,
+  studentId: number,
+  studentData: Partial<StudentData>,
 ): Promise<StudentData> {
-  throw new Error("Student update not available in ipa-new");
+  const body = mapStudentDataToUpdateBody(studentData);
+  const response = await api.patch(`/student/${studentId}`, body);
+  return mapStudentRow(unwrapData<Record<string, unknown>>(response));
 }
 
 export async function deleteStudent(_studentId: number): Promise<void> {
@@ -1335,6 +1359,57 @@ export async function getStudentCertificates(
   studentId: number,
 ): Promise<StudentCertificatesResponse> {
   const response = await api.get(`/certification/student/${studentId}`);
+  const result = unwrapData<unknown>(response);
+  const { rows } = normalizePaginatedResult<unknown>(result);
+  const list = rows.map((row) => {
+    const mapped = mapCertRow(row as CertificateRow);
+    return {
+      id: mapped.id,
+      studentId: mapped.studentId,
+      instructorId: mapped.instructorId,
+      franchiseId: mapped.franchiseId,
+      levelId: Number((row as CertificateRow).levelId ?? 0),
+      requestDate: mapped.requestDate,
+      status: mapped.status,
+      marksObtained: mapped.marksObtained,
+      totalMarks: mapped.totalMarks,
+      issueDate: mapped.issueDate,
+      certificatePdfPath: mapped.certificatePdfPath,
+      studentName: mapped.studentName,
+      studentRollNo: mapped.studentRollNo,
+      studentLevel: mapped.studentLevel,
+      certificateLevel: mapped.studentLevel,
+      levelDisplayOrder: Number(asRecord((row as CertificateRow).level).displayOrder ?? 0),
+      levelPassMark: mapped.levelPassMark,
+      levelTotalMarks: mapped.levelTotalMarks,
+      instructorName: mapped.instructorName,
+      instructorInstructorId: mapped.instructorInstructorId,
+    } as StudentCertificate;
+  });
+  return { result: list };
+}
+
+export async function updateStudentAdmin(
+  studentId: number,
+  studentData: Partial<StudentData>,
+): Promise<StudentData> {
+  const body = mapStudentDataToUpdateBody(studentData);
+  const response = await api.patch(`/admin/student/${studentId}`, body);
+  return mapStudentRow(unwrapData<Record<string, unknown>>(response));
+}
+
+export async function getAdminStudentLifecycleById(
+  studentId: number,
+): Promise<StudentLifecycleRow> {
+  const response = await api.get(`/admin/student/${studentId}/lifecycle`);
+  const raw = unwrapData<Record<string, unknown>>(response);
+  return mapLifecycleRow(raw);
+}
+
+export async function getAdminStudentCertificates(
+  studentId: number,
+): Promise<StudentCertificatesResponse> {
+  const response = await api.get(`/admin/certification/student/${studentId}`);
   const result = unwrapData<unknown>(response);
   const { rows } = normalizePaginatedResult<unknown>(result);
   const list = rows.map((row) => {
