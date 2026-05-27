@@ -130,6 +130,8 @@ export interface StoredIdentity {
   role: UserRole;
   name: string;
   franchiseStatus?: string;
+  franchiseId?: string;
+  franchiseName?: string;
 }
 
 /** Write-only: persist slim identity without any profile/PII fields. */
@@ -139,6 +141,8 @@ export function slimIdentity(user: User): StoredIdentity {
     role: user.role,
     name: user.name,
     franchiseStatus: user.franchiseStatus,
+    franchiseId: user.franchiseId,
+    franchiseName: user.franchiseName,
   };
 }
 
@@ -150,7 +154,14 @@ export function getStoredIdentity(): StoredIdentity | null {
   try {
     const parsed = JSON.parse(raw) as Partial<StoredIdentity>;
     if (!parsed.id || !parsed.role || !parsed.name) return null;
-    return { id: parsed.id, role: parsed.role, name: parsed.name, franchiseStatus: parsed.franchiseStatus };
+    return {
+      id: parsed.id,
+      role: parsed.role,
+      name: parsed.name,
+      franchiseStatus: parsed.franchiseStatus,
+      franchiseId: parsed.franchiseId,
+      franchiseName: parsed.franchiseName,
+    };
   } catch {
     return null;
   }
