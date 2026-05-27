@@ -37,6 +37,10 @@
   ],
   "exclude": [
     "node_modules",
-    "lib/**/*.test.ts"
+    "lib/**/*.test.ts",
+    "playwright.config.ts",
+    "vitest.config.ts",
+    "vitest.setup.ts",
+    "tests/**"
   ]
 }

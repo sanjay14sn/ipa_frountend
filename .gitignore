@@ -7,6 +7,8 @@
 /.next/
 /out/
 
+audit-report/
+
 # production
 /build
 
@@ -35,4 +37,7 @@ claude.md
 *.tsbuildinfo
 next-env.d.ts
 
-*lock*
+package-lock.json
+yarn.lock
+bun.lock
+pnpm-lock.yaml

@@ -1,10 +1,26 @@
 "use client";
 
+// PDF.js is loaded dynamically from a CDN script tag; declare its shape so
+// we can avoid `(window as any)` casts throughout this file.
+declare global {
+  interface Window {
+    pdfjsLib?: {
+      getDocument: (params: {
+        url: string;
+        withCredentials?: boolean;
+        isEvalSupported?: boolean;
+      }) => { promise: Promise<{ numPages: number; getPage: (n: number) => Promise<{ getViewport: (opts: { scale: number }) => { width: number; height: number }; render: (ctx: object) => { promise: Promise<void> } }> }> };
+      GlobalWorkerOptions: { workerSrc: string };
+    };
+    pdfjs?: Window["pdfjsLib"];
+  }
+}
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Edit2, FileText } from "lucide-react";
+import { Plus, Trash2, Edit2, FileText, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -28,10 +44,16 @@ import { LevelManagement } from "./LevelManagement";
 import { CITrainingLevelManagement } from "./CITrainingLevelManagement";
 import { ProgramKitManagement } from "./ProgramKitManagement";
 import { StreamManagement } from "./StreamManagement";
-import { CertificateTemplateEditor } from "./CertificateTemplateEditor";
+import dynamic from "next/dynamic";
+
+const CertificateTemplateEditor = dynamic(
+  () => import("./CertificateTemplateEditor").then((m) => ({ default: m.CertificateTemplateEditor })),
+  { ssr: false, loading: () => <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin" /></div> },
+);
 import { getApiBaseUrl } from "@/lib/api-utils";
 import type { Stream } from "@/services/stream.service";
 import type { StreamTransition } from "@/services/stream-transition.service";
+import { sendClientLog } from "@/lib/client-telemetry";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStreamsByProgram } from "@/hooks/api/stream.hooks";
 import { useStreamTransitionsByProgram } from "@/hooks/api/stream-transition.hooks";
@@ -565,7 +587,7 @@ export function ProgramManagement() {
 
       try {
         // Load PDF.js from CDN
-        let pdfjsLib = (window as any).pdfjsLib;
+        let pdfjsLib = window.pdfjsLib;
 
         if (!pdfjsLib) {
           // Load PDF.js script if not already loaded
@@ -574,7 +596,7 @@ export function ProgramManagement() {
             script.src =
               "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
             script.onload = () => {
-              pdfjsLib = (window as any).pdfjsLib || (window as any).pdfjs;
+              pdfjsLib = window.pdfjsLib ?? window.pdfjs;
               if (pdfjsLib) {
                 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
                 resolve();
@@ -587,6 +609,8 @@ export function ProgramManagement() {
             document.head.appendChild(script);
           });
         }
+
+        if (!pdfjsLib) throw new Error("PDF.js not available");
 
         // Load PDF with proper CORS settings
         const loadingTask = pdfjsLib.getDocument({
@@ -632,7 +656,7 @@ export function ProgramManagement() {
           scale: 2.0, // Rendering scale
         });
       } catch (error) {
-        console.error("Error loading PDF:", error);
+        sendClientLog({ level: "error", event: "pdf-load-error", message: "Error loading PDF preview", context: { error } });
         toast.error("Failed to load PDF preview");
       }
     };
