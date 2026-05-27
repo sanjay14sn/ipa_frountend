@@ -69,4 +69,4 @@ jobs:
       - name: Deploy to server
         run: |
           ssh -o ConnectTimeout=30 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "set -e; source ~/.nvm/nvm.sh; cd /home/ashwin/ipa/ipa-front && git pull origin main && npm ci && NEXT_PUBLIC_API_URL='${{ secrets.NEXT_PUBLIC_API_URL }}' NEXT_PUBLIC_RAZORPAY_KEY_ID='${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID }}' npm run build && pm2 reload ipa-front"
+            "set -e; source ~/.nvm/nvm.sh; cd /home/ashwin/ipa/ipa-front && git pull origin main && npm install && NEXT_PUBLIC_API_URL='${{ secrets.NEXT_PUBLIC_API_URL }}' NEXT_PUBLIC_RAZORPAY_KEY_ID='${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID }}' npm run build && pm2 reload ipa-front"
