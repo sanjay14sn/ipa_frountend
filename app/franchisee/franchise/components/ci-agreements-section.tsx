@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { format, parseISO } from "date-fns";
-import { Eye, Loader2, PenLine, Upload } from "lucide-react";
+import { Eye, Loader2, PenLine } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,12 @@ import {
 import { franchiseeProfileSignatureSrc } from "@/services/agreement.service";
 import { CIAgreementDetail } from "@/components/agreements/CIAgreementDetail";
 import { useUser } from "@/context/user-context";
+import type { ESignatureResult } from "@/components/esignature/ESignaturePad";
+
+const ESignaturePad = dynamic(
+  () => import("@/components/esignature/ESignaturePad").then((m) => ({ default: m.ESignaturePad })),
+  { ssr: false, loading: () => <Loader2 className="h-5 w-5 animate-spin" /> },
+);
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -65,9 +72,6 @@ function PhaseBadge({ phase }: { phase: CIAgreementData["phase"] }) {
 
 // ─── Sign dialog ──────────────────────────────────────────────────────────────
 
-const MAX_SIG_BYTES = 5 * 1024 * 1024;
-const ACCEPT = "image/png,image/jpeg,image/jpg,image/webp";
-
 function SignDialog({
   agreement,
   onSigned,
@@ -78,33 +82,12 @@ function SignDialog({
   onClose: () => void;
 }) {
   const { user } = useUser();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [showUpload, setShowUpload] = useState(false);
+  const [eSignatureOpen, setESignatureOpen] = useState(false);
 
   const profileSignatureSrc = franchiseeProfileSignatureSrc(
     user?.profile?.franchiseeSignature,
   );
-  // Show upload area when there's no on-file signature, or the user chose to upload a different one.
-  const uploadMode = !profileSignatureSrc || showUpload;
-
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (file.size > MAX_SIG_BYTES) {
-      toast.error("Signature image must be 5 MB or smaller.");
-      return;
-    }
-    if (!ACCEPT.split(",").some((t) => file.type === t.trim())) {
-      toast.error("Use a PNG, JPEG, or WebP image.");
-      return;
-    }
-    setSelectedFile(file);
-    setPreview(URL.createObjectURL(file));
-  };
 
   const handleSignWithExisting = async () => {
     if (!agreement) return;
@@ -120,15 +103,18 @@ function SignDialog({
     }
   };
 
-  const handleSignWithFile = async () => {
-    if (!selectedFile || !agreement) return;
+  const handleAdoptESignature = async (payload: ESignatureResult) => {
+    if (!agreement) return;
     setSubmitting(true);
     try {
-      await signCIAgreementAsFranchiseeFile(agreement.id, selectedFile);
+      const blob = new Blob([payload.svg], { type: "image/svg+xml" });
+      const file = new File([blob], "signature.svg", { type: "image/svg+xml" });
+      await signCIAgreementAsFranchiseeFile(agreement.id, file);
       toast.success("CI agreement signed successfully.");
+      setESignatureOpen(false);
       onSigned();
     } catch (err) {
-      toast.error(getErrorMessage(err, "Could not upload signature. Please try again."));
+      toast.error(getErrorMessage(err, "Could not sign agreement. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -136,137 +122,98 @@ function SignDialog({
 
   const handleOpenChange = (open: boolean) => {
     if (!open && !submitting) {
-      setPreview(null);
-      setSelectedFile(null);
-      setShowUpload(false);
       onClose();
     }
   };
 
   return (
-    <Dialog open={!!agreement} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Sign CI Agreement</DialogTitle>
-          <DialogDescription>
-            {agreement?.title ?? "Sign this course instructor agreement."}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={!!agreement} onOpenChange={handleOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sign CI Agreement</DialogTitle>
+            <DialogDescription>
+              {agreement?.title ?? "Sign this course instructor agreement."}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <input
-            ref={inputRef}
-            type="file"
-            accept={ACCEPT}
-            className="hidden"
-            onChange={onFileChange}
-          />
-
-          {!uploadMode ? (
-            // Existing on-file signature
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Your signature on file will be applied to this agreement.
-              </p>
-              <div className="overflow-hidden rounded-lg border border-border bg-muted/30 p-3 flex items-center justify-center">
-                <img
-                  src={profileSignatureSrc!}
-                  alt="Your signature on file"
-                  className="max-h-32 max-w-full object-contain"
-                />
+          <div className="space-y-4 py-2">
+            {profileSignatureSrc ? (
+              // Existing on-file signature
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Your signature on file will be applied to this agreement.
+                </p>
+                <div className="overflow-hidden rounded-lg border border-border bg-muted/30 p-3 flex items-center justify-center">
+                  <img
+                    src={profileSignatureSrc}
+                    alt="Your signature on file"
+                    className="max-h-32 max-w-full object-contain"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setESignatureOpen(true)}
+                  disabled={submitting}
+                >
+                  <PenLine className="mr-1.5 h-3.5 w-3.5" />
+                  Draw a different signature
+                </Button>
               </div>
-              <Button
+            ) : (
+              // No on-file signature — open e-signature pad
+              <button
                 type="button"
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => { setShowUpload(true); inputRef.current?.click(); }}
-                disabled={submitting}
+                onClick={() => setESignatureOpen(true)}
+                className="w-full rounded-lg border-2 border-dashed border-muted-foreground/25 p-8 text-center hover:border-muted-foreground/50 hover:bg-muted/20 transition-colors"
               >
-                <Upload className="mr-1.5 h-3.5 w-3.5" />
-                Upload a different signature
-              </Button>
-            </div>
-          ) : preview ? (
-            // New signature selected
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Selected signature:</p>
-              <div className="rounded-md border bg-muted/30 p-3 flex items-center justify-center">
-                <img
-                  src={preview}
-                  alt="Signature preview"
-                  className="max-h-32 max-w-full object-contain"
-                />
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => inputRef.current?.click()}
-                disabled={submitting}
-              >
-                <Upload className="mr-1.5 h-3.5 w-3.5" />
-                Change image
-              </Button>
-            </div>
-          ) : (
-            // No on-file signature — upload required
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              className="w-full rounded-lg border-2 border-dashed border-muted-foreground/25 p-8 text-center hover:border-muted-foreground/50 hover:bg-muted/20 transition-colors"
-            >
-              <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-sm font-medium">Click to upload signature</p>
-              <p className="text-xs text-muted-foreground mt-1">PNG, JPEG or WebP · max 5 MB</p>
-            </button>
-          )}
-        </div>
+                <PenLine className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm font-medium">Click to create signature</p>
+                <p className="text-xs text-muted-foreground mt-1">Draw or type your signature</p>
+              </button>
+            )}
+          </div>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={submitting}
-          >
-            Cancel
-          </Button>
-          {!uploadMode ? (
+          <DialogFooter>
             <Button
               type="button"
+              variant="outline"
+              onClick={onClose}
               disabled={submitting}
-              onClick={handleSignWithExisting}
             >
-              {submitting ? (
-                <>
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                  Signing…
-                </>
-              ) : (
-                "Sign agreement"
-              )}
+              Cancel
             </Button>
-          ) : (
-            <Button
-              type="button"
-              disabled={!selectedFile || submitting}
-              onClick={handleSignWithFile}
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                  Uploading…
-                </>
-              ) : (
-                "Sign agreement"
-              )}
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            {profileSignatureSrc && (
+              <Button
+                type="button"
+                disabled={submitting}
+                onClick={handleSignWithExisting}
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    Signing…
+                  </>
+                ) : (
+                  "Sign agreement"
+                )}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ESignaturePad
+        open={eSignatureOpen}
+        onOpenChange={setESignatureOpen}
+        defaultName={user?.profile?.name ?? user?.name ?? ""}
+        onAdopt={handleAdoptESignature}
+        submitting={submitting}
+      />
+    </>
   );
 }
 
