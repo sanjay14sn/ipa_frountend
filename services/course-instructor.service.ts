@@ -982,3 +982,22 @@ export async function setupExistingCourseInstructor(
   const response = await api.post("/admin/ci-setup/existing", payload);
   return unwrapData<SetupExistingCIResponse>(response);
 }
+
+// ---------------------------------------------------------------------------
+// Edit completion + paid state for an active CI's training packages
+// ---------------------------------------------------------------------------
+
+export interface EditCITrainingCompletionStatePayload {
+  completedThrough: number | null;
+  packagePaidFlags: { packageOrder: number; paid: boolean }[];
+}
+
+export async function editAdminCITrainingCompletionState(
+  instructorId: number,
+  payload: EditCITrainingCompletionStatePayload,
+): Promise<void> {
+  await api.patch(
+    `/admin/ci-training/instructors/${instructorId}/completion-state`,
+    payload,
+  );
+}

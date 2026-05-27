@@ -130,7 +130,7 @@ export function FranchiseCiListTable({ franchiseId }: FranchiseCiListTableProps)
     name?: string;
     programId?: number;
   } | null>(null);
-  const [progressModal, setProgressModal] = useState<{ id: number; name: string } | null>(null);
+  const [progressModal, setProgressModal] = useState<{ id: number; name: string; programId: number } | null>(null);
   const limit = 10;
 
   const listParams = useMemo(
@@ -186,7 +186,13 @@ export function FranchiseCiListTable({ franchiseId }: FranchiseCiListTableProps)
               className="h-8 w-8"
               title="View training progress"
               aria-label="View training progress"
-              onClick={() => setProgressModal({ id: c.id, name: c.name })}
+              onClick={() =>
+                setProgressModal({
+                  id: c.id,
+                  name: c.name,
+                  programId: c.programId,
+                })
+              }
             >
               <BarChart2 className="h-4 w-4" />
             </Button>
@@ -320,6 +326,7 @@ export function FranchiseCiListTable({ franchiseId }: FranchiseCiListTableProps)
           onClose={() => setProgressModal(null)}
           instructorId={progressModal.id}
           instructorName={progressModal.name}
+          programId={progressModal.programId}
         />
       )}
     </>

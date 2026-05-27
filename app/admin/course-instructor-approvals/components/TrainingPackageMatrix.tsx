@@ -159,6 +159,17 @@ interface TrainingPackageMatrixProps {
   /** Highest displayOrder marked completed; null = none. */
   completedThrough?: number | null;
   onCompletedThroughChange?: (next: number | null) => void;
+  /**
+   * When true, package structure (code, fee, level assignments, add/remove)
+   * is rendered as disabled. Used in edit-completion-state mode where only
+   * completion and paid flags can change.
+   */
+  lockPackageStructure?: boolean;
+  /**
+   * Package orders that are already paid in the database. Their "Already paid"
+   * toggle is forced checked + disabled.
+   */
+  lockedPaidPackageOrders?: Set<number>;
 }
 
 export function TrainingPackageMatrix({
@@ -169,6 +180,8 @@ export function TrainingPackageMatrix({
   showPaidToggle = false,
   completedThrough = null,
   onCompletedThroughChange,
+  lockPackageStructure = false,
+  lockedPaidPackageOrders,
 }: TrainingPackageMatrixProps) {
   const sortedLevels = useMemo(
     () =>
@@ -190,6 +203,9 @@ export function TrainingPackageMatrix({
       return level != null && level.displayOrder <= completedThrough;
     });
   };
+
+  const isPackageLockedPaid = (pkg: ApprovalPackageForm): boolean =>
+    lockedPaidPackageOrders?.has(pkg.packageOrder) === true;
 
   const setLevelCompleted = (level: TrainingLevel, checked: boolean) => {
     if (!onCompletedThroughChange) return;
@@ -258,21 +274,27 @@ export function TrainingPackageMatrix({
               <th className="px-3 py-2 text-left font-medium">Code</th>
               {packages.map((pkg, index) => {
                 const autoPaid = containsCompletedLevel(pkg);
+                const lockedPaid = isPackageLockedPaid(pkg);
+                const paidDisplayChecked =
+                  autoPaid || lockedPaid || pkg.paid === true;
+                const paidToggleDisabled = autoPaid || lockedPaid;
                 return (
                   <th key={`pkg-col-${index}`} className="px-2 py-2 align-top">
                     <div className="flex flex-col items-center gap-1.5">
                       <div className="flex items-center justify-center gap-1.5">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7 shrink-0"
-                          disabled={packages.length === 1}
-                          onClick={() => removePackage(index)}
-                          aria-label="Remove package"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
+                        {!lockPackageStructure && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7 shrink-0"
+                            disabled={packages.length === 1}
+                            onClick={() => removePackage(index)}
+                            aria-label="Remove package"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         <Input
                           value={pkg.code}
                           onChange={(e) =>
@@ -283,18 +305,21 @@ export function TrainingPackageMatrix({
                           }
                           placeholder={`P${index + 1}`}
                           className="h-7 min-w-[96px] text-xs text-center"
+                          disabled={lockPackageStructure}
                         />
                       </div>
                       {showPaidToggle && (
                         <label className="flex items-center justify-center gap-1 text-xs">
                           <Checkbox
-                            checked={autoPaid || pkg.paid === true}
-                            disabled={autoPaid}
+                            checked={paidDisplayChecked}
+                            disabled={paidToggleDisabled}
                             onCheckedChange={(checked) =>
                               updatePackage(index, { paid: checked === true })
                             }
                           />
-                          <span>{autoPaid ? "Paid" : "Already paid"}</span>
+                          <span>
+                            {autoPaid || lockedPaid ? "Paid" : "Already paid"}
+                          </span>
                         </label>
                       )}
                     </div>
@@ -340,6 +365,7 @@ export function TrainingPackageMatrix({
                         checked={pkg.trainingLevelIds.includes(level.id)}
                         onChange={() => toggleLevelInMatrix(packageIndex, level.id)}
                         className="h-4 w-4"
+                        disabled={lockPackageStructure}
                       />
                     </td>
                   ))}
@@ -362,6 +388,7 @@ export function TrainingPackageMatrix({
                     placeholder="0"
                     className="h-8 text-center"
                     required
+                    disabled={lockPackageStructure}
                   />
                 </td>
               ))}
@@ -370,10 +397,12 @@ export function TrainingPackageMatrix({
         </table>
       </div>
 
-      <Button type="button" variant="outline" className="w-full" onClick={addPackage}>
-        <Plus className="mr-2 h-4 w-4" />
-        Add package
-      </Button>
+      {!lockPackageStructure && (
+        <Button type="button" variant="outline" className="w-full" onClick={addPackage}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add package
+        </Button>
+      )}
     </div>
   );
 }

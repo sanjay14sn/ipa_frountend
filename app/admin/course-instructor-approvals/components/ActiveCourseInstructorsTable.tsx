@@ -25,7 +25,7 @@ export default function ActiveCourseInstructorsTable() {
     name?: string;
     programId?: number;
   } | null>(null);
-  const [progressModal, setProgressModal] = useState<{ id: number; name: string } | null>(null);
+  const [progressModal, setProgressModal] = useState<{ id: number; name: string; programId: number } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("createdAt");
@@ -91,7 +91,13 @@ export default function ActiveCourseInstructorsTable() {
             className="h-8 w-8"
             title="View training progress"
             aria-label="View training progress"
-            onClick={() => setProgressModal({ id: instructor.id, name: instructor.name })}
+            onClick={() =>
+              setProgressModal({
+                id: instructor.id,
+                name: instructor.name,
+                programId: instructor.programId,
+              })
+            }
           >
             <BarChart2 className="h-4 w-4" />
           </Button>
@@ -180,6 +186,7 @@ export default function ActiveCourseInstructorsTable() {
           onClose={() => setProgressModal(null)}
           instructorId={progressModal.id}
           instructorName={progressModal.name}
+          programId={progressModal.programId}
         />
       )}
     </>
