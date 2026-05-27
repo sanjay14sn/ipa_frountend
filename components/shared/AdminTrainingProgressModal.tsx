@@ -151,13 +151,24 @@ export function AdminTrainingProgressModal({
     setSaving(true);
     setEditError(null);
     try {
+      const levelOrderById = new Map(levels.map((l) => [l.id, l.displayOrder]));
       await editAdminCITrainingCompletionState(instructorId, {
         completedThrough,
-        packagePaidFlags: editPackages.map((p) => ({
-          packageOrder: p.packageOrder,
-          paid:
-            lockedPaidPackageOrders.has(p.packageOrder) || p.paid === true,
-        })),
+        packagePaidFlags: editPackages.map((p) => {
+          const containsCompleted =
+            completedThrough != null &&
+            p.trainingLevelIds.some((id) => {
+              const order = levelOrderById.get(id);
+              return order != null && order <= completedThrough;
+            });
+          return {
+            packageOrder: p.packageOrder,
+            paid:
+              lockedPaidPackageOrders.has(p.packageOrder) ||
+              containsCompleted ||
+              p.paid === true,
+          };
+        }),
       });
       toast.success("Training progress updated");
       setMode("view");
@@ -189,7 +200,7 @@ export function AdminTrainingProgressModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-3xl max-h-[85vh] overflow-y-auto overflow-x-hidden">
+      <DialogContent className="w-full max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-start justify-between gap-3">
             <div>
