@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +17,7 @@ export default function CILoginPage() {
   const { refresh } = useCIAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,10 +35,16 @@ export default function CILoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Course Instructor Portal</CardTitle>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 gap-6">
+      <div className="text-center">
+        <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+          Abacus Academy
+        </span>
+      </div>
+
+      <Card className="w-full max-w-sm rounded-2xl border-border bg-card shadow-sm">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-xl text-card-foreground">Course Instructor Portal</CardTitle>
           <CardDescription>Sign in with your CI credentials</CardDescription>
         </CardHeader>
         <CardContent>
@@ -53,19 +62,44 @@ export default function CILoginPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1 h-7 w-7 text-muted-foreground"
+                  onClick={() => setShowPassword((s) => !s)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  <span className="sr-only">Toggle password visibility</span>
+                </Button>
+              </div>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
+
+            <Button type="submit" className="w-full rounded-lg" disabled={loading}>
+              {loading ? "Signing in…" : "Sign in"}
             </Button>
           </form>
+
+          <div className="mt-5 border-t border-border pt-4 text-center text-xs text-muted-foreground">
+            <p className="mb-2 font-medium">Other portals</p>
+            <div className="flex justify-center gap-4">
+              <Link href="/login" className="text-primary hover:underline underline-offset-2">
+                Franchisee
+              </Link>
+              <Link href="/admin-login" className="text-primary hover:underline underline-offset-2">
+                Admin
+              </Link>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -170,13 +170,13 @@ export function LoginCard({
   }
 
   return (
-    <Card className="order-2 w-[500px] rounded-2xl border-border bg-card shadow-sm md:order-1">
-      <CardHeader className="space-y-2">
-        <CardTitle className="text-2xl text-primary">Sign in</CardTitle>
-        <CardDescription>Access your franchisee dashboard</CardDescription>
+    <Card className="w-full max-w-sm rounded-2xl border-border bg-card shadow-sm">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-xl text-card-foreground">Franchisee Portal</CardTitle>
+        <CardDescription>Sign in to access your franchise dashboard</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-5">
+        <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="username">Email</Label>
             <Input
@@ -191,9 +191,7 @@ export function LoginCard({
             />
           </div>
           <div className="space-y-2">
-            <div className="flex items-center">
-              <Label htmlFor="password">Password</Label>
-            </div>
+            <Label htmlFor="password">Password</Label>
             <div className="relative">
               <Input
                 id="password"
@@ -211,40 +209,41 @@ export function LoginCard({
                 className="absolute right-1 top-1 h-7 w-7 text-muted-foreground"
                 onClick={() => setShow((s) => !s)}
               >
-                {show ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
+                {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 <span className="sr-only">Toggle password visibility</span>
               </Button>
             </div>
           </div>
 
           {error && (
-            <div className="text-red-500 text-sm text-center">{error}</div>
+            <p className="text-sm text-destructive text-center">{error}</p>
           )}
 
           <Button type="submit" className="w-full rounded-lg" disabled={loading}>
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? "Signing in…" : "Sign in"}
           </Button>
         </form>
 
-        <div className="space-y-2">
-          <div className="text-xs text-muted-foreground text-center mt-2">
-            Admin users should use the{" "}
-            <a href="/admin-login" className="text-primary underline">
-              Admin Portal
-            </a>
-            <br></br>
-            New user?{" "}
-            <button
-              type="button"
-              onClick={onStartApplication}
-              className="text-primary underline"
-            >
-              Apply Now
-            </button>
+        <div className="mt-4 text-center text-xs text-muted-foreground">
+          New franchisee?{" "}
+          <button
+            type="button"
+            onClick={onStartApplication}
+            className="text-primary underline underline-offset-2"
+          >
+            Apply Now
+          </button>
+        </div>
+
+        <div className="mt-5 border-t border-border pt-4 text-center text-xs text-muted-foreground">
+          <p className="mb-2 font-medium">Other portals</p>
+          <div className="flex justify-center gap-4">
+            <Link href="/admin-login" className="text-primary hover:underline underline-offset-2">
+              Admin
+            </Link>
+            <Link href="/ci/login" className="text-primary hover:underline underline-offset-2">
+              Course Instructor
+            </Link>
           </div>
         </div>
       </CardContent>

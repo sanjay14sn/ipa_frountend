@@ -4,6 +4,7 @@ import type React from "react";
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { CIAuthProvider, useCIAuth } from "@/context/ci-auth-context";
+import { logoutCI } from "@/services/ci-auth.service";
 import { DynamicSidebar } from "@/components/dynamic-sidebar";
 import {
   SidebarProvider,
@@ -61,9 +62,30 @@ function CIShell({ children }: { children: React.ReactNode }) {
     return <div className="min-h-screen bg-background">{children}</div>;
   }
 
-  // Agreement page gets a bare shell until both parties have signed.
+  // Agreement page gets a minimal shell (header + logout) until both parties have signed.
   if (pathname === "/ci/agreement" && agreementPhase !== "SIGNED") {
-    return <div className="min-h-screen bg-background">{children}</div>;
+    const handleLogout = async () => {
+      await logoutCI().catch(() => {});
+      clear();
+      router.replace("/ci/login");
+    };
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="flex h-14 items-center justify-between border-b border-border bg-card px-4 sm:px-6">
+          <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+            Abacus Academy — CI Portal
+          </span>
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Sign out
+          </button>
+        </header>
+        {children}
+      </div>
+    );
   }
 
   const ciHomeHref =

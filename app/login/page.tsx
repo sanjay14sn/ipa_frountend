@@ -1,32 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { PageShell, BrandBar } from "@/components/brand";
-import { AbacusHero } from "@/components/abacus-ui";
-import { FranchiseApplicationModal } from "@/components/franchise-application-modal";
 import { LoginCard } from "./components/LoginCard";
-import { FranchiseCTA } from "./components/FranchiseCTA";
+import { FranchiseApplicationModal } from "@/components/franchise-application-modal";
 
 export default function Page() {
   const [franchiseModalOpen, setFranchiseModalOpen] = useState(false);
 
   return (
-    <PageShell brand={false} className="bg-brand-white-500">
-      <BrandBar className="absolute w-full text-center" label="Abacus Academy — Franchise Portal" />
-      {/* <main className="flex w-full max-w-6xl px-4 py-10"> */}
-      {/* <AbacusHero ctaPrimary={<></>} ctaSecondary={<></>} /> */}
-
-      <div className="flex justify-center w-full h-screen items-center border">
-        {/* <div> */}
-          <LoginCard onStartApplication={() => setFranchiseModalOpen(true)} />
-        {/* </div> */}
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 gap-6">
+      <div className="text-center">
+        <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+          Abacus Academy
+        </span>
       </div>
+
+      <LoginCard onStartApplication={() => setFranchiseModalOpen(true)} />
 
       <FranchiseApplicationModal
         open={franchiseModalOpen}
         onOpenChange={setFranchiseModalOpen}
       />
-      {/* </main> */}
-    </PageShell>
+    </div>
   );
 }

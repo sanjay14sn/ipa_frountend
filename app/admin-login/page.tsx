@@ -42,38 +42,41 @@ export default function AdminLoginPage() {
         return;
       }
 
-      const loggedInUser = {
+      setUser({
         id: String(me.id),
         email: me.emailId?.trim() || email.trim(),
         name: me.name || email.trim(),
         role: "admin" as const,
         adminRole: me.role,
         state: me.state ?? null,
-      };
-
-      setUser(loggedInUser);
+      });
       router.push("/admin/dashboard");
     } catch (err: unknown) {
       sendClientLog({ level: "error", event: "admin-login-error", message: "Admin login error", context: { error: err } });
-      const errorMessage = getUserFriendlyMessage(
+      setError(getUserFriendlyMessage(
         err,
         "Invalid username or password. Please check your credentials and try again.",
-      );
-      setError(errorMessage);
+      ));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface p-6">
-      <Card className="w-full max-w-md rounded-2xl border-border bg-card shadow-sm">
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-2xl text-primary">Admin Sign in</CardTitle>
-          <CardDescription>Access the administrative dashboard</CardDescription>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 gap-6">
+      <div className="text-center">
+        <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+          Abacus Academy
+        </span>
+      </div>
+
+      <Card className="w-full max-w-sm rounded-2xl border-border bg-card shadow-sm">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-xl text-card-foreground">Admin Portal</CardTitle>
+          <CardDescription>Sign in to access the administrative dashboard</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
               <Input
@@ -106,31 +109,29 @@ export default function AdminLoginPage() {
                   className="absolute right-1 top-1 h-7 w-7 text-muted-foreground"
                   onClick={() => setShowPassword((s) => !s)}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   <span className="sr-only">Toggle password visibility</span>
                 </Button>
               </div>
             </div>
 
             {error && (
-              <div className="text-red-500 text-sm text-center">
-                {error}
-              </div>
+              <p className="text-sm text-destructive text-center">{error}</p>
             )}
 
             <Button type="submit" className="w-full rounded-lg" disabled={loading}>
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? "Signing in…" : "Sign in"}
             </Button>
           </form>
 
-          <div className="mt-6 rounded-xl border border-border bg-card p-4">
-            <div className="text-center text-xs text-muted-foreground">
-              <Link href="/" className="text-primary underline">
-                ← Back to Franchisee Portal
+          <div className="mt-5 border-t border-border pt-4 text-center text-xs text-muted-foreground">
+            <p className="mb-2 font-medium">Other portals</p>
+            <div className="flex justify-center gap-4">
+              <Link href="/login" className="text-primary hover:underline underline-offset-2">
+                Franchisee
+              </Link>
+              <Link href="/ci/login" className="text-primary hover:underline underline-offset-2">
+                Course Instructor
               </Link>
             </div>
           </div>
