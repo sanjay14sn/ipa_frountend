@@ -19,12 +19,18 @@ import {
 import { getAllStreams } from "@/services/stream.service";
 import { getAllAdminCourseInstructors } from "@/services/course-instructor.service";
 import { getAgreementsAdmin } from "@/services/agreement.service";
+import { STANDARDS } from "@/lib/constants/education";
+import { normalizeStudentBulkImportRow } from "@/lib/student-bulk-import-normalization";
 
 const SEX_OPTIONS: PreviewSelectOption[] = [
-  { value: "M", label: "Male" },
-  { value: "F", label: "Female" },
-  { value: "Other", label: "Other" },
+  { value: "Male", label: "Male" },
+  { value: "Female", label: "Female" },
 ];
+
+const STANDARD_OPTIONS: PreviewSelectOption[] = STANDARDS.map((standard) => ({
+  value: standard,
+  label: standard,
+}));
 
 export default function StudentBulkImportPage() {
   // Admin-scoped queries. Visible in TanStack devtools / network panel.
@@ -250,21 +256,34 @@ export default function StudentBulkImportPage() {
       row: Record<string, unknown>,
       changedField: string,
     ): Promise<Record<string, unknown> | null> => {
+      const normalized = normalizeStudentBulkImportRow(row);
+      const mergeNormalized = (
+        patch: Record<string, unknown> | null,
+      ): Record<string, unknown> | null => {
+        if (!normalized) return patch;
+        if (!patch) return normalized;
+        return { ...normalized, ...patch };
+      };
+
       if (changedField === "program") {
-        return { stream: null, level: null, previousLevel: null };
+        return mergeNormalized({
+          stream: null,
+          level: null,
+          previousLevel: null,
+        });
       }
       if (changedField === "stream") {
-        return { level: null, previousLevel: null };
+        return mergeNormalized({ level: null, previousLevel: null });
       }
       // Both initial preview load (sentinel "__initial") and real level
       // edits run through the same default-fill logic; the ONE difference
       // is cache seeding (see below).
       if (changedField !== "level" && changedField !== "__initial") {
-        return null;
+        return normalized;
       }
 
       const level = row.level as { id?: number; streamId?: number } | null;
-      if (!level?.id) return { previousLevel: null };
+      if (!level?.id) return mergeNormalized({ previousLevel: null });
 
       // Cache seeding — only on initial preview load. On real edits the
       // `row.previousLevelOptions` is STALE (computed by the server for the
@@ -292,7 +311,7 @@ export default function StudentBulkImportPage() {
 
       const candidates = eligibilityCacheRef.current.get(level.id);
       if (!candidates || candidates.length === 0) {
-        return { previousLevel: null };
+        return mergeNormalized({ previousLevel: null });
       }
 
       const sameStream = candidates.find((c) => !c.viaTransition);
@@ -308,7 +327,7 @@ export default function StudentBulkImportPage() {
           streamId: pick.streamId,
         },
       };
-      return patch;
+      return mergeNormalized(patch);
     };
   }, [fetchEligibilityFor]);
 
@@ -366,7 +385,7 @@ export default function StudentBulkImportPage() {
         key: "sex",
         label: "Sex",
         options: SEX_OPTIONS,
-        placeholder: "M / F / Other",
+        placeholder: "Male / Female",
       },
       {
         section: "Student info",
@@ -382,7 +401,13 @@ export default function StudentBulkImportPage() {
         type: "date",
         placeholder: "DD / MM / YYYY",
       },
-      { section: "Student info", key: "standard", label: "Standard" },
+      {
+        section: "Student info",
+        key: "standard",
+        label: "Standard",
+        options: STANDARD_OPTIONS,
+        placeholder: "Select standard",
+      },
       // ── Parents ──────────────────────────────────────────────────────────
       { section: "Father's info", key: "fatherName", label: "Father's name" },
       {
