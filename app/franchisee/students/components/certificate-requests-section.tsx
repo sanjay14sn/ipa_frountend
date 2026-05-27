@@ -7,14 +7,13 @@ import {
   TablePageShell,
 } from "@/components/shared";
 import { useEligibleStudents, useFranchiseeCertificates } from "@/hooks/api/student.hooks";
-import { useCourseInstructors } from "@/hooks/api/course-instructor.hooks";
 import { EligibleStudent } from "@/services/student.service";
 import RequestCertificateModal from "@/app/franchisee/certificate-requests/components/RequestCertificateModal";
 import BulkRequestCertificateModal, {
   GroupForModal,
 } from "@/app/franchisee/certificate-requests/components/BulkRequestCertificateModal";
-import EligibleStudentsTable from "@/app/franchisee/certificate-requests/components/EligibleStudentsTable";
-import FranchiseeCertificatesTable from "@/app/franchisee/certificate-requests/components/FranchiseeCertificatesTable";
+import EligibleStudentsGroupedView from "@/app/franchisee/certificate-requests/components/EligibleStudentsGroupedView";
+import FranchiseeCertificatesGroupedView from "@/app/franchisee/certificate-requests/components/FranchiseeCertificatesGroupedView";
 
 export function FranchiseeCertificateRequestsSection() {
   const [selectedStudent, setSelectedStudent] =
@@ -30,8 +29,6 @@ export function FranchiseeCertificateRequestsSection() {
     isLoading: isLoadingCertificates,
     revalidate,
   } = useFranchiseeCertificates();
-  const { courseInstructors } = useCourseInstructors();
-
   const handleRequestCertificate = (student: EligibleStudent) => {
     setSelectedStudent(student);
     setIsRequestModalOpen(true);
@@ -44,24 +41,8 @@ export function FranchiseeCertificateRequestsSection() {
     revalidate();
   };
 
-  /** Convert a flat list of selected students into grouped GroupForModal[]. */
-  const handleBulkRequest = (students: EligibleStudent[]) => {
-    const map = new Map<string, GroupForModal>();
-    for (const s of students) {
-      const key = `${s.stream}__${s.levelName}__${s.levelId}__${s.programId}`;
-      if (!map.has(key)) {
-        map.set(key, {
-          key,
-          stream: s.stream,
-          levelName: s.levelName,
-          levelId: s.levelId,
-          programId: s.programId,
-          students: [],
-        });
-      }
-      map.get(key)!.students.push(s);
-    }
-    setGroupsForBulk([...map.values()]);
+  const handleBulkRequest = (groups: GroupForModal[]) => {
+    setGroupsForBulk(groups);
     setIsBulkRequestModalOpen(true);
   };
 
@@ -80,11 +61,10 @@ export function FranchiseeCertificateRequestsSection() {
           {isLoadingEligible ? (
             <TableLoadingState message="Loading eligible students..." />
           ) : (
-            <EligibleStudentsTable
+            <EligibleStudentsGroupedView
               students={eligibleStudents}
               onRequestCertificate={handleRequestCertificate}
               onBulkRequest={handleBulkRequest}
-              courseInstructors={courseInstructors}
             />
           )}
 
@@ -93,7 +73,6 @@ export function FranchiseeCertificateRequestsSection() {
               open={isRequestModalOpen}
               onOpenChange={setIsRequestModalOpen}
               student={selectedStudent}
-              courseInstructors={courseInstructors}
               onSuccess={handleSuccess}
             />
           ) : null}
@@ -112,7 +91,7 @@ export function FranchiseeCertificateRequestsSection() {
           {isLoadingCertificates ? (
             <TableLoadingState message="Loading certificate history..." />
           ) : (
-            <FranchiseeCertificatesTable
+            <FranchiseeCertificatesGroupedView
               certificates={certificates}
               onRefresh={revalidate}
             />

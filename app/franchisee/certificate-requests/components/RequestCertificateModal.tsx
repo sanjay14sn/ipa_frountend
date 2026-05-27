@@ -27,7 +27,7 @@ interface RequestCertificateModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   student: EligibleStudent;
-  courseInstructors: CourseInstructorData[];
+  courseInstructors?: CourseInstructorData[];
   onSuccess: () => void;
 }
 
