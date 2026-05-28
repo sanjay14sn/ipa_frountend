@@ -35,7 +35,7 @@ export function AvatarMonogram({
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-lg font-bold leading-none",
+        "flex shrink-0 items-center justify-center rounded-lg font-semibold leading-none",
         SIZE_CLASS[size],
         TONE_CLASS[tone],
         className,

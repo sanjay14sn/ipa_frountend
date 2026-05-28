@@ -58,7 +58,7 @@ export function MoneySplitCard({
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
             {totalLabel}
           </p>
-          <p className="text-xl font-bold tabular-nums text-card-foreground">
+          <p className="text-xl font-semibold tabular-nums text-card-foreground">
             {money(totalAmount)}
           </p>
         </div>

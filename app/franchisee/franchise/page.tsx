@@ -20,7 +20,7 @@ function FranchiseeFranchiseHubInner() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Franchise</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Franchise</h1>
         <p className="text-muted-foreground">
           Manage program requests, signed agreements, and CI agreements for your centre.
         </p>

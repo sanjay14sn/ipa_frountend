@@ -81,7 +81,7 @@ export default function TrainingPreviewModal({
             <div className="flex justify-center mb-4">
               <CheckCircle className="h-12 w-12 text-primary" />
             </div>
-            <DialogTitle className="text-2xl font-bold text-gray-900">
+            <DialogTitle className="text-2xl font-semibold text-gray-900">
               Training Completed!
             </DialogTitle>
             <DialogDescription className="text-center">
@@ -103,7 +103,7 @@ export default function TrainingPreviewModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl w-full mx-4">
         <DialogHeader className="text-center">
-          <DialogTitle className="text-xl font-bold text-gray-900">
+          <DialogTitle className="text-xl font-semibold text-gray-900">
             Training Status Update
           </DialogTitle>
           <DialogDescription>
@@ -117,7 +117,7 @@ export default function TrainingPreviewModal({
             <div className="h-full flex flex-col">
               {/* Header */}
               <div className="text-center border-b border-white/20 pb-3 mb-4">
-                <h3 className="font-bold text-lg">ABACUS ACADEMY</h3>
+                <h3 className="font-semibold text-lg">ABACUS ACADEMY</h3>
                 <p className="text-xs opacity-90">COURSE INSTRUCTOR TRAINING</p>
               </div>
 

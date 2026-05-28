@@ -72,12 +72,13 @@ export default function CourseInstructorDetails({
               <DetailField
                 label="Instructor ID"
                 value={instructor.instructorId || "—"}
+                mono
               />
               <DetailField
                 label="Franchise"
                 value={instructor.franchise?.name || "—"}
               />
-              <DetailField label="Record ID" value={String(instructor.id)} />
+              <DetailField label="Record ID" value={String(instructor.id)} mono />
               <DetailField label="Applied" value={fmtDate(instructor.createdAt)} />
               <DetailField
                 label="Last updated"

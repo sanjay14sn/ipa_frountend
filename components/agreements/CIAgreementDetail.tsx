@@ -187,7 +187,7 @@ export function CIAgreementDetail({
               {/* Franchisee with avatar */}
               <div className="border-t border-border pt-3 space-y-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground text-sm font-bold">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground text-sm font-semibold">
                     {franchiseeInitials}
                   </div>
                   <div className="min-w-0">
@@ -225,7 +225,7 @@ export function CIAgreementDetail({
           <CardContent className="p-4 space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-semibold">
                   {instructorInitials}
                 </div>
                 <div>
@@ -524,7 +524,7 @@ function LevelEarningCard({
           <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
             Total
           </p>
-          <p className="text-xl font-bold tabular-nums">{formatRupees(total)}</p>
+          <p className="text-xl font-semibold tabular-nums">{formatRupees(total)}</p>
         </div>
       </div>
       <p className="text-xs text-muted-foreground">

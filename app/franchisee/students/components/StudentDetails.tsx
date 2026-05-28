@@ -30,7 +30,7 @@ export default function StudentDetails({ student }: StudentDetailsProps) {
     <ExpandedDetailSurface>
       <ExpandedDetailSection title="Student details">
         <DetailFieldsGrid columns={3}>
-          <DetailField label="Roll number" value={student.rollNo || "—"} />
+          <DetailField label="Roll number" value={student.rollNo || "—"} mono />
           <DetailField label="Joined" value={joinedDate} />
           <DetailField label="Status" value={status} />
           <DetailField label="Age" value={calculateAge(student.dateOfBirth)} />

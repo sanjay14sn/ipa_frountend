@@ -67,8 +67,8 @@ export default function StudentDetailCard({
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500">Roll Number</span>
-                  <p className="text-gray-900 mt-1">{student.rollNo}</p>
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Roll Number</span>
+                  <p className="mt-1 rounded bg-muted px-1.5 py-1 font-mono text-xs">{student.rollNo}</p>
                 </div>
 
                 {student.dateOfBirth && (

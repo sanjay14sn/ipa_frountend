@@ -14,36 +14,9 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: [
-          "var(--font-fira-sans)",
-          "Inter",
-          "ui-sans-serif",
-          "system-ui",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "Segoe UI",
-          "Roboto",
-          "Helvetica Neue",
-          "Arial",
-          "Noto Sans",
-          "sans-serif",
-          "Apple Color Emoji",
-          "Segoe UI Emoji",
-          "Segoe UI Symbol",
-          "Noto Color Emoji",
-        ],
-        mono: [
-          "JetBrains Mono",
-          "Fira Code",
-          "ui-monospace",
-          "SFMono-Regular",
-          "Monaco",
-          "Consolas",
-          "Liberation Mono",
-          "Menlo",
-          "Courier New",
-          "monospace",
-        ],
+        // Font stacks are defined once in app/fonts.css — see that file to swap fonts.
+        sans: ["var(--font-sans)"],
+        mono: ["var(--font-mono)"],
         signature: ["cursive"],
       },
       colors: {

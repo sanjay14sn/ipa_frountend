@@ -98,7 +98,7 @@ function SummaryCell({ item }: { item: SummaryItem }) {
         <div className="text-sm text-muted-foreground">{item.label}</div>
         <span className="h-2 w-2 rounded-full bg-primary" />
       </div>
-      <div className="text-4xl font-light leading-none text-card-foreground">
+      <div className="text-4xl font-normal leading-none text-card-foreground">
         {item.value}
       </div>
       <div className="max-w-44 text-xs leading-snug text-muted-foreground">

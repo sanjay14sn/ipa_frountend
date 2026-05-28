@@ -78,7 +78,7 @@ export default function InvoiceGroupCard({
     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       <div className="flex items-start gap-2 border-b border-border bg-muted/30 px-4 py-3">
         <span
-          className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${kindStyles(kind)}`}
+          className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${kindStyles(kind)}`}
         >
           {kind}
         </span>

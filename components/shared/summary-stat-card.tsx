@@ -19,7 +19,7 @@ export function SummaryStatCard({
         <div className="text-sm text-muted-foreground">{label}</div>
         <span className="h-2 w-2 rounded-full bg-primary" />
       </div>
-      <div className="text-3xl font-light leading-none text-card-foreground">
+      <div className="text-3xl font-normal leading-none text-card-foreground">
         {value}
       </div>
       {description ? (

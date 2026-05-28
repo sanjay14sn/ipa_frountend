@@ -23,7 +23,7 @@ export default function TrainingCourseInstructorDetails({
     <ExpandedDetailSurface>
       <ExpandedDetailSection title="Training">
         <DetailFieldsGrid columns={3}>
-          <DetailField label="Instructor ID" value={ci.instructorId || "—"} />
+          <DetailField label="Instructor ID" value={ci.instructorId || "—"} mono />
           <DetailField
             label="Training level"
             value={ci.trainingLevelName || "—"}

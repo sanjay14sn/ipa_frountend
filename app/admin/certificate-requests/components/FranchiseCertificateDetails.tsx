@@ -348,7 +348,7 @@ export default function FranchiseCertificateDetails({
       >
         <DialogContent className="mx-4 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0 border-b border-gray-200 pb-4">
-            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
+            <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900">
               <FileText className="h-5 w-5 text-primary" />
               View Certificate
             </DialogTitle>

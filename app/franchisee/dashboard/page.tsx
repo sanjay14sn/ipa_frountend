@@ -73,7 +73,7 @@ function StatCard({ label, value, sub, icon: Icon, trend, href }: StatCardProps)
         ) : null}
       </div>
       <div>
-        <p className="text-4xl font-light leading-none text-card-foreground">
+        <p className="text-4xl font-normal leading-none text-card-foreground">
           {value}
         </p>
         {sub ? (

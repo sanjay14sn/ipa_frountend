@@ -84,6 +84,7 @@ interface DetailFieldProps {
   value: ReactNode;
   className?: string;
   span?: 1 | 2 | 3 | 4;
+  mono?: boolean;
 }
 
 const fieldSpanClasses: Record<NonNullable<DetailFieldProps["span"]>, string> = {
@@ -98,11 +99,26 @@ export function DetailField({
   value,
   className,
   span = 1,
+  mono,
 }: DetailFieldProps) {
   return (
     <div className={cn("min-w-0", fieldSpanClasses[span], className)}>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 break-words font-medium text-foreground">
+      <dt
+        className={cn(
+          "text-muted-foreground",
+          mono
+            ? "text-[10px] font-semibold uppercase tracking-widest"
+            : "text-xs",
+        )}
+      >
+        {label}
+      </dt>
+      <dd
+        className={cn(
+          "mt-0.5 break-words font-medium text-foreground",
+          mono && "rounded bg-muted px-1.5 py-1 font-mono text-xs font-normal",
+        )}
+      >
         {value ?? "—"}
       </dd>
     </div>

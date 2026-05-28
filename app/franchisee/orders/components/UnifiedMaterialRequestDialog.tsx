@@ -322,7 +322,7 @@ export default function UnifiedMaterialRequestDialog({
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
               {/* Kits */}
               <section>
-                <h4 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Kits
                 </h4>
                 {streamsQuery.isLoading ? (
@@ -398,7 +398,7 @@ export default function UnifiedMaterialRequestDialog({
                           </div>
 
                           {/* Column labels */}
-                          <div className="mt-3 grid grid-cols-[8rem_1fr_auto] gap-3 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                          <div className="mt-3 grid grid-cols-[8rem_1fr_auto] gap-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                             <span>Qty</span>
                             <span>T-shirt size</span>
                             <span aria-hidden />
@@ -785,7 +785,7 @@ export default function UnifiedMaterialRequestDialog({
         sticky
         leftSlot={
           <div className="flex flex-col">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Estimated total
             </span>
             <span className="text-lg font-semibold tabular-nums text-card-foreground">

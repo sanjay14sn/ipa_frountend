@@ -226,7 +226,7 @@ export function MultiLevelTrainingPaymentModal({
             <span className="text-sm text-gray-600">
               {unpaidTrainings.length} level{unpaidTrainings.length !== 1 ? "s" : ""}
             </span>
-            <span className="text-2xl font-bold">
+            <span className="text-2xl font-semibold">
               ₹{totalAmount.toLocaleString()}
             </span>
           </div>

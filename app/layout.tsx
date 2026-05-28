@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Caveat } from "next/font/google";
+// Primary + monospace fonts live in ./fonts.css (single source of truth).
+// Imported before globals.css so its CSS variables are defined first.
+import "./fonts.css";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { UserProvider } from "@/context/user-context";
@@ -33,16 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={caveat.variable}
-      style={
-        {
-          "--font-fira-sans":
-            "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
-        } as React.CSSProperties
-      }
-    >
+    <html lang="en" className={caveat.variable}>
       <body>
         <PointerEventsGuard />
         <WebVitalsReporter />

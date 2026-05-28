@@ -492,7 +492,7 @@ export default function AdminOrdersTable({
                 value={`${certCount} cert · ${idCount} ID`}
               />
               {order.referenceId ? (
-                <DetailField label="Payment ref" value={order.referenceId} span={2} />
+                <DetailField label="Payment ref" value={order.referenceId} span={2} mono />
               ) : null}
             </DetailFieldsGrid>
           </ExpandedDetailSection>

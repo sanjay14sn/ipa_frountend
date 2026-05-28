@@ -265,7 +265,7 @@ export function FranchiseCiListTable({ franchiseId }: FranchiseCiListTableProps)
             <ExpandedDetailSurface>
               <ExpandedDetailSection title="Course Instructor Information">
                 <DetailFieldsGrid columns={3}>
-                  <DetailField label="Instructor ID" value={c.instructorId || "N/A"} />
+                  <DetailField label="Instructor ID" value={c.instructorId || "N/A"} mono />
                   <DetailField label="Email"         value={c.mail || "N/A"} />
                   <DetailField label="Phone"         value={c.phone || "N/A"} />
                   <DetailField label="Date of birth" value={fmtDate(c.dob)} />

@@ -79,8 +79,8 @@ export default function InstructorDetailCard({
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500">Instructor ID</span>
-                  <p className="text-gray-900 mt-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Instructor ID</span>
+                  <p className="mt-1 rounded bg-muted px-1.5 py-1 font-mono text-xs">
                     {instructor.instructorId}
                   </p>
                 </div>

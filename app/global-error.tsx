@@ -40,7 +40,7 @@ export default function GlobalError({
             textAlign: "center",
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
           }}>
-            <h1 style={{ color: "#064e3b", fontSize: "1.5rem", fontWeight: "bold", marginBottom: "0.5rem" }}>
+            <h1 style={{ color: "#064e3b", fontSize: "1.5rem", fontWeight: "600", marginBottom: "0.5rem" }}>
               Critical error
             </h1>
             <p style={{ color: "#6b7280", fontSize: "0.875rem", marginBottom: "1.5rem" }}>

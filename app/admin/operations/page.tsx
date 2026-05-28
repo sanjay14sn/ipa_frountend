@@ -45,7 +45,7 @@ function AdminOperationsHubInner() {
 
         <TabsContent value="orders" className="mt-4 space-y-6">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Order management</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">Order management</h2>
             <p className="text-muted-foreground">
               Track paid demand, allocation, backorders, and cancellation from the order side.
             </p>
@@ -55,7 +55,7 @@ function AdminOperationsHubInner() {
 
         <TabsContent value="shipping" className="mt-4 space-y-6">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Shipping</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">Shipping</h2>
             <p className="text-muted-foreground">
               Only fully ready orders appear here, and the UI never exposes partial shipments.
             </p>
@@ -65,7 +65,7 @@ function AdminOperationsHubInner() {
 
         <TabsContent value="payments" className="mt-4 space-y-6">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Payments</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">Payments</h2>
             <p className="text-muted-foreground">
               Billing stays in the hub, but order creation and stock allocation are now handled elsewhere.
             </p>
@@ -79,7 +79,7 @@ function AdminOperationsHubInner() {
 
         <TabsContent value="procurement" className="mt-4 space-y-6">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Procurement</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">Procurement</h2>
             <p className="text-muted-foreground">
               Manage suppliers, item sourcing, purchase orders, receipts, and replenishment drafts.
             </p>

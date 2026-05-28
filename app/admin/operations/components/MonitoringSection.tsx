@@ -142,7 +142,7 @@ function SummaryCell({ item }: { item: OperationsMonitoringSummaryItem }) {
         <span className={cn("h-2.5 w-2.5 rounded-full", toneDotClass(item.tone))} />
       </div>
       <div className="text-sm text-muted-foreground">{item.description}</div>
-      <div className={cn("text-4xl font-light leading-none", toneValueClass(item.tone))}>
+      <div className={cn("text-4xl font-normal leading-none", toneValueClass(item.tone))}>
         {item.value}
       </div>
     </div>

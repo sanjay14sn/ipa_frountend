@@ -64,7 +64,7 @@ export default function FranchiseeOrdersPage() {
   const eligibleStudents = useMemo(
     () =>
       students.filter((s) => {
-        if (!s.isActive || s.materialsOrdered) return false;
+        if (s.status !== "active" || s.materialsOrdered) return false;
         const ord =
           typeof s.level === "object" && s.level != null
             ? (s.level as { displayOrder?: number }).displayOrder
@@ -225,7 +225,7 @@ export default function FranchiseeOrdersPage() {
     <TablePageShell>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Material Orders</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Material Orders</h1>
           <p className="text-muted-foreground">
             Standard order flow for student level materials and first-level kits.
           </p>

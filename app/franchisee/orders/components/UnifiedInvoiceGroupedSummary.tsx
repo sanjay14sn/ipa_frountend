@@ -82,7 +82,7 @@ export default function UnifiedInvoiceGroupedSummary({
         (preview.startingKitGroups?.length ?? 0) > 0 && (
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Kits
               </h4>
               <span className="text-xs text-muted-foreground">
@@ -126,7 +126,7 @@ export default function UnifiedInvoiceGroupedSummary({
       {selectedStudentIds.length > 0 && (
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Students
             </h4>
             <span className="text-xs text-muted-foreground">
@@ -207,7 +207,7 @@ export default function UnifiedInvoiceGroupedSummary({
       {selectedInstructorIds.length > 0 && (
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Instructors
             </h4>
             <span className="text-xs text-muted-foreground">

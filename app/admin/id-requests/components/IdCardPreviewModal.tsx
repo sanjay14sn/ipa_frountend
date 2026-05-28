@@ -83,7 +83,7 @@ export default function IdCardPreviewModal({
             <div className="flex justify-center mb-4">
               <CheckCircle className="h-12 w-12 text-primary" />
             </div>
-            <DialogTitle className="text-2xl font-bold text-gray-900">
+            <DialogTitle className="text-2xl font-semibold text-gray-900">
               ID Card Issued!
             </DialogTitle>
             <DialogDescription className="text-center">
@@ -104,7 +104,7 @@ export default function IdCardPreviewModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl w-full mx-4">
         <DialogHeader className="text-center">
-          <DialogTitle className="text-xl font-bold text-gray-900">
+          <DialogTitle className="text-xl font-semibold text-gray-900">
             ID Card Preview
           </DialogTitle>
           <DialogDescription>
@@ -126,7 +126,7 @@ export default function IdCardPreviewModal({
                 <div className="h-full flex flex-col">
                   {/* Header */}
                   <div className="text-center border-b border-white/20 pb-2 mb-3">
-                    <h3 className="font-bold text-lg">ABACUS ACADEMY</h3>
+                    <h3 className="font-semibold text-lg">ABACUS ACADEMY</h3>
                     <p className="text-xs opacity-90">STUDENT ID CARD</p>
                   </div>
 
@@ -163,7 +163,7 @@ export default function IdCardPreviewModal({
                 <div className="h-full flex flex-col">
                   {/* Header */}
                   <div className="text-center border-b border-gray-300 pb-2 mb-3">
-                    <h3 className="font-bold text-lg text-gray-800">
+                    <h3 className="font-semibold text-lg text-gray-800">
                       CONTACT DETAILS
                     </h3>
                   </div>

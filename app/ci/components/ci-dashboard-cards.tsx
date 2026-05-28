@@ -31,7 +31,7 @@ export function CIStatCard({ label, value, sub, icon: Icon, href }: CIStatCardPr
         {label}
       </div>
       <div>
-        <p className="text-3xl font-light leading-none text-card-foreground">
+        <p className="text-3xl font-normal leading-none text-card-foreground">
           {value}
         </p>
         {sub ? (

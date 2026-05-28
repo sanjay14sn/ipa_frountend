@@ -25,7 +25,7 @@ export function GstAwareAmount({
     <div className={cn("space-y-0.5", className)}>
       <p
         className={cn(
-          "font-bold tabular-nums tracking-tight text-card-foreground",
+          "font-semibold tabular-nums tracking-tight text-card-foreground",
           size,
         )}
       >

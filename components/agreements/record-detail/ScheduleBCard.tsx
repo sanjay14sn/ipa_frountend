@@ -90,7 +90,7 @@ export function LevelRoyaltyCard({
           <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
             Term Fee
           </p>
-          <p className="text-xl font-bold tabular-nums">{formatRupees(level.termFees)}</p>
+          <p className="text-xl font-semibold tabular-nums">{formatRupees(level.termFees)}</p>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-2">
@@ -215,7 +215,7 @@ export function ScheduleBCard({
               )}
             </div>
             <div>
-              <p className="text-3xl font-bold tabular-nums tracking-tight">
+              <p className="text-3xl font-semibold tabular-nums tracking-tight">
                 {formatRupees(data.franchiseFee)}
               </p>
               <p className="text-sm text-muted-foreground">franchise fee</p>
@@ -262,7 +262,7 @@ export function ScheduleBCard({
               Parties
             </p>
             <div className="flex items-start gap-3 pt-1">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-semibold">
                 IPA
               </div>
               <div>
@@ -278,7 +278,7 @@ export function ScheduleBCard({
               <p className="text-[10px] text-muted-foreground tracking-wide">↕ AGREEMENT</p>
             </div>
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted border border-border text-xs font-bold text-muted-foreground">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted border border-border text-xs font-semibold text-muted-foreground">
                 {franchiseeInitials || "??"}
               </div>
               <div>
@@ -356,7 +356,7 @@ export function ScheduleBCard({
                 </div>
                 <div className="min-h-20 rounded-lg border bg-muted/30 flex items-center justify-center p-4">
                   <p
-                    className="text-2xl italic font-light text-foreground/70"
+                    className="text-2xl italic font-normal text-foreground/70"
                     style={{ fontFamily: "cursive" }}
                   >
                     {data.franchisorSignatory?.split(/\s+/).find((w) => w.length > 2) ??

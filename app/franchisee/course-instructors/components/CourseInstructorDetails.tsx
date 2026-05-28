@@ -24,6 +24,7 @@ export default function CourseInstructorDetails({
           <DetailField
             label="Instructor ID"
             value={courseInstructor.instructorId || "—"}
+            mono
           />
           <DetailField label="Born" value={fmtDate(courseInstructor.dob)} />
           <DetailField label="Age" value={calculateAge(courseInstructor.dob)} />
