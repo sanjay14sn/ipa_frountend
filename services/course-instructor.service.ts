@@ -50,6 +50,8 @@ export interface CourseInstructorData {
   education: string;
   occupation: string;
   reference: string;
+  validFrom?: Date;
+  expiryDate?: Date;
   trainingProof?: string;
   status: string;
   materialsOrdered?: boolean;
