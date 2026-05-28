@@ -98,18 +98,18 @@ export function getMethodSpecificFields(
   const fields: MethodSpecificField[] = [];
 
   if (method === "card") {
-    fields.push({ label: "Card Last 4", value: card?.last4 ? `**** ${card.last4}` : "N/A" });
-    fields.push({ label: "Card Network", value: card?.network || "N/A" });
-    fields.push({ label: "Card Type", value: card?.type || "N/A" });
-    fields.push({ label: "Card Issuer", value: card?.issuer || "N/A" });
-    fields.push({ label: "International", value: boolToYesNo(card?.international) });
-    fields.push({ label: "EMI", value: boolToYesNo(card?.emi) });
+    if (card?.last4) fields.push({ label: "Card Last 4", value: `**** ${card.last4}` });
+    if (card?.network) fields.push({ label: "Card Network", value: card.network });
+    if (card?.type) fields.push({ label: "Card Type", value: card.type });
+    if (card?.issuer) fields.push({ label: "Card Issuer", value: card.issuer });
+    if (card?.international != null) fields.push({ label: "International", value: boolToYesNo(card.international) });
+    if (card?.emi != null) fields.push({ label: "EMI", value: boolToYesNo(card.emi) });
   } else if (method === "upi") {
-    fields.push({ label: "UPI VPA", value: payment.vpa || "N/A" });
+    if (payment.vpa) fields.push({ label: "UPI VPA", value: payment.vpa });
   } else if (method === "netbanking") {
-    fields.push({ label: "Bank Code", value: payment.bank || "N/A" });
+    if (payment.bank) fields.push({ label: "Bank Code", value: payment.bank });
   } else if (method === "wallet") {
-    fields.push({ label: "Wallet", value: payment.wallet || "N/A" });
+    if (payment.wallet) fields.push({ label: "Wallet", value: payment.wallet });
   } else {
     if (payment.vpa) fields.push({ label: "UPI VPA", value: payment.vpa });
     if (payment.bank) fields.push({ label: "Bank Code", value: payment.bank });
@@ -125,10 +125,6 @@ export function getMethodSpecificFields(
         value: display,
       });
     });
-  }
-
-  if (fields.length === 0) {
-    fields.push({ label: "Method details", value: "N/A" });
   }
 
   return fields;
