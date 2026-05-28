@@ -76,8 +76,6 @@ export default function RequestedIdTable({
         <FranchiseIdDetails
           franchiseId={g.franchiseId}
           franchiseName={g.franchiseName}
-          totalRequested={g.totalRequested}
-          totalIssued={g.totalIssued}
           onIssueSuccess={onIssueSuccess}
         />
       )}

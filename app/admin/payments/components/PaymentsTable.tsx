@@ -82,9 +82,6 @@ export default function PaymentsTable({ franchiseId }: PaymentsTableProps = {}) 
         <FranchisePaymentsDetails
           franchiseId={s.franchiseId ?? ""}
           franchiseName={s.franchiseName}
-          totalCompleted={s.totalCompleted}
-          totalPending={s.totalPending}
-          totalAmount={s.totalAmount}
         />
       )}
       searchPlaceholder="Search by franchise or franchisee..."

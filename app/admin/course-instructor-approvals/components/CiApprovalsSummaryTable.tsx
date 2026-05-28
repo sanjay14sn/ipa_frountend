@@ -85,9 +85,6 @@ export default function CiApprovalsSummaryTable({
         <FranchiseCiDetails
           franchiseId={g.franchiseId}
           franchiseName={g.franchiseName}
-          totalPending={g.totalPending}
-          totalApproved={g.totalApproved}
-          totalRejected={g.totalRejected}
           onApprove={onApprove}
           onReject={onReject}
         />

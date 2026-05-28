@@ -4,14 +4,11 @@ import { useMemo, useState } from "react";
 import {
   Building2,
   CalendarDays,
-  CheckCircle2,
-  Clock,
   Eye,
   IdCard,
   MapPin,
   Phone,
   User,
-  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
@@ -26,10 +23,9 @@ import {
   ContactPill,
   ContactPillGrid,
   DataTable,
+  ExpandedDetailSection,
   ExpandedDetailSurface,
   IdentityHeader,
-  KeyFactCard,
-  KeyFactsGrid,
   LabeledValue,
   ProfileCard,
   ProfileCardSection,
@@ -53,8 +49,6 @@ import {
 interface FranchiseIdDetailsProps {
   franchiseId: string;
   franchiseName: string;
-  totalRequested: number;
-  totalIssued: number;
   onIssueSuccess?: () => void;
 }
 
@@ -192,8 +186,6 @@ function StudentIdRequestDetailContent({
 export default function FranchiseIdDetails({
   franchiseId,
   franchiseName,
-  totalRequested,
-  totalIssued,
   onIssueSuccess,
 }: FranchiseIdDetailsProps) {
   const [page, setPage] = useState(1);
@@ -330,33 +322,8 @@ export default function FranchiseIdDetails({
 
   return (
     <ExpandedDetailSurface className="border-t border-border/60">
-      <div className="space-y-3 p-3 md:p-4">
-        <KeyFactsGrid columns={4}>
-          <KeyFactCard
-            icon={Building2}
-            label="Franchise"
-            value={franchiseName}
-          />
-          <KeyFactCard
-            icon={Clock}
-            label="Requested"
-            value={totalRequested}
-          />
-          <KeyFactCard
-            icon={CheckCircle2}
-            label="Issued"
-            value={totalIssued}
-          />
-          <KeyFactCard
-            icon={Users}
-            label="On page"
-            value={students.length}
-          />
-        </KeyFactsGrid>
-
-        <ProfileCard contentClassName="space-y-2 p-3 md:p-4">
-          <ProfileCardSection icon={Users} label="Students">
-            {!franchiseId?.trim() ? (
+      <ExpandedDetailSection title="Students">
+        {!franchiseId?.trim() ? (
               <p className="py-4 text-center text-sm text-muted-foreground">
                 No franchise selected.
               </p>
@@ -401,9 +368,7 @@ export default function FranchiseIdDetails({
                 }
               />
             )}
-          </ProfileCardSection>
-        </ProfileCard>
-      </div>
+      </ExpandedDetailSection>
 
       {selectedStudent && (
         <IdCardPreviewModal

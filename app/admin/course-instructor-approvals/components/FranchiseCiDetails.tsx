@@ -4,24 +4,13 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
+  ExpandedDetailSection,
   ExpandedDetailSurface,
-  KeyFactCard,
-  KeyFactsGrid,
-  ProfileCard,
-  ProfileCardSection,
   StatusBadge,
   TableMainCell,
 } from "@/components/shared";
 import type { DataTableColumn, DataTableSortOption } from "@/components/shared";
-import {
-  Building2,
-  Check,
-  CheckCircle2,
-  Clock,
-  Users,
-  X,
-  XCircle,
-} from "lucide-react";
+import { Check, X } from "lucide-react";
 import { useAdminCIDetails } from "@/hooks/api/course-instructor.hooks";
 import type { AdminCourseInstructorData } from "@/services/course-instructor.service";
 import CourseInstructorDetails from "./CourseInstructorDetails";
@@ -29,9 +18,6 @@ import CourseInstructorDetails from "./CourseInstructorDetails";
 interface FranchiseCiDetailsProps {
   franchiseId: string;
   franchiseName: string;
-  totalPending: number;
-  totalApproved: number;
-  totalRejected: number;
   onApprove: (instructor: AdminCourseInstructorData) => void;
   onReject: (instructor: AdminCourseInstructorData) => void;
 }
@@ -39,9 +25,6 @@ interface FranchiseCiDetailsProps {
 export default function FranchiseCiDetails({
   franchiseId,
   franchiseName,
-  totalPending,
-  totalApproved,
-  totalRejected,
   onApprove,
   onReject,
 }: FranchiseCiDetailsProps) {
@@ -124,29 +107,8 @@ export default function FranchiseCiDetails({
 
   return (
     <ExpandedDetailSurface className="border-t border-border/60">
-      <div className="space-y-3 p-3 md:p-4">
-        <KeyFactsGrid columns={4}>
-          <KeyFactCard
-            icon={Building2}
-            label="Franchise"
-            value={franchiseName}
-          />
-          <KeyFactCard icon={Clock} label="Pending" value={totalPending} />
-          <KeyFactCard
-            icon={CheckCircle2}
-            label="Approved"
-            value={totalApproved}
-          />
-          <KeyFactCard
-            icon={XCircle}
-            label="Rejected"
-            value={totalRejected}
-          />
-        </KeyFactsGrid>
-
-        <ProfileCard contentClassName="space-y-2 p-3 md:p-4">
-          <ProfileCardSection icon={Users} label="Pending applications">
-            <DataTable
+      <ExpandedDetailSection title="Pending applications">
+        <DataTable
               data={instructors}
               loading={loading}
               columns={columns}
@@ -186,9 +148,7 @@ export default function FranchiseCiDetails({
                 `Showing ${count} of ${t} pending applications`
               }
             />
-          </ProfileCardSection>
-        </ProfileCard>
-      </div>
+      </ExpandedDetailSection>
     </ExpandedDetailSurface>
   );
 }
