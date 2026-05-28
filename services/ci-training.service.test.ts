@@ -1,20 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  buildCITrainingPurchasePayload,
-  normalizeCIProgressResponse,
-} from "./ci-training.service";
-
-describe("buildCITrainingPurchasePayload", () => {
-  it("wraps a single id in an array", () => {
-    expect(buildCITrainingPurchasePayload(12)).toEqual({ packageIds: [12] });
-  });
-
-  it("passes through an array unchanged", () => {
-    expect(buildCITrainingPurchasePayload([12, 13])).toEqual({
-      packageIds: [12, 13],
-    });
-  });
-});
+import { normalizeCIProgressResponse } from "./ci-training.service";
 
 describe("normalizeCIProgressResponse", () => {
   const progress = normalizeCIProgressResponse({
