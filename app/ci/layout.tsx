@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { PortalHeaderActions } from "@/components/layout/portal-header-actions";
 
-const UNLOCKED_PATHS = ["/ci/login", "/ci/agreement", "/ci/change-password"];
+const UNLOCKED_PATHS = ["/ci/login", "/ci/agreement"];
 
 function CIShell({ children }: { children: React.ReactNode }) {
   const { user, loading, agreementPhase, clear } = useCIAuth();
@@ -31,10 +31,6 @@ function CIShell({ children }: { children: React.ReactNode }) {
     if (loading) return;
     if (!user && pathname !== "/ci/login") {
       router.replace("/ci/login");
-      return;
-    }
-    if (user?.mustChangePassword && pathname !== "/ci/change-password") {
-      router.replace("/ci/change-password");
       return;
     }
     if (
@@ -57,8 +53,7 @@ function CIShell({ children }: { children: React.ReactNode }) {
 
   if (!user && pathname !== "/ci/login") return null;
 
-  // Login and change-password pages render without sidebar
-  if (pathname === "/ci/login" || pathname === "/ci/change-password") {
+  if (pathname === "/ci/login") {
     return <div className="min-h-screen bg-background">{children}</div>;
   }
 

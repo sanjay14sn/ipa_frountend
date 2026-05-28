@@ -8,7 +8,6 @@ export interface CIUser {
   phone: string | null;
   programId: number;
   franchiseId: string;
-  mustChangePassword: boolean;
   credentialsIssuedAt?: string | null;
 }
 
@@ -37,6 +36,3 @@ export async function getCIMe(): Promise<CIUser> {
   return res.data.result as CIUser;
 }
 
-export async function changeCIPassword(currentPassword: string, newPassword: string): Promise<void> {
-  await api.post("/ci/change-password", { currentPassword, newPassword });
-}
