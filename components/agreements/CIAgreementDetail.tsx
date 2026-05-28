@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +27,14 @@ import {
 import { cn } from "@/lib/utils";
 import { ciAgreementContent } from "@/lib/ciAgreementContent";
 import type { CIAgreementRecord } from "@/services/ci-training.service";
+import { ciSignatureSrc } from "@/services/ci-training.service";
 import { formatRupees } from "@/lib/currency-utils";
+import type { ESignatureResult, ESignaturePadProps } from "@/components/esignature/ESignaturePad";
+
+const ESignaturePad = dynamic<ESignaturePadProps>(
+  () => import("@/components/esignature/ESignaturePad").then((m) => ({ default: m.ESignaturePad })),
+  { ssr: false, loading: () => null },
+);
 
 function fmtDate(value?: string | null): string {
   if (!value) return "-";
@@ -59,11 +67,6 @@ function fmtTime(value?: string | null): string {
   }
 }
 
-function packageCoverage(ids: number[]) {
-  if (!ids.length) return "No levels";
-  const sorted = [...ids].sort((a, b) => a - b);
-  return `Levels ${sorted[0]} to ${sorted[sorted.length - 1]}`;
-}
 
 type BadgeTone = "default" | "secondary" | "outline" | "destructive";
 
@@ -80,6 +83,7 @@ interface CIAgreementDetailProps {
   packageSectionActions?: ReactNode;
   packageSectionContent?: ReactNode;
   hideAgreementTerms?: boolean;
+  onCISign?: (result: ESignatureResult) => Promise<void>;
 }
 
 export function CIAgreementDetail({
@@ -87,8 +91,11 @@ export function CIAgreementDetail({
   packageSectionActions,
   packageSectionContent,
   hideAgreementTerms,
+  onCISign,
 }: CIAgreementDetailProps) {
   const [now] = useState(() => Date.now());
+  const [eSignatureOpen, setESignatureOpen] = useState(false);
+  const [signingBusy, setSigningBusy] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(ciAgreementContent.sections.slice(0, 2).map((section) => section.id)),
   );
@@ -103,7 +110,7 @@ export function CIAgreementDetail({
         : "-",
     [agreement.validFrom, agreement.validUntil],
   );
-  const packages = agreement.trainingPackages ?? [];
+  const receivables = agreement.receivables ?? [];
   const badge = phaseBadge(agreement.phase);
 
   const instructorName = agreement.instructor?.name ?? "—";
@@ -123,7 +130,18 @@ export function CIAgreementDetail({
   const ciSignedAt = agreement.ciSignedAt ?? agreement.dateOfSigning;
   const ciSigned = !!ciSignedAt;
   const franchiseeSigned = !!agreement.franchiseeSignedAt;
-  const sigSrc = agreement.ciSignatureUrl ?? null;
+  const sigSrc = ciSignatureSrc(agreement.ciSignatureUrl);
+
+  async function handleAdoptCISignature(result: ESignatureResult) {
+    if (!onCISign) return;
+    setSigningBusy(true);
+    try {
+      await onCISign(result);
+      setESignatureOpen(false);
+    } finally {
+      setSigningBusy(false);
+    }
+  }
 
   const timeLeft = (() => {
     if (!agreement.validUntil) return "—";
@@ -256,6 +274,14 @@ export function CIAgreementDetail({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={sigSrc} alt="CI signature" className="max-h-14 w-auto max-w-full object-contain" loading="lazy" />
                 </div>
+              ) : onCISign ? (
+                <div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-muted/30 py-3">
+                  <p className="text-xs text-muted-foreground">No signature on file</p>
+                  <Button size="sm" variant="outline" onClick={() => setESignatureOpen(true)} className="gap-1.5">
+                    <PenLine className="h-3.5 w-3.5" />
+                    Add Signature
+                  </Button>
+                </div>
               ) : (
                 <div className="flex items-center justify-center rounded-lg border bg-muted/30 py-3">
                   <p className="text-xs text-muted-foreground">
@@ -351,11 +377,11 @@ export function CIAgreementDetail({
         </Card>
       </div>
 
-      {/* Training packages */}
+      {/* Training receivables */}
       <Card className="rounded-2xl border-border shadow-sm">
         <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg font-normal">Assigned training packages</CardTitle>
+            <CardTitle className="text-lg font-normal">Training receivables</CardTitle>
             {packageSectionActions ? (
               <div className="flex flex-wrap items-center gap-2">{packageSectionActions}</div>
             ) : null}
@@ -364,44 +390,33 @@ export function CIAgreementDetail({
         <CardContent className="space-y-3 p-4 pt-2 sm:p-5 sm:pt-2">
           {packageSectionContent ? (
             packageSectionContent
-          ) : packages.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No packages linked to this agreement.</p>
+          ) : receivables.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No receivables linked to this agreement.</p>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Order</TableHead>
-                    <TableHead>Package</TableHead>
-                    <TableHead>Coverage</TableHead>
+                    <TableHead>#</TableHead>
+                    <TableHead>Label</TableHead>
+                    <TableHead>Levels</TableHead>
                     <TableHead className="text-right">Fee</TableHead>
                     <TableHead className="text-right">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {packages
+                  {receivables
                     .slice()
-                    .sort((a, b) => a.packageOrder - b.packageOrder)
-                    .map((pkg) => (
-                      <TableRow key={pkg.id}>
-                        <TableCell>{pkg.packageOrder}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium text-card-foreground">{pkg.name}</span>
-                            <span className="text-xs text-muted-foreground">{pkg.code}</span>
-                          </div>
-                        </TableCell>
+                    .sort((a, b) => a.receivableOrder - b.receivableOrder)
+                    .map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell>{r.receivableOrder}</TableCell>
+                        <TableCell className="font-medium text-card-foreground">{r.label}</TableCell>
                         <TableCell className="text-muted-foreground">
-                          {packageCoverage(pkg.trainingLevelIds)}
+                          {r.levelFrom} – {r.levelTo}
                         </TableCell>
-                        <TableCell className="text-right">{formatRupees(pkg.fee)}</TableCell>
-                        <TableCell className="text-right">
-                          {pkg.purchaseStatus === "PAID"
-                            ? "Purchased"
-                            : pkg.purchaseStatus === "PENDING"
-                            ? "Pending"
-                            : "Unpaid"}
-                        </TableCell>
+                        <TableCell className="text-right">{formatRupees(r.fee)}</TableCell>
+                        <TableCell className="text-right capitalize">{r.status}</TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
@@ -468,6 +483,15 @@ export function CIAgreementDetail({
           </CardContent>
         </Card>
       ) : null}
+      {onCISign && (
+        <ESignaturePad
+          open={eSignatureOpen}
+          onOpenChange={setESignatureOpen}
+          defaultName={instructorName !== "—" ? instructorName : ""}
+          onAdopt={handleAdoptCISignature}
+          submitting={signingBusy}
+        />
+      )}
     </div>
   );
 }

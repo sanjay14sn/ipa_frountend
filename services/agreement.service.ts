@@ -453,6 +453,19 @@ export async function submitFranchiseeSignatureWithStored(
   return unwrapData<AgreementRecord>(response);
 }
 
+/** Update the franchisee's on-file signature without changing agreement state.
+ *  Used for already-signed/valid agreements where the signature file was never captured. */
+export async function updateFranchiseeSignatureOnly(
+  agreementId: number,
+  payload: ESignaturePayload,
+): Promise<void> {
+  const blob = new Blob([payload.svg], { type: "image/svg+xml" });
+  const file = new File([blob], "signature.svg", { type: "image/svg+xml" });
+  const formData = new FormData();
+  formData.append("signature", file);
+  await api.patch(`/agreement/${agreementId}/signature`, formData);
+}
+
 // -----------------------------------------------------------------------------
 // Admin agreement lifecycle endpoints (post-refactor):
 //   - POST /admin/agreement/:id/suspend     Valid → Suspended
@@ -492,7 +505,7 @@ export async function voidAgreementAdmin(
 }
 
 
-function storedSignatureToPublicPath(
+export function storedSignatureToPublicPath(
   stored: string | null | undefined,
 ): string | null {
   if (stored == null || String(stored).trim() === "") return null;

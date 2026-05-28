@@ -1,33 +1,25 @@
 import { api } from "@/lib/axios";
+import { unwrapData } from "@/lib/unwrap-api";
+import { franchiseeProfileSignatureSrc } from "./agreement.service";
 
-export interface CITrainingPackageItem {
+export interface CITrainingReceivable {
   id: number;
-  programId: number;
-  name: string;
-  code: string;
-  description?: string | null;
-  packageOrder: number;
-  trainingLevelIds: number[];
+  receivableOrder: number;
+  label: string;
+  levelFrom: number;
+  levelTo: number;
   fee: number;
-  currency?: string;
-  isActive: boolean;
-  purchaseStatus: "UNPAID" | "PENDING" | "PAID";
-  isPurchased: boolean;
+  status: "pending" | "paid" | "waived";
+  paidAt?: string | null;
+  waivedAt?: string | null;
 }
 
-export interface CITrainingPurchaseInitiateResponse {
+export interface CIReceivablePayResponse {
   key: string;
   amount: number;
   currency: string;
   orderId: string;
-  purchaseId: number;
   paymentId?: number;
-}
-
-export function buildCITrainingPurchasePayload(packageId: number | number[]) {
-  return {
-    packageIds: Array.isArray(packageId) ? packageId : [packageId],
-  };
 }
 
 export interface CIProgressItem {
@@ -57,52 +49,46 @@ export interface CIUpcomingSession {
   assignmentStatus: string;
 }
 
-export async function listCIPackages(): Promise<CITrainingPackageItem[]> {
-  const res = await api.get("/ci/training/packages");
-  const payload = res.data.result;
+export async function listCIReceivables(): Promise<CITrainingReceivable[]> {
+  const res = await api.get("/ci/training/receivables");
+  const payload = unwrapData<unknown>(res);
   return Array.isArray(payload) ? payload : [];
 }
 
-export async function initiateCITrainingPurchase(
-  packageId: number,
-): Promise<CITrainingPurchaseInitiateResponse> {
-  const res = await api.post(
-    "/ci/training/purchase/initiate",
-    buildCITrainingPurchasePayload(packageId),
-  );
-  const payload = res.data.result;
-  const payment = payload?.payment ?? {};
+export async function initiateCIReceivablePayment(
+  receivableId: number,
+): Promise<CIReceivablePayResponse> {
+  const res = await api.post(`/ci/training/receivables/${receivableId}/pay`);
+  const payload = asRecord(unwrapData<unknown>(res));
+  const payment = asRecord(payload.payment);
   return {
-    key: payload?.key ?? payment.key ?? payment.keyId,
-    amount: payload?.amount ?? payment.amount,
-    currency: payload?.currency ?? payment.currency ?? "INR",
-    orderId: payload?.orderId ?? payment.orderId ?? payment.razorpayOrderId,
-    purchaseId: payload?.purchaseId,
-    paymentId: payload?.paymentId ?? payment.paymentId,
+    key: String(payload.key ?? payload.keyId ?? payment.key ?? payment.keyId ?? ""),
+    amount: Number(payload.amount ?? payment.amount),
+    currency: String(payload.currency ?? payment.currency ?? "INR"),
+    orderId: String(payload.orderId ?? payload.razorpayOrderId ?? payment.orderId ?? payment.razorpayOrderId ?? ""),
+    paymentId: asNumber(payload.paymentId ?? payment.paymentId),
   };
 }
 
-export async function verifyCITrainingPayment(data: {
+export async function verifyCIReceivablePayment(data: {
   razorpayOrderId: string;
   razorpayPaymentId: string;
   signature: string;
-  purchaseId: number;
 }): Promise<void> {
   await api.post("/ci/billing/payment/verify", data);
 }
 
-export async function abandonCIPayment(data: {
+export async function abandonCIReceivablePayment(data: {
   paymentId?: number;
   razorpayOrderId?: string;
   note?: string;
-  purchaseId: number;
 }): Promise<void> {
   await api.post("/ci/billing/payment/abandon", data);
 }
 
 export async function getCIProgress(): Promise<CIProgressItem[]> {
   const res = await api.get("/ci/training/progress");
-  const payload = res.data.result;
+  const payload = unwrapData<unknown>(res);
   return normalizeCIProgressResponse(payload);
 }
 
@@ -179,7 +165,7 @@ export function normalizeCIProgressResponse(payload: unknown): CIProgressItem[] 
 
 export async function getCIUpcomingSessions(): Promise<CIUpcomingSession[]> {
   const res = await api.get("/ci/training/upcoming");
-  const payload = res.data.result;
+  const payload = unwrapData<unknown>(res);
   return Array.isArray(payload) ? payload : [];
 }
 
@@ -210,12 +196,12 @@ export interface CIAgreementRecord {
   franchiseeSignedAt?: string | null;
   ciSignatureUrl?: string | null;
   franchiseeSignatureUrl?: string | null;
-  trainingPackages?: CITrainingPackageItem[];
+  receivables?: CITrainingReceivable[];
 }
 
 export async function getCIAgreement(): Promise<CIAgreementRecord | null> {
   const res = await api.get("/ci/agreement");
-  return res.data.result ?? null;
+  return unwrapData<CIAgreementRecord | null>(res) ?? null;
 }
 
 export async function signCIAgreement(agreementId: number, signaturePath: string): Promise<void> {
@@ -238,6 +224,39 @@ export async function signCIAgreementWithESignature(
   form.append("signature", file);
   form.append("signatureMethod", payload.method);
   form.append("consentVersion", payload.consentVersion);
+  await api.post(`/ci/agreement/${agreementId}/sign`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
+
+/** Update the CI's on-file signature without changing agreement state.
+ *  Used for already-signed agreements where the signature file was never captured. */
+export async function updateCIAgreementSignature(
+  agreementId: number,
+  payload: CIESignaturePayload,
+): Promise<void> {
+  const blob = new Blob([payload.svg], { type: "image/svg+xml" });
+  const file = new File([blob], "signature.svg", { type: "image/svg+xml" });
+  const form = new FormData();
+  form.append("signature", file);
+  await api.patch(`/ci/agreement/${agreementId}/signature`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
+
+/**
+ * Resolves a raw stored CI signature path to a full URL.
+ * The raw path is stored on `course_instructor.ciSignature` and
+ * returned in `CIAgreementRecord.ciSignatureUrl`.
+ */
+export function ciSignatureSrc(stored: string | null | undefined): string | null {
+  return franchiseeProfileSignatureSrc(stored);
+}
+
+/** Sign CI agreement using the CI's on-file signature (no upload needed). */
+export async function signCIAgreementWithStored(agreementId: number): Promise<void> {
+  const form = new FormData();
+  form.append("useExisting", "true");
   await api.post(`/ci/agreement/${agreementId}/sign`, form, {
     headers: { "Content-Type": "multipart/form-data" },
   });
