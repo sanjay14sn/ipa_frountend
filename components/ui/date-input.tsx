@@ -74,19 +74,44 @@ const DateInput = React.forwardRef<HTMLInputElement, DateInputProps>(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [value]);
 
+    function sanitize(raw: string): string {
+      let d = raw.replace(/\D/g, "");
+      // Day first digit > 3 → auto-prepend 0 (prevents "41", "51", etc.)
+      if (d.length >= 1 && parseInt(d[0]) > 3) d = "0" + d;
+      // Month first digit (position 2) > 1 → auto-prepend 0 (prevents "13", etc.)
+      if (d.length >= 3 && parseInt(d[2]) > 1) d = d.slice(0, 2) + "0" + d.slice(2);
+      return d.slice(0, 8);
+    }
+
     function handleTyping(e: React.ChangeEvent<HTMLInputElement>) {
-      const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
-      let formatted = digits;
-      if (digits.length > 4) {
-        formatted =
-          digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4);
-      } else if (digits.length > 2) {
-        formatted = digits.slice(0, 2) + "/" + digits.slice(2);
+      const rawValue = e.target.value;
+      const isDeleting = rawValue.length < inputText.length;
+
+      let digits = sanitize(rawValue);
+
+      // When backspacing into a trailing slash, also eat the last digit
+      if (isDeleting && inputText.endsWith("/")) {
+        const prevDigits = inputText.replace(/\D/g, "");
+        if (digits === prevDigits) digits = digits.slice(0, -1);
       }
+
+      // Build DD/MM/YYYY string, inserting slashes at positions 2 and 4
+      let formatted = "";
+      for (let i = 0; i < digits.length; i++) {
+        if (i === 2 || i === 4) formatted += "/";
+        formatted += digits[i];
+      }
+      // Auto-append trailing slash after completing day (2) or month (4)
+      if (!isDeleting && (digits.length === 2 || digits.length === 4)) {
+        formatted += "/";
+      }
+
       setInputText(formatted);
 
       if (digits.length === 8) {
-        const parsed = parse(formatted, "dd/MM/yyyy", new Date());
+        const dateStr =
+          digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4);
+        const parsed = parse(dateStr, "dd/MM/yyyy", new Date());
         if (isValid(parsed)) onChange?.(dateToIso(parsed));
       } else if (digits.length === 0) {
         onChange?.("");

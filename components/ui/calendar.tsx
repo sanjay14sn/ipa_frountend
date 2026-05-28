@@ -39,7 +39,7 @@ function Calendar({
         inline
         showMonthDropdown
         showYearDropdown
-        dropdownMode="select"
+        dropdownMode="scroll"
         minDate={startMonth}
         maxDate={endMonth}
         filterDate={filterDate}
