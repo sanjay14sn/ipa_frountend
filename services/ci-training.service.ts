@@ -239,6 +239,8 @@ export async function updateCIAgreementSignature(
   const file = new File([blob], "signature.svg", { type: "image/svg+xml" });
   const form = new FormData();
   form.append("signature", file);
+  form.append("signatureMethod", payload.method);
+  form.append("consentVersion", payload.consentVersion);
   await api.patch(`/ci/agreement/${agreementId}/signature`, form, {
     headers: { "Content-Type": "multipart/form-data" },
   });

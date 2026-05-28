@@ -379,11 +379,16 @@ function CIAgreementContent() {
   };
 
   const handleCISign = async (result: ESignatureResult) => {
+    if (!agreement) return;
     const payload: CIESignaturePayload = result;
-    await updateCIAgreementSignature(agreement!.id, payload);
-    toast.success("Signature saved");
-    await refetch();
-    await refresh();
+    try {
+      await updateCIAgreementSignature(agreement.id, payload);
+      toast.success("Signature saved");
+      await refetch();
+      await refresh();
+    } catch {
+      toast.error("Failed to save signature. Please try again.");
+    }
   };
 
   const toggleSection = (id: string) =>
