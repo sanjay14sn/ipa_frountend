@@ -97,7 +97,7 @@ function Calendar({
       classNames={{
         months: "relative flex flex-col gap-4 sm:flex-row sm:gap-4",
         month: "relative flex flex-col gap-3",
-        month_caption: "flex h-7 items-center justify-center",
+        month_caption: "flex h-7 items-center justify-center px-8",
         caption_label: "text-sm font-medium",
         nav: "absolute inset-x-1 top-0 z-20 flex h-7 items-center justify-between pointer-events-none",
         button_previous: cn(
