@@ -375,8 +375,8 @@ export function CIAgreementsSection() {
                     label="Status"
                     value={PHASE_CONFIG[r.phase]?.label ?? r.phase}
                   />
-                  <DetailField label="Valid from" value={fmtShort(r.validFrom)} />
-                  <DetailField label="Valid until" value={fmtShort(r.validUntil)} />
+                  <DetailField label="Tenure" value={r.tenure != null ? `${r.tenure} months` : "—"} />
+                  <DetailField label="Expires" value={fmtShort(r.expiresAt)} />
                 </DetailFieldsGrid>
               </ExpandedDetailSection>
             </ExpandedDetailSurface>

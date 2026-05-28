@@ -114,13 +114,7 @@ export default function SetupExistingCIDialog({
   const [ciData, setCiData] = useState<CIPersonal>(emptyCI);
 
   const today = new Date().toISOString().slice(0, 10);
-  const oneYearLater = useMemo(() => {
-    const d = new Date();
-    d.setFullYear(d.getFullYear() + 1);
-    return d.toISOString().slice(0, 10);
-  }, []);
-  const [validFrom, setValidFrom] = useState(today);
-  const [validUntil, setValidUntil] = useState(oneYearLater);
+  const [tenure, setTenure] = useState(12);
   const [agreementSignedAt, setAgreementSignedAt] = useState(today);
   const [completedThrough, setCompletedThrough] = useState<number | null>(null);
   const [receivables, setReceivables] = useState<ReceivablePlanRow[]>([
@@ -199,12 +193,11 @@ export default function SetupExistingCIDialog({
     setFranchiseId("");
     setProgramId(null);
     setCiData(emptyCI);
-    setValidFrom(today);
-    setValidUntil(oneYearLater);
+    setTenure(12);
     setAgreementSignedAt(today);
     setCompletedThrough(null);
     setReceivables([{ label: "Receivable 1", levelFrom: 1, levelTo: 1, fee: "", paid: false }]);
-  }, [open, today, oneYearLater]);
+  }, [open, today]);
 
   const updateCi = (patch: Partial<CIPersonal>) =>
     setCiData((d) => ({ ...d, ...patch }));
@@ -235,7 +228,7 @@ export default function SetupExistingCIDialog({
       if (!ciData.reference.trim()) e.reference = "Reference required";
     }
     if (step === 3) {
-      if (validUntil <= validFrom) e.validity = "Valid Until must be after Valid From";
+      if (!tenure || tenure < 1) e.tenure = "Tenure must be at least 1 month";
       if (agreementSignedAt > today) e.agreementSignedAt = "Cannot be in the future";
       const planErr = validateReceivablePlan(receivables, sortedLevels);
       if (planErr) e.receivables = planErr;
@@ -270,7 +263,7 @@ export default function SetupExistingCIDialog({
           occupation: ciData.occupation,
           reference: ciData.reference,
         },
-        validity: { validFrom, validUntil },
+        tenure,
         agreementSignedAt,
         completedThrough,
         receivables: receivables.map((r) => ({
@@ -487,12 +480,17 @@ export default function SetupExistingCIDialog({
 
       {currentStep === 3 && (
         <div className="space-y-4">
-          <DialogFormGrid cols={3}>
-            <DialogFormField id="validFrom" label="Valid From" required>
-              <DateInput value={validFrom} onChange={setValidFrom} />
-            </DialogFormField>
-            <DialogFormField id="validUntil" label="Valid Until" required>
-              <DateInput value={validUntil} onChange={setValidUntil} />
+          <DialogFormGrid cols={2}>
+            <DialogFormField id="tenure" label="Tenure (months)" required error={errors.tenure}>
+              <Input
+                id="tenure"
+                type="number"
+                min={1}
+                step={1}
+                value={tenure}
+                onChange={(e) => setTenure(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+                className={cn(errors.tenure && errorClass)}
+              />
             </DialogFormField>
             <DialogFormField
               id="agreementSignedAt"
@@ -507,9 +505,6 @@ export default function SetupExistingCIDialog({
               />
             </DialogFormField>
           </DialogFormGrid>
-          {errors.validity && (
-            <p className="text-sm text-destructive">{errors.validity}</p>
-          )}
 
           <DialogFormField
             id="completedThrough"

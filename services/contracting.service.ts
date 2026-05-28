@@ -14,8 +14,8 @@ export interface CIAgreementData {
   instructorId: number;
   instructorName?: string;
   franchiseId: string;
-  validFrom?: string;
-  validUntil?: string;
+  tenure?: number | null;
+  expiresAt?: string | null;
   createdAt: string;
 }
 
@@ -85,8 +85,8 @@ export interface CIAgreementAdminRow {
   franchiseName?: string;
   centreName?: string;
   franchiseId: string;
-  validFrom?: string;
-  validUntil?: string;
+  tenure?: number | null;
+  expiresAt?: string | null;
   createdAt: string;
   metadata?: Record<string, unknown> | null;
 }

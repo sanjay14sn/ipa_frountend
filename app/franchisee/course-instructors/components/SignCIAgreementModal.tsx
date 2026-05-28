@@ -90,8 +90,8 @@ export default function SignCIAgreementModal({ open, onOpenChange }: SignCIAgree
                     {ag.title}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {ag.validFrom && ag.validUntil
-                      ? `${ag.validFrom} – ${ag.validUntil}`
+                    {ag.tenure != null
+                      ? `${ag.tenure}-month tenure${ag.expiresAt ? ` · expires ${ag.expiresAt.slice(0, 10)}` : ""}`
                       : `Agreement #${ag.id}`}
                   </p>
                 </div>

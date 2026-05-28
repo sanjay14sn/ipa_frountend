@@ -105,10 +105,10 @@ export function CIAgreementDetail({
   const l2 = agreement.levelDurations?.l2 ?? 0;
   const validity = useMemo(
     () =>
-      agreement.validFrom && agreement.validUntil
-        ? `${fmtDate(agreement.validFrom)} to ${fmtDate(agreement.validUntil)}`
+      agreement.tenure != null
+        ? `${agreement.tenure}-month tenure`
         : "-",
-    [agreement.validFrom, agreement.validUntil],
+    [agreement.tenure],
   );
   const receivables = agreement.receivables ?? [];
   const badge = phaseBadge(agreement.phase);
@@ -144,9 +144,9 @@ export function CIAgreementDetail({
   }
 
   const timeLeft = (() => {
-    if (!agreement.validUntil) return "—";
+    if (!agreement.expiresAt) return "—";
     try {
-      const ms = parseISO(agreement.validUntil).getTime() - now;
+      const ms = parseISO(agreement.expiresAt).getTime() - now;
       if (ms <= 0) return "Expired";
       const months = Math.floor(ms / (1000 * 60 * 60 * 24 * 30.44));
       if (months < 12) return `${months}m`;
@@ -340,7 +340,7 @@ export function CIAgreementDetail({
                   <ShieldCheck className="h-4 w-4 text-muted-foreground" />
                   <p className="font-semibold text-sm">Agreement lifecycle</p>
                 </div>
-                {agreement.validFrom && agreement.validUntil ? (
+                {agreement.tenure != null ? (
                   <p className="text-xs text-muted-foreground mt-0.5">{validity}</p>
                 ) : null}
               </div>
@@ -363,14 +363,14 @@ export function CIAgreementDetail({
               <TimelineConnector complete={false} />
               <TimelineNode
                 label="Expires"
-                date={agreement.validUntil}
+                date={agreement.expiresAt}
                 complete={false}
               />
             </div>
 
             <div className="flex-1" />
             <div className="grid grid-cols-2 gap-2 border-t border-border pt-4">
-              <SimpleFactRow label="Valid from" value={fmtShortDate(agreement.validFrom)} />
+              <SimpleFactRow label="Tenure" value={agreement.tenure != null ? `${agreement.tenure} months` : "—"} />
               <SimpleFactRow label="Time remaining" value={timeLeft} />
             </div>
           </CardContent>
