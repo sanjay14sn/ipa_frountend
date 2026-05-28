@@ -33,8 +33,7 @@ const MONTH_NAMES = [
 ];
 
 function CalendarCaption({ calendarMonth }: MonthCaptionProps) {
-  const { goToMonth, previousMonth, nextMonth, startMonth, endMonth } =
-    useDayPicker();
+  const { goToMonth, startMonth, endMonth } = useDayPicker();
 
   const currentMonth = calendarMonth.date.getMonth();
   const currentYear = calendarMonth.date.getFullYear();
@@ -48,64 +47,38 @@ function CalendarCaption({ calendarMonth }: MonthCaptionProps) {
   );
 
   return (
-    <div className="flex w-full items-center justify-between">
-      <button
-        type="button"
-        onClick={() => previousMonth && goToMonth(previousMonth)}
-        disabled={!previousMonth}
-        className={cn(
-          buttonVariants({ variant: "ghost" }),
-          "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100 disabled:opacity-30",
-        )}
+    <div className="flex w-full items-center justify-center gap-1">
+      <Select
+        value={String(currentMonth)}
+        onValueChange={(v) => goToMonth(new Date(currentYear, Number(v)))}
       >
-        <ChevronLeft className="h-4 w-4" />
-      </button>
+        <SelectTrigger className="h-7 w-[115px] border-0 bg-transparent px-2 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {MONTH_NAMES.map((name, i) => (
+            <SelectItem key={name} value={String(i)}>
+              {name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <div className="flex items-center gap-1">
-        <Select
-          value={String(currentMonth)}
-          onValueChange={(v) => goToMonth(new Date(currentYear, Number(v)))}
-        >
-          <SelectTrigger className="h-7 w-[115px] border-0 bg-transparent px-2 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {MONTH_NAMES.map((name, i) => (
-              <SelectItem key={name} value={String(i)}>
-                {name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={String(currentYear)}
-          onValueChange={(v) => goToMonth(new Date(Number(v), currentMonth))}
-        >
-          <SelectTrigger className="h-7 w-[75px] border-0 bg-transparent px-2 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="max-h-52">
-            {years.map((year) => (
-              <SelectItem key={year} value={String(year)}>
-                {year}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => nextMonth && goToMonth(nextMonth)}
-        disabled={!nextMonth}
-        className={cn(
-          buttonVariants({ variant: "ghost" }),
-          "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100 disabled:opacity-30",
-        )}
+      <Select
+        value={String(currentYear)}
+        onValueChange={(v) => goToMonth(new Date(Number(v), currentMonth))}
       >
-        <ChevronRight className="h-4 w-4" />
-      </button>
+        <SelectTrigger className="h-7 w-[75px] border-0 bg-transparent px-2 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="max-h-52">
+          {years.map((year) => (
+            <SelectItem key={year} value={String(year)}>
+              {year}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -123,10 +96,20 @@ function Calendar({
       className={cn("p-3", className)}
       classNames={{
         months: "relative flex flex-col gap-4 sm:flex-row sm:gap-4",
-        month: "flex flex-col gap-3",
-        month_caption: "flex h-7 items-center",
+        month: "relative flex flex-col gap-3",
+        month_caption: "flex h-7 items-center justify-center",
         caption_label: "text-sm font-medium",
-        nav: "hidden",
+        // spans the day-grid area (top-[40px] = h-7 caption + gap-3)
+        // items-center vertically centers the arrows in the day rows
+        nav: "absolute inset-x-0 top-[40px] bottom-0 z-20 flex items-center justify-between pointer-events-none",
+        button_previous: cn(
+          buttonVariants({ variant: "ghost" }),
+          "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100 pointer-events-auto",
+        ),
+        button_next: cn(
+          buttonVariants({ variant: "ghost" }),
+          "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100 pointer-events-auto",
+        ),
         month_grid: "w-full border-collapse",
         weekdays: "flex",
         weekday:
@@ -150,6 +133,12 @@ function Calendar({
         ...classNames,
       }}
       components={{
+        Chevron: ({ orientation, className: chevronCn, ...chevronProps }) => {
+          const Icon = orientation === "left" ? ChevronLeft : ChevronRight;
+          return (
+            <Icon className={cn("h-4 w-4", chevronCn)} {...chevronProps} />
+          );
+        },
         MonthCaption: CalendarCaption,
         ...componentsProp,
       }}
