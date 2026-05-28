@@ -21,8 +21,12 @@ import {
 } from "@/components/shared";
 import {
   downloadScheduleBPdfMine,
+  submitFranchiseeSignature,
+  updateFranchiseeSignatureOnly,
   type AgreementRecord,
+  type ESignaturePayload,
 } from "@/services/agreement.service";
+import type { ESignatureResult } from "@/components/esignature/ESignaturePad";
 import {
   ReceivableCompactProgress,
 } from "@/components/receivables/InstallmentSummaryCard";
@@ -82,6 +86,18 @@ function FranchiseeAgreementViewDialog({
     });
   }
 
+  async function handleSign(result: ESignatureResult) {
+    if (!resolvedAgreementId) return;
+    const payload: ESignaturePayload = result;
+    if (agreement?.signed) {
+      await updateFranchiseeSignatureOnly(resolvedAgreementId, payload);
+    } else {
+      await submitFranchiseeSignature(resolvedAgreementId, payload);
+    }
+    toast.success("Signature saved");
+    await agreementQuery.refetch();
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal={!paymentOpen}>
       <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-[min(1200px,94vw)]">
@@ -110,6 +126,7 @@ function FranchiseeAgreementViewDialog({
               data={agreement}
               onPayReceivableItem={handlePayReceivableItem}
               isInitiatingReceivablePayment={isInitiatingReceivablePayment}
+              onSign={handleSign}
             />
           ) : (
             <p className="py-10 text-center text-sm text-muted-foreground">

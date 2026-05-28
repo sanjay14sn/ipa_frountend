@@ -34,16 +34,15 @@ import {
 } from "@/services/course-instructor.service";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import {
-  TrainingPackageMatrix,
-  type ApprovalPackageForm,
-  createDefaultPackage,
-  validatePackages,
-} from "./TrainingPackageMatrix";
+  ReceivablePlanBuilder,
+  validateReceivablePlan,
+  type ReceivablePlanRow,
+} from "./ReceivablePlanBuilder";
 
 const FORM_STEPS: StepDef[] = [
   { id: 1, title: "Franchise & Program" },
   { id: 2, title: "CI Personal Details" },
-  { id: 3, title: "Training Matrix & Validity" },
+  { id: 3, title: "Receivables & Validity" },
 ];
 
 const BLOOD_GROUPS = [
@@ -93,6 +92,13 @@ const emptyCI: CIPersonal = {
   reference: "",
 };
 
+function defaultReceivable(levels: TrainingLevel[]): ReceivablePlanRow {
+  const sorted = [...levels].sort((a, b) => a.displayOrder - b.displayOrder);
+  const minOrder = sorted[0]?.displayOrder ?? 1;
+  const maxOrder = sorted[sorted.length - 1]?.displayOrder ?? 1;
+  return { label: "Receivable 1", levelFrom: minOrder, levelTo: maxOrder, fee: "", paid: false };
+}
+
 export default function SetupExistingCIDialog({
   open,
   onOpenChange,
@@ -117,8 +123,8 @@ export default function SetupExistingCIDialog({
   const [validUntil, setValidUntil] = useState(oneYearLater);
   const [agreementSignedAt, setAgreementSignedAt] = useState(today);
   const [completedThrough, setCompletedThrough] = useState<number | null>(null);
-  const [packages, setPackages] = useState<ApprovalPackageForm[]>([
-    createDefaultPackage(1),
+  const [receivables, setReceivables] = useState<ReceivablePlanRow[]>([
+    { label: "Receivable 1", levelFrom: 1, levelTo: 1, fee: "", paid: false },
   ]);
 
   const franchisesQuery = useQuery({
@@ -132,8 +138,6 @@ export default function SetupExistingCIDialog({
     [franchisesQuery.data, franchiseId],
   );
 
-  // Programs the admin can pick — one entry per program the franchise has a
-  // currently valid agreement for (status `Valid` or legacy `Signed`).
   const programOptions = useMemo<Array<{ id: number; name: string }>>(() => {
     const agreements = selectedFranchise?.agreements ?? [];
     const seen = new Map<number, string>();
@@ -168,8 +172,6 @@ export default function SetupExistingCIDialog({
     [levelsQuery.data],
   );
 
-  // When the franchise changes, drop the selected program and either auto-pick
-  // (if exactly one option) or force the admin to choose.
   useEffect(() => {
     if (programOptions.length === 1) {
       setProgramId(programOptions[0].id);
@@ -181,7 +183,13 @@ export default function SetupExistingCIDialog({
     }
   }, [programOptions, programId]);
 
-  // Reset state when dialog closes
+  // Seed receivables with sensible defaults once levels load
+  useEffect(() => {
+    if (sortedLevels.length > 0) {
+      setReceivables([defaultReceivable(sortedLevels)]);
+    }
+  }, [sortedLevels]);
+
   useEffect(() => {
     if (open) return;
     setCurrentStep(1);
@@ -195,7 +203,7 @@ export default function SetupExistingCIDialog({
     setValidUntil(oneYearLater);
     setAgreementSignedAt(today);
     setCompletedThrough(null);
-    setPackages([createDefaultPackage(1)]);
+    setReceivables([{ label: "Receivable 1", levelFrom: 1, levelTo: 1, fee: "", paid: false }]);
   }, [open, today, oneYearLater]);
 
   const updateCi = (patch: Partial<CIPersonal>) =>
@@ -229,10 +237,8 @@ export default function SetupExistingCIDialog({
     if (step === 3) {
       if (validUntil <= validFrom) e.validity = "Valid Until must be after Valid From";
       if (agreementSignedAt > today) e.agreementSignedAt = "Cannot be in the future";
-      const pkgErr = validatePackages(packages, sortedLevels);
-      if (pkgErr) e.packages = pkgErr;
-      // Packages containing a completed level are auto-paid at submit (see
-      // handleSubmit); no explicit "must mark as paid" check is needed here.
+      const planErr = validateReceivablePlan(receivables, sortedLevels);
+      if (planErr) e.receivables = planErr;
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -267,25 +273,15 @@ export default function SetupExistingCIDialog({
         validity: { validFrom, validUntil },
         agreementSignedAt,
         completedThrough,
-        trainingPackages: packages.map((p) => {
-          // Effective paid = admin's explicit toggle OR auto-paid because the
-          // package contains a level the CI has already completed.
-          const containsCompleted =
-            completedThrough != null &&
-            p.trainingLevelIds.some((id) => {
-              const lvl = sortedLevels.find((l) => l.id === id);
-              return lvl != null && lvl.displayOrder <= completedThrough;
-            });
-          return {
-            name: p.name.trim(),
-            code: p.code.trim(),
-            description: p.description.trim() || undefined,
-            packageOrder: p.packageOrder,
-            fee: Number(p.fee) || 0,
-            trainingLevelIds: p.trainingLevelIds,
-            paid: containsCompleted || p.paid === true,
-          };
-        }),
+        receivables: receivables.map((r) => ({
+          levelFrom: r.levelFrom,
+          levelTo: r.levelTo,
+          fee: Number(r.fee) || 0,
+          label: r.label.trim() || undefined,
+          paid:
+            r.paid ||
+            (completedThrough != null && r.levelTo <= completedThrough),
+        })),
       });
       setSubmitted(true);
       onSuccess();
@@ -302,7 +298,7 @@ export default function SetupExistingCIDialog({
         open={open}
         onOpenChange={onOpenChange}
         title="Course Instructor created"
-        description="The CI is now active with credentials emailed and training packages assigned."
+        description="The CI is now active with credentials emailed and receivables assigned."
         actionLabel="Close"
         onAction={() => onOpenChange(false)}
       />
@@ -315,7 +311,7 @@ export default function SetupExistingCIDialog({
       onOpenChange={onOpenChange}
       size="xl"
       title="Setup Existing Course Instructor"
-      description="Back-fill a CI who already exists, with training history and pending packages."
+      description="Back-fill a CI who already exists, with training history and pending receivables."
       headerIcon={User}
       steps={FORM_STEPS}
       currentStep={currentStep}
@@ -515,11 +511,30 @@ export default function SetupExistingCIDialog({
             <p className="text-sm text-destructive">{errors.validity}</p>
           )}
 
-          <div className="rounded-md border bg-muted/10 p-3 text-sm">
-            <strong>Tip:</strong> Check the "Completed?" box on the highest level the CI
-            has finished. All levels up to that point are auto-marked complete. Packages
-            containing a completed level are locked as Paid.
-          </div>
+          <DialogFormField
+            id="completedThrough"
+            label="Training completed through"
+            hint="Receivables entirely within the completed range are auto-marked paid."
+          >
+            <Select
+              value={completedThrough != null ? String(completedThrough) : "none"}
+              onValueChange={(v) =>
+                setCompletedThrough(v === "none" ? null : Number(v))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {sortedLevels.map((l) => (
+                  <SelectItem key={l.id} value={String(l.displayOrder)}>
+                    {l.name || `Level ${l.displayOrder}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </DialogFormField>
 
           {levelsQuery.isLoading ? (
             <div className="rounded-md border p-3 text-sm text-muted-foreground">
@@ -530,18 +545,15 @@ export default function SetupExistingCIDialog({
               No CI training levels found for the selected program.
             </div>
           ) : (
-            <TrainingPackageMatrix
+            <ReceivablePlanBuilder
               levels={sortedLevels}
-              packages={packages}
-              onChangePackages={setPackages}
-              showCompletionColumn
-              showPaidToggle
-              completedThrough={completedThrough}
-              onCompletedThroughChange={setCompletedThrough}
+              rows={receivables}
+              onChange={setReceivables}
+              showPaid
             />
           )}
-          {errors.packages && (
-            <p className="text-sm text-destructive">{errors.packages}</p>
+          {errors.receivables && (
+            <p className="text-sm text-destructive">{errors.receivables}</p>
           )}
         </div>
       )}

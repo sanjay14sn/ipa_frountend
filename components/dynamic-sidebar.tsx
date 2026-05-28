@@ -163,8 +163,8 @@ const ciNavigation = {
       title: "Training",
       items: [
         {
-          title: "Packages",
-          url: "/ci/training/packages",
+          title: "Receivables",
+          url: "/ci/training/receivables",
           icon: ClipboardList,
         },
         {

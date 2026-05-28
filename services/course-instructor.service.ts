@@ -5,7 +5,7 @@ import {
   unwrapData,
 } from "@/lib/unwrap-api";
 import { withProgramScope } from "./_scope";
-import type { CITrainingPackageItem } from "./ci-training.service";
+import type { CITrainingReceivable } from "./ci-training.service";
 
 export interface Response {
   statusCode: number;
@@ -92,20 +92,6 @@ export interface CreateCourseInstructorRequest {
 export interface ApproveCourseInstructorRequest {
   validFrom: string;
   validUntil: string;
-  trainingPackages: ApproveCourseInstructorTrainingPackage[];
-}
-
-export interface ApproveCourseInstructorTrainingPackage {
-  name: string;
-  code: string;
-  description?: string;
-  packageOrder: number;
-  fee: number;
-  trainingLevelIds: number[];
-}
-
-export interface UpsertCourseInstructorTrainingPackagesRequest {
-  trainingPackages: ApproveCourseInstructorTrainingPackage[];
 }
 
 export interface AdminCourseInstructorAgreementRecord {
@@ -129,7 +115,7 @@ export interface AdminCourseInstructorAgreementRecord {
     mail?: string | null;
   } | null;
   instructor: { name: string; address: string | null; phone: string | null } | null;
-  trainingPackages?: CITrainingPackageItem[];
+  receivables?: CITrainingReceivable[];
 }
 
 /** Admin UI: grouped instructors for training monitor */
@@ -340,25 +326,6 @@ export async function getAdminCourseInstructorAgreement(
   return unwrapData<AdminCourseInstructorAgreementRecord | null>(response);
 }
 
-export async function getAdminCourseInstructorTrainingPackages(
-  courseInstructorId: number,
-): Promise<CITrainingPackageItem[]> {
-  const response = await api.get(
-    `/admin/ci-training/instructors/${courseInstructorId}/packages`,
-  );
-  return unwrapData<CITrainingPackageItem[]>(response) ?? [];
-}
-
-export async function upsertAdminCourseInstructorTrainingPackages(
-  courseInstructorId: number,
-  body: UpsertCourseInstructorTrainingPackagesRequest,
-): Promise<CITrainingPackageItem[]> {
-  const response = await api.patch(
-    `/admin/ci-training/instructors/${courseInstructorId}/packages`,
-    body,
-  );
-  return unwrapData<CITrainingPackageItem[]>(response) ?? [];
-}
 
 export async function createCourseInstructor(
   data: CreateCourseInstructorRequest | {
@@ -725,51 +692,6 @@ export async function getAdminCITrainingProgress(
   };
 }
 
-export interface CITrainingPackage {
-  id: number;
-  programId: number;
-  name: string;
-  code?: string;
-  description?: string;
-  packageOrder: number;
-  fee: number;
-  currency?: string;
-  isActive?: boolean;
-  trainingLevelIds: number[];
-  purchaseStatus: 'PAID' | 'PENDING' | 'UNPAID';
-  isPurchased: boolean;
-}
-
-function mapPackages(raw: any[]): CITrainingPackage[] {
-  return raw.map((p: any) => ({
-    id: p.id,
-    programId: p.programId,
-    name: p.name,
-    code: p.code,
-    description: p.description,
-    packageOrder: p.packageOrder ?? 0,
-    fee: Number(p.fee ?? 0),
-    currency: p.currency,
-    isActive: p.isActive,
-    trainingLevelIds: Array.isArray(p.trainingLevelIds) ? p.trainingLevelIds : [],
-    purchaseStatus: p.purchaseStatus ?? 'UNPAID',
-    isPurchased: p.isPurchased ?? false,
-  }));
-}
-
-export async function getCITrainingPackages(
-  instructorId: number,
-): Promise<CITrainingPackage[]> {
-  const response = await api.get(`/course-instructor/${instructorId}/training-packages`);
-  return mapPackages(unwrapData<any[]>(response) ?? []);
-}
-
-export async function getAdminCITrainingPackages(
-  instructorId: number,
-): Promise<CITrainingPackage[]> {
-  const response = await api.get(`/admin/ci-training/instructors/${instructorId}/packages`);
-  return mapPackages(unwrapData<any[]>(response) ?? []);
-}
 
 /** Legacy UI: synchronous count from instructor row (ipa-new has no embedded levels). */
 export function getInstructorTrainingLevelCount(
@@ -932,13 +854,11 @@ export async function getAdminCIDetails(
 // Setup Existing Course Instructor (admin back-fill wizard)
 // ---------------------------------------------------------------------------
 
-export interface SetupExistingCITrainingPackage {
-  name: string;
-  code: string;
-  description?: string;
-  packageOrder: number;
+export interface SetupExistingCIReceivable {
+  levelFrom: number;
+  levelTo: number;
   fee: number;
-  trainingLevelIds: number[];
+  label?: string;
   paid: boolean;
 }
 
@@ -961,21 +881,15 @@ export interface SetupExistingCIPayload {
   validity: { validFrom: string; validUntil: string };
   agreementSignedAt: string;
   completedThrough: number | null;
-  trainingPackages: SetupExistingCITrainingPackage[];
+  receivables?: SetupExistingCIReceivable[];
 }
 
 export interface SetupExistingCIResponse {
   courseInstructorId: number;
   instructorCode: string;
   agreementId: number;
-  assignedPackageIds: number[];
+  assignedReceivableIds?: number[];
 }
-
-/**
- * Admin one-shot: create an existing CI with back-signed agreement,
- * issued credentials, and training packages whose completion + paid
- * state is pre-populated per the matrix in the wizard.
- */
 export async function setupExistingCourseInstructor(
   payload: SetupExistingCIPayload,
 ): Promise<SetupExistingCIResponse> {
@@ -983,21 +897,3 @@ export async function setupExistingCourseInstructor(
   return unwrapData<SetupExistingCIResponse>(response);
 }
 
-// ---------------------------------------------------------------------------
-// Edit completion + paid state for an active CI's training packages
-// ---------------------------------------------------------------------------
-
-export interface EditCITrainingCompletionStatePayload {
-  completedThrough: number | null;
-  packagePaidFlags: { packageOrder: number; paid: boolean }[];
-}
-
-export async function editAdminCITrainingCompletionState(
-  instructorId: number,
-  payload: EditCITrainingCompletionStatePayload,
-): Promise<void> {
-  await api.patch(
-    `/admin/ci-training/instructors/${instructorId}/completion-state`,
-    payload,
-  );
-}

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -17,16 +16,8 @@ import {
   approveCourseInstructor,
   AdminCourseInstructorData,
 } from "@/services/course-instructor.service";
-import { getTrainingLevelsByProgram } from "@/services/training-level.service";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
-import {
-  TrainingPackageMatrix,
-  type ApprovalPackageForm,
-  createDefaultPackage,
-  getLevelSelectionErrors,
-  validatePackages,
-} from "./TrainingPackageMatrix";
 
 interface ApproveCIModalProps {
   instructor: AdminCourseInstructorData | null;
@@ -52,39 +43,11 @@ export default function ApproveCIModal({
 
   const [validFrom, setValidFrom] = useState(today);
   const [validUntil, setValidUntil] = useState(oneYearLater);
-  const [packages, setPackages] = useState<ApprovalPackageForm[]>([createDefaultPackage(1)]);
-
-  const levelsQuery = useQuery({
-    queryKey: ["approval-ci-levels", instructor?.programId],
-    queryFn: () => getTrainingLevelsByProgram(Number(instructor?.programId)),
-    enabled: Boolean(instructor?.programId),
-  });
 
   useEffect(() => {
     setValidFrom(today);
     setValidUntil(oneYearLater);
-    setPackages([createDefaultPackage(1)]);
   }, [instructor?.id, oneYearLater, today]);
-
-  const sortedTrainingLevels = useMemo(
-    () =>
-      (levelsQuery.data ?? [])
-        .slice()
-        .sort((a, b) =>
-          a.displayOrder === b.displayOrder ? a.id - b.id : a.displayOrder - b.displayOrder,
-        ),
-    [levelsQuery.data],
-  );
-
-  const coveredLevelCount = useMemo(
-    () => new Set(packages.flatMap((pkg) => pkg.trainingLevelIds)).size,
-    [packages],
-  );
-
-  const levelSelectionErrors = useMemo(
-    () => getLevelSelectionErrors(packages, sortedTrainingLevels),
-    [packages, sortedTrainingLevels],
-  );
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -99,26 +62,9 @@ export default function ApproveCIModal({
       return;
     }
 
-    const packageError = validatePackages(packages, sortedTrainingLevels);
-    if (packageError) {
-      toast.error(packageError);
-      return;
-    }
-
     setLoading(true);
     try {
-      await approveCourseInstructor(instructor.id, {
-        validFrom,
-        validUntil,
-        trainingPackages: packages.map((pkg) => ({
-          name: pkg.name.trim(),
-          code: pkg.code.trim(),
-          description: pkg.description.trim() || undefined,
-          packageOrder: pkg.packageOrder,
-          fee: Number(pkg.fee),
-          trainingLevelIds: pkg.trainingLevelIds,
-        })),
-      });
+      await approveCourseInstructor(instructor.id, { validFrom, validUntil });
       toast.success(`${instructor.name} has been approved.`);
       onSuccess();
       onClose();
@@ -136,12 +82,11 @@ export default function ApproveCIModal({
         if (!open && !loading) onClose();
       }}
     >
-      <DialogContent className="max-h-[90vh] w-[96vw] overflow-y-auto sm:max-w-[900px]">
+      <DialogContent className="w-[96vw] sm:max-w-[420px]">
         <DialogHeader>
           <DialogTitle>Approve Course Instructor</DialogTitle>
           <DialogDescription>
-            Set validity period and CI-specific training packages for{" "}
-            <strong>{instructor?.name}</strong>
+            Set the validity period for <strong>{instructor?.name}</strong>
           </DialogDescription>
         </DialogHeader>
 
@@ -167,47 +112,11 @@ export default function ApproveCIModal({
             </div>
           </div>
 
-          <div className="space-y-3 border-t pt-4">
-            <div className="flex items-center justify-between gap-2">
-              <Label>Training packages</Label>
-              <span className="text-xs text-muted-foreground">
-                {coveredLevelCount} / {sortedTrainingLevels.length} levels covered
-              </span>
-            </div>
-
-            {levelSelectionErrors.overlapError && (
-              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                {levelSelectionErrors.overlapError}
-              </div>
-            )}
-            {levelSelectionErrors.missingError && (
-              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                {levelSelectionErrors.missingError}
-              </div>
-            )}
-
-            {levelsQuery.isLoading ? (
-              <div className="rounded-md border p-3 text-sm text-muted-foreground">
-                Loading levels...
-              </div>
-            ) : sortedTrainingLevels.length === 0 ? (
-              <div className="rounded-md border p-3 text-sm text-muted-foreground">
-                No CI training levels found for this program.
-              </div>
-            ) : (
-              <TrainingPackageMatrix
-                levels={sortedTrainingLevels}
-                packages={packages}
-                onChangePackages={setPackages}
-              />
-            )}
-          </div>
-
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || levelsQuery.isLoading}>
+            <Button type="submit" disabled={loading}>
               {loading ? "Approving..." : "Approve"}
             </Button>
           </DialogFooter>

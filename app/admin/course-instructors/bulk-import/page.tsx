@@ -117,21 +117,6 @@ export default function CourseInstructorBulkImportPage() {
       { key: "validUntil", label: "Valid until" },
       { key: "agreementSignedAt", label: "Agreement signed at" },
       { key: "completedThrough", label: "Completed through (level order)" },
-      { key: "packageName", label: "Package name" },
-      { key: "packageCode", label: "Package code" },
-      { key: "packageDescription", label: "Package description" },
-      { key: "packageOrder", label: "Package order" },
-      { key: "packageFee", label: "Package fee" },
-      {
-        key: "packagePaid",
-        label: "Package paid?",
-        options: BOOL_OPTIONS,
-        placeholder: "Yes / No",
-      },
-      {
-        key: "trainingLevels",
-        label: "Training levels (read-only summary)",
-      },
     ],
     [franchiseOptions, programOptions, programsByFranchise],
   );

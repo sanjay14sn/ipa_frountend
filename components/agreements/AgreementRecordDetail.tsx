@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -42,6 +43,12 @@ import {
 } from "@/components/agreements/record-detail/agreement-utils";
 import { AgreementEmiScheduleCard } from "@/components/agreements/record-detail/AgreementEmiScheduleCard";
 import { ScheduleBCard } from "@/components/agreements/record-detail/ScheduleBCard";
+import type { ESignatureResult, ESignaturePadProps } from "@/components/esignature/ESignaturePad";
+
+const ESignaturePad = dynamic<ESignaturePadProps>(
+  () => import("@/components/esignature/ESignaturePad").then((m) => ({ default: m.ESignaturePad })),
+  { ssr: false, loading: () => null },
+);
 
 // ── Local-only small helpers (not needed outside this file) ──────────────────
 
@@ -239,14 +246,18 @@ export function AgreementRecordDetail({
   data,
   onPayReceivableItem,
   isInitiatingReceivablePayment,
+  onSign,
 }: {
   data: AgreementRecord;
   onPayReceivableItem?: () => void;
   isInitiatingReceivablePayment?: boolean;
+  onSign?: (result: ESignatureResult) => Promise<void>;
 }) {
   const pathname = usePathname();
   const isAdminContext = pathname?.startsWith("/admin") ?? false;
   const [schedulePdfLoading, setSchedulePdfLoading] = useState(false);
+  const [eSignatureOpen, setESignatureOpen] = useState(false);
+  const [signingBusy, setSigningBusy] = useState(false);
   const [fullReceivablePlan, setFullReceivablePlan] =
     useState<ReceivableInstallmentSummary | null>(null);
   const [fullReceivablePlanLoading, setFullReceivablePlanLoading] =
@@ -341,6 +352,17 @@ export function AgreementRecordDetail({
 
   function collapseAllSections() {
     setExpandedSections(new Set());
+  }
+
+  async function handleAdoptSignature(result: ESignatureResult) {
+    if (!onSign) return;
+    setSigningBusy(true);
+    try {
+      await onSign(result);
+      setESignatureOpen(false);
+    } finally {
+      setSigningBusy(false);
+    }
   }
 
   async function handleViewFullSchedule() {
@@ -534,6 +556,14 @@ export function AgreementRecordDetail({
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={sigSrc} alt="Franchisee signature" className="max-h-14 w-auto max-w-full object-contain" loading="lazy" />
                           </div>
+                        ) : onSign ? (
+                          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-muted/30 py-3">
+                            <p className="text-xs text-muted-foreground">No signature on file</p>
+                            <Button size="sm" variant="outline" onClick={() => setESignatureOpen(true)} className="gap-1.5">
+                              <PenLine className="h-3.5 w-3.5" />
+                              Add Signature
+                            </Button>
+                          </div>
                         ) : (
                           <div className="flex items-center justify-center rounded-lg border bg-muted/30 py-3">
                             <p className="text-xs text-muted-foreground">
@@ -670,6 +700,15 @@ export function AgreementRecordDetail({
           </TabsContent>
         ) : null}
       </Tabs>
+      {onSign && (
+        <ESignaturePad
+          open={eSignatureOpen}
+          onOpenChange={setESignatureOpen}
+          defaultName={String(data.franchisee?.name ?? "")}
+          onAdopt={handleAdoptSignature}
+          submitting={signingBusy}
+        />
+      )}
     </div>
   );
 }

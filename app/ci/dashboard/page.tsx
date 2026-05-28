@@ -13,7 +13,7 @@ import {
   Layers,
   Trophy,
 } from "lucide-react";
-import { getCIAgreement, getCIProgress, getCIUpcomingSessions, listCIPackages } from "@/services/ci-training.service";
+import { getCIAgreement, getCIProgress, getCIUpcomingSessions, listCIReceivables } from "@/services/ci-training.service";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { CIDashboardPanel, CIStatCard, ModulePill } from "../components/ci-dashboard-cards";
 import { formatDate } from "@/lib/date-utils";
@@ -41,14 +41,14 @@ export default function CIDashboardPage() {
     queryKey: ["ci-upcoming"],
     queryFn: getCIUpcomingSessions,
   });
-  const packagesQuery = useQuery({
-    queryKey: ["ci-packages"],
-    queryFn: listCIPackages,
+  const receivablesQuery = useQuery({
+    queryKey: ["ci-receivables"],
+    queryFn: listCIReceivables,
   });
 
   const progress = progressQuery.data ?? [];
   const upcoming = upcomingQuery.data ?? [];
-  const packages = packagesQuery.data ?? [];
+  const receivables = receivablesQuery.data ?? [];
   const agreement = agreementQuery.data ?? null;
 
   const completedLevels = useMemo(
@@ -75,13 +75,13 @@ export default function CIDashboardPage() {
     return candidate[0] ?? null;
   }, [upcoming]);
 
-  const purchasedPackageCount = packages.filter((item) => item.isPurchased).length;
-  const pendingPackageCount = packages.filter((item) => !item.isPurchased).length;
+  const settledReceivableCount = receivables.filter((r) => r.status === "paid" || r.status === "waived").length;
+  const pendingReceivableCount = receivables.filter((r) => r.status === "pending").length;
   const loading =
     agreementQuery.isLoading ||
     progressQuery.isLoading ||
     upcomingQuery.isLoading ||
-    packagesQuery.isLoading;
+    receivablesQuery.isLoading;
 
   return (
     <div className="space-y-4">
@@ -93,7 +93,7 @@ export default function CIDashboardPage() {
             </div>
             <h1 className="text-2xl text-card-foreground">Course Instructor Dashboard</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Welcome back{user?.name ? `, ${user.name}` : ""}. Track your current level, next training and package status.
+              Welcome back{user?.name ? `, ${user.name}` : ""}. Track your current level, next training and receivable status.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -138,18 +138,18 @@ export default function CIDashboardPage() {
               href="/ci/training/progress"
             />
             <CIStatCard
-              label="Packages Purchased"
-              value={String(purchasedPackageCount)}
-              sub={`${packages.length} total packages`}
+              label="Receivables Settled"
+              value={String(settledReceivableCount)}
+              sub={`${receivables.length} total receivables`}
               icon={Layers}
-              href="/ci/training/packages"
+              href="/ci/training/receivables"
             />
             <CIStatCard
-              label="Pending Packages"
-              value={String(pendingPackageCount)}
-              sub="Available to purchase"
+              label="Pending Receivables"
+              value={String(pendingReceivableCount)}
+              sub="Due for payment"
               icon={ClipboardList}
-              href="/ci/training/packages"
+              href="/ci/training/receivables"
             />
           </div>
         )}
@@ -163,12 +163,12 @@ export default function CIDashboardPage() {
               </div>
               <p className="text-xs text-muted-foreground">Agreement details and status</p>
             </Link>
-            <Link href="/ci/training/packages" className="rounded-xl border bg-background p-3 text-sm font-medium text-card-foreground shadow-sm transition-colors hover:bg-accent">
+            <Link href="/ci/training/receivables" className="rounded-xl border bg-background p-3 text-sm font-medium text-card-foreground shadow-sm transition-colors hover:bg-accent">
               <div className="mb-1 flex items-center gap-2 text-primary">
                 <Layers className="h-4 w-4" />
-                Training Packages
+                Training Receivables
               </div>
-              <p className="text-xs text-muted-foreground">Purchase available packages</p>
+              <p className="text-xs text-muted-foreground">View and pay training fees</p>
             </Link>
             <Link href="/ci/training/progress" className="rounded-xl border bg-background p-3 text-sm font-medium text-card-foreground shadow-sm transition-colors hover:bg-accent">
               <div className="mb-1 flex items-center gap-2 text-primary">

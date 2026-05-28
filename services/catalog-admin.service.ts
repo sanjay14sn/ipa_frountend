@@ -1,19 +1,6 @@
 import { api } from "@/lib/axios";
 import { unwrapData } from "@/lib/unwrap-api";
 
-export interface CITrainingPackage {
-  id: number;
-  programId: number;
-  name: string;
-  code: string;
-  description?: string | null;
-  packageOrder: number;
-  fee: number;
-  isActive: boolean;
-  trainingLevelIds: number[];
-  createdAt?: string;
-}
-
 export interface CITrainingLevel {
   id: number;
   programId: number;
@@ -30,55 +17,6 @@ export interface StudentLevelMapping {
   levelNumber?: number;
 }
 
-export async function listCITrainingPackages(params: {
-  programId: number;
-}): Promise<CITrainingPackage[]> {
-  const res = await api.get(
-    `/catalog/ci-training-package/by-program/${params.programId}`,
-  );
-  // Defensive guard: unwrapData types T but can return undefined/null at
-  // runtime when the backend returns an unexpected shape. Return [] rather
-  // than letting callers crash on `.map()` / `.length`.
-  const payload = unwrapData<CITrainingPackage[]>(res);
-  return Array.isArray(payload) ? payload : [];
-}
-
-export async function createCITrainingPackage(input: {
-  programId: number;
-  name: string;
-  code: string;
-  description?: string;
-  packageOrder: number;
-  fee: number;
-  trainingLevelIds: number[];
-}): Promise<CITrainingPackage> {
-  const res = await api.post("/catalog/ci-training-package", input);
-  return unwrapData<CITrainingPackage>(res);
-}
-
-export async function updateCITrainingPackage(id: number, input: Partial<{
-  name: string;
-  code: string;
-  description: string;
-  packageOrder: number;
-  fee: number;
-  trainingLevelIds: number[];
-  isActive: boolean;
-}>): Promise<CITrainingPackage> {
-  const res = await api.patch(`/catalog/ci-training-package/${id}`, input);
-  return unwrapData<CITrainingPackage>(res);
-}
-
-export async function generateDefaultPackages(programId: number): Promise<CITrainingPackage[]> {
-  const res = await api.post(
-    "/catalog/ci-training-package/generate-default",
-    null,
-    { params: { programId } },
-  );
-  // Same defensive guard as listCITrainingPackages — see comment above.
-  const payload = unwrapData<CITrainingPackage[]>(res);
-  return Array.isArray(payload) ? payload : [];
-}
 
 export async function listCITrainingLevels(params?: { programId?: number }): Promise<CITrainingLevel[]> {
   if (!params?.programId) return [];
