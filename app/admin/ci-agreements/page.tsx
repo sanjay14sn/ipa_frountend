@@ -186,7 +186,8 @@ function CIAgreementsTable() {
       header: "Validity",
       render: (row) => (
         <span className="text-xs text-muted-foreground">
-          {row.validFrom ?? "—"} → {row.validUntil ?? "—"}
+          {row.tenure != null ? `${row.tenure}mo` : "—"}
+          {row.expiresAt ? ` · exp ${row.expiresAt.slice(0, 10)}` : ""}
         </span>
       ),
     },

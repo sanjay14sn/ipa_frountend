@@ -179,8 +179,8 @@ export interface CIAgreementRecord {
   id: number;
   title: string;
   phase: CIAgreementPhase;
-  validFrom: string | null;
-  validUntil: string | null;
+  tenure: number | null;
+  expiresAt: string | null;
   dateOfSigning: string | null;
   ciShare: number | null;
   levelDurations: { l1: number; l2: number };

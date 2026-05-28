@@ -48,8 +48,9 @@ export default function CITrainingReceivablesPage() {
   const isAgreementValid = useMemo(() => {
     if (!agreement) return false;
     if (agreement.phase !== "SIGNED") return false;
-    if (!agreement.validFrom || !agreement.validUntil) return false;
-    return agreement.validFrom <= today && today <= agreement.validUntil;
+    // Agreement is gated by Valid status (phase=SIGNED). expiresAt null = unlimited or not yet derived.
+    if (!agreement.expiresAt) return true;
+    return today <= agreement.expiresAt;
   }, [agreement, today]);
 
   const sortedReceivables = useMemo(

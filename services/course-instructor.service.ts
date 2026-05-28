@@ -50,8 +50,6 @@ export interface CourseInstructorData {
   education: string;
   occupation: string;
   reference: string;
-  validFrom?: Date;
-  expiryDate?: Date;
   trainingProof?: string;
   status: string;
   materialsOrdered?: boolean;
@@ -90,8 +88,7 @@ export interface CreateCourseInstructorRequest {
 }
 
 export interface ApproveCourseInstructorRequest {
-  validFrom: string;
-  validUntil: string;
+  tenure: number;
 }
 
 export interface AdminCourseInstructorAgreementRecord {
@@ -102,8 +99,8 @@ export interface AdminCourseInstructorAgreementRecord {
     | "PENDING_FRANCHISEE_SIGNATURE"
     | "SIGNED"
     | "EXPIRED";
-  validFrom: string | null;
-  validUntil: string | null;
+  tenure: number | null;
+  expiresAt: string | null;
   dateOfSigning: string | null;
   ciShare: number | null;
   levelDurations: { l1: number; l2: number };
@@ -878,7 +875,7 @@ export interface SetupExistingCIPayload {
     occupation: string;
     reference: string;
   };
-  validity: { validFrom: string; validUntil: string };
+  tenure: number;
   agreementSignedAt: string;
   completedThrough: number | null;
   receivables?: SetupExistingCIReceivable[];

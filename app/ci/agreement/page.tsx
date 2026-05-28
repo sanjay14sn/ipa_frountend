@@ -168,9 +168,10 @@ function SignatureStep({
             Signed on {fmtDate(agreement.dateOfSigning)}
           </p>
         )}
-        {agreement.validFrom && agreement.validUntil && (
+        {agreement.tenure != null && (
           <p className="mt-1 text-xs text-muted-foreground">
-            Valid: {fmtDate(agreement.validFrom)} — {fmtDate(agreement.validUntil)}
+            {agreement.tenure}-month tenure
+            {agreement.expiresAt ? ` · Expires ${fmtDate(agreement.expiresAt)}` : ""}
           </p>
         )}
         <Button className="mt-5" onClick={onGoToPortal}>
