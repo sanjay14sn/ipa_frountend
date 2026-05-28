@@ -112,7 +112,7 @@ export default function AcademicSection({
                       <div>
                         <span className="text-gray-500">Status</span>
                         <p className="text-gray-900 mt-1">
-                          {student.isActive ? "Active" : "Inactive"}
+                          {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
                         </p>
                       </div>
                       <div>

@@ -17,6 +17,10 @@ export interface PaymentListParams {
   limit?: number;
   search?: string;
   status?: string;
+  type?: string;
+  method?: string;
+  sortBy?: string;
+  sortOrder?: "ASC" | "DESC";
   franchiseId?: string | null;
 }
 

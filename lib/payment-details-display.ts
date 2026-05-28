@@ -12,6 +12,32 @@ export type PaymentMethodDetailsInput = {
   acquirerData?: Record<string, unknown> | null;
 };
 
+export function typeLabel(type?: string | null): string {
+  switch ((type ?? "").trim().toUpperCase()) {
+    case "CI_TRAINING_FEE":
+      return "CI Training Fee";
+    case "FRANCHISE_FEE":
+      return "Franchise Fee";
+    case "ORDER_PAYMENT":
+      return "Order Payment";
+    default:
+      return type ? type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Payment";
+  }
+}
+
+export function typeBadgeClass(type?: string | null): string {
+  switch ((type ?? "").trim().toUpperCase()) {
+    case "CI_TRAINING_FEE":
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    case "FRANCHISE_FEE":
+      return "bg-amber-100 text-amber-800 border-amber-200";
+    case "ORDER_PAYMENT":
+      return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    default:
+      return "bg-gray-100 text-gray-600 border-gray-200";
+  }
+}
+
 export function normalizeMethod(method?: string | null): string {
   return (method ?? "").trim().toLowerCase();
 }

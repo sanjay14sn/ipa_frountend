@@ -8,6 +8,8 @@ import {
   getMethodSpecificFields,
   methodBadgeClass,
   methodLabel,
+  typeBadgeClass,
+  typeLabel,
 } from "@/lib/payment-details-display";
 
 export interface PaymentBodyData {
@@ -91,7 +93,14 @@ export function PaymentDetailsBody({
             <LabeledValue label="Franchisee" value={franchiseeName} />
           ) : null}
           {paymentType ? (
-            <LabeledValue label="Type" value={paymentType} />
+            <LabeledValue
+              label="Type"
+              value={
+                <Badge variant="outline" className={typeBadgeClass(paymentType)}>
+                  {typeLabel(paymentType)}
+                </Badge>
+              }
+            />
           ) : null}
         </div>
       ) : null}

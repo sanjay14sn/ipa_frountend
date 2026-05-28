@@ -170,7 +170,7 @@ export default function EditStudentModal({
             programId: student.programId || 0,
             streamId,
             levelId,
-            status: student.isActive ? "active" : "inactive",
+            status: student.status ?? "active",
             fatherName: student.fatherName || "",
             fatherQualification: student.fatherQualification || "",
             fatherOccupation: student.fatherOccupation || "",
@@ -202,7 +202,7 @@ export default function EditStudentModal({
             programId: student.programId || 0,
             streamId: 0,
             levelId: 0,
-            status: student.isActive ? "active" : "inactive",
+            status: student.status ?? "active",
             fatherName: student.fatherName || "",
             fatherQualification: student.fatherQualification || "",
             fatherOccupation: student.fatherOccupation || "",
@@ -359,7 +359,7 @@ export default function EditStudentModal({
         case 4:
           updateData.programId = formData.programId;
           updateData.levelId = formData.levelId;
-          updateData.isActive = formData.status === "active";
+          if (formData.status !== "completed") updateData.status = formData.status as "active" | "inactive";
           break;
       }
 
@@ -454,11 +454,15 @@ export default function EditStudentModal({
                 <Select
                   value={formData.status}
                   onValueChange={(value) => handleInputChange("status", value)}
+                  disabled={formData.status === "completed"}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    {formData.status === "completed" && (
+                      <SelectItem value="completed" disabled>Completed</SelectItem>
+                    )}
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>

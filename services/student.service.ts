@@ -248,7 +248,7 @@ function mapCertRow(c: CertificateRow): AdminCertificateRequest {
     studentStream,
     studentLevel: getLevelLabel(level, c.levelId),
     studentLevelCode: levelCodeRaw || undefined,
-    studentIsActive: Boolean(student.isActive ?? true),
+    studentIsActive: (String(student.status ?? "active")) === "active",
     studentDateOfJoining: student.dateOfJoining
       ? String(student.dateOfJoining)
       : undefined,

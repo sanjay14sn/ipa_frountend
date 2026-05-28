@@ -163,7 +163,8 @@ export default function StudentsTable({
       className: "text-center",
       render: (student) => (
         <StatusBadge
-          label={student.isActive ? "Active" : "Inactive"}
+          label={student.status.charAt(0).toUpperCase() + student.status.slice(1)}
+          tone={student.status === "active" ? "success" : student.status === "completed" ? "info" : "neutral"}
           className="px-1.5 text-[11px]"
         />
       ),
@@ -244,6 +245,7 @@ export default function StudentsTable({
           { value: "all", label: "All statuses" },
           { value: "active", label: "Active" },
           { value: "inactive", label: "Inactive" },
+          { value: "completed", label: "Completed" },
         ],
         defaultValue: statusFilter ?? "all",
       },

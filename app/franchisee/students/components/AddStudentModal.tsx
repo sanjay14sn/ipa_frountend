@@ -400,7 +400,7 @@ export default function AddStudentModal({
         levelId: Number(formData.levelId),
         level: "",
         stream: StudentStream.REGULAR,
-        isActive: formData.status === "active",
+        status: formData.status as "active" | "inactive",
         idIssued,
         idIssueDate,
         existing: formData.existing,
