@@ -50,6 +50,7 @@ interface FranchisePaymentsDetailsProps {
   totalCompleted?: number;
   totalPending?: number;
   totalAmount?: number;
+  hideSummary?: boolean;
 }
 
 export default function FranchisePaymentsDetails({
@@ -58,6 +59,7 @@ export default function FranchisePaymentsDetails({
   totalCompleted,
   totalPending,
   totalAmount,
+  hideSummary = false,
 }: FranchisePaymentsDetailsProps) {
   const [paymentsPage, setPaymentsPage] = useState(1);
   const paymentsLimit = 10;
@@ -171,32 +173,34 @@ export default function FranchisePaymentsDetails({
   return (
     <ExpandedDetailSurface className="border-t border-border/60">
       <div className="space-y-3 p-3 md:p-4">
-        <KeyFactsGrid columns={4}>
-          <KeyFactCard
-            icon={Receipt}
-            label="Total payments"
-            value={totalPaymentsCount}
-          />
-          <KeyFactCard
-            icon={IndianRupee}
-            label="Completed amount"
-            value={
-              totalAmount != null
-                ? formatRsAmount(totalAmount, "INR")
-                : "—"
-            }
-          />
-          <KeyFactCard
-            icon={CheckCircle2}
-            label="Completed"
-            value={totalCompleted ?? "—"}
-          />
-          <KeyFactCard
-            icon={Clock}
-            label="Pending"
-            value={totalPending ?? "—"}
-          />
-        </KeyFactsGrid>
+        {!hideSummary && (
+          <KeyFactsGrid columns={4}>
+            <KeyFactCard
+              icon={Receipt}
+              label="Total payments"
+              value={totalPaymentsCount}
+            />
+            <KeyFactCard
+              icon={IndianRupee}
+              label="Completed amount"
+              value={
+                totalAmount != null
+                  ? formatRsAmount(totalAmount, "INR")
+                  : "—"
+              }
+            />
+            <KeyFactCard
+              icon={CheckCircle2}
+              label="Completed"
+              value={totalCompleted ?? "—"}
+            />
+            <KeyFactCard
+              icon={Clock}
+              label="Pending"
+              value={totalPending ?? "—"}
+            />
+          </KeyFactsGrid>
+        )}
 
         <ProfileCard contentClassName="space-y-2 p-3 md:p-4">
           <ProfileCardSection icon={Wallet} label="Payments">

@@ -20,6 +20,8 @@ import { getFranchiseApplicationDetail } from "@/services/franchisee.service";
 import AdminOrdersTable from "@/app/admin/orders/components/AdminOrdersTable";
 import { FranchiseStudentsTable } from "./components/FranchiseStudentsTable";
 import { FranchiseCiListTable } from "./components/FranchiseCiListTable";
+import { FranchiseCiSummary } from "./components/FranchiseCiSummary";
+import { FranchiseStudentsSummary } from "./components/FranchiseStudentsSummary";
 import { FranchiseOrdersSummary } from "./components/FranchiseOrdersSummary";
 import { FranchisePaymentsTab } from "./components/FranchisePaymentsTab";
 import { FranchiseAgreementsWorkspace } from "@/app/admin/franchise/components/FranchiseAgreementsWorkspace";
@@ -183,11 +185,17 @@ function FranchiseDetailInner() {
       </div>
 
       <TabsContent value="students" className="mt-0">
-        <FranchiseStudentsTable franchiseId={franchiseId} />
+        <div className="space-y-4">
+          <FranchiseStudentsSummary franchiseId={franchiseId} />
+          <FranchiseStudentsTable franchiseId={franchiseId} />
+        </div>
       </TabsContent>
 
       <TabsContent value="ci" className="mt-0">
-        <FranchiseCiListTable franchiseId={franchiseId} />
+        <div className="space-y-4">
+          <FranchiseCiSummary franchiseId={franchiseId} />
+          <FranchiseCiListTable franchiseId={franchiseId} />
+        </div>
       </TabsContent>
 
       <TabsContent value="orders" className="mt-0">

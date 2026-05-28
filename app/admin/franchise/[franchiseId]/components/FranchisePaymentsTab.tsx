@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import FranchisePaymentsDetails from "@/app/admin/payments/components/FranchisePaymentsDetails";
 import { useAdminFranchisePaymentSummaries } from "@/hooks/api/payment.hooks";
+import { FranchisePaymentsSummary } from "./FranchisePaymentsSummary";
 
 interface FranchisePaymentsTabProps {
   franchiseId: string;
@@ -22,12 +23,16 @@ export function FranchisePaymentsTab({
   const summary = summariesQuery.data?.data?.[0];
 
   return (
-    <FranchisePaymentsDetails
-      franchiseId={franchiseId}
-      franchiseName={summary?.franchiseName ?? franchiseName}
-      totalCompleted={summary?.totalCompleted}
-      totalPending={summary?.totalPending}
-      totalAmount={summary?.totalAmount}
-    />
+    <div className="space-y-4">
+      <FranchisePaymentsSummary franchiseId={franchiseId} />
+      <FranchisePaymentsDetails
+        franchiseId={franchiseId}
+        franchiseName={summary?.franchiseName ?? franchiseName}
+        totalCompleted={summary?.totalCompleted}
+        totalPending={summary?.totalPending}
+        totalAmount={summary?.totalAmount}
+        hideSummary
+      />
+    </div>
   );
 }
