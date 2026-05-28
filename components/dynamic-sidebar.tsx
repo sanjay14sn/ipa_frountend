@@ -11,6 +11,7 @@ import {
   FileText,
   GraduationCap,
   LayoutDashboard,
+  ScrollText,
   ShieldCheck,
   ShoppingCart,
   Store,
@@ -66,6 +67,11 @@ const adminNavigation = {
           title: "Course Instructors",
           url: "/admin/course-instructors",
           icon: GraduationCap,
+        },
+        {
+          title: "CI Agreements",
+          url: "/admin/ci-agreements",
+          icon: ScrollText,
         },
         {
           title: "Operations",
