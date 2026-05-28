@@ -1,9 +1,20 @@
 "use client";
 
 import * as React from "react";
+import {
+  addMonths,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isSameDay,
+  isSameMonth,
+  isToday,
+  startOfMonth,
+  startOfWeek,
+  subMonths,
+} from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker, useDayPicker } from "react-day-picker";
-import type { MonthCaptionProps } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
@@ -15,137 +26,207 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>;
+const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
 
-function CalendarCaption({ calendarMonth }: MonthCaptionProps) {
-  const { goToMonth, startMonth, endMonth } = useDayPicker();
+export interface CalendarProps {
+  mode?: "single";
+  selected?: Date;
+  onSelect?: (date: Date | undefined) => void;
+  defaultMonth?: Date;
+  month?: Date;
+  onMonthChange?: (month: Date) => void;
+  startMonth?: Date;
+  endMonth?: Date;
+  disabled?: ((date: Date) => boolean) | Date[];
+  showOutsideDays?: boolean;
+  /** accepted but unused — popover handles focus */
+  initialFocus?: boolean;
+  className?: string;
+}
 
-  const currentMonth = calendarMonth.date.getMonth();
-  const currentYear = calendarMonth.date.getFullYear();
+function isDayDisabled(
+  date: Date,
+  disabled: CalendarProps["disabled"],
+  startMonth?: Date,
+  endMonth?: Date,
+): boolean {
+  if (startMonth && date < startMonth) return true;
+  if (endMonth && date > endMonth) return true;
+  if (!disabled) return false;
+  if (typeof disabled === "function") return disabled(date);
+  return disabled.some((d) => isSameDay(d, date));
+}
 
-  const startYear = startMonth ? startMonth.getFullYear() : 1950;
-  const endYear = endMonth ? endMonth.getFullYear() : 2100;
-
-  const years = Array.from(
-    { length: endYear - startYear + 1 },
-    (_, i) => startYear + i,
+function Calendar({
+  selected,
+  onSelect,
+  defaultMonth,
+  month: controlledMonth,
+  onMonthChange,
+  startMonth,
+  endMonth,
+  disabled,
+  showOutsideDays = true,
+  className,
+}: CalendarProps) {
+  const [internalMonth, setInternalMonth] = React.useState<Date>(
+    controlledMonth ?? defaultMonth ?? selected ?? new Date(),
   );
 
-  return (
-    <div className="flex w-full items-center justify-center gap-1">
-      <Select
-        value={String(currentMonth)}
-        onValueChange={(v) => goToMonth(new Date(currentYear, Number(v)))}
-      >
-        <SelectTrigger className="h-7 w-[115px] border-0 bg-transparent px-2 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {MONTH_NAMES.map((name, i) => (
-            <SelectItem key={name} value={String(i)}>
-              {name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+  const displayMonth = controlledMonth ?? internalMonth;
 
-      <Select
-        value={String(currentYear)}
-        onValueChange={(v) => goToMonth(new Date(Number(v), currentMonth))}
-      >
-        <SelectTrigger className="h-7 w-[75px] border-0 bg-transparent px-2 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent className="max-h-52">
-          {years.map((year) => (
-            <SelectItem key={year} value={String(year)}>
-              {year}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+  function navigate(next: Date) {
+    setInternalMonth(next);
+    onMonthChange?.(next);
+  }
+
+  const startYear = startMonth?.getFullYear() ?? 1950;
+  const endYear = endMonth?.getFullYear() ?? 2100;
+
+  const years = React.useMemo(
+    () => Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i),
+    [startYear, endYear],
+  );
+
+  const days = React.useMemo(() => {
+    const monthStart = startOfMonth(displayMonth);
+    const monthEnd = endOfMonth(displayMonth);
+    return eachDayOfInterval({
+      start: startOfWeek(monthStart),
+      end: endOfWeek(monthEnd),
+    });
+  }, [displayMonth]);
+
+  const weeks = React.useMemo(() => {
+    const result: Date[][] = [];
+    for (let i = 0; i < days.length; i += 7) result.push(days.slice(i, i + 7));
+    return result;
+  }, [days]);
+
+  const currentMonth = displayMonth.getMonth();
+  const currentYear = displayMonth.getFullYear();
+
+  const canGoPrev = !startMonth || subMonths(displayMonth, 1) >= startOfMonth(startMonth);
+  const canGoNext = !endMonth || addMonths(displayMonth, 1) <= startOfMonth(endMonth);
+
+  return (
+    <div className={cn("p-3 select-none", className)}>
+      {/* ── Header row ── */}
+      <div className="relative mb-3 flex h-8 items-center justify-center">
+        {/* Prev button */}
+        <button
+          type="button"
+          onClick={() => navigate(subMonths(displayMonth, 1))}
+          disabled={!canGoPrev}
+          aria-label="Previous month"
+          className={cn(
+            buttonVariants({ variant: "ghost" }),
+            "absolute left-0 h-7 w-7 p-0 opacity-60 hover:opacity-100 disabled:opacity-25",
+          )}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+
+        {/* Month + Year selects */}
+        <div className="flex items-center gap-0.5">
+          <Select
+            value={String(currentMonth)}
+            onValueChange={(v) => navigate(new Date(currentYear, Number(v)))}
+          >
+            <SelectTrigger className="h-7 w-[110px] border-0 bg-transparent px-2 text-sm font-semibold shadow-none focus:ring-0 focus:ring-offset-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MONTH_NAMES.map((name, i) => (
+                <SelectItem key={name} value={String(i)}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={String(currentYear)}
+            onValueChange={(v) => navigate(new Date(Number(v), currentMonth))}
+          >
+            <SelectTrigger className="h-7 w-[72px] border-0 bg-transparent px-2 text-sm font-semibold shadow-none focus:ring-0 focus:ring-offset-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="max-h-52">
+              {years.map((year) => (
+                <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Next button */}
+        <button
+          type="button"
+          onClick={() => navigate(addMonths(displayMonth, 1))}
+          disabled={!canGoNext}
+          aria-label="Next month"
+          className={cn(
+            buttonVariants({ variant: "ghost" }),
+            "absolute right-0 h-7 w-7 p-0 opacity-60 hover:opacity-100 disabled:opacity-25",
+          )}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* ── Weekday headers ── */}
+      <div className="mb-1 flex">
+        {WEEKDAYS.map((d) => (
+          <div key={d} className="w-8 text-center text-[0.75rem] font-normal text-muted-foreground">
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* ── Day grid ── */}
+      <div className="flex flex-col gap-1">
+        {weeks.map((week, wi) => (
+          <div key={wi} className="flex">
+            {week.map((day) => {
+              const outside = !isSameMonth(day, displayMonth);
+              const sel = selected ? isSameDay(day, selected) : false;
+              const today = isToday(day);
+              const dis = isDayDisabled(day, disabled, startMonth, endMonth);
+
+              if (outside && !showOutsideDays) {
+                return <div key={day.toISOString()} className="h-8 w-8" />;
+              }
+
+              return (
+                <button
+                  key={day.toISOString()}
+                  type="button"
+                  disabled={dis}
+                  onClick={() => !dis && onSelect?.(day)}
+                  className={cn(
+                    buttonVariants({ variant: "ghost" }),
+                    "h-8 w-8 p-0 text-sm font-normal",
+                    outside && "text-muted-foreground opacity-40",
+                    today && !sel && "bg-accent text-accent-foreground",
+                    sel && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                    dis && "pointer-events-none opacity-30",
+                  )}
+                >
+                  {format(day, "d")}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-function Calendar({
-  className,
-  classNames,
-  showOutsideDays = true,
-  components: componentsProp,
-  ...props
-}: CalendarProps) {
-  return (
-    <DayPicker
-      showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
-      classNames={{
-        months: "relative flex flex-col gap-4 sm:flex-row sm:gap-4",
-        month: "relative flex flex-col gap-3",
-        month_caption: "flex h-7 items-center justify-center",
-        caption_label: "text-sm font-medium",
-        // spans the day-grid area (top-[40px] = h-7 caption + gap-3)
-        // items-center vertically centers the arrows in the day rows
-        nav: "absolute inset-x-0 top-[40px] bottom-0 z-20 flex items-center justify-between pointer-events-none",
-        button_previous: cn(
-          buttonVariants({ variant: "ghost" }),
-          "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100 pointer-events-auto",
-        ),
-        button_next: cn(
-          buttonVariants({ variant: "ghost" }),
-          "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100 pointer-events-auto",
-        ),
-        month_grid: "w-full border-collapse",
-        weekdays: "flex",
-        weekday:
-          "text-muted-foreground rounded-md w-8 font-normal text-[0.75rem]",
-        week: "mt-1 flex w-full",
-        day: "h-8 w-8 p-0 text-center text-sm relative [&:has([aria-selected].range_end)]:rounded-r-md [&:has([aria-selected].outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-10",
-        day_button: cn(
-          buttonVariants({ variant: "ghost" }),
-          "h-8 w-8 p-0 font-normal aria-selected:opacity-100",
-        ),
-        range_end: "range_end",
-        selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-        today: "bg-accent text-accent-foreground",
-        outside:
-          "outside text-muted-foreground aria-selected:bg-accent/50 aria-selected:text-muted-foreground",
-        disabled: "text-muted-foreground opacity-50",
-        range_middle:
-          "aria-selected:bg-accent aria-selected:text-accent-foreground",
-        hidden: "invisible",
-        ...classNames,
-      }}
-      components={{
-        Chevron: ({ orientation, className: chevronCn, ...chevronProps }) => {
-          const Icon = orientation === "left" ? ChevronLeft : ChevronRight;
-          return (
-            <Icon className={cn("h-4 w-4", chevronCn)} {...chevronProps} />
-          );
-        },
-        MonthCaption: CalendarCaption,
-        ...componentsProp,
-      }}
-      {...props}
-    />
-  );
-}
 Calendar.displayName = "Calendar";
 
 export { Calendar };
