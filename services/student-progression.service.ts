@@ -7,7 +7,9 @@ import {
 import {
   PaginationMeta,
   StudentPaginationParams,
+  StudentStatus,
   StudentStream,
+  normalizeStudentStatus,
 } from "@/services/student-list.service";
 
 // ---------------------------------------------------------------------------
@@ -72,7 +74,7 @@ export interface EligibleStudent {
   /** Duration in months of the student's current level — used to compute the
    *  15-day "duration exceeded" buffer on the eligibility badge. */
   durationInMonths: number;
-  isActive: boolean;
+  status: StudentStatus;
   lastCertIssuedAt: string | null;
   eligibilityReason: "no_certificate" | "duration_exceeded";
 }
@@ -98,7 +100,7 @@ function mapLifecycleRow(row: Record<string, unknown>): StudentLifecycleRow {
     levelCode: String(row.levelCode ?? ""),
     durationInMonths:
       row.durationInMonths == null ? null : Number(row.durationInMonths),
-    isActive: Boolean(row.isActive),
+    isActive: (String(row.status ?? "active")) === "active",
     dateOfJoining: row.dateOfJoining ? String(row.dateOfJoining) : null,
     certificateStatus: String(row.certificateStatus ?? "NONE"),
     progressionStatus: row.progressionStatus ? String(row.progressionStatus) : null,
@@ -213,7 +215,7 @@ export async function getEligibleStudents(): Promise<EligibleStudentsResponse> {
       stream: String(levelStream?.name ?? (s.stream as string) ?? StudentStream.REGULAR),
       levelName: level?.name ? String(level.name) : String(s.levelId ?? ""),
       durationInMonths: Number(level?.durationInMonths ?? 0),
-      isActive: Boolean(s.isActive),
+      status: normalizeStudentStatus(s.status),
       lastCertIssuedAt: (s.lastCertIssuedAt as string | null) ?? null,
       eligibilityReason: (s.eligibilityReason as "no_certificate" | "duration_exceeded") ?? "no_certificate",
     };

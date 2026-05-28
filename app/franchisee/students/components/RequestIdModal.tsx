@@ -38,7 +38,9 @@ export default function RequestIdModal({
   const [submitted, setSubmitted] = useState(false);
 
   const eligibleStudents = students.filter(
-    (student) => student.idIssued === StudentIdStatus.NOT_ISSUED
+    (student) =>
+      student.status === "active" &&
+      student.idIssued === StudentIdStatus.NOT_ISSUED
   );
 
   const handleStudentToggle = (studentId: number) => {
@@ -96,9 +98,7 @@ export default function RequestIdModal({
     );
   }
 
-  const ineligibleCount = students.filter(
-    (s) => s.idIssued !== StudentIdStatus.NOT_ISSUED
-  ).length;
+  const ineligibleCount = students.length - eligibleStudents.length;
 
   return (
     <AppDialog

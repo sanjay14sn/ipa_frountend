@@ -67,8 +67,8 @@ export default function EligibleStudentsGroupedView({
       const matchesLevel = levelFilter === "all" || s.levelName === levelFilter;
       const matchesStatus =
         statusFilter === "all" ||
-        (statusFilter === "active" && s.isActive) ||
-        (statusFilter === "inactive" && !s.isActive);
+        (statusFilter === "active" && s.status === "active") ||
+        (statusFilter === "inactive" && s.status !== "active");
 
       return matchesSearch && matchesStream && matchesLevel && matchesStatus;
     });

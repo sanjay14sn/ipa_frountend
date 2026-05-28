@@ -29,6 +29,8 @@ export enum StudentIdStatus {
   REQUESTED = "Requested",
 }
 
+export type StudentStatus = "active" | "inactive" | "completed";
+
 export interface StudentData {
   id: number;
   franchiseId: string;
@@ -51,7 +53,7 @@ export interface StudentData {
   levelId?: number;
   level: StudentLevel | string | { id: number; name: string; code: string; streamId: number; displayOrder?: number };
   stream: StudentStream | string;
-  isActive: boolean;
+  status: StudentStatus;
   idIssued: StudentIdStatus;
   deactivateDate?: Date;
   dateOfJoining?: Date;
@@ -118,6 +120,13 @@ export interface StudentPaginationParams {
 // ---------------------------------------------------------------------------
 // Internal normalisers
 // ---------------------------------------------------------------------------
+
+export function normalizeStudentStatus(value: unknown): StudentStatus {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (raw === "inactive") return "inactive";
+  if (raw === "completed") return "completed";
+  return "active";
+}
 
 function normalizeStudentIdStatus(value: unknown): StudentIdStatus {
   const raw = String(value ?? "").trim().toLowerCase();
@@ -198,7 +207,7 @@ export function mapStudentRow(row: Record<string, unknown>): StudentData {
     levelId: row.levelId != null ? Number(row.levelId) : undefined,
     level: normalizeStudentLevel(row),
     stream: normalizeStudentStream(row),
-    isActive: Boolean(row.isActive ?? true),
+    status: normalizeStudentStatus(row.status),
     idIssued,
     dateOfJoining: row.dateOfJoining
       ? new Date(String(row.dateOfJoining))
