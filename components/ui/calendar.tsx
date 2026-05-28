@@ -2,17 +2,92 @@
 
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker } from "react-day-picker";
+import { DayPicker, useDayPicker } from "react-day-picker";
+import type { MonthCaptionProps } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
+
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+function CalendarCaption({ calendarMonth }: MonthCaptionProps) {
+  const { goToMonth, startMonth, endMonth } = useDayPicker();
+
+  const currentMonth = calendarMonth.date.getMonth();
+  const currentYear = calendarMonth.date.getFullYear();
+
+  const startYear = startMonth ? startMonth.getFullYear() : 1950;
+  const endYear = endMonth ? endMonth.getFullYear() : 2100;
+
+  const years = Array.from(
+    { length: endYear - startYear + 1 },
+    (_, i) => startYear + i,
+  );
+
+  return (
+    <div className="flex items-center gap-1">
+      <Select
+        value={String(currentMonth)}
+        onValueChange={(v) => goToMonth(new Date(currentYear, Number(v)))}
+      >
+        <SelectTrigger className="h-7 w-[115px] border-0 bg-transparent px-2 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {MONTH_NAMES.map((name, i) => (
+            <SelectItem key={name} value={String(i)}>
+              {name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={String(currentYear)}
+        onValueChange={(v) => goToMonth(new Date(Number(v), currentMonth))}
+      >
+        <SelectTrigger className="h-7 w-[75px] border-0 bg-transparent px-2 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="max-h-52">
+          {years.map((year) => (
+            <SelectItem key={year} value={String(year)}>
+              {year}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
 
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  components: componentsProp,
   ...props
 }: CalendarProps) {
   return (
@@ -20,23 +95,10 @@ function Calendar({
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
       classNames={{
-        // react-day-picker v9 emits `<nav>` as a sibling of `<month_caption>`
-        // under `<month>`, so we anchor `nav` absolutely at the top of the
-        // month and let the caption (label or dropdowns) sit centered in the
-        // same row underneath it.
         months: "relative flex flex-col gap-4 sm:flex-row sm:gap-4",
         month: "relative flex flex-col gap-3",
         month_caption: "flex h-7 items-center justify-center",
         caption_label: "text-sm font-medium",
-        // captionLayout="dropdown" styles — visible label inside each
-        // dropdown_root, with the real <select> overlaid invisibly.
-        dropdowns: "flex items-center gap-1.5",
-        dropdown_root:
-          "relative inline-flex h-7 items-center rounded-md border border-input bg-background px-2 text-sm font-medium hover:bg-accent",
-        dropdown:
-          "absolute inset-0 z-10 cursor-pointer appearance-none bg-transparent opacity-0",
-        months_dropdown: "",
-        years_dropdown: "",
         nav: "absolute inset-x-1 top-0 z-20 flex h-7 items-center justify-between",
         button_previous: cn(
           buttonVariants({ variant: "ghost" }),
@@ -69,12 +131,14 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Chevron: ({ orientation, className, ...chevronProps }) => {
+        Chevron: ({ orientation, className: chevronCn, ...chevronProps }) => {
           const Icon = orientation === "left" ? ChevronLeft : ChevronRight;
           return (
-            <Icon className={cn("h-4 w-4", className)} {...chevronProps} />
+            <Icon className={cn("h-4 w-4", chevronCn)} {...chevronProps} />
           );
         },
+        MonthCaption: CalendarCaption,
+        ...componentsProp,
       }}
       {...props}
     />

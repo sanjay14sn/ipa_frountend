@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/popover";
 
 const ISO_FORMAT = "yyyy-MM-dd";
-const DISPLAY_FORMAT = "dd/MM/yyyy";
 
 export interface DateInputProps {
   /** ISO date string (yyyy-mm-dd) — matches native input[type=date] value semantics. */
@@ -44,11 +43,7 @@ function dateToIso(d: Date): string {
   return format(d, ISO_FORMAT);
 }
 
-/**
- * Shadcn date picker: a trigger button that shows the selected date and opens
- * a Calendar popover for picking. Value in/out is ISO yyyy-mm-dd.
- */
-const DateInput = React.forwardRef<HTMLButtonElement, DateInputProps>(
+const DateInput = React.forwardRef<HTMLInputElement, DateInputProps>(
   (
     {
       value,
@@ -67,66 +62,101 @@ const DateInput = React.forwardRef<HTMLButtonElement, DateInputProps>(
     ref,
   ) => {
     const [open, setOpen] = React.useState(false);
+    const [inputText, setInputText] = React.useState("");
 
     const dateValue = isoToDate(value);
     const minDate = isoToDate(min) ?? undefined;
     const maxDate = isoToDate(max) ?? undefined;
 
+    React.useEffect(() => {
+      setInputText(dateValue ? format(dateValue, "dd/MM/yyyy") : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [value]);
+
+    function handleTyping(e: React.ChangeEvent<HTMLInputElement>) {
+      const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
+      let formatted = digits;
+      if (digits.length > 4) {
+        formatted =
+          digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4);
+      } else if (digits.length > 2) {
+        formatted = digits.slice(0, 2) + "/" + digits.slice(2);
+      }
+      setInputText(formatted);
+      if (digits.length === 8) {
+        const parsed = parse(formatted, "dd/MM/yyyy", new Date());
+        if (isValid(parsed)) {
+          onChange?.(dateToIso(parsed));
+        }
+      } else if (digits.length === 0) {
+        onChange?.("");
+      }
+    }
+
     return (
-      <Popover open={open} onOpenChange={disabled ? undefined : setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            ref={ref}
-            type="button"
-            id={id}
-            name={name}
-            disabled={disabled}
-            aria-required={required}
-            aria-invalid={ariaInvalid}
-            aria-describedby={ariaDescribedby}
-            aria-haspopup="dialog"
-            aria-expanded={open}
-            className={cn(
-              "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
-              "hover:bg-accent hover:text-accent-foreground",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              "disabled:cursor-not-allowed disabled:opacity-50",
-              !dateValue && "text-muted-foreground",
-              className,
-            )}
-          >
-            <span className="truncate">
-              {dateValue ? format(dateValue, "dd/MM/yyyy") : placeholder}
-            </span>
-            <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={dateValue ?? undefined}
-            defaultMonth={dateValue ?? maxDate ?? minDate}
-            captionLayout="dropdown"
-            startMonth={minDate ?? new Date(1950, 0)}
-            endMonth={maxDate ?? new Date(2100, 11)}
-            disabled={
-              minDate || maxDate
-                ? (d: Date) => {
-                    if (minDate && d < minDate) return true;
-                    if (maxDate && d > maxDate) return true;
-                    return false;
-                  }
-                : undefined
-            }
-            onSelect={(d: Date | undefined) => {
-              if (!d) return;
-              onChange?.(dateToIso(d));
-              setOpen(false);
-            }}
-            initialFocus
-          />
-        </PopoverContent>
-      </Popover>
+      <div className="relative">
+        <input
+          ref={ref}
+          type="text"
+          id={id}
+          name={name}
+          disabled={disabled}
+          required={required}
+          aria-invalid={ariaInvalid}
+          aria-describedby={ariaDescribedby}
+          value={inputText}
+          onChange={handleTyping}
+          placeholder={placeholder}
+          maxLength={10}
+          inputMode="numeric"
+          className={cn(
+            "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm ring-offset-background",
+            "placeholder:text-muted-foreground",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+            className,
+          )}
+        />
+        <Popover open={open} onOpenChange={disabled ? undefined : setOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              disabled={disabled}
+              tabIndex={-1}
+              aria-haspopup="dialog"
+              aria-expanded={open}
+              aria-label="Open date picker"
+              className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <CalendarIcon className="h-4 w-4" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateValue ?? undefined}
+              defaultMonth={dateValue ?? maxDate ?? minDate}
+              startMonth={minDate ?? new Date(1950, 0)}
+              endMonth={maxDate ?? new Date(2100, 11)}
+              disabled={
+                minDate || maxDate
+                  ? (d: Date) => {
+                      if (minDate && d < minDate) return true;
+                      if (maxDate && d > maxDate) return true;
+                      return false;
+                    }
+                  : undefined
+              }
+              onSelect={(d: Date | undefined) => {
+                if (!d) return;
+                onChange?.(dateToIso(d));
+                setOpen(false);
+              }}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
     );
   },
 );
