@@ -13,7 +13,6 @@ export interface CalendarProps {
   endMonth?: Date;
   disabled?: ((date: Date) => boolean) | Date[];
   showOutsideDays?: boolean;
-  /** accepted but unused — popover handles focus */
   initialFocus?: boolean;
   className?: string;
 }
@@ -21,6 +20,7 @@ export interface CalendarProps {
 function Calendar({
   selected,
   onSelect,
+  defaultMonth,
   startMonth,
   endMonth,
   disabled,
@@ -29,19 +29,24 @@ function Calendar({
     typeof disabled === "function" ? (d: Date) => !disabled(d) : undefined;
 
   return (
-    <DatePicker
-      selected={selected ?? null}
-      onChange={(date: Date | null) => onSelect?.(date ?? undefined)}
-      inline
-      showMonthDropdown
-      showYearDropdown
-      dropdownMode="select"
-      minDate={startMonth}
-      maxDate={endMonth}
-      filterDate={filterDate}
-      yearDropdownItemNumber={100}
-      scrollableYearDropdown
-    />
+    // Scoping class — CSS overrides in globals.css use .dp-theme prefix
+    // for higher specificity than react-datepicker's default stylesheet.
+    <div className="dp-theme">
+      <DatePicker
+        selected={selected ?? null}
+        onChange={(date: Date | null) => onSelect?.(date ?? undefined)}
+        openToDate={defaultMonth ?? selected ?? undefined}
+        inline
+        showMonthDropdown
+        showYearDropdown
+        dropdownMode="select"
+        minDate={startMonth}
+        maxDate={endMonth}
+        filterDate={filterDate}
+        yearDropdownItemNumber={100}
+        scrollableYearDropdown
+      />
+    </div>
   );
 }
 
