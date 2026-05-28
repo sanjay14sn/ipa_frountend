@@ -99,14 +99,14 @@ function Calendar({
         month: "relative flex flex-col gap-3",
         month_caption: "flex h-7 items-center justify-center",
         caption_label: "text-sm font-medium",
-        nav: "absolute inset-x-1 top-0 z-20 flex h-7 items-center justify-between",
+        nav: "absolute inset-x-1 top-0 z-20 flex h-7 items-center justify-between pointer-events-none",
         button_previous: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100",
+          "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100 pointer-events-auto",
         ),
         button_next: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100",
+          "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100 pointer-events-auto",
         ),
         month_grid: "w-full border-collapse",
         weekdays: "flex",
