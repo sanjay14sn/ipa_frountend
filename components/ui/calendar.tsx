@@ -99,7 +99,7 @@ function Calendar({
         month: "relative flex flex-col gap-3",
         month_caption: "flex h-7 items-center justify-center px-8",
         caption_label: "text-sm font-medium",
-        nav: "absolute inset-x-1 top-0 z-20 flex h-7 items-center justify-between pointer-events-none",
+        nav: "absolute inset-x-1 top-1/2 -translate-y-1/2 z-20 flex items-center justify-between pointer-events-none",
         button_previous: cn(
           buttonVariants({ variant: "ghost" }),
           "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100 pointer-events-auto",
