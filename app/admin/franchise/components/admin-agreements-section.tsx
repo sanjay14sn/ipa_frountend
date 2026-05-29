@@ -278,9 +278,9 @@ export function AdminAgreementsSection({
           getRowId={(record) => String(record.id)}
           renderMainCell={(record) => (
             <span className="font-medium">
-              {record.franchisee?.name ?? "—"}
-              <span className="mx-1 text-muted-foreground">-</span>
               {record.franchise?.name ?? record.franchiseId ?? "—"}
+              <span className="mx-1 text-muted-foreground">-</span>
+              {record.program?.name ?? record.programName ?? "—"}
             </span>
           )}
           emptyMessage="No agreements found."
