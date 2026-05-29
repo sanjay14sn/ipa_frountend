@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
   SelectContent,
@@ -179,14 +180,12 @@ export default function RequestCertificateModal({
         label="Completion Date"
         required
       >
-        <Input
+        <DateInput
           id="completionDate"
-          type="date"
           min={student.minCompletionDate || undefined}
           max={todayIso}
           value={formData.completionDate}
-          onChange={(e) => handleInputChange("completionDate", e.target.value)}
-          required
+          onChange={(v) => handleInputChange("completionDate", v)}
         />
       </DialogFormField>
 

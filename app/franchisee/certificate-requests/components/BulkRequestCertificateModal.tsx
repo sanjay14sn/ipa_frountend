@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -157,8 +158,7 @@ function GroupCardSection({
           Apply Completion Date to All in Group
         </label>
         <div className="flex gap-2">
-          <Input
-            type="date"
+          <DateInput
             min={group.students
               .map((s) => s.minCompletionDate)
               .filter(Boolean)
@@ -166,7 +166,7 @@ function GroupCardSection({
               .pop() || undefined}
             max={todayIso}
             value={applyDateToAll}
-            onChange={(e) => onApplyDateToAllChange(group.key, e.target.value)}
+            onChange={(v) => onApplyDateToAllChange(group.key, v)}
             className="flex-1"
           />
           <Button
@@ -193,13 +193,11 @@ function GroupCardSection({
                 {student.rollNo} · {student.levelName}
               </div>
             </div>
-            <Input
-              type="date"
+            <DateInput
               min={student.minCompletionDate || undefined}
               max={todayIso}
               value={completionMap[student.id] ?? ""}
-              onChange={(e) => onDateChange(group.key, student.id, e.target.value)}
-              placeholder="Completion date"
+              onChange={(v) => onDateChange(group.key, student.id, v)}
               className="w-36 shrink-0"
             />
             <Input
