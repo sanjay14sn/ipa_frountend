@@ -5,6 +5,10 @@ interface SummaryStatCardProps {
   value: string | number;
   description?: string;
   className?: string;
+  /** Override the value typography (e.g. for text values rather than numeric stats). */
+  valueClassName?: string;
+  /** Override the description typography (e.g. to clamp long helper text). */
+  descriptionClassName?: string;
 }
 
 export function SummaryStatCard({
@@ -12,6 +16,8 @@ export function SummaryStatCard({
   value,
   description,
   className,
+  valueClassName,
+  descriptionClassName,
 }: SummaryStatCardProps) {
   return (
     <div className={cn("space-y-2 px-4 py-4 sm:px-5", className)}>
@@ -19,11 +25,21 @@ export function SummaryStatCard({
         <div className="text-sm text-muted-foreground">{label}</div>
         <span className="h-2 w-2 rounded-full bg-primary" />
       </div>
-      <div className="text-3xl font-normal leading-none text-card-foreground">
+      <div
+        className={cn(
+          "text-3xl font-normal leading-none text-card-foreground",
+          valueClassName,
+        )}
+      >
         {value}
       </div>
       {description ? (
-        <div className="max-w-44 text-xs leading-snug text-muted-foreground">
+        <div
+          className={cn(
+            "max-w-44 text-xs leading-snug text-muted-foreground",
+            descriptionClassName,
+          )}
+        >
           {description}
         </div>
       ) : null}

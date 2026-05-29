@@ -1,19 +1,13 @@
 "use client";
 
-import { Suspense, type ElementType } from "react";
+import { Suspense } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  BadgeCheck,
-  FileText,
-  Loader2,
-  MapPin,
-  User,
-} from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SummaryStatCard } from "@/components/shared";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { getFranchiseApplicationDetail } from "@/services/franchisee.service";
@@ -36,37 +30,6 @@ function compactText(value: unknown) {
 
 function uniqueValues(values: Array<string | null | undefined>) {
   return [...new Set(values.map((value) => value?.trim()).filter(Boolean))] as string[];
-}
-
-function FranchiseFactCard({
-  icon: Icon,
-  label,
-  value,
-  helper,
-}: {
-  icon: ElementType;
-  label: string;
-  value: string;
-  helper?: string;
-}) {
-  return (
-    <div className="rounded-xl border bg-card p-3 shadow-sm">
-      <div className="mb-2 flex items-center gap-2 text-muted-foreground">
-        <Icon className="h-4 w-4" />
-        <span className="text-[11px] font-medium uppercase tracking-[0.08em]">
-          {label}
-        </span>
-      </div>
-      <p className="break-words text-sm font-semibold text-card-foreground">
-        {value}
-      </p>
-      {helper ? (
-        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-          {helper}
-        </p>
-      ) : null}
-    </div>
-  );
 }
 
 function FranchiseDetailInner() {
@@ -142,33 +105,34 @@ function FranchiseDetailInner() {
         </div>
 
         {!isLoading && !isError ? (
-          <div className="grid gap-3 px-4 py-4 sm:px-5 md:grid-cols-2 xl:grid-cols-4">
-            <FranchiseFactCard
-              icon={User}
+          <div className="grid divide-y md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
+            <SummaryStatCard
               label="Franchisee"
               value={compactText(franchisee?.name)}
-              helper={
+              description={
                 uniqueValues([franchisee?.mail, franchisee?.phone]).join(" | ") ||
                 "Owner contact"
               }
+              valueClassName="text-lg font-semibold leading-snug"
             />
-            <FranchiseFactCard
-              icon={MapPin}
+            <SummaryStatCard
               label="Location"
               value={subtitle || compactText(franchise?.city)}
-              helper={compactText(franchise?.address)}
+              description={compactText(franchise?.address)}
+              valueClassName="text-lg font-semibold leading-snug"
+              descriptionClassName="max-w-none line-clamp-2"
             />
-            <FranchiseFactCard
-              icon={FileText}
+            <SummaryStatCard
               label="Programs"
               value={programNames.length > 0 ? programNames.join(", ") : "-"}
-              helper={`${programNames.length || 0} assigned`}
+              description={`${programNames.length || 0} assigned`}
+              valueClassName="text-lg font-semibold leading-snug"
             />
-            <FranchiseFactCard
-              icon={BadgeCheck}
+            <SummaryStatCard
               label="Agreements"
               value={String(agreementsCount)}
-              helper={`Created ${formatDate(franchise?.createdAt)}`}
+              description={`Created ${formatDate(franchise?.createdAt)}`}
+              valueClassName="text-lg font-semibold leading-snug"
             />
           </div>
         ) : null}
