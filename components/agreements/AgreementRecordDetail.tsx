@@ -18,6 +18,7 @@ import {
   getReceivablePlanMine,
   type AgreementRecord,
   type ReceivableInstallmentSummary,
+  type ReceivableSummaryItem,
 } from "@/services/agreement.service";
 import {
   buildAgreementDetailFranchiseData,
@@ -247,11 +248,13 @@ export function AgreementRecordDetail({
   onPayReceivableItem,
   isInitiatingReceivablePayment,
   onSign,
+  onWaiveItem,
 }: {
   data: AgreementRecord;
   onPayReceivableItem?: () => void;
   isInitiatingReceivablePayment?: boolean;
   onSign?: (result: ESignatureResult) => Promise<void>;
+  onWaiveItem?: (item: ReceivableSummaryItem) => void;
 }) {
   const pathname = usePathname();
   const isAdminContext = pathname?.startsWith("/admin") ?? false;
@@ -392,6 +395,7 @@ export function AgreementRecordDetail({
         }
         onPayReceivableItem={isAdminContext ? undefined : onPayReceivableItem}
         isInitiatingReceivablePayment={isInitiatingReceivablePayment}
+        onWaiveItem={onWaiveItem}
       />
 
       <Tabs defaultValue="overview" className="space-y-4">

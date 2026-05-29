@@ -100,6 +100,9 @@ function statusBadge(item: ReceivableSummaryItem) {
   if (item.status === "scheduled") {
     return { label: "Scheduled", variant: "outline" as const };
   }
+  if (item.status === "waived") {
+    return { label: "Waived", variant: "secondary" as const };
+  }
   return { label: item.status, variant: "secondary" as const };
 }
 

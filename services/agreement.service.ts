@@ -105,12 +105,15 @@ export interface ReceivableSummaryItem {
   payableAmount?: number;
   /** TRUE when the parent agreement's franchise fee already includes GST. */
   isGstInclusive?: boolean;
-  status: "scheduled" | "due" | "overdue" | "paid";
+  status: "scheduled" | "due" | "overdue" | "paid" | "waived";
   dueAt: string | null;
   paidAt: string | null;
   paymentId: number | null;
   isInitialPayable: boolean;
   sortOrder: number;
+  waivedAt?: string | null;
+  waivedBy?: number | null;
+  waiveReason?: string | null;
 }
 
 export interface ReceivableInstallmentSummary {
@@ -591,6 +594,13 @@ export type AgreementLifecycleStatus =
   | "Suspended"
   | "Void"
   | "Rejected";
+
+export async function waiveReceivableItem(
+  itemId: number,
+  reason: string,
+): Promise<void> {
+  await api.post(`/admin/receivables/item/${itemId}/waive`, { reason });
+}
 
 /** One row in the agreement switcher feed (mirrors backend `AgreementSwitcherItem`). */
 export interface AgreementSwitcherItem {

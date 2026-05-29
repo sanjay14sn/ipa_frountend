@@ -2,7 +2,14 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TableCell, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { formatRupees } from "@/lib/currency-utils";
 import { EmiTimeline } from "@/components/receivables/EmiTimeline";
@@ -34,6 +41,8 @@ export function statusVariant(status: string | null | undefined) {
       return "destructive" as const;
     case "due":
     case "grace":
+      return "secondary" as const;
+    case "waived":
       return "secondary" as const;
     default:
       return "outline" as const;
@@ -75,7 +84,13 @@ export function EmiMetric({
 
 // ── EmiScheduleRow ───────────────────────────────────────────────────────────
 
-export function EmiScheduleRow({ item }: { item: ReceivableSummaryItem }) {
+export function EmiScheduleRow({
+  item,
+  onWaiveItem,
+}: {
+  item: ReceivableSummaryItem;
+  onWaiveItem?: (item: ReceivableSummaryItem) => void;
+}) {
   return (
     <TableRow>
       <TableCell>
@@ -91,6 +106,19 @@ export function EmiScheduleRow({ item }: { item: ReceivableSummaryItem }) {
       <TableCell>{fmtShortDate(item.dueAt)}</TableCell>
       <TableCell>{fmtShortDate(item.paidAt)}</TableCell>
       <TableCell className="text-right font-medium">{formatRupees(item.amount)}</TableCell>
+      <TableCell className="text-right">
+        {onWaiveItem && item.status !== "paid" && item.status !== "waived" ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 text-xs text-muted-foreground hover:text-destructive"
+            onClick={() => onWaiveItem(item)}
+          >
+            Waive
+          </Button>
+        ) : null}
+      </TableCell>
     </TableRow>
   );
 }
@@ -103,6 +131,7 @@ export function AgreementEmiScheduleCard({
   viewFullScheduleLabel = "View full schedule",
   onPayReceivableItem,
   isInitiatingReceivablePayment = false,
+  onWaiveItem,
 }: {
   summary:
     | ReceivableInstallmentSummary
@@ -114,6 +143,7 @@ export function AgreementEmiScheduleCard({
   viewFullScheduleLabel?: string;
   onPayReceivableItem?: () => void;
   isInitiatingReceivablePayment?: boolean;
+  onWaiveItem?: (item: ReceivableSummaryItem) => void;
 }) {
   const hasPlan = hasReceivablePlan(summary);
 
@@ -161,6 +191,36 @@ export function AgreementEmiScheduleCard({
         <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {summary.holdReason}
         </p>
+      ) : null}
+
+      {/* Admin-only schedule table with waive actions */}
+      {onWaiveItem && fullSummary ? (
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Item</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Due</TableHead>
+                <TableHead>Paid</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {fullSummary.items
+                .slice()
+                .sort((a, b) => a.sortOrder - b.sortOrder)
+                .map((item) => (
+                  <EmiScheduleRow
+                    key={item.receivableItemId}
+                    item={item}
+                    onWaiveItem={onWaiveItem}
+                  />
+                ))}
+            </TableBody>
+          </Table>
+        </div>
       ) : null}
 
       {/* Pay-now CTA — only when the franchisee can pay and we have a payable item */}

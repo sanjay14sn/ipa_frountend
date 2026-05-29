@@ -1,11 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getAgreementsAdmin,
   getAgreementsMine,
   getAgreementAdmin,
   getAgreementMine,
+  waiveReceivableItem,
   type AgreementRecord,
   type AgreementListParams,
 } from "@/services/agreement.service";
@@ -81,6 +82,19 @@ export function useAgreementAdmin(id: number | undefined) {
 export async function invalidateAgreementLists() {
   const client = getQueryClientBridge();
   await client.invalidateQueries({ queryKey: ["agreements", "list"] });
+}
+
+export function useWaiveReceivableItemMutation(agreementId: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, reason }: { itemId: number; reason: string }) =>
+      waiveReceivableItem(itemId, reason),
+    onSuccess: async () => {
+      await client.invalidateQueries({
+        queryKey: queryKeys.agreements.detail(agreementId),
+      });
+    },
+  });
 }
 
 export type { AgreementRecord };
