@@ -167,3 +167,17 @@ export async function rescheduleSession(sessionId: number, sessionDate: string):
   const res = await api.patch(`/admin/ci-training/session/${sessionId}`, { sessionDate });
   return res.data.result;
 }
+
+/**
+ * Force-set how far an instructor has completed. Every *paid* level with
+ * displayOrder <= completedThrough is marked completed and its receivables waived.
+ */
+export async function setInstructorCompletionState(
+  instructorId: number,
+  completedThrough: number,
+): Promise<void> {
+  await api.patch(
+    `/admin/ci-training/instructors/${instructorId}/completion-state`,
+    { completedThrough },
+  );
+}
