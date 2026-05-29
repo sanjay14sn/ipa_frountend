@@ -1,5 +1,6 @@
 import { api } from "@/lib/axios";
 import { unwrapData } from "@/lib/unwrap-api";
+import type { CITrainingReceivable } from "@/services/ci-training.service";
 
 export interface CITrainingSession {
   id: number;
@@ -180,4 +181,19 @@ export async function setInstructorCompletionState(
     `/admin/ci-training/instructors/${instructorId}/completion-state`,
     { completedThrough },
   );
+}
+
+export async function listInstructorReceivables(
+  instructorId: number,
+): Promise<CITrainingReceivable[]> {
+  const res = await api.get(`/admin/ci-training/instructors/${instructorId}/receivables`);
+  const payload = res.data.result;
+  return Array.isArray(payload) ? payload : [];
+}
+
+export async function waiveCIReceivable(
+  receivableId: number,
+  reason: string,
+): Promise<void> {
+  await api.post(`/admin/ci-training/receivables/${receivableId}/waive`, { reason });
 }
