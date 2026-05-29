@@ -2,6 +2,7 @@
 
 import type { InvoicePreview } from "@/services/order.service";
 import InvoiceGroupCard from "./checkout/InvoiceGroupCard";
+import CustomMaterialsList from "./CustomMaterialsList";
 
 export interface StartingKitRowSelection {
   streamId: number;
@@ -22,6 +23,9 @@ export interface UnifiedInvoiceGroupedSummaryProps {
   onRemoveKit?: (streamId: number) => void;
   onRemoveStudent?: (studentId: number) => void;
   onRemoveInstructor?: (instructorId: number) => void;
+  /** Render the custom-materials groups inline. Off by default so the order
+   * detail modal can surface them in a dedicated tab instead. */
+  showCustomGroups?: boolean;
 }
 
 function displayInstructorCode(id: string | number | undefined | null): string {
@@ -73,8 +77,10 @@ export default function UnifiedInvoiceGroupedSummary({
   onRemoveKit,
   onRemoveStudent,
   onRemoveInstructor,
+  showCustomGroups = false,
 }: UnifiedInvoiceGroupedSummaryProps) {
   const selectedKitsTotalQty = startingKitRows.reduce((s, i) => s + i.quantity, 0);
+  const customGroups = preview.customGroups ?? [];
 
   return (
     <div className="space-y-6">
@@ -253,6 +259,21 @@ export default function UnifiedInvoiceGroupedSummary({
               );
             })}
           </div>
+        </div>
+      )}
+
+      {showCustomGroups && customGroups.length > 0 && (
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Custom materials
+            </h4>
+            <span className="text-xs text-muted-foreground">
+              {customGroups.length}{" "}
+              {customGroups.length === 1 ? "student" : "students"}
+            </span>
+          </div>
+          <CustomMaterialsList groups={customGroups} />
         </div>
       )}
     </div>

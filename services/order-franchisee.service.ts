@@ -38,6 +38,7 @@ export interface CreateOrderDto {
   studentIds?: number[];
   instructorIds?: number[];
   startingKitItems?: StartingKitItem[];
+  customItems?: CustomMaterialLine[];
   notes?: string;
   paymentRecordId?: number;
 }
@@ -66,6 +67,7 @@ export interface InitiateOrderPaymentDto {
   studentIds?: number[];
   instructorIds?: number[];
   startingKitItems?: StartingKitItem[];
+  customItems?: CustomMaterialLine[];
   notes?: string;
   paymentRecordId?: number;
   totalAmount: number;
@@ -91,6 +93,7 @@ export interface OrderPaymentResponse {
   studentIds: number[];
   instructorIds?: number[];
   startingKitItems?: StartingKitItem[];
+  customItems?: CustomMaterialLine[];
   notes?: string;
   isZeroAmount?: boolean;
 }
@@ -110,39 +113,31 @@ export interface VerifyOrderPaymentResponse {
   order?: OrderData;
 }
 
-export interface CustomOrderItem {
+/** A custom (re-order) inventory line attached to a student, folded into the
+ * unified order. Priced off the inventory item's unitPrice with no GST. */
+export interface CustomMaterialLine {
   studentId: number;
-  inventoryId: number;
+  inventoryItemId: number;
   quantity: number;
 }
 
-export interface CreateCustomOrderDto {
-  studentIds: number[];
-  customItems: CustomOrderItem[];
-  notes?: string;
-}
-
-export interface AvailableItem {
-  id: number;
+/** An inventory item a student may custom-order: their level-template items +
+ * the program kit items. Shape mirrors the backend `/order/available-items`. */
+export interface AvailableInventoryItem {
+  inventoryItemId: number;
   name: string;
-  description: string;
-  category: string | null;
-  price: number;
+  sku: string | null;
+  unitPrice: number;
+  availableStock: number;
   isKitItem: boolean;
-  defaultQuantity?: number;
+  isLevelItem: boolean;
 }
 
 export interface StudentAvailableItems {
   studentId: number;
   studentName: string;
-  rollNo: string;
   levelId: number;
-  levelName: string;
-  programId: number;
-  programName: string;
-  levelItems: AvailableItem[];
-  kitItems: AvailableItem[];
-  allItems?: AvailableItem[];
+  items: AvailableInventoryItem[];
 }
 
 export interface StudentOrderHistory {
@@ -244,7 +239,10 @@ export async function cancelOrderFranchisee(orderId: number): Promise<OrderData>
 }
 
 export async function previewOrderInvoice(
-  dto: Pick<CreateOrderDto, "studentIds" | "instructorIds" | "startingKitItems"> & { franchiseId?: string | number },
+  dto: Pick<
+    CreateOrderDto,
+    "studentIds" | "instructorIds" | "startingKitItems" | "customItems"
+  > & { franchiseId?: string | number },
 ): Promise<InvoicePreview> {
   const body: Record<string, unknown> = {};
   if (dto.studentIds != null && dto.studentIds.length > 0) {
@@ -256,12 +254,28 @@ export async function previewOrderInvoice(
   if (dto.startingKitItems != null && dto.startingKitItems.length > 0) {
     body.startingKitItems = dto.startingKitItems;
   }
+  if (dto.customItems != null && dto.customItems.length > 0) {
+    body.customItems = dto.customItems;
+  }
   if (dto.franchiseId != null && dto.franchiseId !== "") {
     body.franchiseId = String(dto.franchiseId);
   }
   const response = await api.post("/order/preview-invoice", body);
   const data = unwrapData<any>(response);
   return parseInvoicePreviewPayload(data);
+}
+
+/**
+ * Fetches the inventory items each student may custom-order — their
+ * level-template items plus the program kit items — with live prices and
+ * stock. Backs the Custom Materials picker. Mirrors `/order/available-items`.
+ */
+export async function getAvailableItemsForStudents(
+  studentIds: number[],
+): Promise<StudentAvailableItems[]> {
+  if (studentIds.length === 0) return [];
+  const response = await api.post("/order/available-items", { studentIds });
+  return unwrapData<StudentAvailableItems[]>(response) ?? [];
 }
 
 export async function getInvoiceDetails(
@@ -317,6 +331,7 @@ export async function initiateOrderPayment(
       studentIds: paymentData.studentIds,
       instructorIds: paymentData.instructorIds,
       startingKitItems: paymentData.startingKitItems,
+      customItems: paymentData.customItems,
       notes: paymentData.notes,
     });
     return {
@@ -331,6 +346,7 @@ export async function initiateOrderPayment(
       studentIds: paymentData.studentIds ?? [],
       instructorIds: paymentData.instructorIds,
       startingKitItems: paymentData.startingKitItems,
+      customItems: paymentData.customItems,
       notes: paymentData.notes,
       isZeroAmount: true,
     };
@@ -349,6 +365,7 @@ export async function initiateOrderPayment(
       studentIds: paymentData.studentIds,
       instructorIds: paymentData.instructorIds,
       startingKitItems: paymentData.startingKitItems,
+      customItems: paymentData.customItems,
     },
   });
   const billing = unwrapData<{
@@ -371,6 +388,7 @@ export async function initiateOrderPayment(
     studentIds: paymentData.studentIds ?? [],
     instructorIds: paymentData.instructorIds,
     startingKitItems: paymentData.startingKitItems,
+    customItems: paymentData.customItems,
     notes: paymentData.notes,
     isZeroAmount: false,
   };

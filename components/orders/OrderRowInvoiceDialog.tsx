@@ -11,6 +11,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { InvoicePreview, OrderData } from "@/services/order.service";
 import UnifiedInvoiceGroupedSummary from "@/app/franchisee/orders/components/UnifiedInvoiceGroupedSummary";
+import CustomMaterialsList from "@/app/franchisee/orders/components/CustomMaterialsList";
 import { DispatchRecipientTable } from "@/app/admin/orders/components/DispatchRecipientTable";
 import { isStandaloneDispatchOrderType } from "@/lib/dispatch-order-helpers";
 import { OrderPaymentDetailsPanel } from "@/components/orders/OrderPaymentDetailsPanel";
@@ -49,15 +50,6 @@ function defaultDispatchTab(certCount: number, idCount: number) {
   if (certCount > 0) return "certificates";
   if (idCount > 0) return "id-cards";
   return "certificates";
-}
-
-function defaultTabValue(
-  tabsMode: "mixed" | "dispatch-only",
-  certCount: number,
-  idCount: number,
-) {
-  if (tabsMode === "mixed") return "invoice";
-  return defaultDispatchTab(certCount, idCount);
 }
 
 function TabCount({ n }: { n: number }) {
@@ -129,6 +121,12 @@ export function OrderRowInvoiceDialog({
   const snapshot = order?.invoicePreview ?? null;
   const hasMaterialSnapshot = snapshot != null && !standaloneDispatch;
 
+  const customGroups = useMemo(
+    () => (hasMaterialSnapshot ? (snapshot?.customGroups ?? []) : []),
+    [hasMaterialSnapshot, snapshot],
+  );
+  const hasCustom = customGroups.length > 0;
+
   const materialSelection = useMemo(() => {
     if (!snapshot) return null;
     return materialSelectionFromSnapshot(snapshot);
@@ -147,7 +145,16 @@ export function OrderRowInvoiceDialog({
           ? "invoice-only"
           : "empty";
 
-  const dialogPreviewFooter = hasMaterialSnapshot && hasDispatch;
+  // The Invoice tab is only meaningful when there are standard (student/kit/CI)
+  // groups; a custom-only order shows just the Custom materials tab.
+  const showInvoiceTab = hasMaterialSnapshot && invoiceTabCount > 0;
+
+  // Invoice-only orders render inline (no tabs) UNLESS they also carry custom
+  // materials, which get their own tab alongside the invoice.
+  const inlineInvoiceOnly = tabsMode === "invoice-only" && !hasCustom;
+
+  const dialogPreviewFooter =
+    hasMaterialSnapshot && (tabsMode === "mixed" || hasCustom);
 
   const groupedSummary =
     snapshot && materialSelection ? (
@@ -203,7 +210,7 @@ export function OrderRowInvoiceDialog({
               />
             ) : null}
           </div>
-        ) : tabsMode === "invoice-only" ? (
+        ) : inlineInvoiceOnly ? (
           <>
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
               {hasMaterialSnapshot && snapshot && groupedSummary ? (
@@ -233,39 +240,66 @@ export function OrderRowInvoiceDialog({
         ) : (
           <Tabs
             key={orderId ?? "closed"}
-            defaultValue={defaultTabValue(tabsMode as "mixed" | "dispatch-only", certCount, idCount)}
+            defaultValue={
+              showInvoiceTab
+                ? "invoice"
+                : hasCustom
+                  ? "custom-materials"
+                  : defaultDispatchTab(certCount, idCount)
+            }
             className="flex min-h-0 flex-1 flex-col"
           >
             <TabsList className="mx-6 mt-3 flex h-auto w-auto flex-shrink-0 flex-wrap justify-start gap-1 self-start rounded-xl border border-border bg-muted/40 p-1 text-muted-foreground">
-              {tabsMode === "mixed" ? (
+              {showInvoiceTab ? (
                 <TabsTrigger value="invoice" className="group gap-2">
                   Invoice
                   <TabCount n={invoiceTabCount} />
                 </TabsTrigger>
               ) : null}
-              <TabsTrigger value="certificates" className="group gap-2">
-                Certificates
-                <TabCount n={certCount} />
-              </TabsTrigger>
-              <TabsTrigger value="id-cards" className="group gap-2">
-                ID cards
-                <TabCount n={idCount} />
-              </TabsTrigger>
+              {hasCustom ? (
+                <TabsTrigger value="custom-materials" className="group gap-2">
+                  Custom materials
+                  <TabCount n={customGroups.length} />
+                </TabsTrigger>
+              ) : null}
+              {hasDispatch ? (
+                <TabsTrigger value="certificates" className="group gap-2">
+                  Certificates
+                  <TabCount n={certCount} />
+                </TabsTrigger>
+              ) : null}
+              {hasDispatch ? (
+                <TabsTrigger value="id-cards" className="group gap-2">
+                  ID cards
+                  <TabCount n={idCount} />
+                </TabsTrigger>
+              ) : null}
             </TabsList>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-              {tabsMode === "mixed" ? (
+              {showInvoiceTab ? (
                 <TabsContent value="invoice" className="mt-0 space-y-3 focus-visible:ring-0">
                   {groupedSummary}
                 </TabsContent>
               ) : null}
-              <TabsContent value="certificates" className="mt-0 focus-visible:ring-0">
-                <DispatchRecipientTable rows={certificates} emptyLabel="None on this order." />
-              </TabsContent>
-
-              <TabsContent value="id-cards" className="mt-0 focus-visible:ring-0">
-                <DispatchRecipientTable rows={idCards} emptyLabel="None on this order." />
-              </TabsContent>
+              {hasCustom ? (
+                <TabsContent
+                  value="custom-materials"
+                  className="mt-0 focus-visible:ring-0"
+                >
+                  <CustomMaterialsList groups={customGroups} />
+                </TabsContent>
+              ) : null}
+              {hasDispatch ? (
+                <TabsContent value="certificates" className="mt-0 focus-visible:ring-0">
+                  <DispatchRecipientTable rows={certificates} emptyLabel="None on this order." />
+                </TabsContent>
+              ) : null}
+              {hasDispatch ? (
+                <TabsContent value="id-cards" className="mt-0 focus-visible:ring-0">
+                  <DispatchRecipientTable rows={idCards} emptyLabel="None on this order." />
+                </TabsContent>
+              ) : null}
               {order?.payment ? (
                 <OrderPaymentDetailsPanel
                 payment={order.payment}
