@@ -73,11 +73,6 @@ export function PersonalInfoFields({
           placeholder="Enter student's full name"
           disabled={lockIdentityFields}
         />
-        {lockIdentityFields && (
-          <p className="text-muted-foreground text-xs mt-1">
-            Locked after enrollment — contact admin to change
-          </p>
-        )}
         {errors.studentName && (
           <p className="text-red-500 text-sm flex items-center gap-1">
             <AlertCircle className="w-4 h-4" />
@@ -103,11 +98,6 @@ export function PersonalInfoFields({
           className={errors.dob ? "border-red-500" : ""}
           disabled={lockIdentityFields}
         />
-        {lockIdentityFields && (
-          <p className="text-muted-foreground text-xs mt-1">
-            Locked after enrollment — contact admin to change
-          </p>
-        )}
         {errors.dob && (
           <p className="text-red-500 text-sm flex items-center gap-1">
             <AlertCircle className="w-4 h-4" />
@@ -128,11 +118,6 @@ export function PersonalInfoFields({
           className={errors.dateOfJoining ? "border-red-500" : ""}
           disabled={lockDateOfJoining}
         />
-        {lockDateOfJoining && (
-          <p className="text-muted-foreground text-xs mt-1">
-            Locked after enrollment — contact admin to change
-          </p>
-        )}
         {errors.dateOfJoining && (
           <p className="text-red-500 text-sm flex items-center gap-1">
             <AlertCircle className="w-4 h-4" />

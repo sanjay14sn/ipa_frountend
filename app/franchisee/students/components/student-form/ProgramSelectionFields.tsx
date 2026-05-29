@@ -94,11 +94,6 @@ export function ProgramSelectionFields({
             ))}
           </SelectContent>
         </Select>
-        {!programStreamEditable && (
-          <p className="text-muted-foreground text-xs mt-1">
-            Locked after enrollment — contact admin to change
-          </p>
-        )}
         {errors.programId && (
           <p className="text-red-500 text-sm flex items-center gap-1">
             <AlertCircle className="w-4 h-4" />
@@ -141,11 +136,6 @@ export function ProgramSelectionFields({
             ))}
           </SelectContent>
         </Select>
-        {!programStreamEditable && (
-          <p className="text-muted-foreground text-xs mt-1">
-            Locked after enrollment — contact admin to change
-          </p>
-        )}
         {errors.streamId && (
           <p className="text-red-500 text-sm flex items-center gap-1">
             <AlertCircle className="w-4 h-4" />
@@ -192,11 +182,6 @@ export function ProgramSelectionFields({
           <p className="text-red-500 text-sm flex items-center gap-1">
             <AlertCircle className="w-4 h-4" />
             {errors.levelId}
-          </p>
-        )}
-        {!levelEditable && (
-          <p className="text-muted-foreground text-xs mt-1">
-            Locked after enrollment — contact admin to change
           </p>
         )}
       </div>

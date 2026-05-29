@@ -469,11 +469,6 @@ export default function EditStudentModal({
                     <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
-                {mode === "franchise" && (
-                  <p className="text-muted-foreground text-xs mt-1">
-                    Locked after enrollment — contact admin to change
-                  </p>
-                )}
               </div>
             </div>
           </div>
