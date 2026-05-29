@@ -16,6 +16,7 @@ import {
   downloadScheduleBPdfAdmin,
   downloadScheduleBPdfMine,
   getReceivablePlanMine,
+  type AgreementLinkedPayment,
   type AgreementRecord,
   type ReceivableInstallmentSummary,
   type ReceivableSummaryItem,
@@ -25,6 +26,9 @@ import {
 } from "@/lib/agreement-page-terms";
 import { getErrorMessage } from "@/lib/error-utils";
 import { fmtDate } from "@/lib/date-utils";
+import { getFranchiseFeePayable } from "@/lib/gst";
+import { formatRupees } from "@/lib/currency-utils";
+import { methodLabel } from "@/lib/payment-details-display";
 import PaymentBreakdown from "@/app/franchisee/agreement/components/PaymentBreakdown";
 import {
   Check,
@@ -36,11 +40,11 @@ import {
   PenLine,
   Phone,
   ShieldCheck,
+  Wallet,
 } from "lucide-react";
 import {
   fmtShortDate,
   agreementStatusBadge,
-  isFullInstallmentSummary,
 } from "@/components/agreements/record-detail/agreement-utils";
 import { AgreementEmiScheduleCard } from "@/components/agreements/record-detail/AgreementEmiScheduleCard";
 import { ScheduleBCard } from "@/components/agreements/record-detail/ScheduleBCard";
@@ -273,55 +277,26 @@ export function AgreementRecordDetail({
   const sigSrc = agreementSignatureSrc(data);
   const franchiseData = buildAgreementDetailFranchiseData(data);
   const agreementContent = getProcessedAgreementContent(franchiseData);
-  const payment = data.payment;
   const installmentSummary =
     fullReceivablePlan ??
     data.receivables?.installmentSummary ??
     data.receivables?.paymentSummary ??
     null;
-  const receivablePaymentItems = isFullInstallmentSummary(installmentSummary)
-    ? installmentSummary.items
-        .filter((item) => item.paymentId != null || item.paidAt != null)
-        .slice()
-        .sort((left, right) => {
-          const leftAt = left.paidAt ? new Date(left.paidAt).getTime() : 0;
-          const rightAt = right.paidAt ? new Date(right.paidAt).getTime() : 0;
-          if (leftAt !== rightAt) return rightAt - leftAt;
-          return right.sortOrder - left.sortOrder;
-        })
-    : [];
-  const paymentMetaEntries = payment
-    ? Object.entries(payment as unknown as Record<string, unknown>).filter(
-        ([k, v]) =>
-          v != null &&
-          v !== "" &&
-          ![
-            "createdAt",
-            "updatedAt",
-            "amount",
-            "currency",
-            "status",
-            "type",
-            "paidAt",
-          ].includes(k) &&
-          typeof v !== "object",
-      )
-    : [];
-  const paymentPrimaryRows = payment
-    ? [
-        ["Payment type", (payment.type ?? "-")],
-        [
-          "Paid at",
-          fmtDate(
-            (payment as AgreementRecord["payment"] & {
-              paidAt?: string | null;
-            })?.paidAt ?? null,
-          ),
-        ],
-        ["Payment ID", payment.razorpayPaymentId ?? "-"],
-        ["Order ID", payment.razorpayOrderId ?? "-"],
-      ]
-    : [];
+
+  // Linked payments: every completed payment recorded against this agreement
+  // (advance / lump-sum / prior-installment records from existing-franchise
+  // setup), newest first. Outstanding = fee payable (incl. GST) − received.
+  const linkedPayments: AgreementLinkedPayment[] = data.payments ?? [];
+  const totalReceived = linkedPayments.reduce(
+    (acc, p) => acc + (Number(p.amount) || 0),
+    0,
+  );
+  const feePayable =
+    data.franchiseFee != null
+      ? getFranchiseFeePayable(data.franchiseFee, data.gstFranchiseFee)
+      : null;
+  const outstandingAmount =
+    feePayable != null ? Math.max(0, feePayable.payable - totalReceived) : null;
 
   async function handleDownloadScheduleB() {
     setSchedulePdfLoading(true);
@@ -660,6 +635,76 @@ export function AgreementRecordDetail({
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* ── Payments received ── */}
+                <Card className="rounded-xl">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2">
+                      <Wallet className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm font-semibold">Payments received</p>
+                      <Badge variant="secondary" className="ml-auto text-xs">
+                        {linkedPayments.length}{" "}
+                        payment{linkedPayments.length === 1 ? "" : "s"}
+                      </Badge>
+                    </div>
+
+                    {linkedPayments.length === 0 ? (
+                      <p className="mt-3 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
+                        No payments recorded against this agreement.
+                      </p>
+                    ) : (
+                      <div className="mt-3 divide-y divide-border rounded-lg border border-border">
+                        {linkedPayments.map((p) => (
+                          <div
+                            key={p.id}
+                            className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-card-foreground">
+                                {fmtDate(p.paidAt)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {methodLabel(p.method)}
+                                {p.reference ? ` · ${p.reference}` : ""}
+                              </p>
+                            </div>
+                            <span className="tabular-nums text-sm font-semibold text-card-foreground">
+                              {formatRupees(p.amount)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border pt-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                          Total received
+                        </p>
+                        <p className="mt-0.5 text-sm font-semibold tabular-nums text-card-foreground">
+                          {formatRupees(totalReceived)}
+                        </p>
+                      </div>
+                      {outstandingAmount != null ? (
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                            Outstanding
+                          </p>
+                          <p
+                            className={cn(
+                              "mt-0.5 text-sm font-semibold tabular-nums",
+                              outstandingAmount > 0
+                                ? "text-primary"
+                                : "text-emerald-600",
+                            )}
+                          >
+                            {formatRupees(outstandingAmount)}
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+                  </CardContent>
+                </Card>
               </>
             );
           })()}

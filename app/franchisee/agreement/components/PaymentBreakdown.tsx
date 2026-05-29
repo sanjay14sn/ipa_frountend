@@ -466,7 +466,7 @@ export default function PaymentBreakdown({
 
       {/* Total franchise fee — bottom summary strip */}
       <div className="border-t border-border bg-muted/30 p-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-card-foreground">
             {showInitialPayable ? "Total franchise fee" : "Franchise Fee"}
             {feePayable.inclusive ? (
@@ -479,28 +479,24 @@ export default function PaymentBreakdown({
               </Badge>
             )}
           </span>
-          <span
-            className={cn(
-              "tabular-nums",
-              showInitialPayable
-                ? "text-lg font-semibold text-card-foreground"
-                : "text-xl font-semibold text-primary",
-            )}
-          >
-            ₹{fmt(feePayable.base)}
-          </span>
-        </div>
-        {!feePayable.inclusive && feePayable.base > 0 ? (
-          <div className="mt-2 flex flex-col gap-1 border-t border-border/60 pt-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-            <span>
-              +{GST_RATE_LABEL} (₹{fmt(feePayable.gst)})
+          <div className="sm:text-right">
+            <span
+              className={cn(
+                "block tabular-nums",
+                showInitialPayable
+                  ? "text-lg font-semibold text-card-foreground"
+                  : "text-xl font-semibold text-primary",
+              )}
+            >
+              ₹{fmt(feePayable.base)}
             </span>
-            <span className="font-semibold tabular-nums text-card-foreground">
-              {showInitialPayable ? "Total payable" : "Payable now"}: ₹
-              {fmt(feePayable.payable)}
-            </span>
+            {!feePayable.inclusive && feePayable.base > 0 ? (
+              <span className="mt-1 block text-sm text-muted-foreground">
+                +{GST_RATE_LABEL} (₹{fmt(feePayable.gst)})
+              </span>
+            ) : null}
           </div>
-        ) : null}
+        </div>
       </div>
     </div>
   );

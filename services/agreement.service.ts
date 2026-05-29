@@ -35,6 +35,19 @@ export interface AgreementPaymentDetail {
   updatedAt?: string;
 }
 
+/** Lean payment row linked to an agreement (all completed payments received). */
+export interface AgreementLinkedPayment {
+  id: number;
+  amount: number;
+  paidAt: string | null;
+  method: string | null;
+  /** Free-text reference (admin-recorded payments store it at acquirerData.reference). */
+  reference: string | null;
+  type: string;
+  status: string;
+  razorpayPaymentId: string | null;
+}
+
 export interface AgreementProgramItem {
   id: number;
   name: string;
@@ -322,6 +335,8 @@ export interface AgreementRecord extends AgreementTermsSnapshot {
     franchiseeSignature?: string | null;
   } | null;
   payment?: AgreementPaymentDetail | null;
+  /** All completed payments linked to this agreement (newest first). */
+  payments?: AgreementLinkedPayment[] | null;
   program?: AgreementProgramDetail | null;
   programs?: AgreementProgramItem[] | null;
   scheduleB?: AgreementScheduleBView | null;
