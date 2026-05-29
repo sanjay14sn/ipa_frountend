@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useHydrated } from "@/hooks/use-hydrated";
 import Link from "next/link";
 import { login, getAdminProfile } from "@/services/auth.service";
 import { Eye, EyeOff } from "lucide-react";
@@ -27,6 +28,7 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const hydrated = useHydrated();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +78,7 @@ export default function AdminLoginPage() {
           <CardDescription>Sign in to access the administrative dashboard</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form method="post" onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
               <Input
@@ -119,7 +121,7 @@ export default function AdminLoginPage() {
               <p className="text-sm text-destructive text-center">{error}</p>
             )}
 
-            <Button type="submit" className="w-full rounded-lg" disabled={loading}>
+            <Button type="submit" className="w-full rounded-lg" disabled={loading || !hydrated}>
               {loading ? "Signing in…" : "Sign in"}
             </Button>
           </form>

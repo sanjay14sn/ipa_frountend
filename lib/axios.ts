@@ -182,7 +182,12 @@ api.interceptors.response.use(
             try {
               await api.post(logoutUrl);
             } catch (logoutErr) {
-              console.error("Logout failed", logoutErr);
+              // 401 is expected: the session is already invalid server-side (refresh
+              // also failed above), so there is nothing to revoke. Only surface others.
+              const status = (logoutErr as { response?: { status?: number } })?.response?.status;
+              if (status !== 401) {
+                console.error("Logout failed", logoutErr);
+              }
             }
 
             if (typeof window !== "undefined") {

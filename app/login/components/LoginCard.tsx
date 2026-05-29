@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +38,7 @@ export function LoginCard({
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const hydrated = useHydrated();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -176,7 +178,7 @@ export function LoginCard({
         <CardDescription>Sign in to access your franchise dashboard</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form method="post" onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="username">Email</Label>
             <Input
@@ -219,7 +221,7 @@ export function LoginCard({
             <p className="text-sm text-destructive text-center">{error}</p>
           )}
 
-          <Button type="submit" className="w-full rounded-lg" disabled={loading}>
+          <Button type="submit" className="w-full rounded-lg" disabled={loading || !hydrated}>
             {loading ? "Signing in…" : "Sign in"}
           </Button>
         </form>

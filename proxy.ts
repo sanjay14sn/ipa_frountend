@@ -150,9 +150,14 @@ export const config = {
     /*
      * Match all request paths except:
      * - _next/static (static files)
-     * - _next/image (image optimization)
-     * - favicon.ico
+     * - _next/image (image optimization files)
+     * - favicon.ico, robots.txt
+     * - Static asset file extensions (svg, png, jpg, …, css, js, fonts)
+     *
+     * Excluding these here avoids waking the middleware for assets that
+     * NextResponse.next() immediately anyway, which reduces dev-mode
+     * compilation overhead and narrows the window before login pages hydrate.
      */
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/((?!api|_next/static|_next/image|favicon\\.ico|robots\\.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?|ttf|map)$).*)",
   ],
 };
