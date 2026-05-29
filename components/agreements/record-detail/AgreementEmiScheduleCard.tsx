@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Slash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatRupees } from "@/lib/currency-utils";
 import { EmiTimeline } from "@/components/receivables/EmiTimeline";
@@ -111,10 +112,11 @@ export function EmiScheduleRow({
           <Button
             type="button"
             size="sm"
-            variant="ghost"
-            className="h-7 text-xs text-muted-foreground hover:text-destructive"
+            variant="outline"
+            className="h-7 gap-1 border-amber-300 bg-amber-50 px-2.5 text-xs font-medium text-amber-700 hover:border-amber-400 hover:bg-amber-100 hover:text-amber-800"
             onClick={() => onWaiveItem(item)}
           >
+            <Slash className="h-3 w-3" />
             Waive
           </Button>
         ) : null}

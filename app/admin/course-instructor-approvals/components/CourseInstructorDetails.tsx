@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Slash } from "lucide-react";
 import {
   DetailField,
   DetailFieldsGrid,
@@ -121,13 +122,14 @@ function InstructorReceivablesSection({ instructorId }: InstructorReceivablesSec
                 {r.status === "pending" && (
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="h-7 text-xs shrink-0 text-muted-foreground hover:text-destructive"
+                    variant="outline"
+                    className="h-7 shrink-0 gap-1 border-amber-300 bg-amber-50 px-2.5 text-xs font-medium text-amber-700 hover:border-amber-400 hover:bg-amber-100 hover:text-amber-800"
                     onClick={() => {
                       setWaiveTarget(r);
                       setWaiveOpen(true);
                     }}
                   >
+                    <Slash className="h-3 w-3" />
                     Waive
                   </Button>
                 )}
