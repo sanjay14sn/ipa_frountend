@@ -81,6 +81,21 @@ export function InventoryForm({
         />
       </div>
       <div className="space-y-2">
+        <Label>Unit price (₹)</Label>
+        <Input
+          type="number"
+          min={0}
+          step="0.01"
+          value={form.unitPrice}
+          onChange={(event) =>
+            setForm((prev) => ({
+              ...prev,
+              unitPrice: Number(event.target.value) || 0,
+            }))
+          }
+        />
+      </div>
+      <div className="space-y-2">
         <Label>Legacy item code</Label>
         <Input
           value={form.legacyItemCode}

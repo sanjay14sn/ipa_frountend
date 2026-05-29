@@ -36,6 +36,7 @@ export type InventoryItemSummary = {
   availableQty: number;
   onOrderQty: number;
   weightedAverageCost: number;
+  unitPrice: number;
   defaultQuantity?: number | null;
 };
 
@@ -69,6 +70,7 @@ export type CreateInventoryDto = {
   safetyStock: number;
   reorderCycleDays: number;
   isActive: boolean;
+  unitPrice?: number;
 };
 
 export type UpdateInventoryDto = Partial<CreateInventoryDto>;
@@ -118,6 +120,7 @@ function normalizeInventoryRow(raw: any): InventoryItemSummary {
     availableQty: Number(raw?.availableQty ?? 0),
     onOrderQty: Number(raw?.onOrderQty ?? 0),
     weightedAverageCost: Number(raw?.weightedAverageCost ?? 0),
+    unitPrice: Number(raw?.unitPrice ?? 0),
     defaultQuantity:
       raw?.defaultQuantity == null ? null : Number(raw.defaultQuantity),
   };

@@ -43,6 +43,12 @@ export function buildInventoryColumns(
       render: (item) => item.category ?? "Uncategorized",
     },
     {
+      key: "unitPrice",
+      header: "Unit price",
+      className: "text-right",
+      render: (item) => `₹${item.unitPrice.toFixed(2)}`,
+    },
+    {
       key: "onHand",
       header: "On hand",
       className: "text-center",

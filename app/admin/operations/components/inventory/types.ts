@@ -19,6 +19,7 @@ export type InventoryFormState = {
   safetyStock: number;
   reorderCycleDays: number;
   isActive: boolean;
+  unitPrice: number;
 };
 
 export type AdjustmentDirection = "INCREASE" | "DECREASE";
@@ -50,6 +51,7 @@ export const EMPTY_FORM: InventoryFormState = {
   safetyStock: 0,
   reorderCycleDays: 30,
   isActive: true,
+  unitPrice: 0,
 };
 
 export const INVENTORY_TYPES: InventoryType[] = [
@@ -85,6 +87,7 @@ export function mapInventoryFormToPayload(
     safetyStock: Number(data.safetyStock || 0),
     reorderCycleDays: Math.max(1, Number(data.reorderCycleDays || 30)),
     isActive: data.isActive,
+    unitPrice: Math.max(0, Number(data.unitPrice || 0)),
   };
 }
 
@@ -105,6 +108,7 @@ export function mapItemToEditForm(item: InventoryItemSummary): InventoryFormStat
     safetyStock: item.safetyStock,
     reorderCycleDays: item.reorderCycleDays,
     isActive: item.isActive,
+    unitPrice: item.unitPrice ?? 0,
   };
 }
 
