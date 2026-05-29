@@ -8,7 +8,6 @@ import {
 } from "@/components/shared";
 import { useEligibleStudents, useFranchiseeCertificates } from "@/hooks/api/student.hooks";
 import { EligibleStudent } from "@/services/student.service";
-import RequestCertificateModal from "@/app/franchisee/certificate-requests/components/RequestCertificateModal";
 import BulkRequestCertificateModal, {
   GroupForModal,
 } from "@/app/franchisee/certificate-requests/components/BulkRequestCertificateModal";
@@ -16,11 +15,9 @@ import EligibleStudentsGroupedView from "@/app/franchisee/certificate-requests/c
 import FranchiseeCertificatesGroupedView from "@/app/franchisee/certificate-requests/components/FranchiseeCertificatesGroupedView";
 
 export function FranchiseeCertificateRequestsSection() {
-  const [selectedStudent, setSelectedStudent] =
-    useState<EligibleStudent | null>(null);
-  const [groupsForBulk, setGroupsForBulk] = useState<GroupForModal[]>([]);
-  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
-  const [isBulkRequestModalOpen, setIsBulkRequestModalOpen] = useState(false);
+  const [groupsForModal, setGroupsForModal] = useState<GroupForModal[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSingleMode, setIsSingleMode] = useState(false);
 
   const { eligibleStudents, isLoading: isLoadingEligible } =
     useEligibleStudents();
@@ -30,20 +27,28 @@ export function FranchiseeCertificateRequestsSection() {
     revalidate,
   } = useFranchiseeCertificates();
   const handleRequestCertificate = (student: EligibleStudent) => {
-    setSelectedStudent(student);
-    setIsRequestModalOpen(true);
+    setGroupsForModal([{
+      key: `${student.programId}-${student.levelId}`,
+      stream: student.stream,
+      levelName: student.levelName,
+      levelId: student.levelId,
+      programId: student.programId,
+      students: [student],
+    }]);
+    setIsSingleMode(true);
+    setIsModalOpen(true);
   };
 
   const handleSuccess = () => {
-    setIsRequestModalOpen(false);
-    setIsBulkRequestModalOpen(false);
-    setGroupsForBulk([]);
+    setIsModalOpen(false);
+    setGroupsForModal([]);
     revalidate();
   };
 
   const handleBulkRequest = (groups: GroupForModal[]) => {
-    setGroupsForBulk(groups);
-    setIsBulkRequestModalOpen(true);
+    setGroupsForModal(groups);
+    setIsSingleMode(false);
+    setIsModalOpen(true);
   };
 
   return (
@@ -68,21 +73,13 @@ export function FranchiseeCertificateRequestsSection() {
             />
           )}
 
-          {selectedStudent ? (
-            <RequestCertificateModal
-              open={isRequestModalOpen}
-              onOpenChange={setIsRequestModalOpen}
-              student={selectedStudent}
-              onSuccess={handleSuccess}
-            />
-          ) : null}
-
-          {groupsForBulk.length > 0 ? (
+          {groupsForModal.length > 0 ? (
             <BulkRequestCertificateModal
-              open={isBulkRequestModalOpen}
-              onOpenChange={setIsBulkRequestModalOpen}
-              groups={groupsForBulk}
+              open={isModalOpen}
+              onOpenChange={setIsModalOpen}
+              groups={groupsForModal}
               onSuccess={handleSuccess}
+              showBulkHelpers={!isSingleMode}
             />
           ) : null}
         </TabsContent>

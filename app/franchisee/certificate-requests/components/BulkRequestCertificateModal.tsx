@@ -37,6 +37,8 @@ export interface BulkRequestCertificateModalProps {
   onOpenChange: (open: boolean) => void;
   groups: GroupForModal[];
   onSuccess: () => void;
+  /** When false, hides "Apply to All" helpers — use for single-student requests */
+  showBulkHelpers?: boolean;
 }
 
 type GroupFormState = {
@@ -86,6 +88,7 @@ interface GroupCardSectionProps {
   onApplyDateToAll: (groupKey: string) => void;
   onApplyDateToAllChange: (groupKey: string, value: string) => void;
   todayIso: string;
+  showBulkHelpers: boolean;
 }
 
 function GroupCardSection({
@@ -101,6 +104,7 @@ function GroupCardSection({
   onApplyDateToAll,
   onApplyDateToAllChange,
   todayIso,
+  showBulkHelpers,
 }: GroupCardSectionProps) {
   const { data: eligibleInstructors = [], isLoading } =
     useEligibleCourseInstructorsForCertificate([group.levelId], group.programId);
@@ -149,58 +153,62 @@ function GroupCardSection({
         </Select>
       </div>
 
-      {/* Apply to all in group */}
-      <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">
-          Apply Marks to All in Group
-        </label>
-        <div className="flex gap-2">
-          <Input
-            type="number"
-            min="0"
-            value={formState.applyToAll}
-            onChange={(e) => onApplyToAllChange(group.key, e.target.value)}
-            placeholder="Enter marks"
-            className="flex-1"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onApplyToAll(group.key)}
-            disabled={!formState.applyToAll}
-          >
-            Apply
-          </Button>
+      {/* Apply to all in group — hidden in single-student mode */}
+      {showBulkHelpers && (
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
+            Apply Marks to All in Group
+          </label>
+          <div className="flex gap-2">
+            <Input
+              type="number"
+              min="0"
+              value={formState.applyToAll}
+              onChange={(e) => onApplyToAllChange(group.key, e.target.value)}
+              placeholder="Enter marks"
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onApplyToAll(group.key)}
+              disabled={!formState.applyToAll}
+            >
+              Apply
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Apply date to all in group */}
-      <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">
-          Apply Completion Date to All in Group
-        </label>
-        <div className="flex gap-2">
-          <DateInput
-            min={group.students
-              .map((s) => s.minCompletionDate)
-              .filter(Boolean)
-              .sort()
-              .pop() || undefined}
-            max={todayIso}
-            value={applyDateToAll}
-            onChange={(v) => onApplyDateToAllChange(group.key, v)}
-            className="flex-1"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onApplyDateToAll(group.key)}
-            disabled={!applyDateToAll}
-          >
-            Apply
-          </Button>
+      {/* Apply date to all in group — hidden in single-student mode */}
+      {showBulkHelpers && (
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
+            Apply Completion Date to All in Group
+          </label>
+          <div className="flex gap-2">
+            <DateInput
+              min={group.students
+                .map((s) => s.minCompletionDate)
+                .filter(Boolean)
+                .sort()
+                .pop() || undefined}
+              max={todayIso}
+              value={applyDateToAll}
+              onChange={(v) => onApplyDateToAllChange(group.key, v)}
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onApplyDateToAll(group.key)}
+              disabled={!applyDateToAll}
+            >
+              Apply
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Per-student marks */}
       <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-green">
@@ -257,8 +265,10 @@ export default function BulkRequestCertificateModal({
   onOpenChange,
   groups,
   onSuccess,
+  showBulkHelpers = true,
 }: BulkRequestCertificateModalProps) {
   const todayIso = new Date().toISOString().slice(0, 10);
+  const isSingle = !showBulkHelpers;
 
   const [forms, setForms] = useState<Record<string, GroupFormState>>(() =>
     Object.fromEntries(
@@ -446,19 +456,24 @@ export default function BulkRequestCertificateModal({
   };
 
   const totalStudents = groups.reduce((n, g) => n + g.students.length, 0);
+  const singleStudent = isSingle ? groups[0]?.students[0] : null;
 
   return (
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
       size="lg"
-      title="Bulk Certificate Request"
-      description={`Request certificates for ${totalStudents} student(s) across ${groups.length} group(s)`}
+      title={isSingle ? "Request Certificate" : "Bulk Certificate Request"}
+      description={
+        isSingle && singleStudent
+          ? `Create a certificate request for ${singleStudent.name} (Roll No: ${singleStudent.rollNo})`
+          : `Request certificates for ${totalStudents} student(s) across ${groups.length} group(s)`
+      }
       headerIcon={Users}
       onSubmit={handleSubmit}
       isSubmitting={bulkCert.isPending}
       canSubmit={canSubmit}
-      submitLabel={`Submit All (${totalStudents} students)`}
+      submitLabel={isSingle ? "Create Request" : `Submit All (${totalStudents} students)`}
     >
       <div className="space-y-4 max-h-[60vh] overflow-y-auto scrollbar-green pr-1">
         {groups.map((group) => (
@@ -484,6 +499,7 @@ export default function BulkRequestCertificateModal({
             onApplyDateToAll={handleApplyDateToAll}
             onApplyDateToAllChange={handleApplyDateToAllChange}
             todayIso={todayIso}
+            showBulkHelpers={showBulkHelpers}
           />
         ))}
       </div>
