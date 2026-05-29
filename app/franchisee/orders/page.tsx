@@ -32,6 +32,7 @@ import {
   OrderStatus,
   type OrderData,
   type StartingKitItem,
+  type CustomMaterialLine,
 } from "@/services/order.service";
 import UnifiedMaterialRequestDialog from "./components/UnifiedMaterialRequestDialog";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
@@ -57,6 +58,7 @@ export default function FranchiseeOrdersPage() {
     studentIds?: number[];
     instructorIds?: number[];
     startingKitItems?: StartingKitItem[];
+    customItems?: CustomMaterialLine[];
     notes?: string;
     paymentRecordId: number;
   } | null>(null);
@@ -71,6 +73,12 @@ export default function FranchiseeOrdersPage() {
             : undefined;
         return (ord ?? 1) > 1;
       }),
+    [students],
+  );
+
+  // Custom (re-order) items are for students who have ALREADY ordered materials.
+  const customEligibleStudents = useMemo(
+    () => students.filter((s) => s.status === "active" && s.materialsOrdered),
     [students],
   );
 
@@ -118,6 +126,7 @@ export default function FranchiseeOrdersPage() {
         studentIds: pd.studentIds,
         instructorIds: pd.instructorIds,
         startingKitItems: pd.startingKitItems,
+        customItems: pd.customItems,
         notes: pd.notes,
         paymentRecordId: pd.paymentRecordId,
       });
@@ -133,6 +142,7 @@ export default function FranchiseeOrdersPage() {
           studentIds: pd.studentIds,
           instructorIds: pd.instructorIds,
           startingKitItems: pd.startingKitItems,
+          customItems: pd.customItems,
           notes: pd.notes,
           paymentRecordId: pd.paymentRecordId,
         });
@@ -227,7 +237,8 @@ export default function FranchiseeOrdersPage() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Material Orders</h1>
           <p className="text-muted-foreground">
-            Standard order flow for student level materials and first-level kits.
+            Order student level materials and first-level kits, or re-order
+            custom items for students who already have materials.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -277,6 +288,7 @@ export default function FranchiseeOrdersPage() {
           setIsUnifiedModalOpen(false);
         }}
         eligibleStudents={eligibleStudents}
+        customEligibleStudents={customEligibleStudents}
       />
 
       {unifiedPaymentData && !unifiedPaymentData.isZeroAmount && unifiedPaymentData.amount > 0 ? (

@@ -253,6 +253,24 @@ export interface StudentBreakdown {
   durationInMonths: number;
 }
 
+export interface CustomGroupPreviewItem {
+  inventoryItemId: number;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+/** Custom (re-order) items folded into the unified order, grouped per student.
+ * Priced off inventory unitPrice with no GST. Mirrors backend `customGroups`. */
+export interface CustomGroupPreview {
+  studentId: number;
+  studentName: string;
+  levelId: number;
+  items: CustomGroupPreviewItem[];
+  totalPrice: number;
+}
+
 export interface InvoicePreview {
   franchiseId: string;
   programId: number;
@@ -272,6 +290,8 @@ export interface InvoicePreview {
   studentGroups?: StudentGroupPreview[];
   startingKitGroups?: StartingKitGroupPreview[];
   instructorGroups?: InstructorGroupPreview[];
+  /** Custom (re-order) items folded into the unified order, grouped per student. */
+  customGroups?: CustomGroupPreview[];
 }
 
 // ---------------------------------------------------------------------------
@@ -581,6 +601,29 @@ function normalizeInstructorGroupPreview(raw: unknown): InstructorGroupPreview |
   };
 }
 
+function normalizeCustomGroupPreview(raw: unknown): CustomGroupPreview | null {
+  if (raw == null || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const items: CustomGroupPreviewItem[] = Array.isArray(r.items)
+    ? (r.items as Record<string, unknown>[]).map((it) => ({
+        inventoryItemId: Number(it?.inventoryItemId ?? 0),
+        name: String(it?.name ?? ""),
+        quantity: Number(it?.quantity ?? 0),
+        unitPrice: Number(it?.unitPrice ?? 0),
+        totalPrice: Number(it?.totalPrice ?? 0),
+      }))
+    : [];
+  return {
+    studentId: Number(r?.studentId ?? 0),
+    studentName: String(r?.studentName ?? ""),
+    levelId: Number(r?.levelId ?? 0),
+    items,
+    totalPrice: Number(
+      r?.totalPrice ?? items.reduce((sum, it) => sum + it.totalPrice, 0),
+    ),
+  };
+}
+
 /** Normalize unified / stored preview payload (API or `order.invoicePreview` JSON). */
 export function parseInvoicePreviewPayload(data: unknown): InvoicePreview {
   if (data == null || typeof data !== "object") {
@@ -674,6 +717,11 @@ export function parseInvoicePreviewPayload(data: unknown): InvoicePreview {
       ? (d.instructorGroups as unknown[])
           .map(normalizeInstructorGroupPreview)
           .filter((g): g is InstructorGroupPreview => g != null)
+      : [],
+    customGroups: Array.isArray(d?.customGroups)
+      ? (d.customGroups as unknown[])
+          .map(normalizeCustomGroupPreview)
+          .filter((g): g is CustomGroupPreview => g != null)
       : [],
   };
 }

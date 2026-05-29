@@ -123,6 +123,9 @@ export const queryKeys = {
       ["orders", "franchisee", "detail", id] as const,
     dispatchEligible: (franchiseId: string) =>
       ["orders", "dispatch-eligible", franchiseId] as const,
+    /** Custom-order available items (level + kit) for a set of students. */
+    availableItems: (studentIds: number[]) =>
+      ["orders", "available-items", [...studentIds].sort((a, b) => a - b)] as const,
   },
   programs: {
     all: ["programs"] as const,

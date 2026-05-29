@@ -7,9 +7,11 @@ import {
   getAdminOrdersFlat,
   getOrderById,
   getOrderByIdAdmin,
+  getAvailableItemsForStudents,
   type OrderData,
   type GroupedOrdersResponse,
   type FranchiseeOrderListParams,
+  type StudentAvailableItems,
 } from "@/services/order.service";
 import { useProgramId } from "@/hooks/use-scope";
 import { queryKeys } from "./query-keys";
@@ -89,6 +91,20 @@ export function useOrderByIdAdmin(orderId: number | undefined) {
     queryKey: queryKeys.orders.adminDetail(orderId ?? 0),
     queryFn: () => getOrderByIdAdmin(orderId!),
     enabled: orderId != null && orderId > 0,
+  });
+}
+
+/**
+ * Fetches the custom-orderable items (level-template + program-kit items) for
+ * the given students. Backs the Custom Materials picker. Disabled when no
+ * students are selected.
+ */
+export function useAvailableItems(studentIds: number[], enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.orders.availableItems(studentIds),
+    queryFn: () => getAvailableItemsForStudents(studentIds),
+    enabled: enabled && studentIds.length > 0,
+    placeholderData: (prev) => prev as StudentAvailableItems[] | undefined,
   });
 }
 

@@ -13,12 +13,19 @@ import {
 import {
   previewOrderInvoice,
   type InvoicePreview,
+  type CustomGroupPreview,
 } from "@/services/order.service";
 
 export interface StartingKitSelectionItem {
   streamId: number;
   quantity: number;
   tshirtItemId: number | null;
+}
+
+export interface CustomMaterialSelectionItem {
+  studentId: number;
+  inventoryItemId: number;
+  quantity: number;
 }
 
 function emptyPreview(seed?: Partial<InvoicePreview>): InvoicePreview {
@@ -72,6 +79,9 @@ export interface UseUnifiedInvoicePreviewArgs {
   selectedStudentIds: number[];
   selectedInstructorIds: number[];
   startingKitItems: StartingKitSelectionItem[];
+  /** Custom (re-order) inventory lines folded into the same order. Priced off
+   * inventory unitPrice with no GST; fetched as a standalone preview block. */
+  customItems?: CustomMaterialSelectionItem[];
   franchiseId?: string | number;
 }
 
@@ -90,6 +100,7 @@ export function useUnifiedInvoicePreview({
   selectedStudentIds,
   selectedInstructorIds,
   startingKitItems,
+  customItems = [],
   franchiseId,
 }: UseUnifiedInvoicePreviewArgs): UseUnifiedInvoicePreviewResult {
   // Franchisee JWT: server resolves franchise from token; `franchiseId` here is for admin-style calls only.
@@ -97,6 +108,16 @@ export function useUnifiedInvoicePreview({
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [refetchTick, setRefetchTick] = useState(0);
+
+  // Custom items are priced independently (inventory unitPrice, no GST), so we
+  // fetch them as a standalone block and overlay onto the merged preview rather
+  // than threading them through the incremental student/CI/kit merge engine.
+  const [customBlock, setCustomBlock] = useState<{
+    customGroups: CustomGroupPreview[];
+    totalAmount: number;
+  } | null>(null);
+  const [isCustomFetching, setIsCustomFetching] = useState(false);
+  const customGenRef = useRef(0);
 
   const genRef = useRef(0);
   const mergedRef = useRef<InvoicePreview | null>(null);
@@ -116,6 +137,17 @@ export function useUnifiedInvoicePreview({
         .map((i) => `${i.streamId}:${i.tshirtItemId ?? "none"}:${i.quantity}`)
         .join(","),
     [startingKitItems],
+  );
+  const customKey = useMemo(
+    () =>
+      [...customItems]
+        .sort(
+          (a, b) =>
+            a.studentId - b.studentId || a.inventoryItemId - b.inventoryItemId,
+        )
+        .map((i) => `${i.studentId}:${i.inventoryItemId}:${i.quantity}`)
+        .join(","),
+    [customItems],
   );
 
   useEffect(() => {
@@ -257,21 +289,97 @@ export function useUnifiedInvoicePreview({
     refetchTick,
   ]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      if (!open || customItems.length === 0) {
+        customGenRef.current += 1;
+        setCustomBlock(null);
+        setIsCustomFetching(false);
+        return;
+      }
+      const myGen = ++customGenRef.current;
+      setIsCustomFetching(true);
+      try {
+        const dtoBase =
+          franchiseId != null && franchiseId !== ""
+            ? { franchiseId: String(franchiseId) }
+            : {};
+        const part = await previewOrderInvoice({
+          ...dtoBase,
+          customItems: customItems.map((i) => ({
+            studentId: i.studentId,
+            inventoryItemId: i.inventoryItemId,
+            quantity: i.quantity,
+          })),
+        });
+        if (cancelled || myGen !== customGenRef.current) return;
+        setCustomBlock({
+          customGroups: part.customGroups ?? [],
+          totalAmount: Number(part.totalAmount ?? 0),
+        });
+      } catch (e) {
+        if (cancelled || myGen !== customGenRef.current) return;
+        setError(e instanceof Error ? e : new Error(String(e)));
+      } finally {
+        if (!cancelled && myGen === customGenRef.current) {
+          setIsCustomFetching(false);
+        }
+      }
+    }
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, customKey, franchiseId, refetchTick]);
+
   const refetch = useCallback(() => {
     mergedRef.current = null;
     setPreview(null);
+    setCustomBlock(null);
     setError(null);
     setRefetchTick((t) => t + 1);
   }, []);
 
+  // Overlay the custom block: custom items add to the grand total (and to the
+  // pre-GST subtotal, since they carry no GST) and surface as `customGroups`.
+  const combinedPreview = useMemo<InvoicePreview | undefined>(() => {
+    const hasCustom = (customBlock?.customGroups.length ?? 0) > 0;
+    if (preview == null) {
+      if (!hasCustom || customBlock == null) return preview ?? undefined;
+      return {
+        ...emptyPreview({ franchiseId: String(franchiseId ?? "") }),
+        customGroups: customBlock.customGroups,
+        totalAmount: customBlock.totalAmount,
+        subtotalAmount: customBlock.totalAmount,
+        gstAmount: 0,
+        isGstInclusive: true,
+      };
+    }
+    if (!hasCustom || customBlock == null) return preview;
+    const baseSubtotal = preview.subtotalAmount ?? preview.totalAmount;
+    return {
+      ...preview,
+      customGroups: customBlock.customGroups,
+      totalAmount: preview.totalAmount + customBlock.totalAmount,
+      subtotalAmount: baseSubtotal + customBlock.totalAmount,
+    };
+  }, [preview, customBlock, franchiseId]);
+
   const isLoading = Boolean(
-    open && hasSelection && preview == null && !error && isFetching,
+    open &&
+      hasSelection &&
+      combinedPreview == null &&
+      !error &&
+      (isFetching || isCustomFetching),
   );
 
   return {
-    preview: preview ?? undefined,
+    preview: combinedPreview,
     isLoading,
-    isFetching,
+    isFetching: isFetching || isCustomFetching,
     isError: error != null,
     error,
     refetch,
