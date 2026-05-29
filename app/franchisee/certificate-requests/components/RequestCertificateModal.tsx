@@ -40,8 +40,11 @@ export default function RequestCertificateModal({
   const [formData, setFormData] = useState({
     marksObtained: "",
     courseInstructorId: "",
+    completionDate: "",
   });
   const requestCert = useRequestCertificateForStudent();
+
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   const levelIds = student.levelId > 0 ? [student.levelId] : [];
   const {
@@ -55,8 +58,18 @@ export default function RequestCertificateModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.marksObtained || !formData.courseInstructorId) {
+    if (!formData.marksObtained || !formData.courseInstructorId || !formData.completionDate) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+
+    const minDate = student.minCompletionDate; // "YYYY-MM-DD" or ""
+    if (minDate && formData.completionDate < minDate) {
+      toast.error(`Completion date must be on or after ${minDate}`);
+      return;
+    }
+    if (formData.completionDate > todayIso) {
+      toast.error("Completion date cannot be in the future");
       return;
     }
 
@@ -79,7 +92,7 @@ export default function RequestCertificateModal({
         levelId: student.levelId,
         marksObtained,
         courseInstructorId: parseInt(formData.courseInstructorId, 10),
-        completionDate: "",
+        completionDate: formData.completionDate,
       });
 
       toast.success("Certificate request created successfully");
@@ -87,6 +100,7 @@ export default function RequestCertificateModal({
       setFormData({
         marksObtained: "",
         courseInstructorId: "",
+        completionDate: "",
       });
 
       onSuccess();
@@ -158,6 +172,22 @@ export default function RequestCertificateModal({
             )}
           </SelectContent>
         </Select>
+      </DialogFormField>
+
+      <DialogFormField
+        id="completionDate"
+        label="Completion Date"
+        required
+      >
+        <Input
+          id="completionDate"
+          type="date"
+          min={student.minCompletionDate || undefined}
+          max={todayIso}
+          value={formData.completionDate}
+          onChange={(e) => handleInputChange("completionDate", e.target.value)}
+          required
+        />
       </DialogFormField>
 
       <DialogFormField
