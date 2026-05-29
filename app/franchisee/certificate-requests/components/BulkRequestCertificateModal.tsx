@@ -279,6 +279,7 @@ export default function BulkRequestCertificateModal({
           students: g.students.map((s) => ({
             studentId: s.id,
             marksObtained: parseInt(forms[g.key].marksMap[s.id], 10),
+            completionDate: "",
           })),
         })),
       };

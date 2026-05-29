@@ -77,6 +77,7 @@ export interface EligibleStudent {
   status: StudentStatus;
   lastCertIssuedAt: string | null;
   eligibilityReason: "no_certificate" | "duration_exceeded";
+  minCompletionDate: string;
 }
 
 export interface EligibleStudentsResponse {
@@ -213,11 +214,17 @@ export async function getEligibleStudents(): Promise<EligibleStudentsResponse> {
       sex: s.sex as string,
       standard: (s.standard as string) ?? "",
       stream: String(levelStream?.name ?? (s.stream as string) ?? StudentStream.REGULAR),
-      levelName: level?.name ? String(level.name) : String(s.levelId ?? ""),
+      // Eligible-student (certificate request) views display the level CODE.
+      levelName: level?.code
+        ? String(level.code)
+        : level?.name
+          ? String(level.name)
+          : String(s.levelId ?? ""),
       durationInMonths: Number(level?.durationInMonths ?? 0),
       status: normalizeStudentStatus(s.status),
       lastCertIssuedAt: (s.lastCertIssuedAt as string | null) ?? null,
       eligibilityReason: (s.eligibilityReason as "no_certificate" | "duration_exceeded") ?? "no_certificate",
+      minCompletionDate: s.minCompletionDate ? String(s.minCompletionDate).slice(0, 10) : "",
     };
   });
   return { result: mapped };

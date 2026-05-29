@@ -182,6 +182,7 @@ export interface ApproveAndDispatchClassification {
 export interface BulkCertificateRequestStudentEntry {
   studentId: number;
   marksObtained: number;
+  completionDate: string;
 }
 
 export interface BulkCertificateRequestGroup {
@@ -210,8 +211,9 @@ function asRecord(value: unknown): Record<string, unknown> {
 function getLevelLabel(level: Record<string, unknown>, fallbackId: unknown): string {
   const name = String(level.name ?? "").trim();
   const code = String(level.code ?? "").trim();
-  if (name) return name;
+  // Certificate views display the level CODE (e.g. "L1"), not the name.
   if (code) return code;
+  if (name) return name;
   const numericId = Number(fallbackId ?? level.id ?? 0);
   return numericId > 0 ? `Level ${numericId}` : "N/A";
 }
@@ -534,6 +536,7 @@ export async function requestCertificateForStudent(body: {
   marksObtained?: number;
   totalMarks?: number;
   courseInstructorId?: number;
+  completionDate: string;
 }) {
   const response = await api.post("/certification/request", body);
   return unwrapData(response);

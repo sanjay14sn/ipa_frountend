@@ -79,6 +79,7 @@ export default function RequestCertificateModal({
         levelId: student.levelId,
         marksObtained,
         courseInstructorId: parseInt(formData.courseInstructorId, 10),
+        completionDate: "",
       });
 
       toast.success("Certificate request created successfully");
