@@ -81,9 +81,6 @@ export default function AdminCertificateRequestsTable({
         <FranchiseCertificateDetails
           franchiseId={g.franchiseId}
           franchiseName={g.franchiseName}
-          totalPending={g.totalPending}
-          totalIssued={g.totalIssued}
-          totalRejected={g.totalRejected}
         />
       )}
       searchPlaceholder="Search by student name, roll number, instructor, or franchise..."

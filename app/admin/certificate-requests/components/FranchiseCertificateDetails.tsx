@@ -14,19 +14,9 @@ import {
 } from "@/components/ui/dialog";
 import { Check, X, FileText, ExternalLink } from "lucide-react";
 import {
-  Award,
-  Building2,
-  CheckCircle2,
-  Clock,
-  XCircle,
-} from "lucide-react";
-import {
   DataTable,
+  ExpandedDetailSection,
   ExpandedDetailSurface,
-  KeyFactCard,
-  KeyFactsGrid,
-  ProfileCard,
-  ProfileCardSection,
   StatusBadge,
   TableMainCell,
   type DataTableColumn,
@@ -49,17 +39,11 @@ import { BulkDispatchFlowModal } from "@/components/shared/BulkDispatchFlowModal
 interface FranchiseCertificateDetailsProps {
   franchiseId: string;
   franchiseName: string;
-  totalPending: number;
-  totalIssued: number;
-  totalRejected: number;
 }
 
 export default function FranchiseCertificateDetails({
   franchiseId,
   franchiseName,
-  totalPending,
-  totalIssued,
-  totalRejected,
 }: FranchiseCertificateDetailsProps) {
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -276,28 +260,7 @@ export default function FranchiseCertificateDetails({
   return (
     <>
       <ExpandedDetailSurface className="border-t border-border/60">
-        <div className="space-y-3 p-3 md:p-4">
-          <KeyFactsGrid columns={4}>
-            <KeyFactCard
-              icon={Building2}
-              label="Franchise"
-              value={franchiseName}
-            />
-            <KeyFactCard icon={Clock} label="Pending" value={totalPending} />
-            <KeyFactCard
-              icon={CheckCircle2}
-              label="Issued"
-              value={totalIssued}
-            />
-            <KeyFactCard
-              icon={XCircle}
-              label="Rejected"
-              value={totalRejected}
-            />
-          </KeyFactsGrid>
-
-          <ProfileCard contentClassName="space-y-2 p-3 md:p-4">
-            <ProfileCardSection icon={Award} label={sectionTitle}>
+        <ExpandedDetailSection title={sectionTitle}>
           {!franchiseId?.trim() ? (
             <p className="py-4 text-center text-sm text-muted-foreground">
               No franchise selected.
@@ -335,9 +298,7 @@ export default function FranchiseCertificateDetails({
               }
             />
           )}
-            </ProfileCardSection>
-          </ProfileCard>
-        </div>
+        </ExpandedDetailSection>
       </ExpandedDetailSurface>
 
       <Dialog
