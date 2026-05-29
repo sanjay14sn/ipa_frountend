@@ -39,6 +39,12 @@ export interface ProgramSelectionFieldsProps {
    */
   levelEditable?: boolean;
   /**
+   * When false the program and stream selects are read-only (franchise edit
+   * mode — a student's program/stream cannot be reassigned by a franchisee).
+   * Defaults to true.
+   */
+  programStreamEditable?: boolean;
+  /**
    * When true the level placeholder says "Auto-set to first level" instead of
    * "Select level". Used by AddStudentModal for non-existing (new) students.
    */
@@ -59,6 +65,7 @@ export function ProgramSelectionFields({
   loadingLevels,
   levelEditable = true,
   levelAutoSet = false,
+  programStreamEditable = true,
 }: ProgramSelectionFieldsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -70,7 +77,7 @@ export function ProgramSelectionFields({
           onValueChange={(value) => {
             onProgramChange(value);
           }}
-          disabled={loadingPrograms}
+          disabled={!programStreamEditable || loadingPrograms}
         >
           <SelectTrigger className={errors.programId ? "border-red-500" : ""}>
             <SelectValue
@@ -87,6 +94,11 @@ export function ProgramSelectionFields({
             ))}
           </SelectContent>
         </Select>
+        {!programStreamEditable && (
+          <p className="text-muted-foreground text-xs mt-1">
+            Locked after enrollment — contact admin to change
+          </p>
+        )}
         {errors.programId && (
           <p className="text-red-500 text-sm flex items-center gap-1">
             <AlertCircle className="w-4 h-4" />
@@ -104,7 +116,10 @@ export function ProgramSelectionFields({
             onStreamChange(value);
           }}
           disabled={
-            !formData.programId || formData.programId === 0 || loadingStreams
+            !programStreamEditable ||
+            !formData.programId ||
+            formData.programId === 0 ||
+            loadingStreams
           }
         >
           <SelectTrigger className={errors.streamId ? "border-red-500" : ""}>
@@ -126,6 +141,11 @@ export function ProgramSelectionFields({
             ))}
           </SelectContent>
         </Select>
+        {!programStreamEditable && (
+          <p className="text-muted-foreground text-xs mt-1">
+            Locked after enrollment — contact admin to change
+          </p>
+        )}
         {errors.streamId && (
           <p className="text-red-500 text-sm flex items-center gap-1">
             <AlertCircle className="w-4 h-4" />

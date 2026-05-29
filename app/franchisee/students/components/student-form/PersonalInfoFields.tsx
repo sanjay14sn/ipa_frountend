@@ -45,6 +45,8 @@ export interface PersonalInfoFieldsProps {
   onFieldChange: (field: string, value: string) => void;
   /** When true, studentName and dob inputs are disabled (franchise edit mode). */
   lockIdentityFields?: boolean;
+  /** When true, the dateOfJoining input is disabled (franchise edit mode). */
+  lockDateOfJoining?: boolean;
   /** When true, dateOfJoining is required and shows an error slot. Defaults to false. */
   dateOfJoiningRequired?: boolean;
 }
@@ -54,6 +56,7 @@ export function PersonalInfoFields({
   errors,
   onFieldChange,
   lockIdentityFields = false,
+  lockDateOfJoining = false,
   dateOfJoiningRequired = false,
 }: PersonalInfoFieldsProps) {
   return (
@@ -123,7 +126,13 @@ export function PersonalInfoFields({
           value={formData.dateOfJoining}
           onChange={(v) => onFieldChange("dateOfJoining", v)}
           className={errors.dateOfJoining ? "border-red-500" : ""}
+          disabled={lockDateOfJoining}
         />
+        {lockDateOfJoining && (
+          <p className="text-muted-foreground text-xs mt-1">
+            Locked after enrollment — contact admin to change
+          </p>
+        )}
         {errors.dateOfJoining && (
           <p className="text-red-500 text-sm flex items-center gap-1">
             <AlertCircle className="w-4 h-4" />

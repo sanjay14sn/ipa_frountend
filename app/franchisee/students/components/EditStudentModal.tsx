@@ -403,6 +403,7 @@ export default function EditStudentModal({
             errors={errors}
             onFieldChange={handleInputChange}
             lockIdentityFields={mode === "franchise"}
+            lockDateOfJoining={mode === "franchise"}
           />
         );
 
@@ -446,6 +447,7 @@ export default function EditStudentModal({
               loadingStreams={loadingStreams}
               loadingLevels={loadingLevels}
               levelEditable={mode !== "franchise"}
+              programStreamEditable={mode !== "franchise"}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -454,7 +456,7 @@ export default function EditStudentModal({
                 <Select
                   value={formData.status}
                   onValueChange={(value) => handleInputChange("status", value)}
-                  disabled={formData.status === "completed"}
+                  disabled={formData.status === "completed" || mode === "franchise"}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -467,6 +469,11 @@ export default function EditStudentModal({
                     <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
+                {mode === "franchise" && (
+                  <p className="text-muted-foreground text-xs mt-1">
+                    Locked after enrollment — contact admin to change
+                  </p>
+                )}
               </div>
             </div>
           </div>
