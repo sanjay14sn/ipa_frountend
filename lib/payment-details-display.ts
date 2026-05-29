@@ -76,6 +76,8 @@ export function agreementTypeLabel(type?: string | null): string {
   switch ((type ?? "").trim().toUpperCase()) {
     case "NEW_FRANCHISE":
       return "New Franchise";
+    case "NEW_PROGRAM":
+      return "New Program";
     case "RENEWAL":
       return "Renewal";
     case "TRANSFER":
@@ -89,6 +91,8 @@ export function agreementTypeBadgeClass(type?: string | null): string {
   switch ((type ?? "").trim().toUpperCase()) {
     case "NEW_FRANCHISE":
       return "bg-blue-100 text-blue-800 border-blue-200";
+    case "NEW_PROGRAM":
+      return "bg-violet-100 text-violet-800 border-violet-200";
     case "RENEWAL":
       return "bg-emerald-100 text-emerald-800 border-emerald-200";
     case "TRANSFER":

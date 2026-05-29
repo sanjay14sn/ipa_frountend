@@ -356,10 +356,9 @@ export function CIAgreementsSection() {
           onPageChange={setPage}
           renderMainCell={(r) => (
             <span className="font-medium">
-              {r.title}
-              <span className="ml-2 text-xs text-muted-foreground">
-                · {r.instructorName ?? `Instructor #${r.instructorId}`}
-              </span>
+              {r.instructorName ?? `Instructor #${r.instructorId}`}
+              <span className="mx-1 text-muted-foreground">-</span>
+              {r.franchiseName ?? r.franchiseId}
             </span>
           )}
           renderExpandedContent={(r) => (

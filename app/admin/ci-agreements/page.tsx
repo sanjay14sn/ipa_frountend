@@ -6,14 +6,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Check, X } from "lucide-react";
+import { Check, X, Eye } from "lucide-react";
+import { AdminCIAgreementDialog } from "@/components/agreements/AdminCIAgreementDialog";
 import {
   DataTable,
   type DataTableColumn,
   TableLoadingState,
   TablePageShell,
 } from "@/components/shared";
-import { StatusBadge } from "@/components/shared/status-badge";
 import {
   AppDialog,
   AppDialogBody,
@@ -102,19 +102,12 @@ function ActionDialog({
   );
 }
 
-function statusTone(status: string) {
-  if (status === "Valid") return "success" as const;
-  if (status === "Approved") return "warning" as const;
-  if (status === "Suspended") return "destructive" as const;
-  if (status === "Void") return "neutral" as const;
-  return undefined;
-}
-
 function CIAgreementsTable() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [actionDialog, setActionDialog] = useState<ActionDialogState | null>(null);
   const [reactivatingId, setReactivatingId] = useState<number | null>(null);
+  const [viewInstructor, setViewInstructor] = useState<{ id: number; name?: string } | null>(null);
 
   const query = useQuery({
     queryKey: ["ci-agreements", "admin", page],
@@ -146,11 +139,8 @@ function CIAgreementsTable() {
 
   const columns: DataTableColumn<CIAgreementAdminRow>[] = [
     {
-      key: "status",
-      header: "Status",
-      render: (row) => (
-        <StatusBadge label={row.status} tone={statusTone(row.status)} />
-      ),
+      key: "agreement",
+      header: "Agreement",
     },
     {
       key: "signatures",
@@ -165,20 +155,6 @@ function CIAgreementsTable() {
             Fr {row.franchiseeSigned ? <Check className="inline h-3 w-3 text-emerald-600" /> : <X className="inline h-3 w-3 text-red-400" />}
           </span>
         </div>
-      ),
-    },
-    {
-      key: "instructor",
-      header: "Instructor",
-      render: (row) => (
-        <span className="text-sm">{row.instructorName ?? "—"}</span>
-      ),
-    },
-    {
-      key: "centre",
-      header: "Centre",
-      render: (row) => (
-        <span className="text-sm">{row.centreName ?? row.franchiseName ?? "—"}</span>
       ),
     },
     {
@@ -197,6 +173,18 @@ function CIAgreementsTable() {
       className: "w-[200px] text-right",
       render: (row) => (
         <div className="flex items-center justify-end gap-1">
+          {row.courseInstructorId != null && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs"
+              onClick={() =>
+                setViewInstructor({ id: row.courseInstructorId!, name: row.ciName })
+              }
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </Button>
+          )}
           {row.status === "Valid" && (
             <Button
               size="sm"
@@ -249,7 +237,7 @@ function CIAgreementsTable() {
           getRowId={(row) => String(row.id)}
           renderMainCell={(row) => (
             <span className="font-medium">
-              {row.title}
+              {row.ciName ?? "—"} - {row.franchiseName ?? "—"}
             </span>
           )}
           emptyMessage="No CI agreements found."
@@ -266,6 +254,11 @@ function CIAgreementsTable() {
           onSuccess={invalidate}
         />
       )}
+
+      <AdminCIAgreementDialog
+        instructor={viewInstructor}
+        onClose={() => setViewInstructor(null)}
+      />
     </div>
   );
 }

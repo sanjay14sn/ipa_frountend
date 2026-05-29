@@ -14,6 +14,7 @@ export interface CIAgreementData {
   instructorId: number;
   instructorName?: string;
   franchiseId: string;
+  franchiseName?: string | null;
   tenure?: number | null;
   expiresAt?: string | null;
   createdAt: string;
@@ -81,6 +82,8 @@ export interface CIAgreementAdminRow {
   phase: CIAgreementData["phase"];
   ciSigned: boolean;
   franchiseeSigned: boolean;
+  courseInstructorId?: number;
+  ciName?: string;
   instructorName?: string;
   franchiseName?: string;
   centreName?: string;

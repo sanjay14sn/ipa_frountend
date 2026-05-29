@@ -26,6 +26,7 @@ import {
   type AgreementRecord,
   type ReceivableSummaryItem,
 } from "@/services/agreement.service";
+import { agreementTypeBadgeClass, agreementTypeLabel } from "@/lib/payment-details-display";
 import {
   ReceivableCompactProgress,
 } from "@/components/receivables/InstallmentSummaryCard";
@@ -159,7 +160,11 @@ export function AdminAgreementsSection({
     {
       key: "type",
       header: "Type",
-      render: (record) => <Badge variant="secondary">{record.type}</Badge>,
+      render: (record) => (
+        <Badge variant="outline" className={agreementTypeBadgeClass(record.type)}>
+          {agreementTypeLabel(record.type)}
+        </Badge>
+      ),
     },
     {
       key: "emi",
@@ -273,10 +278,9 @@ export function AdminAgreementsSection({
           getRowId={(record) => String(record.id)}
           renderMainCell={(record) => (
             <span className="font-medium">
-              Agreement #{record.id}
-              <span className="ml-2 text-xs text-muted-foreground">
-                · {record.franchise?.name ?? record.franchiseId ?? "-"}
-              </span>
+              {record.franchisee?.name ?? "—"}
+              <span className="mx-1 text-muted-foreground">-</span>
+              {record.franchise?.name ?? record.franchiseId ?? "—"}
             </span>
           )}
           emptyMessage="No agreements found."

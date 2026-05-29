@@ -26,6 +26,7 @@ import {
   type AgreementRecord,
   type ESignaturePayload,
 } from "@/services/agreement.service";
+import { agreementTypeBadgeClass, agreementTypeLabel } from "@/lib/payment-details-display";
 import type { ESignatureResult } from "@/components/esignature/ESignaturePad";
 import {
   ReceivableCompactProgress,
@@ -206,7 +207,11 @@ export function MyAgreementsSection() {
     {
       key: "type",
       header: "Type",
-      render: (record) => <Badge variant="secondary">{record.type}</Badge>,
+      render: (record) => (
+        <Badge variant="outline" className={agreementTypeBadgeClass(record.type)}>
+          {agreementTypeLabel(record.type)}
+        </Badge>
+      ),
     },
     {
       key: "emi",
@@ -284,7 +289,9 @@ export function MyAgreementsSection() {
           getRowId={(record) => String(record.id)}
           renderMainCell={(record) => (
             <span className="font-medium">
-              {record.program?.name ?? record.programName ?? record.title ?? `Agreement #${record.id}`}
+              {record.franchise?.name ?? record.franchiseId ?? "—"}
+              <span className="mx-1 text-muted-foreground">-</span>
+              {record.program?.name ?? record.programName ?? "—"}
             </span>
           )}
           emptyMessage="No agreements on file yet."
