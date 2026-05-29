@@ -62,8 +62,13 @@ function AdminAgreementViewDialog({
   const agreement = agreementQuery.data ?? null;
 
   const handleWaiveSubmit = async (itemId: number, reason: string) => {
-    await waiveMutation.mutateAsync({ itemId, reason });
-    toast.success("Receivable waived successfully");
+    try {
+      await waiveMutation.mutateAsync({ itemId, reason });
+      toast.success("Receivable waived successfully");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Failed to waive receivable"));
+      throw error;
+    }
   };
 
   return (

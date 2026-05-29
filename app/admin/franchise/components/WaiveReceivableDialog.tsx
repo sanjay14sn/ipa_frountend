@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,6 +35,10 @@ export function WaiveReceivableDialog({
     resolver: zodResolver(schema),
     defaultValues: { reason: "" },
   });
+
+  useEffect(() => {
+    if (!open) form.reset();
+  }, [open, form]);
 
   const handleSubmit = async (values: FormValues) => {
     if (!item) return;
