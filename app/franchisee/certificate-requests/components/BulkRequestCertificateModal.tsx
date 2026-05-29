@@ -159,6 +159,11 @@ function GroupCardSection({
         <div className="flex gap-2">
           <Input
             type="date"
+            min={group.students
+              .map((s) => s.minCompletionDate)
+              .filter(Boolean)
+              .sort()
+              .pop() || undefined}
             max={todayIso}
             value={applyDateToAll}
             onChange={(e) => onApplyDateToAllChange(group.key, e.target.value)}
@@ -190,6 +195,7 @@ function GroupCardSection({
             </div>
             <Input
               type="date"
+              min={student.minCompletionDate || undefined}
               max={todayIso}
               value={completionMap[student.id] ?? ""}
               onChange={(e) => onDateChange(group.key, student.id, e.target.value)}
