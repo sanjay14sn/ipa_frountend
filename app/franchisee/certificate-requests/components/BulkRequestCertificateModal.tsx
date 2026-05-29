@@ -42,6 +42,8 @@ type GroupFormState = {
   courseInstructorId: string; // string for Select component
   marksMap: Record<number, string>; // studentId -> marks string
   applyToAll: string; // helper input for "apply to all"
+  completionMap: Record<number, string>; // studentId -> completion date (YYYY-MM-DD)
+  applyDateToAll: string; // helper for "apply date to all"
 };
 
 // ---------------------------------------------------------------------------
@@ -55,6 +57,12 @@ interface GroupCardSectionProps {
   onMarksChange: (groupKey: string, studentId: number, value: string) => void;
   onApplyToAll: (groupKey: string) => void;
   onApplyToAllChange: (groupKey: string, value: string) => void;
+  completionMap: Record<number, string>;
+  applyDateToAll: string;
+  onDateChange: (groupKey: string, studentId: number, value: string) => void;
+  onApplyDateToAll: (groupKey: string) => void;
+  onApplyDateToAllChange: (groupKey: string, value: string) => void;
+  todayIso: string;
 }
 
 function GroupCardSection({
@@ -64,6 +72,12 @@ function GroupCardSection({
   onMarksChange,
   onApplyToAll,
   onApplyToAllChange,
+  completionMap,
+  applyDateToAll,
+  onDateChange,
+  onApplyDateToAll,
+  onApplyDateToAllChange,
+  todayIso,
 }: GroupCardSectionProps) {
   const { data: eligibleInstructors = [], isLoading } =
     useEligibleCourseInstructorsForCertificate([group.levelId], group.programId);
@@ -137,6 +151,30 @@ function GroupCardSection({
         </div>
       </div>
 
+      {/* Apply date to all in group */}
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">
+          Apply Completion Date to All in Group
+        </label>
+        <div className="flex gap-2">
+          <Input
+            type="date"
+            max={todayIso}
+            value={applyDateToAll}
+            onChange={(e) => onApplyDateToAllChange(group.key, e.target.value)}
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onApplyDateToAll(group.key)}
+            disabled={!applyDateToAll}
+          >
+            Apply
+          </Button>
+        </div>
+      </div>
+
       {/* Per-student marks */}
       <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-green">
         {group.students.map((student) => (
@@ -150,6 +188,14 @@ function GroupCardSection({
                 {student.rollNo} · {student.levelName}
               </div>
             </div>
+            <Input
+              type="date"
+              max={todayIso}
+              value={completionMap[student.id] ?? ""}
+              onChange={(e) => onDateChange(group.key, student.id, e.target.value)}
+              placeholder="Completion date"
+              className="w-36 shrink-0"
+            />
             <Input
               type="number"
               min="0"
@@ -175,11 +221,13 @@ export default function BulkRequestCertificateModal({
   groups,
   onSuccess,
 }: BulkRequestCertificateModalProps) {
+  const todayIso = new Date().toISOString().slice(0, 10);
+
   const [forms, setForms] = useState<Record<string, GroupFormState>>(() =>
     Object.fromEntries(
       groups.map((g) => [
         g.key,
-        { courseInstructorId: "", marksMap: {}, applyToAll: "" },
+        { courseInstructorId: "", marksMap: {}, applyToAll: "", completionMap: {}, applyDateToAll: "" },
       ])
     )
   );
@@ -228,17 +276,52 @@ export default function BulkRequestCertificateModal({
     }));
   };
 
+  const handleDateChange = (groupKey: string, studentId: number, value: string) => {
+    setForms((prev) => ({
+      ...prev,
+      [groupKey]: {
+        ...prev[groupKey],
+        completionMap: { ...prev[groupKey].completionMap, [studentId]: value },
+      },
+    }));
+  };
+
+  const handleApplyDateToAll = (groupKey: string) => {
+    const state = forms[groupKey];
+    if (!state?.applyDateToAll) return;
+    const group = groups.find((g) => g.key === groupKey);
+    if (!group) return;
+    const newMap: Record<number, string> = {};
+    group.students.forEach((s) => {
+      newMap[s.id] = state.applyDateToAll;
+    });
+    setForms((prev) => ({
+      ...prev,
+      [groupKey]: { ...prev[groupKey], completionMap: newMap },
+    }));
+  };
+
+  const handleApplyDateToAllChange = (groupKey: string, value: string) => {
+    setForms((prev) => ({
+      ...prev,
+      [groupKey]: { ...prev[groupKey], applyDateToAll: value },
+    }));
+  };
+
   const canSubmit = groups.every((g) => {
     const state = forms[g.key];
     if (!state?.courseInstructorId) return false;
     return g.students.every((s) => {
       const v = state.marksMap[s.id];
-      return (
-        v !== undefined &&
-        v !== "" &&
-        !isNaN(parseInt(v)) &&
-        parseInt(v) >= 0
-      );
+      const validMarks = v !== undefined && v !== "" && !isNaN(parseInt(v)) && parseInt(v) >= 0;
+      const cd = state.completionMap[s.id];
+      const minDate = s.minCompletionDate;
+      const validDate =
+        cd !== undefined &&
+        cd !== "" &&
+        cd <= todayIso &&
+        (!minDate || cd >= minDate);
+      return validMarks && validDate;
     });
   });
 
@@ -268,6 +351,22 @@ export default function BulkRequestCertificateModal({
           return;
         }
       }
+      for (const s of g.students) {
+        const cd = state.completionMap[s.id];
+        if (!cd) {
+          toast.error(`Please enter completion date for ${s.name} (${g.stream} · ${g.levelName})`);
+          return;
+        }
+        const minDate = s.minCompletionDate;
+        if (minDate && cd < minDate) {
+          toast.error(`Completion date for ${s.name} must be on or after ${minDate}`);
+          return;
+        }
+        if (cd > todayIso) {
+          toast.error(`Completion date for ${s.name} cannot be in the future`);
+          return;
+        }
+      }
     }
 
     try {
@@ -279,7 +378,7 @@ export default function BulkRequestCertificateModal({
           students: g.students.map((s) => ({
             studentId: s.id,
             marksObtained: parseInt(forms[g.key].marksMap[s.id], 10),
-            completionDate: "",
+            completionDate: forms[g.key].completionMap[s.id],
           })),
         })),
       };
@@ -293,7 +392,7 @@ export default function BulkRequestCertificateModal({
         Object.fromEntries(
           groups.map((g) => [
             g.key,
-            { courseInstructorId: "", marksMap: {}, applyToAll: "" },
+            { courseInstructorId: "", marksMap: {}, applyToAll: "", completionMap: {}, applyDateToAll: "" },
           ])
         )
       );
@@ -334,12 +433,20 @@ export default function BulkRequestCertificateModal({
                 courseInstructorId: "",
                 marksMap: {},
                 applyToAll: "",
+                completionMap: {},
+                applyDateToAll: "",
               }
             }
             onCiChange={handleCiChange}
             onMarksChange={handleMarksChange}
             onApplyToAll={handleApplyToAll}
             onApplyToAllChange={handleApplyToAllChange}
+            completionMap={forms[group.key]?.completionMap ?? {}}
+            applyDateToAll={forms[group.key]?.applyDateToAll ?? ""}
+            onDateChange={handleDateChange}
+            onApplyDateToAll={handleApplyDateToAll}
+            onApplyDateToAllChange={handleApplyDateToAllChange}
+            todayIso={todayIso}
           />
         ))}
       </div>
