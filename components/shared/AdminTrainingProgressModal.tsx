@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -9,13 +10,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, AlertCircle, GraduationCap } from "lucide-react";
+import { Loader2, AlertCircle, GraduationCap, Pencil } from "lucide-react";
 import {
   getAdminCITrainingProgress,
   CITrainingProgress,
 } from "@/services/course-instructor.service";
+import { setInstructorCompletionState } from "@/services/ci-training-admin.service";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 
 interface AdminTrainingProgressModalProps {
@@ -35,6 +45,9 @@ export function AdminTrainingProgressModal({
   const [progress, setProgress] = useState<CITrainingProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [selectedThrough, setSelectedThrough] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const loadProgress = useCallback(async () => {
     setLoading(true);
@@ -55,8 +68,45 @@ export function AdminTrainingProgressModal({
 
   const trainings = progress?.trainings ?? [];
 
+  // Levels that can be marked as "completed through" — ordered by displayOrder.
+  const orderedLevels = [...trainings]
+    .filter((t) => t.displayOrder != null)
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+
+  const highestCompleted = orderedLevels
+    .filter((t) => t.isCompleted)
+    .reduce((max, t) => Math.max(max, t.displayOrder ?? 0), 0);
+
+  const startEditing = () => {
+    const active = orderedLevels.find((t) => t.isActive && !t.isCompleted);
+    setSelectedThrough(
+      highestCompleted || active?.displayOrder || orderedLevels[0]?.displayOrder || null,
+    );
+    setEditing(true);
+  };
+
+  const handleClose = () => {
+    setEditing(false);
+    onClose();
+  };
+
+  const saveCompletion = async () => {
+    if (selectedThrough == null) return;
+    setSaving(true);
+    try {
+      await setInstructorCompletionState(instructorId, selectedThrough);
+      await loadProgress();
+      toast.success("Training progress updated");
+      setEditing(false);
+    } catch (err) {
+      toast.error(getUserFriendlyMessage(err, "Failed to update training progress"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="w-full max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -91,6 +141,52 @@ export function AdminTrainingProgressModal({
                 <span>{Math.round(progress.progress ?? 0)}%</span>
               </div>
               <Progress value={progress.progress ?? 0} className="h-1.5" />
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              {editing ? (
+                <>
+                  <Select
+                    value={selectedThrough != null ? String(selectedThrough) : undefined}
+                    onValueChange={(value) => setSelectedThrough(Number(value))}
+                  >
+                    <SelectTrigger className="h-8 w-[220px] text-sm">
+                      <SelectValue placeholder="Completed through level…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {orderedLevels.map((level) => (
+                        <SelectItem
+                          key={level.id ?? level.trainingLevelId}
+                          value={String(level.displayOrder)}
+                        >
+                          {level.displayOrder}. {level.trainingLevelName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    onClick={saveCompletion}
+                    disabled={saving || selectedThrough == null}
+                  >
+                    {saving && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />}
+                    Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditing(false)}
+                    disabled={saving}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button size="sm" variant="outline" onClick={startEditing}>
+                  <Pencil className="mr-1 h-3.5 w-3.5" />
+                  Edit progress
+                </Button>
+              )}
             </div>
 
             <div className="divide-y divide-border rounded-lg border">
