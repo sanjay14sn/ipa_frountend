@@ -48,6 +48,28 @@ type GroupFormState = {
 };
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Convert ISO YYYY-MM-DD to display DD/MM/YYYY */
+function toDisplayDate(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+/** Return an inline error string for a student's completion date, or null if valid/empty */
+function getDateError(
+  cd: string | undefined,
+  minDate: string | undefined,
+  todayIso: string,
+): string | null {
+  if (!cd) return null;
+  if (cd > todayIso) return "Cannot be in the future";
+  if (minDate && cd < minDate) return `Must be on or after ${toDisplayDate(minDate)}`;
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // GroupCardSection sub-component
 // ---------------------------------------------------------------------------
 
@@ -182,34 +204,45 @@ function GroupCardSection({
 
       {/* Per-student marks */}
       <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-green">
-        {group.students.map((student) => (
-          <div
-            key={student.id}
-            className="flex items-center gap-3 p-2 bg-muted/30 rounded"
-          >
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">{student.name}</div>
-              <div className="text-xs text-muted-foreground truncate">
-                {student.rollNo} · {student.levelName}
+        {group.students.map((student) => {
+          const dateError = getDateError(
+            completionMap[student.id],
+            student.minCompletionDate || undefined,
+            todayIso,
+          );
+          return (
+            <div
+              key={student.id}
+              className="flex items-start gap-3 p-2 bg-muted/30 rounded"
+            >
+              <div className="flex-1 min-w-0 pt-1">
+                <div className="text-sm font-medium truncate">{student.name}</div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {student.rollNo} · {student.levelName}
+                </div>
               </div>
+              <div className="w-36 shrink-0 space-y-1">
+                <DateInput
+                  min={student.minCompletionDate || undefined}
+                  max={todayIso}
+                  value={completionMap[student.id] ?? ""}
+                  onChange={(v) => onDateChange(group.key, student.id, v)}
+                />
+                {dateError && (
+                  <p className="text-xs text-destructive leading-tight">{dateError}</p>
+                )}
+              </div>
+              <Input
+                type="number"
+                min="0"
+                value={formState.marksMap[student.id] ?? ""}
+                onChange={(e) => onMarksChange(group.key, student.id, e.target.value)}
+                placeholder="Marks"
+                className="w-24 shrink-0 mt-0.5"
+              />
             </div>
-            <DateInput
-              min={student.minCompletionDate || undefined}
-              max={todayIso}
-              value={completionMap[student.id] ?? ""}
-              onChange={(v) => onDateChange(group.key, student.id, v)}
-              className="w-36 shrink-0"
-            />
-            <Input
-              type="number"
-              min="0"
-              value={formState.marksMap[student.id] ?? ""}
-              onChange={(e) => onMarksChange(group.key, student.id, e.target.value)}
-              placeholder="Marks"
-              className="w-24 shrink-0"
-            />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
