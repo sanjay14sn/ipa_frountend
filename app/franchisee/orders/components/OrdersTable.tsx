@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { FileText, Loader2, X } from "lucide-react";
 import { DataTable, StatusBadge, type StatusTone } from "@/components/shared";
+import { orderTypeBadgeClass, orderTypeLabel } from "@/lib/payment-details-display";
 import type {
   DataTableColumn,
   DataTableFilter,
@@ -123,8 +124,8 @@ export default function OrdersTable({
       header: "Type",
       className: "text-center",
       render: (order) => (
-        <Badge variant="outline" className="text-xs">
-          {order.orderType}
+        <Badge variant="outline" className={orderTypeBadgeClass(order.orderType)}>
+          {orderTypeLabel(order.orderType)}
         </Badge>
       ),
     },
@@ -159,6 +160,25 @@ export default function OrdersTable({
             ₹{total.toFixed(2)}
           </span>
         );
+      },
+    },
+    {
+      key: "date",
+      header: "Date",
+      render: (order) =>
+        order.createdAt
+          ? new Date(order.createdAt).toLocaleDateString("en-IN")
+          : "—",
+    },
+    {
+      key: "students",
+      header: "Students / CIs",
+      className: "text-center",
+      render: (order) => {
+        const s = order.totalStudents ?? 0;
+        const c = order.totalInstructors ?? 0;
+        const total = s + c;
+        return <span>{total > 0 ? total : "—"}</span>;
       },
     },
     {

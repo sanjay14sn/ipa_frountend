@@ -3,25 +3,17 @@
 import { OrderData, OrderItemData } from "@/services/order.service";
 import { useOrderById } from "@/hooks/api/order.hooks";
 import {
-  CalendarDays,
   CreditCard,
-  IndianRupee,
   Loader2,
   Package,
-  Receipt,
-  Users,
 } from "lucide-react";
 import {
   ExpandedDetailSurface,
-  KeyFactCard,
-  KeyFactsGrid,
   ProfileCard,
   ProfileCardSection,
   RawTableSurface,
-  StatusBadge,
 } from "@/components/shared";
 import { OrderPaymentDetailsPanel } from "@/components/orders/OrderPaymentDetailsPanel";
-import { money } from "@/lib/ui-helpers";
 
 interface OrderDetailsProps {
   order: OrderData;
@@ -91,29 +83,6 @@ export default function OrderDetails({ order, lastRow }: OrderDetailsProps) {
   return (
     <ExpandedDetailSurface className={wrapperClass}>
       <div className="space-y-3 p-3 md:p-4">
-        <KeyFactsGrid columns={4}>
-          <KeyFactCard
-            icon={CalendarDays}
-            label="Order date"
-            value={new Date(detailedOrder.createdAt).toLocaleDateString()}
-          />
-          <KeyFactCard
-            icon={Receipt}
-            label="Status"
-            value={<StatusBadge label={detailedOrder.status ?? "Unknown"} />}
-          />
-          <KeyFactCard
-            icon={IndianRupee}
-            label="Total"
-            value={money(detailedOrder.totalAmount)}
-          />
-          <KeyFactCard
-            icon={Users}
-            label="Students / CIs"
-            value={studentKeys.length}
-          />
-        </KeyFactsGrid>
-
         {detailedOrder.referenceId ? (
           <ProfileCard>
             <ProfileCardSection icon={CreditCard} label="Payment reference">

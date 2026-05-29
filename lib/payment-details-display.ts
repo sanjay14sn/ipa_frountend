@@ -12,6 +12,40 @@ export type PaymentMethodDetailsInput = {
   acquirerData?: Record<string, unknown> | null;
 };
 
+export function orderTypeLabel(type?: string | null): string {
+  switch ((type ?? "").trim().toUpperCase()) {
+    case "STUDENT_LEVEL_REQUEST":
+      return "Level Request";
+    case "STUDENT_CUSTOM_ORDER":
+      return "Custom Order";
+    case "CI_TRAINING":
+      return "CI Training";
+    case "CERTIFICATE_DISPATCH":
+      return "Certificate Dispatch";
+    case "ID_CARD_DISPATCH":
+      return "ID Card Dispatch";
+    default:
+      return type ? type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Order";
+  }
+}
+
+export function orderTypeBadgeClass(type?: string | null): string {
+  switch ((type ?? "").trim().toUpperCase()) {
+    case "STUDENT_LEVEL_REQUEST":
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    case "STUDENT_CUSTOM_ORDER":
+      return "bg-violet-100 text-violet-800 border-violet-200";
+    case "CI_TRAINING":
+      return "bg-amber-100 text-amber-800 border-amber-200";
+    case "CERTIFICATE_DISPATCH":
+      return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    case "ID_CARD_DISPATCH":
+      return "bg-teal-100 text-teal-800 border-teal-200";
+    default:
+      return "bg-gray-100 text-gray-600 border-gray-200";
+  }
+}
+
 export function typeLabel(type?: string | null): string {
   switch ((type ?? "").trim().toUpperCase()) {
     case "CI_TRAINING_FEE":
@@ -33,6 +67,32 @@ export function typeBadgeClass(type?: string | null): string {
       return "bg-amber-100 text-amber-800 border-amber-200";
     case "ORDER_PAYMENT":
       return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    default:
+      return "bg-gray-100 text-gray-600 border-gray-200";
+  }
+}
+
+export function agreementTypeLabel(type?: string | null): string {
+  switch ((type ?? "").trim().toUpperCase()) {
+    case "NEW_FRANCHISE":
+      return "New Franchise";
+    case "RENEWAL":
+      return "Renewal";
+    case "TRANSFER":
+      return "Transfer";
+    default:
+      return type ? type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Agreement";
+  }
+}
+
+export function agreementTypeBadgeClass(type?: string | null): string {
+  switch ((type ?? "").trim().toUpperCase()) {
+    case "NEW_FRANCHISE":
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    case "RENEWAL":
+      return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    case "TRANSFER":
+      return "bg-amber-100 text-amber-800 border-amber-200";
     default:
       return "bg-gray-100 text-gray-600 border-gray-200";
   }
