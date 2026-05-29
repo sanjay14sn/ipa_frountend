@@ -118,6 +118,7 @@ export function studentGroupsToBreakdowns(
     studentName: g.studentName,
     levelId: g.levelId,
     levelName: g.levelName,
+    levelCode: g.levelCode,
     isFirstLevel: g.isFirstLevel,
     royalty: g.royalty,
     materialCost: g.materialCost,

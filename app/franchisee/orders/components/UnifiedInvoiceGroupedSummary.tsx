@@ -183,7 +183,8 @@ export default function UnifiedInvoiceGroupedSummary({
                   kind="STUDENT"
                   title={title}
                   subtitle={(() => {
-                    const n = String(bd.levelName ?? "").trim();
+                    // Prefer the level CODE; fall back to name for legacy snapshots.
+                    const n = String(bd.levelCode || bd.levelName || "").trim();
                     if (!n || n === "_") return undefined;
                     return n;
                   })()}

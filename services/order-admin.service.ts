@@ -219,6 +219,7 @@ export interface StudentGroupPreview {
   studentName: string;
   levelId: number;
   levelName: string;
+  levelCode?: string;
   isFirstLevel: boolean;
   durationInMonths: number;
   royalty: number;
@@ -239,6 +240,7 @@ export interface StudentBreakdown {
   studentName: string;
   levelId: number;
   levelName: string;
+  levelCode?: string;
   isFirstLevel: boolean;
   royalty: number;
   royaltyGst?: number;
@@ -555,6 +557,7 @@ function normalizeStudentGroupPreview(raw: unknown): StudentGroupPreview | null 
     studentName: String(r.studentName ?? ""),
     levelId: Number(r.levelId ?? 0),
     levelName: String(r.levelName ?? ""),
+    levelCode: String(r.levelCode ?? ""),
     isFirstLevel: Boolean(r.isFirstLevel ?? false),
     durationInMonths: Number(r.durationInMonths ?? 0),
     royalty: Number(r.royalty ?? 0),
@@ -606,6 +609,7 @@ export function parseInvoicePreviewPayload(data: unknown): InvoicePreview {
     studentName: g.studentName,
     levelId: g.levelId,
     levelName: g.levelName,
+    levelCode: g.levelCode,
     isFirstLevel: g.isFirstLevel,
     royalty: g.royalty,
     materialCost: g.materialCost,
@@ -620,6 +624,7 @@ export function parseInvoicePreviewPayload(data: unknown): InvoicePreview {
         studentName: String(s?.studentName ?? ""),
         levelId: Number(s?.levelId ?? 0),
         levelName: String(s?.levelName ?? ""),
+        levelCode: String(s?.levelCode ?? ""),
         isFirstLevel: Boolean(s?.isFirstLevel ?? false),
         royalty: Number(s?.royalty ?? 0),
         materialCost: Number(s?.materialCost ?? 0),

@@ -41,7 +41,8 @@ function getStudentLevelName(student: StudentData): string {
   let raw = "";
   if (student.level && typeof student.level === "object") {
     const l = student.level as { name?: string; code?: string };
-    raw = l.name ?? l.code ?? "";
+    // Show the level CODE (e.g. "L1"), not the name.
+    raw = l.code ?? l.name ?? "";
   } else {
     raw = String(student.level ?? "");
   }
