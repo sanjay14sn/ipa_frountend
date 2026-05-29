@@ -53,11 +53,12 @@ export function useMarkNotificationRead(userType: UserType) {
     mutationFn: (notificationId: number) =>
       markAsRead(userType, notificationId),
     onSuccess: () => {
+      const unreadKey =
+        userType === "admin"
+          ? queryKeys.notifications.unreadAdmin
+          : queryKeys.notifications.unreadFranchisee;
       void qc.invalidateQueries({ queryKey: NOTIFICATIONS_LIST_PREFIX });
-      void qc.invalidateQueries({ queryKey: queryKeys.notifications.unreadAdmin });
-      void qc.invalidateQueries({
-        queryKey: queryKeys.notifications.unreadFranchisee,
-      });
+      void qc.invalidateQueries({ queryKey: unreadKey });
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error));
@@ -70,11 +71,12 @@ export function useMarkAllNotificationsRead(userType: UserType) {
   return useMutation({
     mutationFn: () => markAllAsRead(userType),
     onSuccess: () => {
+      const unreadKey =
+        userType === "admin"
+          ? queryKeys.notifications.unreadAdmin
+          : queryKeys.notifications.unreadFranchisee;
       void qc.invalidateQueries({ queryKey: NOTIFICATIONS_LIST_PREFIX });
-      void qc.invalidateQueries({ queryKey: queryKeys.notifications.unreadAdmin });
-      void qc.invalidateQueries({
-        queryKey: queryKeys.notifications.unreadFranchisee,
-      });
+      void qc.invalidateQueries({ queryKey: unreadKey });
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error));
@@ -88,11 +90,12 @@ export function useDeleteNotification(userType: UserType) {
     mutationFn: (notificationId: number) =>
       deleteNotification(userType, notificationId),
     onSuccess: () => {
+      const unreadKey =
+        userType === "admin"
+          ? queryKeys.notifications.unreadAdmin
+          : queryKeys.notifications.unreadFranchisee;
       void qc.invalidateQueries({ queryKey: NOTIFICATIONS_LIST_PREFIX });
-      void qc.invalidateQueries({ queryKey: queryKeys.notifications.unreadAdmin });
-      void qc.invalidateQueries({
-        queryKey: queryKeys.notifications.unreadFranchisee,
-      });
+      void qc.invalidateQueries({ queryKey: unreadKey });
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error));

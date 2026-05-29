@@ -31,7 +31,7 @@ npm run lint             # Run ESLint checks
 - **State Management**: React Context API (UserContext, NotificationContext)
 - **Data Fetching**: Axios with React Query (TanStack Query v5)
 - **Forms**: React Hook Form + Zod validation
-- **Real-time**: Socket.io for notifications
+- **Real-time**: SSE (Server-Sent Events / EventSource) for notifications
 
 ### Backend Integration
 
@@ -106,7 +106,7 @@ All API calls are in `services/*.service.ts` files:
 #### Custom Hooks
 
 - `hooks/usePaginatedData.ts`: Generic hook for server-side paginated data with search, sort, filters
-- `hooks/useNotificationSocket.ts`: WebSocket connection for real-time notifications via Socket.io
+- `hooks/use-notification-sse.ts`: SSE (EventSource) connection for real-time notifications (see `useNotificationSse`)
 - `hooks/use-franchisee-profile.ts`, `use-franchises.ts`, etc.: SWR-based data fetching hooks
 
 #### Context Providers
@@ -114,7 +114,7 @@ All API calls are in `services/*.service.ts` files:
 Root layout wraps app in two providers:
 
 1. `UserProvider` - manages current user state and localStorage sync
-2. `NotificationProvider` - manages real-time notifications via WebSocket
+2. `NotificationProvider` - manages real-time notifications via SSE (EventSource)
 
 ### UI Component Library
 
@@ -129,7 +129,7 @@ Uses shadcn/ui components from `components/ui/`:
 - `data-table.tsx` (`DataTable`) - Generic data table with filtering/sorting/pagination
 - `NestedSection.tsx` - Collapsible nested sections with tree connectors
 - `TreeConnector.tsx` - Visual tree connector lines for hierarchical data
-- `notification-bell.tsx` - Real-time notification bell with WebSocket integration
+- `notification-bell.tsx` - Real-time notification bell with SSE integration
 
 ### Dialog Wrappers
 
@@ -229,12 +229,12 @@ This project uses **npm**. The lockfile is `package-lock.json`. Do not run `pnpm
 
 ## Real-time Notifications
 
-The app uses Socket.io for real-time notifications:
+The app uses SSE (Server-Sent Events / EventSource) for real-time notifications:
 
-- WebSocket namespace: `/notifications` on the same port as `NEXT_PUBLIC_API_URL` (default dev: 5500)
-- Hook: `useNotificationSocket` handles connection and registration
-- User registers with `userId` and `userType` on connect
-- Notifications appear in `NotificationBell` component
+- Admin stream endpoint: `/admin/notification/stream`
+- Franchisee stream endpoint: `/notification/stream`
+- Hook: `useNotificationSse` (`hooks/use-notification-sse.ts`) handles connection, reconnect capping (max 5 retries), and `isHardDisconnected` state
+- Notifications are pushed to `NotificationBell` component via `NotificationContext`
 
 ## Data Flow Summary
 
@@ -243,7 +243,7 @@ The app uses Socket.io for real-time notifications:
 3. **Page loads** → Custom hook (e.g., `usePaginatedData`) calls service function
 4. **Service function** → Makes axios request to backend with credentials
 5. **Data returns** → Renders in `DataTable` or custom components
-6. **Real-time updates** → WebSocket pushes notifications to NotificationBell
+6. **Real-time updates** → SSE (EventSource) pushes notifications to NotificationBell
 
 ## Git Status Note
 
@@ -252,7 +252,7 @@ List pages use the unified `DataTable` component (`components/shared/data-table.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Abacus** (7581 symbols, 15924 relationships, 271 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Abacus** (7641 symbols, 16059 relationships, 274 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

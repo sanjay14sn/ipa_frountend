@@ -13,6 +13,11 @@ export const NotificationRowSchema = z.object({
   type: z.string().optional(),
   link: z.string().nullable().optional(),
   metadata: z.record(z.unknown()).optional(),
+  // Fields read by mapApiNotificationRow — must be present so Zod doesn't strip them
+  body: z.string().optional(),
+  recipientId: z.number().optional(),
+  recipientType: z.string().optional(),
+  readAt: z.string().nullable().optional(),
 });
 
 export type NotificationRow = z.infer<typeof NotificationRowSchema>;
@@ -35,6 +40,7 @@ export function safeParseNotification(
       id: 0,
       title: "",
       isRead: false,
+      body: "",
     };
   }
   return result.data;

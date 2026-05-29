@@ -27,6 +27,7 @@ interface NotificationContextType {
   unreadCount: number;
   isLoading: boolean;
   isConnected: boolean;
+  isHardDisconnected: boolean;
   fetchNotifications: () => Promise<void>;
   markNotificationAsRead: (notificationId: number) => Promise<void>;
   markAllNotificationsAsRead: () => Promise<void>;
@@ -123,7 +124,7 @@ export function NotificationProvider({
     ],
   );
 
-  const { isConnected } = useNotificationSse({
+  const { isConnected, isHardDisconnected } = useNotificationSse({
     userId: effectiveUserId,
     userType: effectiveUserType,
     onNotification: handleNewNotification,
@@ -141,19 +142,27 @@ export function NotificationProvider({
     async (notificationId: number) => {
       if (!effectiveUserType || !notificationsListKey || !unreadKey) return;
 
+      // Snapshot before optimistic update so we can roll back on failure
+      const prevList = queryClient.getQueryData<Notification[]>(notificationsListKey);
+      const prevCount = queryClient.getQueryData<number>(unreadKey);
+
+      queryClient.setQueryData<Notification[]>(
+        notificationsListKey,
+        (prev) =>
+          (prev ?? []).map((n) =>
+            n.id === notificationId ? { ...n, isRead: true } : n,
+          ),
+      );
+      queryClient.setQueryData<number>(unreadKey, (c) =>
+        Math.max(0, (c ?? 0) - 1),
+      );
+
       try {
         await markAsRead(effectiveUserType, notificationId);
-        queryClient.setQueryData<Notification[]>(
-          notificationsListKey,
-          (prev) =>
-            (prev ?? []).map((n) =>
-              n.id === notificationId ? { ...n, isRead: true } : n,
-            ),
-        );
-        queryClient.setQueryData<number>(unreadKey, (c) =>
-          Math.max(0, (c ?? 0) - 1),
-        );
       } catch (error) {
+        // Roll back optimistic update
+        queryClient.setQueryData(notificationsListKey, prevList);
+        queryClient.setQueryData(unreadKey, prevCount);
         sendClientLog({ level: "error", event: "notification-mark-read-error", message: "Error marking notification as read", context: { error } });
         toast.error("Failed to mark notification as read");
       }
@@ -169,15 +178,23 @@ export function NotificationProvider({
   const markAllNotificationsAsRead = useCallback(async () => {
     if (!effectiveUserType || !notificationsListKey || !unreadKey) return;
 
+    // Snapshot before optimistic update so we can roll back on failure
+    const prevList = queryClient.getQueryData<Notification[]>(notificationsListKey);
+    const prevCount = queryClient.getQueryData<number>(unreadKey);
+
+    queryClient.setQueryData<Notification[]>(
+      notificationsListKey,
+      (prev) => (prev ?? []).map((n) => ({ ...n, isRead: true })),
+    );
+    queryClient.setQueryData<number>(unreadKey, 0);
+
     try {
       await markAllAsRead(effectiveUserType);
-      queryClient.setQueryData<Notification[]>(
-        notificationsListKey,
-        (prev) => (prev ?? []).map((n) => ({ ...n, isRead: true })),
-      );
-      queryClient.setQueryData<number>(unreadKey, 0);
       toast.success("All notifications marked as read");
     } catch (error) {
+      // Roll back optimistic update
+      queryClient.setQueryData(notificationsListKey, prevList);
+      queryClient.setQueryData(unreadKey, prevCount);
       sendClientLog({ level: "error", event: "notification-mark-all-read-error", message: "Error marking all notifications as read", context: { error } });
       toast.error("Failed to mark all notifications as read");
     }
@@ -193,6 +210,7 @@ export function NotificationProvider({
       unreadCount: notificationsEnabled ? (unreadQuery.data ?? 0) : 0,
       isLoading: notificationsEnabled ? notificationsQuery.isLoading : false,
       isConnected,
+      isHardDisconnected,
       fetchNotifications,
       markNotificationAsRead,
       markAllNotificationsAsRead,
@@ -204,6 +222,7 @@ export function NotificationProvider({
       notificationsQuery.isLoading,
       unreadQuery.data,
       isConnected,
+      isHardDisconnected,
       fetchNotifications,
       markNotificationAsRead,
       markAllNotificationsAsRead,
