@@ -12,7 +12,12 @@ import {
 import { DialogFormField } from "@/components/shared/dialog";
 import statesCities from "@/data/indian-states-cities.json";
 
-type StatesCitiesType = Record<string, string[]>;
+interface StateCityEntry {
+  code: string;
+  cities: Record<string, string>;
+}
+
+type StatesCitiesType = Record<string, StateCityEntry>;
 
 const STATE_ORDER = ["Tamil Nadu"];
 const statesData = statesCities as StatesCitiesType;
@@ -25,7 +30,10 @@ const stateNames = [
 
 function getStateForCity(city: string): string | null {
   for (const state of stateNames) {
-    if (statesData[state]?.includes(city)) return state;
+    const cities = statesData[state]?.cities;
+    if (cities && Object.prototype.hasOwnProperty.call(cities, city)) {
+      return state;
+    }
   }
   return null;
 }
@@ -69,17 +77,17 @@ export function StateCitySelect({
 
   useEffect(() => {
     setCity(value);
-    if (value) {
+    if (stateValue !== undefined) {
+      // Explicit stateValue always wins — prevents ambiguous city names
+      // (e.g. Dwarka appears in both Gujarat and Delhi) from overriding the prop.
+      setState(stateValue);
+    } else if (value) {
       const foundState = getStateForCity(value);
       if (foundState) setState(foundState);
-    } else if (stateValue !== undefined) {
-      setState(stateValue);
-    } else {
-      setState("");
     }
   }, [value, stateValue]);
 
-  const cities = state ? (statesData[state] ?? []) : [];
+  const cities = state ? Object.keys(statesData[state]?.cities ?? {}) : [];
 
   const handleStateChange = (newState: string) => {
     setState(newState);
