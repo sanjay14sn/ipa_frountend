@@ -96,7 +96,8 @@ function FranchiseDetailInner() {
                     ) : null}
                   </div>
                   <p className="max-w-3xl text-sm text-muted-foreground">
-                    {subtitle || "Franchise hub"} | {franchiseId}
+                    {subtitle || "Franchise hub"}
+                    {franchise?.code ? ` | ${franchise.code}` : null}
                   </p>
                 </>
               )}
