@@ -103,6 +103,7 @@ function ApplicationsExpanded({ item }: { item: FranchiseData }) {
           <DetailField label="Location" value={location} />
           <DetailField label="Application date" value={formatDate(item.createdAt)} />
           <DetailField label="Last updated" value={formatDate(item.updatedAt)} />
+          <DetailField label="Franchise Code" value={item.code ?? "—"} />
           <DetailField label="Franchise ID" value={item.id ?? "—"} />
           <DetailField label="Address" value={item.address ?? "—"} span={2} />
         </DetailFieldsGrid>
@@ -320,7 +321,12 @@ export function FranchiseHubTable({
       columns={columns}
       getRowId={(item) => String(item.id)}
       renderMainCell={(item) => (
-        <span className="font-medium text-gray-900">{item.name}</span>
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium text-gray-900">{item.name}</span>
+          {item.code && (
+            <span className="text-xs text-muted-foreground font-mono">{item.code}</span>
+          )}
+        </div>
       )}
       renderExpandedContent={(item) =>
         variant === "franchises" ? (

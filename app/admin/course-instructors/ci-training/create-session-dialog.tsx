@@ -30,9 +30,7 @@ import {
 } from "@/services/training-level.service";
 import statesCities from "@/data/indian-states-cities.json";
 
-type StatesCitiesType = Record<string, string[]>;
-const statesData = statesCities as StatesCitiesType;
-const stateNames = Object.keys(statesData).sort();
+const stateNames = Object.keys(statesCities).sort();
 
 export function CreateSessionDialog({
   open,

@@ -59,9 +59,7 @@ interface AdminFormState {
   isActive: boolean;
 }
 
-const stateOptions = Object.keys(
-  statesCities as Record<string, string[]>,
-).sort();
+const stateOptions = Object.keys(statesCities).sort();
 
 const emptyForm: AdminFormState = {
   name: "",

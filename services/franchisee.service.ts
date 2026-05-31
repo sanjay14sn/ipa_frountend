@@ -50,6 +50,7 @@ export interface Franchise {
 
 export interface FranchiseResponse {
   id: string;
+  code?: string | null;
   name: string;
   type: string;
   status: string;

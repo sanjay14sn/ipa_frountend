@@ -1,9 +1,6 @@
 import statesCities from "@/data/indian-states-cities.json";
 
-type StatesCitiesType = Record<string, string[]>;
-const statesData = statesCities as StatesCitiesType;
-
-export const stateNames = Object.keys(statesData).sort();
+export const stateNames = Object.keys(statesCities).sort();
 
 export function formatStateLabel(value: string | null | undefined): string {
   if (!value) return "";
