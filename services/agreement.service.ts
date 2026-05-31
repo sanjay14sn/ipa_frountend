@@ -312,6 +312,7 @@ export interface AgreementRecord extends AgreementTermsSnapshot {
   updatedAt: string;
   franchise?: {
     id: string;
+    code?: string | null;
     name: string;
     city: string;
     state: string;

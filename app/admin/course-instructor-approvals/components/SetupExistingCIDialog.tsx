@@ -326,7 +326,7 @@ export default function SetupExistingCIDialog({
               <SelectContent>
                 {franchisesQuery.data?.result.map((f) => (
                   <SelectItem key={f.id} value={f.id}>
-                    {f.name} — {f.city ?? "—"} ({f.id})
+                    {f.name} — {f.city ?? "—"} ({f.code ?? "—"})
                   </SelectItem>
                 ))}
               </SelectContent>

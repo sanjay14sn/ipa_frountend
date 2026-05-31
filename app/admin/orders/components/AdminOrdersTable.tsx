@@ -259,7 +259,7 @@ export default function AdminOrdersTable({
       {
         key: "franchise",
         header: "Franchise",
-        render: (order) => order.franchise?.name ?? order.franchiseId ?? "—",
+        render: (order) => order.franchise?.name ?? order.franchise?.code ?? "—",
       },
       {
         key: "payment",
@@ -480,7 +480,7 @@ export default function AdminOrdersTable({
               )}
               <DetailField
                 label="Franchise"
-                value={order.franchise?.name ?? String(order.franchiseId ?? "—")}
+                value={order.franchise?.name ?? order.franchise?.code ?? "—"}
               />
               <DetailField
                 label="Students"

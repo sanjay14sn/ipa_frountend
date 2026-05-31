@@ -125,7 +125,7 @@ export default function AdminShippingTable() {
       {
         key: "franchise",
         header: "Franchise",
-        render: (row) => row.franchise?.name ?? row.franchiseId ?? "—",
+        render: (row) => row.franchise?.name ?? row.franchise?.code ?? "—",
       },
       {
         key: "shipment",

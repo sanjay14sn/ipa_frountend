@@ -104,7 +104,6 @@ function ApplicationsExpanded({ item }: { item: FranchiseData }) {
           <DetailField label="Application date" value={formatDate(item.createdAt)} />
           <DetailField label="Last updated" value={formatDate(item.updatedAt)} />
           <DetailField label="Franchise Code" value={item.code ?? "—"} />
-          <DetailField label="Franchise ID" value={item.id ?? "—"} />
           <DetailField label="Address" value={item.address ?? "—"} span={2} />
         </DetailFieldsGrid>
       </ExpandedDetailSection>

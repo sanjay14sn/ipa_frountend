@@ -155,8 +155,7 @@ export function buildAgreementDetailFranchiseData(
     state: agreement.franchise?.state ?? "-",
     pincode: agreement.franchise?.pincode ?? "-",
     communicationAddress: agreement.franchisee?.communicationAddress ?? null,
-    franchiseCode:
-      agreement.franchiseId != null ? `FR-${agreement.franchiseId}` : "-",
+    franchiseCode: agreement.franchise?.code ?? "-",
     program: programName,
     franchiseType: agreement.franchise?.type ?? null,
     date: agreement.createdAt,
@@ -211,7 +210,7 @@ export function buildFranchiseDataForAgreementPage(
     state: profile.state ?? "",
     pincode: profile.pincode,
     communicationAddress: profile.communicationAddress,
-    franchiseCode: `FR-${franchise.id}`,
+    franchiseCode: franchise.code ?? "-",
     program: programLabel || programName,
     franchiseType: franchise.type,
     reference: profile.reference,

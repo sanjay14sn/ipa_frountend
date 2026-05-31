@@ -39,6 +39,7 @@ export interface User {
     franchiseeSignature?: string | null;
     franchise?: {
       id: string;
+      code?: string | null;
       name: string;
       type: string;
       status: string;

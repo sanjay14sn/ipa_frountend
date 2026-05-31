@@ -112,8 +112,8 @@ export default function ProgramRequestDetails({
                 />
               </ContactPillGrid>
               <LabeledValue
-                label="Franchise ID"
-                value={request.franchiseId}
+                label="Franchise Code"
+                value={request.franchise?.code ?? "—"}
                 mono
                 className="pt-2"
               />
