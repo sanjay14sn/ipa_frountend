@@ -17,7 +17,7 @@ export type ShipmentData = {
   orderId: number;
   referenceId: string;
   franchiseId: string;
-  franchise: { id: string; name: string; city: string } | null;
+  franchise: { id: string; code?: string | null; name: string; city: string } | null;
   totalAmount: number;
   status: string;
   trackingNumber: string | null;

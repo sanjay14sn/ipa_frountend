@@ -332,6 +332,7 @@ export interface OrderData {
   backorderedAt?: string | null;
   franchise?: {
     id: string | number;
+    code?: string | null;
     name: string;
     city?: string;
   };
