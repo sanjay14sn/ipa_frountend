@@ -32,7 +32,25 @@
       "Tenkasi": "TEN",
       "Pattukkottai": "PAT",
       "Thoothukudi": "TUT",
-      "Cuddalore": "CUD"
+      "Cuddalore": "CUD",
+      "Trichy": "TRC",
+      "Virudhunagar": "VRN",
+      "Hosur": "HSR",
+      "Tuticorin": "TTC",
+      "Villupuram": "VPM",
+      "Kanchipuram": "KNP",
+      "Cudalore": "CDL",
+      "Ramanathapuram": "RNP",
+      "Thiruchengode": "TGD",
+      "Gobichettipalayam": "GBP",
+      "Thiruvallur": "TVR",
+      "Panruti": "PNR",
+      "Chengalpattu": "CGP",
+      "Sivakasi": "SVK",
+      "Bodinayakanur": "BDN",
+      "Mayiladuthurai": "MYD",
+      "Palayamkottai": "PLK",
+      "Kabisthalam": "KBS"
     }
   },
   "Andhra Pradesh": {
@@ -63,7 +81,14 @@
       "Guntakal": "GNT",
       "Dharmavaram": "DHA",
       "Gudivada": "GUD",
-      "Srikakulam": "SRI"
+      "Srikakulam": "SRI",
+      "Secunderabad": "SEC",
+      "Malkajgiri": "MLK",
+      "Venkatagiri": "VKG",
+      "Hyderabad": "HYD",
+      "Nellur": "NLR",
+      "Tirupathi": "TRP",
+      "Vishakapatnam": "VSP"
     }
   },
   "Karnataka": {
@@ -90,7 +115,34 @@
       "Bijapur": "BIJ",
       "Ranebennuru": "RAN",
       "Mandya": "MND",
-      "Ramanagara": "RAM"
+      "Ramanagara": "RAM",
+      "Bangalore": "BNG",
+      "Hubli": "HBL",
+      "Mysore": "MYR",
+      "Mangalore": "MNG",
+      "Tumkur": "TMK",
+      "Davangere": "DVG",
+      "Belgaum": "BLG",
+      "Karwar": "KRW",
+      "Sirsi": "SRS",
+      "Siddapur": "SDP",
+      "Tiptur": "TPT",
+      "Madhugiri": "MDG",
+      "Ankola": "ANK",
+      "Savanur": "SVN",
+      "Gottigere": "GTG",
+      "Bhatkal": "BTK",
+      "Arasikere": "ARK",
+      "Chickballapur": "CBP",
+      "Basavan Bagewadi": "BBG",
+      "Kolar": "KLR",
+      "Vijayapur": "VJP",
+      "Dandeli": "DDL",
+      "Challakere": "CLK",
+      "Koteshwar": "KTS",
+      "Dharwad": "DHW",
+      "Honavar": "HNV",
+      "Athani": "ATH"
     }
   },
   "Kerala": {
@@ -110,7 +162,15 @@
       "Kottayam": "KOT",
       "Idukki": "IDU",
       "Ernakulam": "ERN",
-      "Wayanad": "WAY"
+      "Wayanad": "WAY",
+      "Thirssur": "THS",
+      "Erunakulam": "ERK",
+      "Cochin": "CCN",
+      "Kotayam": "KTM",
+      "Thodupuzha": "TDP",
+      "Alathur": "ALT",
+      "Angamaly": "AGM",
+      "Muvattupuzha": "MVT"
     }
   },
   "Maharashtra": {
@@ -140,7 +200,34 @@
       "Ambarnath": "AMB",
       "Bhusawal": "BHU",
       "Panvel": "PAN",
-      "Ulhasnagar": "ULH"
+      "Ulhasnagar": "ULH",
+      "Nasik": "NSK",
+      "Kolapur": "KLP",
+      "Amaravathi": "AMV",
+      "Badlapur": "BDL",
+      "Kalwa": "KLW",
+      "Kalyan": "KYN",
+      "Malkapur": "MKP",
+      "Satara": "STR",
+      "Borivali": "BRV",
+      "Dahisar": "DHS",
+      "Hadapsar": "HDP",
+      "Buldhana": "BLD",
+      "Karad": "KRD",
+      "Chiplun": "CPL",
+      "Sindhudurga": "SDG",
+      "Pandharpur": "PDP",
+      "Raigad": "RGD",
+      "Osmanabad": "OSM",
+      "Ratnagiri": "RTN",
+      "Wagholi": "WGL",
+      "Mazagaon": "MZG",
+      "Chikhali": "CKL",
+      "Banavadi": "BNV",
+      "Ambarethnagar": "ABN",
+      "Balewadi": "BLW",
+      "Panchwad": "PNW",
+      "Jule": "JUL"
     }
   },
   "Gujarat": {
@@ -193,7 +280,8 @@
       "Ganganagar": "GAN",
       "Churu": "CHU",
       "Dhaulpur": "DHA",
-      "Chittorgarh": "CHT"
+      "Chittorgarh": "CHT",
+      "Mansarovar": "MSR"
     }
   },
   "Uttar Pradesh": {
@@ -283,7 +371,9 @@
       "Rohini": "ROH",
       "Saket": "SAK",
       "Karol Bagh": "KAR",
-      "Connaught Place": "CON"
+      "Connaught Place": "CON",
+      "Shalimar Bagh": "SLB",
+      "Gurgaon": "GRG"
     }
   },
   "Madhya Pradesh": {
@@ -304,7 +394,8 @@
       "Burhanpur": "BUR",
       "Khandwa": "KHA",
       "Sidhi": "SID",
-      "Damoh": "DAM"
+      "Damoh": "DAM",
+      "Gadarwara": "GDW"
     }
   },
   "Punjab": {
@@ -326,7 +417,10 @@
       "Muktsar": "MUK",
       "Barnala": "BAR",
       "Rajpura": "RAJ",
-      "Firozpur": "FIR"
+      "Firozpur": "FIR",
+      "Chandigarh": "CHD",
+      "Chandigran": "CDG",
+      "Gurdaspur": "GDP"
     }
   },
   "Haryana": {
@@ -393,7 +487,8 @@
       "Jeypore": "JEY",
       "Bhawanipatna": "BHW",
       "Dhenkanal": "DHE",
-      "Barbil": "BAB"
+      "Barbil": "BAB",
+      "Bhubaneshwar": "BBW"
     }
   },
   "Assam": {
@@ -611,7 +706,15 @@
       "Udhampur": "UDH",
       "Kupwara": "KUP",
       "Budgam": "BUD",
-      "Leh": "LEH"
+      "Leh": "LEH",
+      "Gandhi Nagar": "GDN",
+      "Kunjwani": "KNJ"
+    }
+  },
+  "Andaman and Nicobar Islands": {
+    "code": "AN",
+    "cities": {
+      "Port Blair": "PBL"
     }
   }
 }
