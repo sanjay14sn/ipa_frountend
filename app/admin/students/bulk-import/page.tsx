@@ -105,7 +105,7 @@ export default function StudentBulkImportPage() {
       .filter((f) => f.status !== "Rejected" && f.status !== "Inactive")
       .map((f) => ({
         value: String(f.id),
-        label: f.status === "Active" ? f.name : `${f.name} (${f.status})`,
+        label: f.status === "Approved" ? f.name : `${f.name} (${f.status})`,
         payload: { id: f.id, name: f.name },
       }));
   }, [franchisesQ.data]);

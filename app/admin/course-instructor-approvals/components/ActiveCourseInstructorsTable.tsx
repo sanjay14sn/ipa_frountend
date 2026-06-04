@@ -37,11 +37,12 @@ export default function ActiveCourseInstructorsTable() {
       "course-instructors",
       "admin",
       "status",
-      "Active",
+      // "valid" = derived operational filter (latest CI agreement is Valid).
+      "valid",
       { page: currentPage, limit, searchTerm, sortBy, sortOrder },
     ],
     queryFn: () =>
-      getPaginatedCourseInstructors("Active", {
+      getPaginatedCourseInstructors("valid", {
         page: currentPage,
         limit,
         search: searchTerm,
@@ -76,7 +77,9 @@ export default function ActiveCourseInstructorsTable() {
       key: "status",
       header: "Status",
       className: "text-center",
-      render: () => <StatusBadge label="Active" />,
+      render: (instructor) => (
+        <StatusBadge label={instructor.operationalStatus ?? "valid"} />
+      ),
     },
     {
       key: "actions",

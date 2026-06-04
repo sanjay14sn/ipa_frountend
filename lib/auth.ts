@@ -6,7 +6,15 @@ export interface User {
   role: UserRole;
   franchiseId?: string;
   franchiseName?: string;
+  /** Application-review status only (Pending/Approved/Rejected). */
   franchiseStatus?: string;
+  /**
+   * Derived operational flag — true when the active franchise has at least one
+   * in-force (Valid) agreement. Replaces the old `franchiseStatus === "Active"`
+   * check. Persisted in the slim identity so gating works before the profile
+   * finishes loading.
+   */
+  isOperational?: boolean;
   /**
    * Currently selected program scope inside the active franchise. Mirrors the
    * franchise-selection model: persisted in the localStorage `user` blob,
@@ -42,7 +50,12 @@ export interface User {
       code?: string | null;
       name: string;
       type: string;
+      /** Application-review status only (Pending/Approved/Rejected). */
       status: string;
+      /** Derived: count of in-force (Valid) agreements, excluding CI agreements. */
+      validAgreementsCount?: number;
+      /** Derived: true when the franchise has at least one valid agreement. */
+      isOperational?: boolean;
       franchiseeId: number;
       approvedBy: number;
       approvedAt: string;
@@ -125,12 +138,44 @@ export function getEffectiveFranchiseStatus(
     ?.status;
 }
 
+/**
+ * True when the franchise is operational — i.e. has at least one in-force
+ * (Valid) agreement. Replaces the old `getEffectiveFranchiseStatus(...) === "Active"`
+ * checks now that operational standing is derived from agreements rather than a
+ * stored franchise status. Prefers the loaded profile; falls back to the slim
+ * persisted flag (available before the profile finishes loading).
+ */
+export function isFranchiseOperational(
+  user: User | null | undefined,
+  franchiseId?: string | null,
+): boolean {
+  if (!user) return false;
+  const targetFranchiseId = franchiseId ?? user.franchiseId;
+  const franchise = user.profile?.franchise;
+  if (
+    franchise &&
+    (targetFranchiseId == null || franchise.id === targetFranchiseId)
+  ) {
+    if (typeof franchise.isOperational === "boolean") {
+      return franchise.isOperational;
+    }
+    if (typeof franchise.validAgreementsCount === "number") {
+      return franchise.validAgreementsCount > 0;
+    }
+  }
+  if (targetFranchiseId == null || targetFranchiseId === user.franchiseId) {
+    return user.isOperational === true;
+  }
+  return false;
+}
+
 /** Minimal identity blob stored in localStorage — no PII, no profile. */
 export interface StoredIdentity {
   id: string;
   role: UserRole;
   name: string;
   franchiseStatus?: string;
+  isOperational?: boolean;
   franchiseId?: string;
   franchiseName?: string;
 }
@@ -142,6 +187,7 @@ export function slimIdentity(user: User): StoredIdentity {
     role: user.role,
     name: user.name,
     franchiseStatus: user.franchiseStatus,
+    isOperational: user.isOperational,
     franchiseId: user.franchiseId,
     franchiseName: user.franchiseName,
   };
@@ -160,6 +206,7 @@ export function getStoredIdentity(): StoredIdentity | null {
       role: parsed.role,
       name: parsed.name,
       franchiseStatus: parsed.franchiseStatus,
+      isOperational: parsed.isOperational,
       franchiseId: parsed.franchiseId,
       franchiseName: parsed.franchiseName,
     };

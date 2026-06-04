@@ -15,7 +15,7 @@ import {
   getFranchiseeProfile,
   getAdminProfile,
 } from "../services/auth.service";
-import { getEffectiveFranchiseStatus } from "../lib/auth";
+import { getEffectiveFranchiseStatus, isFranchiseOperational } from "../lib/auth";
 import { queryKeys } from "@/hooks/api/query-keys";
 import { useScopeStore } from "@/lib/stores/scope-store";
 import { toast } from "sonner";
@@ -178,6 +178,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         franchiseId: data.franchiseId,
         franchiseName: data.franchiseName,
         franchiseStatus: data.franchiseStatus,
+        isOperational:
+          fetchedProfile?.franchise?.isOperational ??
+          (fetchedProfile?.franchise?.validAgreementsCount ?? 0) > 0,
         franchises: data.franchises,
         // Program scope is franchise-specific — clear the previous selection
         // here so applyScopeFromUser (called inside setUserWithStorage) picks
@@ -261,7 +264,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   // would return all data unscoped.
   useEffect(() => {
     if (!user || user.role !== "franchisee" || !user.franchiseId) return;
-    if (user.franchiseStatus !== "Active") return;
+    if (!isFranchiseOperational(user)) return;
     const activePrograms = user.profile?.franchise?.activePrograms ?? [];
     const candidates = activePrograms.filter(
       (row) => row.type !== "CI_AGREEMENT" && row.id != null,
@@ -293,6 +296,10 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           profile.franchise?.status ??
           getEffectiveFranchiseStatus(prev, prev.franchiseId);
         const franchiseName = profile.franchise?.name ?? prev.franchiseName;
+        // Operational standing is derived from agreements now.
+        const isOperational =
+          profile.franchise?.isOperational ??
+          (profile.franchise?.validAgreementsCount ?? 0) > 0;
         const franchises = prev.franchises?.map((franchise) =>
           franchise.id === (profile.franchise?.id ?? prev.franchiseId)
             ? {
@@ -306,6 +313,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         const sameFranchiseUpdated =
           prev.profile?.franchise?.updatedAt === profile.franchise?.updatedAt;
         const sameStatus = prev.franchiseStatus === franchiseStatus;
+        const sameOperational = prev.isOperational === isOperational;
         const sameName = prev.franchiseName === franchiseName;
         // Also gate on franchiseeSignature: without this, a stale localStorage
         // snapshot from before the signature was uploaded would survive the
@@ -335,6 +343,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           sameId &&
           sameFranchiseUpdated &&
           sameStatus &&
+          sameOperational &&
           sameName &&
           sameSignature &&
           sameActivePrograms &&
@@ -345,6 +354,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         const next: User = {
           ...prev,
           franchiseStatus,
+          isOperational,
           franchiseName,
           franchises,
           profile,

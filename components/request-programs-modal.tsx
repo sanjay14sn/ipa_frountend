@@ -52,7 +52,9 @@ const BLOCKED_STATUSES = new Set([
 ]);
 
 function isActiveFranchiseStatus(status: string | undefined): boolean {
-  return (status ?? "").trim().toLowerCase() === "active";
+  // Operational franchises now carry the "Approved" review status; operational
+  // standing itself is derived from agreements.
+  return (status ?? "").trim().toLowerCase() === "approved";
 }
 
 function activeFranchiseChoices(
@@ -73,7 +75,7 @@ function activeFranchiseChoices(
       {
         id: user.franchiseId,
         name: user.franchiseName,
-        status: effective ?? "Active",
+        status: effective ?? "Approved",
       },
     ];
   }

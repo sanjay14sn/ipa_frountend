@@ -77,13 +77,11 @@ export default function CourseInstructorsTable({
         ci.mail.toLowerCase().includes(searchTerm.toLowerCase()) ||
         ci.education.toLowerCase().includes(searchTerm.toLowerCase());
 
+      // Operational standing (valid/expired/void) is derived from the CI
+      // agreement now, not the review status column.
       const matchesStatus =
         statusFilter === "all" ||
-        (statusFilter === "active" && ci.status === "Active") ||
-        (statusFilter === "training" && ci.status === "Training") ||
-        (statusFilter === "inactive" &&
-          ci.status !== "Active" &&
-          ci.status !== "Training");
+        (ci.operationalStatus ?? "void") === statusFilter;
 
       const matchesBloodGroup =
         bloodGroupFilter === "all" || ci.bloodGroup === bloodGroupFilter;
@@ -142,7 +140,7 @@ export default function CourseInstructorsTable({
       key: "status",
       header: "Status",
       className: "text-center",
-      render: (ci) => <StatusBadge label={ci.status} />,
+      render: (ci) => <StatusBadge label={ci.operationalStatus ?? "void"} />,
     },
     {
       key: "actions",
@@ -189,9 +187,9 @@ export default function CourseInstructorsTable({
       label: "Status",
       options: [
         { value: "all", label: "All Status" },
-        { value: "active", label: "Active" },
-        { value: "training", label: "Training" },
-        { value: "inactive", label: "Inactive" },
+        { value: "valid", label: "Valid" },
+        { value: "expired", label: "Expired" },
+        { value: "void", label: "Void" },
       ],
       defaultValue: "all",
     },

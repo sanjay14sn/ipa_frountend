@@ -21,7 +21,7 @@ import { PortalHeaderActions } from "@/components/layout/portal-header-actions";
 import { FranchiseSwitcher } from "@/components/franchisee/franchise-switcher";
 import { AgreementSwitcher } from "@/components/franchisee/agreement-switcher";
 import { useUser } from "@/context/user-context";
-import { getEffectiveFranchiseStatus } from "@/lib/auth";
+import { isFranchiseOperational } from "@/lib/auth";
 
 export default function FranchiseeLayout({
   children,
@@ -31,12 +31,13 @@ export default function FranchiseeLayout({
   const router = useRouter();
   const { user, loading } = useUser();
   const pathname = usePathname();
-  const franchiseStatus = getEffectiveFranchiseStatus(user);
   const isOnAgreementPage =
     pathname === "/franchisee/agreement" ||
     (pathname?.startsWith("/franchisee/agreement/") ?? false);
+  // "Operational" is derived from agreements now (>=1 valid agreement); a
+  // franchisee with no valid agreement is funnelled to the agreement page.
   const isPreActiveFranchisee =
-    user?.role === "franchisee" && franchiseStatus !== "Active";
+    user?.role === "franchisee" && !isFranchiseOperational(user);
 
   useEffect(() => {
     if (loading) return;

@@ -62,12 +62,13 @@ export default function FranchiseTable({
       {
         key: "status",
         label: "Status",
+        // Operational states (Active/Suspended/Inactive) are no longer stored
+        // statuses — they're derived from agreements. The franchises tab lists
+        // approved franchises; their operational standing shows as the
+        // valid-agreement count in the Status column.
         options: [
           { value: "all", label: "All statuses" },
           { value: "Approved", label: "Approved" },
-          { value: "Active", label: "Active" },
-          { value: "Suspended", label: "Suspended" },
-          { value: "Inactive", label: "Inactive" },
         ],
         defaultValue: "all",
       },

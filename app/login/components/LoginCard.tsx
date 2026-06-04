@@ -22,7 +22,7 @@ import {
 import { getFranchiseList } from "@/services/franchise.service";
 import { useUser } from "@/context/user-context";
 import { getErrorMessage, getUserFriendlyMessage } from "@/lib/error-utils";
-import { getEffectiveFranchiseStatus, type User } from "@/lib/auth";
+import { isFranchiseOperational, type User } from "@/lib/auth";
 import { sendClientLog } from "@/lib/client-telemetry";
 
 export function LoginCard({
@@ -127,6 +127,10 @@ export function LoginCard({
         franchiseStatus:
           current?.status ??
           (profile as User["profile"] | undefined)?.franchise?.status,
+        isOperational:
+          (profile as User["profile"] | undefined)?.franchise?.isOperational ??
+          ((profile as User["profile"] | undefined)?.franchise
+            ?.validAgreementsCount ?? 0) > 0,
         franchiseId: loginResult.franchiseId,
         franchiseName:
           current?.name ??
@@ -136,12 +140,8 @@ export function LoginCard({
       } as User;
 
       setUser(nextUser);
-      const franchiseStatus = getEffectiveFranchiseStatus(
-        nextUser,
-        loginResult.franchiseId,
-      );
       router.push(
-        franchiseStatus === "Active"
+        isFranchiseOperational(nextUser, loginResult.franchiseId)
           ? "/franchisee/dashboard"
           : `/franchisee/agreement?franchiseId=${loginResult.franchiseId}`,
       );

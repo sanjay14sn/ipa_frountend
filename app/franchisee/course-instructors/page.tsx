@@ -24,7 +24,7 @@ export default function FranchiseeCourseInstructorsPage() {
   } = useCourseInstructors();
 
   const activeRows = useMemo(
-    () => allCourseInstructors.filter((item) => item.status === "Active" || item.status === "Approved"),
+    () => allCourseInstructors.filter((item) => item.status === "Approved"),
     [allCourseInstructors],
   );
   const trainingRows = useMemo(

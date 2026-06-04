@@ -79,7 +79,7 @@ export default function UnifiedMaterialRequestDialog({
     () =>
       courseInstructors.filter(
         (ci) =>
-          (ci.status === "Active" || ci.status === "Training") &&
+          (ci.operationalStatus === "valid" || ci.status === "Training") &&
           !ci.materialsOrdered,
       ),
     [courseInstructors],

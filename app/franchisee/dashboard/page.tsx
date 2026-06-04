@@ -28,7 +28,7 @@ import { useFranchiseeDashboardStats } from "@/hooks/api/dashboard.hooks";
 import { useAgreementsMine } from "@/hooks/api/agreement.hooks";
 import { useFranchiseeOrders } from "@/hooks/api/order.hooks";
 import { cn } from "@/lib/utils";
-import { getEffectiveFranchiseStatus } from "@/lib/auth";
+import { isFranchiseOperational } from "@/lib/auth";
 import { formatRupees } from "@/lib/currency-utils";
 import type {
   AgreementRecord,
@@ -218,7 +218,7 @@ export default function FranchiseeDashboard() {
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [requestProgramsModalOpen, setRequestProgramsModalOpen] =
     useState(false);
-  const franchiseStatus = getEffectiveFranchiseStatus(user);
+  const isOperational = isFranchiseOperational(user);
   const canFetch = !!user?.franchiseId;
   const statsQuery = useFranchiseeDashboardStats(canFetch);
   const ordersQuery = useFranchiseeOrders(undefined, canFetch);
@@ -280,11 +280,11 @@ export default function FranchiseeDashboard() {
     whole > 0 ? Math.round((part / whole) * 100) : 0;
 
   useEffect(() => {
-    if (user?.role === "franchisee" && franchiseStatus !== "Active") {
+    if (user?.role === "franchisee" && !isOperational) {
       router.push("/franchisee/agreement");
       return;
     }
-  }, [franchiseStatus, router, user?.role]);
+  }, [isOperational, router, user?.role]);
 
   if (!user || !user.franchiseId) {
     return (
@@ -449,7 +449,7 @@ export default function FranchiseeDashboard() {
               Overview of your franchise activities.
             </p>
           </div>
-          {franchiseStatus === "Active" && (
+          {isOperational && (
             <div className="flex shrink-0 flex-wrap gap-2">
               <Button
                 variant="outline"

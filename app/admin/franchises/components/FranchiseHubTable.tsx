@@ -225,7 +225,17 @@ export function FranchiseHubTable({
             key: "status",
             header: "Status",
             className: "text-center",
-            render: (item) => <StatusBadge label={item.status} />,
+            render: (item) => {
+              // Operational standing is derived from agreements now — show the
+              // count of valid agreements instead of a stored "Active" status.
+              const validCount = item.validAgreementsCount ?? 0;
+              return (
+                <StatusBadge
+                  label={`${validCount} valid agreement${validCount === 1 ? "" : "s"}`}
+                  tone={validCount > 0 ? "success" : "neutral"}
+                />
+              );
+            },
           },
           {
             key: "actions",

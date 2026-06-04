@@ -5,22 +5,21 @@
  * exhaustive switches easier to write.
  */
 
+/**
+ * Franchise application-review status values. Operational standing
+ * (whether the franchise is "live") is NO LONGER a franchise status — it is
+ * derived from agreements; use `isFranchiseOperational` from `lib/auth` for that.
+ */
 export const FranchiseStatus = {
-  ACTIVE: "Active",
   PENDING: "Pending",
-  SUSPENDED: "Suspended",
-  VOID: "Void",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
 } as const;
 
 export type FranchiseStatusValue =
   (typeof FranchiseStatus)[keyof typeof FranchiseStatus];
 
-/** Returns true when the franchise has completed onboarding and is live. */
-export function isFranchiseActive(status: string | undefined | null): boolean {
-  return status === FranchiseStatus.ACTIVE;
-}
-
-/** Returns true when the franchise needs to complete onboarding/signing. */
+/** Returns true when the franchise still needs admin approval. */
 export function isFranchisePending(
   status: string | undefined | null,
 ): boolean {

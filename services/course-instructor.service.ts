@@ -53,7 +53,10 @@ export interface CourseInstructorData {
   validFrom?: Date;
   expiryDate?: Date;
   trainingProof?: string;
+  /** Application/onboarding review status (Pending/Approved/Rejected/Payment/Training). */
   status: string;
+  /** Derived operational standing from the latest CI agreement. */
+  operationalStatus?: "valid" | "expired" | "void";
   materialsOrdered?: boolean;
   createdAt: string;
   updatedAt: string;
@@ -266,6 +269,11 @@ function mapRow(row: Record<string, unknown>): CourseInstructorData {
     validFrom: validFromRaw ? new Date(validFromRaw) : undefined,
     expiryDate: expiryRaw ? new Date(expiryRaw) : undefined,
     status: String(row.status ?? ""),
+    operationalStatus: row.operationalStatus as
+      | "valid"
+      | "expired"
+      | "void"
+      | undefined,
     materialsOrdered: Boolean(row.materialsOrdered ?? false),
     createdAt: String(row.createdAt ?? ""),
     updatedAt: String(row.updatedAt ?? ""),
@@ -449,14 +457,14 @@ export async function getAllCITraining(): Promise<CITrainingByFranchise> {
   const list = result ?? [];
   const grouped: CITrainingByFranchise = {};
   for (const ci of list) {
-    if (ci.status !== "Training" && ci.status !== "Active") continue;
+    if (ci.status !== "Training" && ci.operationalStatus !== "valid") continue;
     const fname = ci.franchise.name || "Franchise";
     if (!grouped[fname]) grouped[fname] = [];
     const row: CITrainingData = {
       ...ci,
       instructorName: ci.name,
       dateOfTraining: ci.createdAt,
-      isApproved: ci.status === "Active",
+      isApproved: ci.operationalStatus === "valid",
     };
     grouped[fname].push(row);
   }
@@ -569,6 +577,18 @@ export async function getPaginatedCourseInstructors(
   });
 
   let rows = paginated.data;
+  // "valid" is the derived operational filter (active CIs). The backend filters
+  // and paginates it server-side, so trust its rows + meta rather than the
+  // review-status client filter below (rows carry a review status, not "valid").
+  if (status === "valid") {
+    return {
+      data: rows,
+      meta: {
+        total: paginated.meta.total ?? rows.length,
+        totalPages: paginated.meta.totalPages ?? 1,
+      },
+    };
+  }
   if (rows.some((ci) => ci.status !== status)) {
     rows = rows.filter((ci) => ci.status === status);
   }

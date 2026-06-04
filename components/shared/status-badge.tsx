@@ -53,6 +53,7 @@ const LABEL_TONE_MAP: Record<string, StatusTone> = {
   signed: "success",
   granted: "success",
   ready: "success",
+  valid: "success",
   // warning
   pending: "warning",
   "in progress": "warning",
@@ -75,6 +76,7 @@ const LABEL_TONE_MAP: Record<string, StatusTone> = {
   overdue: "destructive",
   // neutral
   inactive: "neutral",
+  void: "neutral",
   archived: "neutral",
   closed: "neutral",
   none: "neutral",

@@ -53,7 +53,12 @@ export interface FranchiseResponse {
   code?: string | null;
   name: string;
   type: string;
+  /** Application-review status only (Pending/Approved/Rejected). */
   status: string;
+  /** Derived: count of in-force (Valid) agreements, excluding CI agreements. */
+  validAgreementsCount?: number;
+  /** Derived: true when the franchise has at least one valid agreement. */
+  isOperational?: boolean;
   address: string;
   city?: string;
   state?: string;

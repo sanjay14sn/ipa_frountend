@@ -91,6 +91,18 @@ function FranchiseDetailInner() {
                     {franchise?.status ? (
                       <Badge variant="secondary">{franchise.status}</Badge>
                     ) : null}
+                    {typeof franchise?.validAgreementsCount === "number" ? (
+                      <Badge
+                        variant={
+                          franchise.validAgreementsCount > 0
+                            ? "default"
+                            : "outline"
+                        }
+                      >
+                        {franchise.validAgreementsCount} valid agreement
+                        {franchise.validAgreementsCount === 1 ? "" : "s"}
+                      </Badge>
+                    ) : null}
                     {franchise?.type ? (
                       <Badge variant="outline">{franchise.type}</Badge>
                     ) : null}

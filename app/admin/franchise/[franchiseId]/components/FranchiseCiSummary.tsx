@@ -25,7 +25,9 @@ function useCiCount(franchiseId: string, status?: string) {
 
 export function FranchiseCiSummary({ franchiseId }: FranchiseCiSummaryProps) {
   const total = useCiCount(franchiseId);
-  const active = useCiCount(franchiseId, "Active");
+  // "valid" = derived operational filter (latest CI agreement is Valid); the
+  // old "Active" review status no longer exists.
+  const active = useCiCount(franchiseId, "valid");
   const training = useCiCount(franchiseId, "Training");
   const pending = useCiCount(franchiseId, "Pending");
 

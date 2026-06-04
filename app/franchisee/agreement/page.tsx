@@ -65,7 +65,7 @@ import { useAgreementMine, useAgreementsMine } from "@/hooks/api/agreement.hooks
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { User } from "@/lib/auth";
-import { getEffectiveFranchiseStatus } from "@/lib/auth";
+import { getEffectiveFranchiseStatus, isFranchiseOperational } from "@/lib/auth";
 import { abandonOrderPayment } from "@/services/order.service";
 import { ComponentErrorBoundary } from "@/components/error/ComponentErrorBoundary";
 import { sendClientLog } from "@/lib/client-telemetry";
@@ -282,7 +282,7 @@ function FranchiseAgreementContent() {
 
   const refreshFranchiseeState = useCallback(async () => {
     if (!user || user.role !== "franchisee") {
-      return franchiseStatus ?? "";
+      return isFranchiseOperational(user, franchiseIdParam);
     }
 
     const profileResponse = await getFranchiseeProfile();
@@ -298,6 +298,10 @@ function FranchiseAgreementContent() {
     const currentFranchiseId = franchiseIdParam || user.franchiseId || "";
     const profileFranchiseStatus =
       profile.franchise?.status ?? user.franchiseStatus;
+    // Operational standing is derived from agreements now.
+    const isOperational =
+      profile.franchise?.isOperational ??
+      (profile.franchise?.validAgreementsCount ?? 0) > 0;
     const updatedFranchises = user.franchises?.map((franchise) =>
       franchise.id === currentFranchiseId
         ? { ...franchise, status: profileFranchiseStatus ?? franchise.status }
@@ -309,6 +313,7 @@ function FranchiseAgreementContent() {
       franchiseId: currentFranchiseId,
       franchiseName: profile.franchise?.name ?? user.franchiseName,
       franchiseStatus: profileFranchiseStatus,
+      isOperational,
       franchises: updatedFranchises ?? user.franchises,
       profile,
     });
@@ -317,13 +322,13 @@ function FranchiseAgreementContent() {
       queryKey: queryKeys.auth.franchiseeProfile(currentFranchiseId),
     });
 
-    return profileFranchiseStatus ?? "";
-  }, [franchiseIdParam, franchiseStatus, queryClient, setUser, user]);
+    return isOperational;
+  }, [franchiseIdParam, queryClient, setUser, user]);
 
   const waitForActivation = useCallback(async () => {
     for (let attempt = 0; attempt < 6; attempt += 1) {
-      const status = await refreshFranchiseeState();
-      if (status === "Active") return true;
+      const operational = await refreshFranchiseeState();
+      if (operational) return true;
       await sleep(1500);
     }
     return false;
@@ -358,9 +363,9 @@ function FranchiseAgreementContent() {
       return;
     }
 
-    // Active franchises can still need to sign a NEW_PROGRAM agreement — only
-    // redirect to the dashboard when the URL doesn't pin a specific agreement.
-    if (franchiseStatus === "Active" && !hasExplicitAgreementId) {
+    // Operational franchises can still need to sign a NEW_PROGRAM agreement —
+    // only redirect to the dashboard when the URL doesn't pin a specific agreement.
+    if (isFranchiseOperational(user, franchiseIdParam) && !hasExplicitAgreementId) {
       router.push("/franchisee/dashboard");
       return;
     }
@@ -465,9 +470,9 @@ function FranchiseAgreementContent() {
 
   useEffect(() => {
     if (user?.role === "admin") return;
-    // Active franchises can still need to sign a NEW_PROGRAM agreement — only
-    // bail when there's no explicit agreementId pinning us here.
-    if (franchiseStatus === "Active" && !hasExplicitAgreementId) return;
+    // Operational franchises can still need to sign a NEW_PROGRAM agreement —
+    // only bail when there's no explicit agreementId pinning us here.
+    if (isFranchiseOperational(user, franchiseIdParam) && !hasExplicitAgreementId) return;
 
     const effectiveFranchiseId = franchiseIdParam || user?.franchiseId;
 
@@ -810,7 +815,7 @@ function FranchiseAgreementContent() {
     );
   }
 
-  if (!feeAgreement && !feeAgreementLoading && franchiseStatus !== "Active") {
+  if (!feeAgreement && !feeAgreementLoading && !isFranchiseOperational(user, franchiseIdParam)) {
     const waitingMessage =
       franchiseStatus === "Approved"
         ? "Your agreement is being prepared. You will be able to sign and pay here as soon as it is issued."

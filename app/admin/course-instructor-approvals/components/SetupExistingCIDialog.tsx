@@ -123,7 +123,7 @@ export default function SetupExistingCIDialog({
 
   const franchisesQuery = useQuery({
     queryKey: ["admin-franchises-for-existing-ci"],
-    queryFn: () => getAllFranchise({ status: "Active", page: 1, limit: 5000 }),
+    queryFn: () => getAllFranchise({ status: "Approved", page: 1, limit: 5000 }),
     enabled: open,
   });
 

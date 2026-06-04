@@ -36,7 +36,7 @@ import { useUser } from "@/context/user-context";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { getEffectiveFranchiseStatus } from "@/lib/auth";
+import { getEffectiveFranchiseStatus, isFranchiseOperational } from "@/lib/auth";
 
 const adminNavigation = {
   navMain: [
@@ -249,7 +249,9 @@ export function DynamicSidebar({
   const { user: ciUser, agreementPhase } = useCIAuth();
   const pathname = usePathname();
   const franchiseStatus = getEffectiveFranchiseStatus(user);
-  const isActiveFranchisee = franchiseStatus === "Active";
+  // Operational standing is derived from agreements; review status drives the
+  // "approved but not yet operational" onboarding navigation.
+  const isActiveFranchisee = isFranchiseOperational(user);
   const isApprovedFranchisee = franchiseStatus === "Approved";
 
   let navigation = adminNavigation;

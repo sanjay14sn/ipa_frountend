@@ -5,7 +5,7 @@ import { useEffect, useMemo } from "react";
 import { useUser } from "@/context/user-context";
 import { useScopeStore } from "@/lib/stores/scope-store";
 import type { AgreementSwitcherItem } from "@/services/agreement.service";
-import type { User } from "@/lib/auth";
+import { isFranchiseOperational, type User } from "@/lib/auth";
 
 type ActiveProgramRow = NonNullable<
   NonNullable<NonNullable<User["profile"]>["franchise"]>["activePrograms"]
@@ -85,7 +85,7 @@ export function useScopeAgreements() {
   const isActiveFranchisee =
     user?.role === "franchisee" &&
     !!franchiseId &&
-    user.franchiseStatus === "Active";
+    isFranchiseOperational(user);
 
   const agreements = useMemo<AgreementSwitcherItem[]>(() => {
     const rows = user?.profile?.franchise?.activePrograms ?? [];
