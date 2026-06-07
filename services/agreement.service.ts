@@ -523,6 +523,30 @@ export async function voidAgreementAdmin(
   return unwrapData<AgreementRecord>(response);
 }
 
+export interface RenewProgramAgreementInput {
+  franchiseFee: number;
+  monthlyFee: number;
+  royalty: number;
+  materialCost: number;
+  kitCost: number;
+  ciShare: number;
+  franchiseShare: number;
+  gstFranchiseFee: boolean;
+  gstRoyalty: boolean;
+  gstMaterialCost: boolean;
+  installment: boolean;
+  tenure: number;
+}
+
+/** POST /admin/agreement/:id/renew — issue a program renewal for an expired agreement. */
+export async function renewProgramAgreementAdmin(
+  agreementId: number,
+  dto: RenewProgramAgreementInput,
+): Promise<AgreementRecord> {
+  const response = await api.post(`/admin/agreement/${agreementId}/renew`, dto);
+  return unwrapData<AgreementRecord>(response);
+}
+
 
 export function storedSignatureToPublicPath(
   stored: string | null | undefined,

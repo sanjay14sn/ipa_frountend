@@ -14,6 +14,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { AgreementRecordDetail } from "@/components/agreements/AgreementRecordDetail";
+import { IssueRenewalButton } from "@/components/agreements/IssueRenewalButton";
 import {
   DataTable,
   type DataTableColumn,
@@ -211,6 +212,7 @@ export function AdminAgreementsSection({
           >
             <Download className="h-4 w-4" />
           </Button>
+          <IssueRenewalButton agreement={record} />
         </div>
       ),
     },
