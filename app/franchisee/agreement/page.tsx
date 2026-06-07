@@ -17,6 +17,7 @@ import FranchiseDetails from "./components/FranchiseDetails";
 import PaymentBreakdown from "./components/PaymentBreakdown";
 import AgreementTerms from "./components/AgreementTerms";
 import PaymentAction from "./components/PaymentAction";
+import { AgreementExpiredView } from "./components/AgreementExpiredView";
 import { EmiTimeline } from "@/components/receivables/EmiTimeline";
 import { getFranchiseFeePayable } from "@/lib/gst";
 import { FranchiseAgreementSignaturePanel } from "./components/FranchiseAgreementSignaturePanel";
@@ -234,6 +235,19 @@ function FranchiseAgreementContent() {
   const payableHeadline =
     installmentInitialPayable ?? nonInstallmentPayable;
 
+  const renewalAgreementId = useMemo(() => {
+    if (!feeAgreement || feeAgreement.status !== "Expired") return null;
+    const list = agreementsQuery.data ?? [];
+    const match = list.find(
+      (a) =>
+        a.type === "RENEWAL" &&
+        ((((a.metadata as Record<string, unknown> | null)?.renewalOfAgreementId) ===
+          feeAgreement.id) ||
+          (a.programId === feeAgreement.programId && a.status === "Approved")),
+    );
+    return match?.id ?? null;
+  }, [agreementsQuery.data, feeAgreement]);
+
   // Step 4 (Payment) unlocks once `agreement.signed === true`. Post-refactor,
   // signing flips the `signed` boolean while the agreement stays in `Approved`
   // status until payment lands — so the legacy `agreementSignatureSrc(...)`
@@ -387,8 +401,10 @@ function FranchiseAgreementContent() {
 
   // Bug 1 fix: when a specific agreementId is pinned and that agreement has
   // already reached a terminal/active state (Valid, Suspended, Void) — or the
-  // legacy equivalents `Signed`/`Expired` from pre-refactor data — there's
-  // nothing for the franchisee to do here. Send them to the dashboard.
+  // legacy equivalent `Signed` from pre-refactor data — there's nothing for
+  // the franchisee to do here. Send them to the dashboard.
+  // Note: Expired is intentionally excluded — it renders a dedicated
+  // expired/renew view (AgreementExpiredView) rather than redirecting.
   useEffect(() => {
     if (!hasExplicitAgreementId) return;
     if (feeAgreementLoading) return;
@@ -398,7 +414,6 @@ function FranchiseAgreementContent() {
       "Signed", // legacy alias for Valid prior to status refactor
       "Suspended",
       "Void",
-      "Expired", // legacy alias collapsed into Void
     ]);
     if (terminalOrActiveStatuses.has(feeAgreement.status ?? "")) {
       router.replace("/franchisee/dashboard");
@@ -812,6 +827,15 @@ function FranchiseAgreementContent() {
           </Button>
         </div>
       </div>
+    );
+  }
+
+  if (!feeAgreementLoading && feeAgreement?.status === "Expired") {
+    return (
+      <AgreementExpiredView
+        agreement={feeAgreement}
+        renewalAgreementId={renewalAgreementId}
+      />
     );
   }
 
