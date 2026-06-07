@@ -609,7 +609,8 @@ export type AgreementLifecycleStatus =
   | "Valid"
   | "Suspended"
   | "Void"
-  | "Rejected";
+  | "Rejected"
+  | "Expired";
 
 export async function waiveReceivableItem(
   itemId: number,

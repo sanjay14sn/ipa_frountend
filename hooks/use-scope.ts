@@ -22,6 +22,7 @@ function toLifecycleStatus(status: string): AgreementLifecycleStatus {
     case "Void":
     case "Rejected":
     case "Pending":
+    case "Expired":
       return status as AgreementLifecycleStatus;
     default:
       return "Approved";

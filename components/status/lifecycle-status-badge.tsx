@@ -19,7 +19,7 @@ interface LifecycleStatusBadgeProps {
  *   - info     → in-flight / waiting (Pending)
  *   - warning  → admin done, franchisee action needed (Approved) / paused (Suspended)
  *   - success  → in force (Valid)
- *   - destructive → action rejected (Rejected)
+ *   - destructive → action rejected (Rejected) / expired (Expired)
  *   - neutral  → terminal / inactive (Void, Draft)
  */
 const STATUS_TONE: Record<AgreementLifecycleStatus, StatusTone> = {
@@ -30,6 +30,7 @@ const STATUS_TONE: Record<AgreementLifecycleStatus, StatusTone> = {
   Suspended: "warning",
   Void: "neutral",
   Rejected: "destructive",
+  Expired: "destructive",
 };
 
 export function LifecycleStatusBadge({
