@@ -124,7 +124,6 @@ export default function EditStudentModal({
       open,
       programId: formData.programId,
       streamId: formData.streamId,
-      autoSelectFirstLevel: false,
       levelId: formData.levelId,
       onLevelIdChange: (id) =>
         setFormData((prev) => ({ ...prev, levelId: id })),
