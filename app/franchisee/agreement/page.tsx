@@ -830,7 +830,25 @@ function FranchiseAgreementContent() {
     );
   }
 
-  if (!feeAgreementLoading && feeAgreement?.status === "Expired") {
+  // The agreement detail loads after the page chrome is ready (pageLoading is
+  // cleared once agreementContent is built from the profile, independent of the
+  // agreement record). Until the record resolves we can't tell whether to show
+  // the expired view or the sign+pay stepper — keep the loader up rather than
+  // briefly flashing the stepper and then swapping to the expired view.
+  if (feeAgreementLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div className="rounded-2xl border bg-card px-6 py-5 text-center shadow-sm">
+          <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">
+            Loading your franchise agreement...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (feeAgreement?.status === "Expired") {
     return (
       <AgreementExpiredView
         agreement={feeAgreement}
