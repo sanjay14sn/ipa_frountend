@@ -80,11 +80,15 @@ export function AgreementSwitcher() {
       //      becomes the working view.
       const isSignNeeded = agreementId != null && lifecycleStatus === "Approved";
       const isPendingRequest = lifecycleStatus === "Pending";
+      const isExpired =
+        agreementId != null && lifecycleStatus === "Expired";
 
       if (isSignNeeded) {
         router.push(`/franchisee/agreement?agreementId=${agreementId}`);
       } else if (isPendingRequest) {
         router.push(`/franchisee/franchise?tab=programs`);
+      } else if (isExpired) {
+        router.push(`/franchisee/agreement?agreementId=${agreementId}`);
       } else if (isOnAgreementPage) {
         // Picked a non-actionable agreement (Valid / Suspended / Void / Draft)
         // while sitting on the sign page — leave the sign flow and land on
