@@ -37,7 +37,7 @@ describe("AgreementExpiredView", () => {
     render(
       <AgreementExpiredView agreement={makeAgreement()} renewalAgreementId={null} />,
     );
-    expect(screen.getByText(/expired/i)).toBeInTheDocument();
+    expect(screen.getByText("Expired")).toBeInTheDocument();
     expect(screen.getByText(/being prepared/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /pay again/i })).toBeNull();
   });

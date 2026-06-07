@@ -38,13 +38,13 @@ export function AgreementExpiredView({
           </div>
           <CardTitle className="flex items-center gap-2 text-2xl font-normal text-card-foreground">
             <AlertTriangle className="h-6 w-6 text-destructive" />
-            Agreement no longer active
+            Agreement expired
           </CardTitle>
         </CardHeader>
         <CardContent className="px-5 py-5">
           <p className="text-sm text-muted-foreground">
             Your agreement for <span className="font-medium text-card-foreground">{programLabel}</span>
-            {expiredOn ? <> lapsed on <span className="font-medium text-card-foreground">{expiredOn}</span>.</> : <> has lapsed.</>}
+            {expiredOn ? <> expired on <span className="font-medium text-card-foreground">{expiredOn}</span>.</> : <> has expired.</>}
           </p>
 
           {renewalAgreementId != null ? (
