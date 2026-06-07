@@ -13,7 +13,7 @@ type ActiveProgramRow = NonNullable<
 
 type AgreementLifecycleStatus = AgreementSwitcherItem["lifecycleStatus"];
 
-function toLifecycleStatus(status: string): AgreementLifecycleStatus {
+export function toLifecycleStatus(status: string): AgreementLifecycleStatus {
   switch (status) {
     case "Draft":
     case "Approved":
