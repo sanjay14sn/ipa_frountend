@@ -20,6 +20,11 @@ export interface CascadingSelectsOptions {
   open: boolean;
   programId: number;
   streamId: number;
+  /**
+   * When truthy the hook auto-selects the first level after stream changes
+   * (new-student mode). When falsy it only validates the current pick.
+   */
+  autoSelectFirstLevel: boolean;
   levelId: number;
   onLevelIdChange: (id: number) => void;
   onPreviousLevelIdChange?: (id: number) => void;
@@ -59,6 +64,7 @@ export function useCascadingSelects(
     open,
     programId,
     streamId,
+    autoSelectFirstLevel,
     levelId,
     onLevelIdChange,
     onPreviousLevelIdChange,
@@ -137,14 +143,16 @@ export function useCascadingSelects(
           const fetched = await getLevelsByStream(streamId);
           setLevels(fetched);
           if (fetched.length > 0) {
-            // The starting level is freely changeable for every mode — we no
-            // longer force new students onto the first level. Just drop a stale
-            // pick if it isn't part of the newly-fetched stream so the admin
-            // can choose any level.
-            const stillValid = fetched.some((l) => l.id === levelId);
-            if (!stillValid) {
-              onLevelIdChange(0);
-              onPreviousLevelIdChange?.(0);
+            if (autoSelectFirstLevel) {
+              // New-student mode: always jump to first level
+              onLevelIdChange(fetched[0].id);
+            } else {
+              // Edit/existing mode: keep current pick if still valid
+              const stillValid = fetched.some((l) => l.id === levelId);
+              if (!stillValid) {
+                onLevelIdChange(0);
+                onPreviousLevelIdChange?.(0);
+              }
             }
           }
         } catch (error) {

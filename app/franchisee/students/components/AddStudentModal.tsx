@@ -159,6 +159,7 @@ export default function AddStudentModal({
     open,
     programId: formData.programId,
     streamId: formData.streamId,
+    autoSelectFirstLevel: !formData.existing,
     levelId: formData.levelId,
     onLevelIdChange: (id) =>
       setFormData((prev) => ({ ...prev, levelId: id })),
