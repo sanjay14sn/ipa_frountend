@@ -43,6 +43,14 @@ import { getApiBaseUrl } from "@/lib/api-utils";
 import { sendClientLog } from "@/lib/client-telemetry";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import dynamic from "next/dynamic";
+import { useStreamsByProgram } from "@/hooks/api/stream.hooks";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const CertificateTemplateEditor = dynamic(
   () =>
@@ -95,6 +103,8 @@ export function CertificateTemplateSection({
   > | null>(null);
   const [selectedFieldKey, setSelectedFieldKey] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedStreamId, setSelectedStreamId] = useState<number | null>(null);
+  const { data: streams } = useStreamsByProgram(program.id);
   const [pdfScale, setPdfScale] = useState({
     width: 612,
     height: 792,
@@ -112,6 +122,19 @@ export function CertificateTemplateSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive]);
 
+  // Reset editor state and reload when stream selection changes
+  useEffect(() => {
+    if (!isActive) return;
+    setTemplateFile(null);
+    setTemplatePreviewUrl(null);
+    setTemplateImageUrl(null);
+    setFieldCoordinates(null);
+    setTemplateId(undefined);
+    setIsEditMode(false);
+    void loadCertificateTemplate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStreamId]);
+
   const defaultCoordinates: Record<string, FieldCoordinate> = {
     student_name: { rect: [255, 338, 598, 354], label: "Student Name" },
     student_level: { rect: [184, 299, 359, 315], label: "Student Level" },
@@ -125,7 +148,7 @@ export function CertificateTemplateSection({
     setIsLoadingTemplate(true);
     setIsEditMode(false);
     try {
-      const template = await getCertificateTemplate(program.id);
+      const template = await getCertificateTemplate(program.id, { streamId: selectedStreamId ?? undefined });
       setTemplateId(template?.id);
       if (template) {
         setTemplateData({
@@ -205,6 +228,7 @@ export function CertificateTemplateSection({
           program.id,
           templateFile,
           templatePayload,
+          selectedStreamId,
         );
       } else {
         await updateCertificateTemplate(program.id, {
@@ -216,7 +240,7 @@ export function CertificateTemplateSection({
       toast.success("Certificate template saved successfully");
       setIsEditMode(false);
 
-      const updatedTemplate = await getCertificateTemplate(program.id);
+      const updatedTemplate = await getCertificateTemplate(program.id, { streamId: selectedStreamId ?? undefined });
       if (updatedTemplate?.id) setTemplateId(updatedTemplate.id);
       if (updatedTemplate?.templatePdfPath) {
         const baseUrl = getApiBaseUrl();
@@ -454,22 +478,47 @@ export function CertificateTemplateSection({
   }
 
   return (
-    <CertificateTemplateEditor
-      programName={program.name}
-      templatePreviewUrl={templatePreviewUrl}
-      templateImageUrl={templateImageUrl}
-      fieldCoordinates={fieldCoordinates}
-      isEditMode={isEditMode}
-      setIsEditMode={setIsEditMode}
-      isSavingTemplate={isSavingTemplate}
-      handleSaveTemplate={handleSaveTemplate}
-      handleTemplateFileChange={handleTemplateFileChange}
-      pdfContainerRef={pdfContainerRef}
-      canvasRef={canvasRef}
-      pdfToScreen={pdfToScreen}
-      handleDragStart={handleDragStart}
-      selectedFieldKey={selectedFieldKey}
-      setSelectedFieldKey={setSelectedFieldKey}
-    />
+    <>
+      <div className="mb-4 max-w-sm">
+        <label className="mb-1 block text-sm font-medium text-gray-700">
+          Certificate type
+        </label>
+        <Select
+          value={selectedStreamId == null ? "level" : String(selectedStreamId)}
+          onValueChange={(v) =>
+            setSelectedStreamId(v === "level" ? null : Number(v))
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="level">Level certificate (program default)</SelectItem>
+            {(streams ?? []).map((s) => (
+              <SelectItem key={s.id} value={String(s.id)}>
+                Stream completion — {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <CertificateTemplateEditor
+        programName={program.name}
+        templatePreviewUrl={templatePreviewUrl}
+        templateImageUrl={templateImageUrl}
+        fieldCoordinates={fieldCoordinates}
+        isEditMode={isEditMode}
+        setIsEditMode={setIsEditMode}
+        isSavingTemplate={isSavingTemplate}
+        handleSaveTemplate={handleSaveTemplate}
+        handleTemplateFileChange={handleTemplateFileChange}
+        pdfContainerRef={pdfContainerRef}
+        canvasRef={canvasRef}
+        pdfToScreen={pdfToScreen}
+        handleDragStart={handleDragStart}
+        selectedFieldKey={selectedFieldKey}
+        setSelectedFieldKey={setSelectedFieldKey}
+      />
+    </>
   );
 }
