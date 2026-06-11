@@ -18,10 +18,17 @@ import {
   getFranchiseeCertificatePdfUrl,
   getAdminCertificatePdfUrl,
   StudentCertificate,
+  getStudentStreamCertificates,
+  getFranchiseeStreamCertificatePdfUrl,
+  getAdminStreamCertificates,
+  getAdminStreamCertificatePdfUrl,
+  type StreamCertificate,
 } from "@/services/student.service";
 import { toast } from "sonner";
 import { sendClientLog } from "@/lib/client-telemetry";
 import { formatDate } from "@/lib/date-utils";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/hooks/api/query-keys";
 
 interface StudentCertificatesModalProps {
   open: boolean;
@@ -42,6 +49,16 @@ export default function StudentCertificatesModal({
 }: StudentCertificatesModalProps) {
   const [certificates, setCertificates] = useState<StudentCertificate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  const { data: streamCertsRaw } = useQuery({
+    queryKey: queryKeys.studentAdmin.studentStreamCertificates(studentId),
+    queryFn: async (): Promise<StreamCertificate[]> =>
+      mode === "admin"
+        ? (await getAdminStreamCertificates({ studentId, limit: 50 })).rows
+        : await getStudentStreamCertificates(studentId),
+    enabled: open && studentId > 0,
+  });
+  const streamCerts = streamCertsRaw ?? [];
 
   useEffect(() => {
     if (!open || !studentId) return;
@@ -170,6 +187,47 @@ export default function StudentCertificatesModal({
                 );
               })}
             </div>
+
+            {streamCerts.length > 0 && (
+              <div className="mt-4">
+                <h4 className="mb-2 text-sm font-medium text-gray-900">
+                  Stream Completion Certificates
+                </h4>
+                <div className="space-y-2">
+                  {streamCerts.map((cert) => (
+                    <div
+                      key={cert.id}
+                      className="flex items-center justify-between rounded-md border border-border px-3 py-2"
+                    >
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {cert.stream?.name ?? `Stream #${cert.streamId}`}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {cert.certificateStatus === "ISSUED"
+                            ? `Issued ${cert.certificateIssuedAt ? new Date(cert.certificateIssuedAt).toLocaleDateString() : ""}`
+                            : "Pending issuance"}
+                        </div>
+                      </div>
+                      {cert.certificateStatus === "ISSUED" && (
+                        <a
+                          className="text-sm font-medium text-primary hover:underline"
+                          href={
+                            mode === "admin"
+                              ? getAdminStreamCertificatePdfUrl(cert.id)
+                              : getFranchiseeStreamCertificatePdfUrl(cert.id)
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          View PDF
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
