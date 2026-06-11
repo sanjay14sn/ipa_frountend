@@ -656,6 +656,11 @@ export async function getStudentStreamCertificates(studentId: number) {
   return unwrapData<StreamCertificate[]>(res);
 }
 
+export async function getFranchiseeStreamCertificates() {
+  const res = await api.get("/certification/stream-certificates");
+  return unwrapData<StreamCertificate[]>(res);
+}
+
 export function getFranchiseeStreamCertificatePdfUrl(id: number): string {
   const baseUrl = api.defaults.baseURL || getApiBaseUrl();
   return `${baseUrl}/certification/stream-certificates/${id}/pdf`;

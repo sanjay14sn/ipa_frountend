@@ -57,6 +57,7 @@ export const queryKeys = {
       ["admin-stream-certificates", params] as const,
     studentStreamCertificates: (studentId: number) =>
       ["student-stream-certificates", studentId] as const,
+    franchiseeStreamCertificates: ["franchisee-stream-certificates"] as const,
   },
   courseInstructors: {
     franchisee: (params?: Record<string, unknown> | null) =>
