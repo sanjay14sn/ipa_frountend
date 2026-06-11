@@ -20,6 +20,12 @@ export interface FieldCoordinate {
   /** PDF bounding box [x1, y1, x2, y2] from legacy template editor */
   rect?: number[];
   label?: string;
+  /** Font size in PDF points (backend default: 13). */
+  size?: number;
+  /** Font key understood by the backend renderer (default: helvetica-bold). */
+  font?: string;
+  /** When true, the field is skipped during PDF generation. */
+  hidden?: boolean;
 }
 
 export interface CertificateTemplate {

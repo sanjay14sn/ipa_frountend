@@ -45,6 +45,11 @@ import { getUserFriendlyMessage } from "@/lib/error-utils";
 import dynamic from "next/dynamic";
 import { useStreamsByProgram } from "@/hooks/api/stream.hooks";
 import {
+  CERTIFICATE_FIELDS,
+  getFieldDef,
+  type CertificateFieldDef,
+} from "./certificate-template-fields";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -103,6 +108,7 @@ export function CertificateTemplateSection({
   > | null>(null);
   const [selectedFieldKey, setSelectedFieldKey] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [selectedStreamId, setSelectedStreamId] = useState<number | null>(null);
   const { data: streams } = useStreamsByProgram(program.id);
   const [pdfScale, setPdfScale] = useState({
@@ -130,14 +136,19 @@ export function CertificateTemplateSection({
     setTemplateImageUrl(null);
     setFieldCoordinates(null);
     setTemplateId(undefined);
+    setSelectedFieldKey(null);
     setIsEditMode(false);
+    setIsDirty(false);
     void loadCertificateTemplate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStreamId]);
 
+  // Stream templates print student_stream; level templates print student_level.
   const defaultCoordinates: Record<string, FieldCoordinate> = {
     student_name: { rect: [255, 338, 598, 354], label: "Student Name" },
-    student_level: { rect: [184, 299, 359, 315], label: "Student Level" },
+    ...(selectedStreamId == null
+      ? { student_level: { rect: [184, 299, 359, 315], label: "Student Level" } }
+      : { student_stream: { rect: [184, 299, 359, 315], label: "Student Stream" } }),
     student_program: { rect: [383, 298, 596, 314], label: "Student Program" },
     franchise_name: { rect: [177, 223, 635, 239], label: "Franchise Name" },
     year: { rect: [76, 100, 147, 116], label: "Year" },
@@ -185,6 +196,7 @@ export function CertificateTemplateSection({
         setTemplatePreviewUrl(null);
         setFieldCoordinates(defaultCoordinates);
       }
+      setIsDirty(false);
     } catch {
       toast.error("Failed to load certificate template");
     } finally {
@@ -239,6 +251,8 @@ export function CertificateTemplateSection({
 
       toast.success("Certificate template saved successfully");
       setIsEditMode(false);
+      setTemplateFile(null);
+      setIsDirty(false);
 
       const updatedTemplate = await getCertificateTemplate(program.id, { streamId: selectedStreamId ?? undefined });
       if (updatedTemplate?.id) setTemplateId(updatedTemplate.id);
@@ -264,13 +278,21 @@ export function CertificateTemplateSection({
     }
   };
 
+  const MAX_TEMPLATE_BYTES = 10 * 1024 * 1024;
+
   const handleTemplateFileChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = e.target.files?.[0];
+    // Allow re-selecting the same file after a discard.
+    e.target.value = "";
     if (file) {
       if (file.type !== "application/pdf") {
         toast.error("Only PDF files are allowed");
+        return;
+      }
+      if (file.size > MAX_TEMPLATE_BYTES) {
+        toast.error("File is too large — maximum size is 10 MB");
         return;
       }
       setTemplateFile(file);
@@ -278,8 +300,67 @@ export function CertificateTemplateSection({
       setTemplatePreviewUrl(url);
       setTemplateImageUrl(null);
       setFieldCoordinates(defaultCoordinates);
+      setIsDirty(true);
     }
   };
+
+  /** Merge a partial patch into one field's coordinate spec. */
+  const updateField = (key: string, patch: Partial<FieldCoordinate>) => {
+    setFieldCoordinates((prev) =>
+      prev && prev[key] ? { ...prev, [key]: { ...prev[key], ...patch } } : prev,
+    );
+    setIsDirty(true);
+  };
+
+  /** Place a known data field in the middle of the page. */
+  const addField = (key: string) => {
+    const def = getFieldDef(key);
+    if (!def) return;
+    const w = def.signature ? 110 : 200;
+    const h = 18;
+    const cx = pdfScale.width / 2;
+    const cy = pdfScale.height / 2;
+    setFieldCoordinates((prev) => ({
+      ...(prev ?? {}),
+      [key]: {
+        rect: [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2],
+        label: def.label,
+      },
+    }));
+    setSelectedFieldKey(key);
+    setIsDirty(true);
+  };
+
+  const removeField = (key: string) => {
+    setFieldCoordinates((prev) => {
+      if (!prev || !prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+    if (selectedFieldKey === key) setSelectedFieldKey(null);
+    setIsDirty(true);
+  };
+
+  /** Throw away local edits and reload the saved template. */
+  const handleDiscard = () => {
+    setTemplateFile(null);
+    setTemplatePreviewUrl(null);
+    setTemplateImageUrl(null);
+    setFieldCoordinates(null);
+    setSelectedFieldKey(null);
+    setIsEditMode(false);
+    setIsDirty(false);
+    void loadCertificateTemplate();
+  };
+
+  // Fields valid for the current template type that are not yet placed.
+  const availableFields: CertificateFieldDef[] = CERTIFICATE_FIELDS.filter(
+    (f) =>
+      !(fieldCoordinates && fieldCoordinates[f.key]) &&
+      !(f.streamOnly && selectedStreamId == null) &&
+      !(f.levelOnly && selectedStreamId != null),
+  );
 
   // Convert PDF coordinates to screen coordinates (PDF uses bottom-left origin)
   const pdfToScreen = (pdfCoord: number, isY: boolean = false) => {
@@ -365,6 +446,7 @@ export function CertificateTemplateSection({
           rect: [newPdfX1, newPdfY1, newPdfX1 + width, newPdfY1 + height],
         },
       });
+      setIsDirty(true);
     };
 
     const handleMouseUp = () => {
@@ -510,7 +592,9 @@ export function CertificateTemplateSection({
         isEditMode={isEditMode}
         setIsEditMode={setIsEditMode}
         isSavingTemplate={isSavingTemplate}
+        isDirty={isDirty}
         handleSaveTemplate={handleSaveTemplate}
+        handleDiscard={handleDiscard}
         handleTemplateFileChange={handleTemplateFileChange}
         pdfContainerRef={pdfContainerRef}
         canvasRef={canvasRef}
@@ -518,6 +602,11 @@ export function CertificateTemplateSection({
         handleDragStart={handleDragStart}
         selectedFieldKey={selectedFieldKey}
         setSelectedFieldKey={setSelectedFieldKey}
+        updateField={updateField}
+        addField={addField}
+        removeField={removeField}
+        availableFields={availableFields}
+        pdfScale={pdfScale}
       />
     </>
   );
