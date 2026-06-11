@@ -250,10 +250,11 @@ export function CertificateTemplateSection({
           selectedStreamId,
         );
       } else {
-        await updateCertificateTemplate(program.id, {
-          id: templateId,
-          ...templatePayload,
-        });
+        await updateCertificateTemplate(
+          program.id,
+          { id: templateId, ...templatePayload },
+          selectedStreamId,
+        );
       }
 
       toast.success("Certificate template saved successfully");

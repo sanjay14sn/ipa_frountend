@@ -97,6 +97,7 @@ export async function getCertificateTemplate(
 export async function updateCertificateTemplate(
   programId: number,
   data: Record<string, unknown> & { id?: number },
+  streamId?: number | null,
 ): Promise<void> {
   const { id, ...payload } = data;
   if (id != null) {
@@ -105,6 +106,7 @@ export async function updateCertificateTemplate(
     await api.post("/admin/certification/template", {
       ...payload,
       programId,
+      ...(streamId != null ? { streamId } : {}),
       templatePdfPath: payload.templatePdfPath ?? "",
     });
   }
