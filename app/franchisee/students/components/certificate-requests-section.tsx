@@ -13,7 +13,6 @@ import BulkRequestCertificateModal, {
 } from "@/app/franchisee/certificate-requests/components/BulkRequestCertificateModal";
 import EligibleStudentsGroupedView from "@/app/franchisee/certificate-requests/components/EligibleStudentsGroupedView";
 import FranchiseeCertificatesGroupedView from "@/app/franchisee/certificate-requests/components/FranchiseeCertificatesGroupedView";
-import FranchiseeStreamCertificatesCard from "@/app/franchisee/certificate-requests/components/FranchiseeStreamCertificatesCard";
 
 export function FranchiseeCertificateRequestsSection() {
   const [groupsForModal, setGroupsForModal] = useState<GroupForModal[]>([]);
@@ -86,7 +85,6 @@ export function FranchiseeCertificateRequestsSection() {
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
-          <FranchiseeStreamCertificatesCard />
           {isLoadingCertificates ? (
             <TableLoadingState message="Loading certificate history..." />
           ) : (

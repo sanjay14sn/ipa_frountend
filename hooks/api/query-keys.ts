@@ -53,11 +53,6 @@ export const queryKeys = {
       listQueryKey("approve-and-dispatch-eligible-certs", params ?? undefined),
     lifecycle: (params?: Record<string, unknown> | null) =>
       listQueryKey("admin-student-lifecycle", params ?? undefined),
-    streamCertificates: (params?: Record<string, unknown>) =>
-      ["admin-stream-certificates", params] as const,
-    studentStreamCertificates: (studentId: number) =>
-      ["student-stream-certificates", studentId] as const,
-    franchiseeStreamCertificates: ["franchisee-stream-certificates"] as const,
   },
   courseInstructors: {
     franchisee: (params?: Record<string, unknown> | null) =>
