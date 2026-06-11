@@ -68,7 +68,7 @@ export async function deleteProgram(id: number): Promise<void> {
 
 export async function getCertificateTemplate(
   programId?: number,
-  listParams?: { page?: number; limit?: number; search?: string },
+  listParams?: { page?: number; limit?: number; search?: string; streamId?: number },
 ): Promise<CertificateTemplate> {
   const response = await api.get("/admin/certification/template", {
     params: compactRequestParams({
@@ -76,6 +76,7 @@ export async function getCertificateTemplate(
       page: listParams?.page ?? 1,
       limit: listParams?.limit ?? (programId != null ? 100 : 500),
       search: listParams?.search,
+      streamId: listParams?.streamId,
     } as Record<string, string | number | boolean | undefined | null>),
   });
   const result = unwrapData<unknown>(response);
@@ -113,10 +114,12 @@ export async function uploadCertificateTemplate(
     additionalText?: string;
     isActive?: boolean;
   },
+  streamId?: number | null,
 ): Promise<void> {
   const form = new FormData();
   form.append("file", file);
   form.append("programId", String(programId));
+  if (streamId != null) form.append("streamId", String(streamId));
   if (data) form.append("data", JSON.stringify(data));
   await api.post("/admin/certification/template/upload", form, {
     headers: { "Content-Type": "multipart/form-data" },
