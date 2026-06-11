@@ -53,8 +53,6 @@ interface CertificateTemplateEditorProps {
     event: React.ChangeEvent<HTMLInputElement>,
   ) => void;
   pdfContainerRef: React.RefObject<HTMLDivElement | null>;
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
-  pdfToScreen: (value: number, isYAxis: boolean) => number;
   handleDragStart: (key: string, e: React.MouseEvent) => void;
   selectedFieldKey: string | null;
   setSelectedFieldKey: (value: string | null) => void;
@@ -80,8 +78,6 @@ export function CertificateTemplateEditor({
   handleDiscard,
   handleTemplateFileChange,
   pdfContainerRef,
-  canvasRef,
-  pdfToScreen,
   handleDragStart,
   selectedFieldKey,
   setSelectedFieldKey,
@@ -92,6 +88,7 @@ export function CertificateTemplateEditor({
   pdfScale,
 }: CertificateTemplateEditorProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const imgRef = React.useRef<HTMLImageElement | null>(null);
   const fields = fieldCoordinates ? Object.entries(fieldCoordinates) : [];
   const selectedField =
     selectedFieldKey && fieldCoordinates
@@ -102,12 +99,11 @@ export function CertificateTemplateEditor({
   // "Preview filled" — render only the sample values, no editing chrome.
   const [previewMode, setPreviewMode] = React.useState(false);
 
-  // Bump this whenever the preview image's rendered dimensions change
-  // (initial load, src swap, viewport resize). The overlay boxes call
-  // pdfToScreen() during render, which reads getBoundingClientRect() —
-  // so we just need a state nonce to force a re-render after the image
-  // finishes laying out.
-  const [imageNonce, setImageNonce] = React.useState(0);
+  // Rendered width of the preview image, tracked by a ResizeObserver so the
+  // in-box font preview rescales whenever the layout changes for any reason
+  // (initial paint, sidebar mount, breakpoint switch, window resize). The
+  // boxes themselves are percentage-positioned and never need recomputing.
+  const [imgWidth, setImgWidth] = React.useState(0);
 
   // Default the selected field to the first one once data loads.
   React.useEffect(() => {
@@ -116,27 +112,25 @@ export function CertificateTemplateEditor({
     }
   }, [selectedFieldKey, fields, setSelectedFieldKey]);
 
-  // Reset the nonce when the image src changes so pdfToScreen recomputes
-  // against the new image once it loads.
   React.useEffect(() => {
-    setImageNonce(0);
-  }, [templateImageUrl]);
-
-  // Recalculate overlay positions on viewport resize (image is responsive).
-  React.useEffect(() => {
-    if (!templateImageUrl) return;
-    const handleResize = () => setImageNonce((n) => n + 1);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    const img = imgRef.current;
+    if (!img || !templateImageUrl) {
+      setImgWidth(0);
+      return;
+    }
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setImgWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(img);
+    return () => observer.disconnect();
   }, [templateImageUrl]);
 
   const triggerFileSelect = () => fileInputRef.current?.click();
 
   // Screen pixels per PDF point at the current image size.
-  const screenScale = Math.max(
-    pdfToScreen(1, false) - pdfToScreen(0, false),
-    0.01,
-  );
+  const screenScale = imgWidth > 0 ? imgWidth / pdfScale.width : 0;
 
   const pageSizeLabel = `${Math.round(pdfScale.width * PT_TO_MM)} × ${Math.round(
     pdfScale.height * PT_TO_MM,
@@ -297,18 +291,13 @@ export function CertificateTemplateEditor({
                 className="relative w-full overflow-auto bg-card"
                 style={{ minHeight: "500px" }}
               >
-                <canvas
-                  ref={canvasRef}
-                  className="hidden"
-                  style={{ display: "none" }}
-                />
                 <div className="relative inline-block w-full">
                   {templateImageUrl ? (
                     <img
+                      ref={imgRef}
                       src={templateImageUrl}
                       alt="Template preview"
                       className="block h-auto w-full"
-                      onLoad={() => setImageNonce((n) => n + 1)}
                     />
                   ) : (
                     <div className="flex h-full min-h-[500px] items-center justify-center px-6">
@@ -317,43 +306,50 @@ export function CertificateTemplateEditor({
                       </p>
                     </div>
                   )}
-                  {fieldCoordinates && templateImageUrl && imageNonce > 0 ? (
+                  {fieldCoordinates && templateImageUrl ? (
                     <div className="pointer-events-none absolute inset-0">
                       {Object.entries(fieldCoordinates).map(([key, coord]) => {
                         const r = coord.rect;
                         if (!r || r.length < 4) return null;
                         if (coord.hidden) return null;
-                        // r = [x1, yBottom, x2, yTop] in PDF points
-                        // (bottom-left origin) — the screen top edge maps
-                        // from r[3], not r[1].
-                        const left = pdfToScreen(r[0], false);
-                        const top = pdfToScreen(r[3], true);
-                        const width = pdfToScreen(r[2], false) - left;
-                        const height = pdfToScreen(r[1], true) - top;
+                        // r = [x1, yBottom, x2, yTop] in PDF points with a
+                        // bottom-left origin. Boxes are positioned as
+                        // percentages of the page so they track the image
+                        // through every layout/zoom change.
+                        const leftPct = (r[0] / pdfScale.width) * 100;
+                        const topPct =
+                          ((pdfScale.height - r[3]) / pdfScale.height) * 100;
+                        const widthPct =
+                          ((r[2] - r[0]) / pdfScale.width) * 100;
+                        const heightPct =
+                          ((r[3] - r[1]) / pdfScale.height) * 100;
                         const isSelected = selectedFieldKey === key;
                         const def = getFieldDef(key);
                         const sample = def?.sample ?? coord.label ?? key;
                         const isSignature = Boolean(def?.signature);
 
-                        const previewText = isSignature ? (
-                          <span
-                            className="flex h-full w-full items-center justify-center whitespace-nowrap text-gray-500"
-                            style={{
-                              fontFamily: "'Segoe Script', cursive",
-                              fontSize: `${14 * screenScale}px`,
-                              lineHeight: 1,
-                            }}
-                          >
-                            {sample}
-                          </span>
-                        ) : (
-                          <span
-                            className="flex h-full w-full items-center justify-center whitespace-nowrap text-gray-900"
-                            style={previewTextStyle(coord)}
-                          >
-                            {sample}
-                          </span>
-                        );
+                        const previewText =
+                          screenScale > 0 ? (
+                            isSignature ? (
+                              <span
+                                className="flex h-full w-full items-center justify-center whitespace-nowrap text-gray-500"
+                                style={{
+                                  fontFamily: "'Segoe Script', cursive",
+                                  fontSize: `${14 * screenScale}px`,
+                                  lineHeight: 1,
+                                }}
+                              >
+                                {sample}
+                              </span>
+                            ) : (
+                              <span
+                                className="flex h-full w-full items-center justify-center whitespace-nowrap text-gray-900"
+                                style={previewTextStyle(coord)}
+                              >
+                                {sample}
+                              </span>
+                            )
+                          ) : null;
 
                         if (previewMode) {
                           return (
@@ -361,10 +357,10 @@ export function CertificateTemplateEditor({
                               key={key}
                               className="absolute"
                               style={{
-                                left: `${left}px`,
-                                top: `${top}px`,
-                                width: `${width}px`,
-                                height: `${height}px`,
+                                left: `${leftPct}%`,
+                                top: `${topPct}%`,
+                                width: `${widthPct}%`,
+                                height: `${heightPct}%`,
                               }}
                             >
                               {previewText}
@@ -383,10 +379,10 @@ export function CertificateTemplateEditor({
                                   : "border-primary/40 bg-primary/5 pointer-events-auto"
                             } ${isEditMode ? "cursor-move" : "cursor-pointer"}`}
                             style={{
-                              left: `${left}px`,
-                              top: `${top}px`,
-                              width: `${width}px`,
-                              height: `${height}px`,
+                              left: `${leftPct}%`,
+                              top: `${topPct}%`,
+                              width: `${widthPct}%`,
+                              height: `${heightPct}%`,
                             }}
                             onMouseDown={(e) => {
                               setSelectedFieldKey(key);

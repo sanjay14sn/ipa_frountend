@@ -117,7 +117,7 @@ export function CertificateTemplateSection({
     scale: 1,
   });
   const pdfContainerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pdfRenderSeqRef = useRef(0);
   const loadedForRef = useRef(false);
 
   // Lazy-load template when tab first becomes active
@@ -128,8 +128,15 @@ export function CertificateTemplateSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive]);
 
-  // Reset editor state and reload when stream selection changes
+  // Reset editor state and reload when stream selection changes. Skips the
+  // initial mount run — otherwise this fires alongside the isActive effect
+  // and two concurrent loads race the PDF preview render.
+  const streamEffectRanRef = useRef(false);
   useEffect(() => {
+    if (!streamEffectRanRef.current) {
+      streamEffectRanRef.current = true;
+      return;
+    }
     if (!isActive) return;
     setTemplateFile(null);
     setTemplatePreviewUrl(null);
@@ -458,15 +465,14 @@ export function CertificateTemplateSection({
     document.addEventListener("mouseup", handleMouseUp);
   };
 
-  // Convert PDF to image when preview URL changes
+  // Convert PDF to image when preview URL changes. Each run renders into its
+  // own canvas and checks the sequence token before committing state — two
+  // overlapping runs sharing one canvas corrupts the pdf.js transform
+  // (vertically flipped output) and publishes a stale image size.
   useEffect(() => {
+    const seq = ++pdfRenderSeqRef.current;
     const loadPdfAsImage = async () => {
-      if (
-        !templatePreviewUrl ||
-        !canvasRef.current ||
-        typeof window === "undefined"
-      )
-        return;
+      if (!templatePreviewUrl || typeof window === "undefined") return;
 
       try {
         let pdfjsLib = window.pdfjsLib;
@@ -506,7 +512,7 @@ export function CertificateTemplateSection({
         });
 
         const viewport = page.getViewport({ scale: 2.0 });
-        const canvas = canvasRef.current;
+        const canvas = document.createElement("canvas");
         const context = canvas.getContext("2d");
 
         if (!context) return;
@@ -515,6 +521,9 @@ export function CertificateTemplateSection({
         canvas.width = viewport.width;
 
         await page.render({ canvasContext: context, viewport }).promise;
+
+        // A newer render started while this one was in flight — drop it.
+        if (seq !== pdfRenderSeqRef.current) return;
 
         setTemplateImageUrl(canvas.toDataURL("image/png"));
         setPdfScale({ width: pdfWidth, height: pdfHeight, scale: 2.0 });
@@ -531,17 +540,6 @@ export function CertificateTemplateSection({
 
     void loadPdfAsImage();
   }, [templatePreviewUrl]);
-
-  // Update scale on window resize
-  useEffect(() => {
-    const handleResize = () => {
-      if (templateImageUrl && pdfContainerRef.current) {
-        setPdfScale((prev) => ({ ...prev }));
-      }
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [templateImageUrl]);
 
   if (!isActive) {
     return (
@@ -597,8 +595,6 @@ export function CertificateTemplateSection({
         handleDiscard={handleDiscard}
         handleTemplateFileChange={handleTemplateFileChange}
         pdfContainerRef={pdfContainerRef}
-        canvasRef={canvasRef}
-        pdfToScreen={pdfToScreen}
         handleDragStart={handleDragStart}
         selectedFieldKey={selectedFieldKey}
         setSelectedFieldKey={setSelectedFieldKey}
