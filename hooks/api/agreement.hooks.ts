@@ -9,6 +9,7 @@ import {
   getAgreementMine,
   waiveReceivableItem,
   updateReceivableItemDueDate,
+  recordReceivablePayment,
   type AgreementRecord,
   type AgreementListParams,
 } from "@/services/agreement.service";
@@ -117,6 +118,32 @@ export function useUpdateReceivableDueDateMutation(agreementId: number) {
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error, "Failed to update due date"));
+    },
+  });
+}
+
+export function useRecordReceivablePaymentMutation(agreementId: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      itemId,
+      paidAt,
+      mode,
+      reference,
+    }: {
+      itemId: number;
+      paidAt: string;
+      mode: string;
+      reference?: string;
+    }) => recordReceivablePayment(itemId, { paidAt, mode, reference }),
+    onSuccess: async () => {
+      await client.invalidateQueries({
+        queryKey: queryKeys.agreements.detail(agreementId),
+      });
+      toast.success("Payment recorded");
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error, "Failed to record payment"));
     },
   });
 }

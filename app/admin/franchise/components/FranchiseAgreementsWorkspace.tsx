@@ -13,7 +13,11 @@ import { EmiTimeline } from "@/components/receivables/EmiTimeline";
 import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
 import { AgreementKitItemsDialog } from "./AgreementKitItemsDialog";
 import { EditDueDateDialog } from "./EditDueDateDialog";
-import { useUpdateReceivableDueDateMutation } from "@/hooks/api/agreement.hooks";
+import { RecordReceivablePaymentDialog } from "./RecordReceivablePaymentDialog";
+import {
+  useUpdateReceivableDueDateMutation,
+  useRecordReceivablePaymentMutation,
+} from "@/hooks/api/agreement.hooks";
 import { formatDate } from "@/lib/date-utils";
 import { formatRupees } from "@/lib/currency-utils";
 
@@ -98,6 +102,8 @@ export function FranchiseAgreementsWorkspace({
   const [kitDialogOpen, setKitDialogOpen] = useState(false);
   const [editDueDateItem, setEditDueDateItem] =
     useState<ReceivableSummaryItem | null>(null);
+  const [recordPaymentItem, setRecordPaymentItem] =
+    useState<ReceivableSummaryItem | null>(null);
 
   const resolvedActiveIdForMutation =
     sortedAgreements.find((agreement) => String(agreement.id) === activeAgreementId)
@@ -105,6 +111,9 @@ export function FranchiseAgreementsWorkspace({
 
   const { mutateAsync: updateDueDate, isPending: isDueDatePending } =
     useUpdateReceivableDueDateMutation(resolvedActiveIdForMutation);
+
+  const { mutateAsync: recordPayment, isPending: recordingPayment } =
+    useRecordReceivablePaymentMutation(resolvedActiveIdForMutation);
 
   if (sortedAgreements.length === 0) {
     return <DetailMessage>No agreements on file.</DetailMessage>;
@@ -194,6 +203,7 @@ export function FranchiseAgreementsWorkspace({
                   agreement.id ? `Agreement #${agreement.id}` : null
                 }
                 onEditDueDate={setEditDueDateItem}
+                onRecordPayment={setRecordPaymentItem}
               />
             </div>
           </TabsContent>
@@ -218,6 +228,20 @@ export function FranchiseAgreementsWorkspace({
           setEditDueDateItem(null);
         }}
         isSubmitting={isDueDatePending}
+      />
+
+      <RecordReceivablePaymentDialog
+        item={recordPaymentItem}
+        open={!!recordPaymentItem}
+        onOpenChange={(v) => {
+          if (!v) setRecordPaymentItem(null);
+        }}
+        onSubmit={async (data) => {
+          if (!recordPaymentItem) return;
+          await recordPayment({ itemId: recordPaymentItem.receivableItemId, ...data });
+          setRecordPaymentItem(null);
+        }}
+        isSubmitting={recordingPayment}
       />
     </>
   );

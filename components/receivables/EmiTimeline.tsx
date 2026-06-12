@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { format, isToday, parseISO } from "date-fns";
 import {
+  Banknote,
   CalendarDays,
   Check,
   ChevronLeft,
@@ -46,6 +47,11 @@ export interface EmiTimelineProps {
    * unpaid, non-waived items. Admin-only — omit on franchisee pages.
    */
   onEditDueDate?: (item: ReceivableSummaryItem) => void;
+  /**
+   * When provided, renders a banknote button on unpaid, non-waived items to
+   * record an offline payment. Admin-only — omit on franchisee pages.
+   */
+  onRecordPayment?: (item: ReceivableSummaryItem) => void;
 }
 
 function isFullInstallmentSummary(
@@ -131,12 +137,14 @@ function TimelineStop({
   isFirst,
   isLast,
   onEditDueDate,
+  onRecordPayment,
 }: {
   item: ReceivableSummaryItem;
   gstFranchiseFee: boolean | null | undefined;
   isFirst: boolean;
   isLast: boolean;
   onEditDueDate?: (item: ReceivableSummaryItem) => void;
+  onRecordPayment?: (item: ReceivableSummaryItem) => void;
 }) {
   // Prefer the item's own GST flag; fall back to the parent agreement's.
   const itemInclusive = item.isGstInclusive ?? (gstFranchiseFee === true);
@@ -193,6 +201,21 @@ function TimelineStop({
               <Pencil className="h-3 w-3" />
             </Button>
           ) : null}
+          {onRecordPayment &&
+            !item.paidAt &&
+            item.status !== "paid" &&
+            item.status !== "waived" ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Record payment"
+              className="h-4 w-4 shrink-0 text-muted-foreground hover:text-foreground"
+              onClick={() => onRecordPayment(item)}
+            >
+              <Banknote className="h-3 w-3" />
+            </Button>
+          ) : null}
         </div>
         <p className="mt-1 text-lg font-semibold tabular-nums text-card-foreground">
           {formatRupees(payable)}
@@ -226,6 +249,7 @@ export function EmiTimeline({
   hideSummaryRow = false,
   className,
   onEditDueDate,
+  onRecordPayment,
 }: EmiTimelineProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -419,6 +443,7 @@ export function EmiTimeline({
                   isFirst={idx === 0}
                   isLast={idx === items.length - 1}
                   onEditDueDate={onEditDueDate}
+                  onRecordPayment={onRecordPayment}
                 />
               ))}
             </div>

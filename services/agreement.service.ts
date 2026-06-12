@@ -650,6 +650,13 @@ export async function updateReceivableItemDueDate(
   await api.patch(`/admin/receivables/item/${itemId}/due-date`, { dueAt });
 }
 
+export async function recordReceivablePayment(
+  itemId: number,
+  body: { paidAt: string; mode: string; reference?: string },
+): Promise<void> {
+  await api.post(`/admin/receivables/item/${itemId}/record-payment`, body);
+}
+
 /** One row in the agreement switcher feed (mirrors backend `AgreementSwitcherItem`). */
 export interface AgreementSwitcherItem {
   kind: "agreement" | "request";
