@@ -131,7 +131,7 @@ function TimelineStop({
   isLast: boolean;
 }) {
   // Prefer the item's own GST flag; fall back to the parent agreement's.
-  const itemInclusive = item.isGstInclusive ?? (gstFranchiseFee !== false);
+  const itemInclusive = item.isGstInclusive ?? (gstFranchiseFee === true);
   const principal = item.principalAmount ?? item.amount;
   const gst =
     item.gstAmount ??
