@@ -185,6 +185,8 @@ export function CreateFranchiseDialog({
             }
             if (!row.paidAt) {
               newErrors[`paid-${programId}-${idx}-paidAt`] = "Date required";
+            } else if (new Date(row.paidAt) > new Date()) {
+              newErrors[`paid-${programId}-${idx}-paidAt`] = "Payment date cannot be in the future";
             }
           });
           if (
