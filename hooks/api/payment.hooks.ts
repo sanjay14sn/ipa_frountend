@@ -22,6 +22,8 @@ export interface PaymentListParams {
   sortBy?: string;
   sortOrder?: "ASC" | "DESC";
   franchiseId?: string | null;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export function useAdminPaymentsPaginated(params: PaymentListParams) {

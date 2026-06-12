@@ -367,6 +367,7 @@ export function CreateFranchiseDialog({
         },
       );
 
+      // Amounts are NET principal; backend grosses up GST on payment rows (RCV-1).
       const payload: SetupExistingFranchisePayload = {
         franchisee:
           franchiseeMode === "existing"

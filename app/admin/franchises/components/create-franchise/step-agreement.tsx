@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 import { formatRupees } from "@/lib/currency-utils";
+import { getFranchiseFeePayable, GST_RATE_LABEL } from "@/lib/gst";
 import type { Program } from "@/services/program.service";
 import type { PaymentMode } from "@/services/franchisee.service";
 import type { ProgramPayroll, PaidPaymentRow } from "./types";
@@ -51,6 +52,7 @@ interface PaidPaymentEditorProps {
   amountError?: string;
   paidAtError?: string;
   amountMax?: number;
+  gstExclusive?: boolean;
   onChange: (next: PaidPaymentRow) => void;
   onRemove: () => void;
 }
@@ -60,6 +62,7 @@ function PaidPaymentEditor({
   amountError,
   paidAtError,
   amountMax,
+  gstExclusive,
   onChange,
   onRemove,
 }: PaidPaymentEditorProps) {
@@ -88,6 +91,11 @@ function PaidPaymentEditor({
         {!amountError && amountMax != null && amountMax > 0 && row.amount > 0 && row.amount === amountMax && (
           <p className="text-[11px] text-muted-foreground">
             Capped at remaining balance
+          </p>
+        )}
+        {!amountError && gstExclusive && (
+          <p className="text-[11px] text-muted-foreground">
+            Enter the amount excluding GST
           </p>
         )}
       </div>
@@ -176,8 +184,35 @@ function PaidUnpaidSection({
     : 1;
   const perInstallment = unpaidAmount > 0 ? unpaidAmount / splitCount : 0;
 
+  // GST-reconciled gross amounts for display only — net values are sent to the backend.
+  const inc = payroll.gstFranchiseFee === true;
+  const gstExclusive = !inc;
+  const feeB    = getFranchiseFeePayable(franchiseFee, inc);
+  const paidB   = getFranchiseFeePayable(paidSum, inc);
+  const unpaidB = getFranchiseFeePayable(unpaidAmount, inc);
+  const perB    = getFranchiseFeePayable(perInstallment, inc);
+
   return (
     <div className="mt-4 space-y-4 border-t border-border pt-4">
+      {/* Total payable summary */}
+      {franchiseFee > 0 && (
+        <div className="flex items-start justify-between rounded-lg border border-border bg-accent/20 px-4 py-3">
+          <span className="text-sm font-medium text-card-foreground">
+            Total payable
+          </span>
+          <div className="text-right">
+            <span className="text-sm font-semibold text-card-foreground">
+              {formatRupees(feeB.payable)}
+            </span>
+            {gstExclusive && (
+              <p className="text-[11px] text-muted-foreground">
+                {formatRupees(feeB.base)} + {formatRupees(feeB.gst)} {GST_RATE_LABEL}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       <h3 className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
         <CreditCard className="h-4 w-4" />
         Received payments
@@ -237,6 +272,7 @@ function PaidUnpaidSection({
                   amountError={errors[`paid-${programId}-${idx}-amount`]}
                   paidAtError={errors[`paid-${programId}-${idx}-paidAt`]}
                   amountMax={rowMax}
+                  gstExclusive={gstExclusive}
                   onChange={(next) => {
                     const requested = Number(next.amount) || 0;
                     const clamped =
@@ -260,11 +296,18 @@ function PaidUnpaidSection({
           </div>
         )}
 
-        <div className="flex items-center justify-between border-t border-primary/10 pt-2 text-sm">
+        <div className="flex items-start justify-between border-t border-primary/10 pt-2 text-sm">
           <span className="text-muted-foreground">Total paid</span>
-          <span className="font-medium text-card-foreground">
-            {formatRupees(paidSum)}
-          </span>
+          <div className="text-right">
+            <span className="font-medium text-card-foreground">
+              {formatRupees(paidB.payable)}
+            </span>
+            {gstExclusive && paidSum > 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                {formatRupees(paidB.base)} + {formatRupees(paidB.gst)} {GST_RATE_LABEL}
+              </p>
+            )}
+          </div>
         </div>
         {errors[`paid-${programId}`] && (
           <p className="text-xs text-destructive">
@@ -275,13 +318,20 @@ function PaidUnpaidSection({
 
       {/* Unpaid subcard */}
       <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-medium text-card-foreground">
             Unpaid balance
           </p>
-          <span className="text-sm font-semibold text-card-foreground">
-            {formatRupees(unpaidAmount)}
-          </span>
+          <div className="text-right">
+            <span className="text-sm font-semibold text-card-foreground">
+              {formatRupees(unpaidB.payable)}
+            </span>
+            {gstExclusive && unpaidAmount > 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                {formatRupees(unpaidB.base)} + {formatRupees(unpaidB.gst)} {GST_RATE_LABEL}
+              </p>
+            )}
+          </div>
         </div>
 
         {unpaidAmount === 0 ? (
@@ -381,8 +431,8 @@ function PaidUnpaidSection({
 
             <p className="rounded-lg border border-dashed border-border bg-background px-4 py-3 text-sm text-card-foreground">
               {splitCount > 1
-                ? `${splitCount} receivables of ${formatRupees(perInstallment)} each, starting ${formatDueDateDisplay(payroll.unpaidFirstDueDate)}`
-                : `1 receivable of ${formatRupees(unpaidAmount)} due ${formatDueDateDisplay(payroll.unpaidFirstDueDate)}`}
+                ? `${splitCount} receivables of ${formatRupees(perB.payable)}${gstExclusive ? ` (incl. ${GST_RATE_LABEL})` : ""} each, starting ${formatDueDateDisplay(payroll.unpaidFirstDueDate)}`
+                : `1 receivable of ${formatRupees(unpaidB.payable)}${gstExclusive ? ` (incl. ${GST_RATE_LABEL})` : ""} due ${formatDueDateDisplay(payroll.unpaidFirstDueDate)}`}
             </p>
           </>
         )}
