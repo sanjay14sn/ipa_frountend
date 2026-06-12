@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   getAgreementsAdmin,
   getAgreementsMine,
@@ -12,6 +13,7 @@ import {
 } from "@/services/agreement.service";
 import { queryKeys } from "./query-keys";
 import { getQueryClientBridge } from "./query-client-bridge";
+import { extractErrorMessage } from "@/lib/error-utils";
 
 function mineKey(
   franchiseId: string | undefined,
@@ -93,6 +95,10 @@ export function useWaiveReceivableItemMutation(agreementId: number) {
       await client.invalidateQueries({
         queryKey: queryKeys.agreements.detail(agreementId),
       });
+      toast.success("Receivable waived");
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error, "Failed to waive receivable"));
     },
   });
 }
