@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { format, isToday, parseISO } from "date-fns";
 import {
   Banknote,
+  Bell,
   CalendarDays,
   Check,
   ChevronLeft,
@@ -52,6 +53,11 @@ export interface EmiTimelineProps {
    * record an offline payment. Admin-only — omit on franchisee pages.
    */
   onRecordPayment?: (item: ReceivableSummaryItem) => void;
+  /**
+   * When provided, renders a bell button on due/overdue items to send a
+   * manual installment reminder. Admin-only — omit on franchisee pages.
+   */
+  onSendReminder?: (item: ReceivableSummaryItem) => void;
 }
 
 function isFullInstallmentSummary(
@@ -138,6 +144,7 @@ function TimelineStop({
   isLast,
   onEditDueDate,
   onRecordPayment,
+  onSendReminder,
 }: {
   item: ReceivableSummaryItem;
   gstFranchiseFee: boolean | null | undefined;
@@ -145,6 +152,7 @@ function TimelineStop({
   isLast: boolean;
   onEditDueDate?: (item: ReceivableSummaryItem) => void;
   onRecordPayment?: (item: ReceivableSummaryItem) => void;
+  onSendReminder?: (item: ReceivableSummaryItem) => void;
 }) {
   // Prefer the item's own GST flag; fall back to the parent agreement's.
   const itemInclusive = item.isGstInclusive ?? (gstFranchiseFee === true);
@@ -216,6 +224,23 @@ function TimelineStop({
               <Banknote className="h-3 w-3" />
             </Button>
           ) : null}
+          {onSendReminder &&
+            !item.paidAt &&
+            item.status !== "paid" &&
+            item.status !== "waived" &&
+            item.dueAt != null &&
+            (item.status === "due" || item.status === "overdue") ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Send reminder"
+              className="h-4 w-4 shrink-0 text-muted-foreground hover:text-foreground"
+              onClick={() => onSendReminder(item)}
+            >
+              <Bell className="h-3 w-3" />
+            </Button>
+          ) : null}
         </div>
         <p className="mt-1 text-lg font-semibold tabular-nums text-card-foreground">
           {formatRupees(payable)}
@@ -250,6 +275,7 @@ export function EmiTimeline({
   className,
   onEditDueDate,
   onRecordPayment,
+  onSendReminder,
 }: EmiTimelineProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -444,6 +470,7 @@ export function EmiTimeline({
                   isLast={idx === items.length - 1}
                   onEditDueDate={onEditDueDate}
                   onRecordPayment={onRecordPayment}
+                  onSendReminder={onSendReminder}
                 />
               ))}
             </div>

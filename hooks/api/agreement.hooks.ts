@@ -10,6 +10,7 @@ import {
   waiveReceivableItem,
   updateReceivableItemDueDate,
   recordReceivablePayment,
+  sendReceivableReminder,
   type AgreementRecord,
   type AgreementListParams,
 } from "@/services/agreement.service";
@@ -144,6 +145,19 @@ export function useRecordReceivablePaymentMutation(agreementId: number) {
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error, "Failed to record payment"));
+    },
+  });
+}
+
+export function useSendReceivableReminderMutation(agreementId: number) {
+  return useMutation({
+    mutationFn: ({ itemId }: { itemId: number }) =>
+      sendReceivableReminder(itemId),
+    onSuccess: () => {
+      toast.success("Reminder sent");
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error, "Failed to send reminder"));
     },
   });
 }

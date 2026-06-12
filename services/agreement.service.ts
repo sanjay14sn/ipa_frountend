@@ -657,6 +657,10 @@ export async function recordReceivablePayment(
   await api.post(`/admin/receivables/item/${itemId}/record-payment`, body);
 }
 
+export async function sendReceivableReminder(itemId: number): Promise<void> {
+  await api.post(`/admin/receivables/item/${itemId}/remind`);
+}
+
 /** One row in the agreement switcher feed (mirrors backend `AgreementSwitcherItem`). */
 export interface AgreementSwitcherItem {
   kind: "agreement" | "request";

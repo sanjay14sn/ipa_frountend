@@ -17,6 +17,7 @@ import { RecordReceivablePaymentDialog } from "./RecordReceivablePaymentDialog";
 import {
   useUpdateReceivableDueDateMutation,
   useRecordReceivablePaymentMutation,
+  useSendReceivableReminderMutation,
 } from "@/hooks/api/agreement.hooks";
 import { formatDate } from "@/lib/date-utils";
 import { formatRupees } from "@/lib/currency-utils";
@@ -115,6 +116,9 @@ export function FranchiseAgreementsWorkspace({
   const { mutateAsync: recordPayment, isPending: recordingPayment } =
     useRecordReceivablePaymentMutation(resolvedActiveIdForMutation);
 
+  const { mutate: sendReminder } =
+    useSendReceivableReminderMutation(resolvedActiveIdForMutation);
+
   if (sortedAgreements.length === 0) {
     return <DetailMessage>No agreements on file.</DetailMessage>;
   }
@@ -204,6 +208,9 @@ export function FranchiseAgreementsWorkspace({
                 }
                 onEditDueDate={setEditDueDateItem}
                 onRecordPayment={setRecordPaymentItem}
+                onSendReminder={(item) =>
+                  sendReminder({ itemId: item.receivableItemId })
+                }
               />
             </div>
           </TabsContent>
