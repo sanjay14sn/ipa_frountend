@@ -47,6 +47,38 @@ export function formatDateTime(value?: string | Date | null): string {
 }
 
 /**
+ * Formats a date to a short human-readable string in `D Mon YYYY` style
+ * (e.g. "12 Jun 2026") — numeric day (no leading zero).
+ *
+ * Returns "-" for falsy / unparseable input.
+ */
+export function formatShortDate(date: Date | string | null | undefined): string {
+  if (!date) return "-";
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return String(date);
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/**
+ * Formats a date to a compact uppercase timeline label in `D MON` style
+ * (e.g. "12 JUN") — intended for narrow timeline display.
+ *
+ * Returns "-" for falsy / unparseable input.
+ */
+export function formatTimelineDate(date: Date | string | null | undefined): string {
+  if (!date) return "-";
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return String(date);
+  return d
+    .toLocaleDateString("en-IN", { day: "numeric", month: "short" })
+    .toUpperCase();
+}
+
+/**
  * Calculates age in full years from a date-of-birth string.
  *
  * Returns 0 for falsy / unparseable input.

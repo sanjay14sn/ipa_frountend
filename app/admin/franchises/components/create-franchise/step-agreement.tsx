@@ -17,6 +17,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
+import { formatRupees } from "@/lib/currency-utils";
 import type { Program } from "@/services/program.service";
 import type { PaymentMode } from "@/services/franchisee.service";
 import type { ProgramPayroll, PaidPaymentRow } from "./types";
@@ -32,13 +33,6 @@ function emptyPaidRow(): PaidPaymentRow {
     mode: "cash",
     reference: "",
   };
-}
-
-function formatRupees(n: number): string {
-  return n.toLocaleString("en-IN", {
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 0,
-  });
 }
 
 function formatDueDateDisplay(iso: string): string {
@@ -269,7 +263,7 @@ function PaidUnpaidSection({
         <div className="flex items-center justify-between border-t border-primary/10 pt-2 text-sm">
           <span className="text-muted-foreground">Total paid</span>
           <span className="font-medium text-card-foreground">
-            ₹{formatRupees(paidSum)}
+            {formatRupees(paidSum)}
           </span>
         </div>
         {errors[`paid-${programId}`] && (
@@ -286,7 +280,7 @@ function PaidUnpaidSection({
             Unpaid balance
           </p>
           <span className="text-sm font-semibold text-card-foreground">
-            ₹{formatRupees(unpaidAmount)}
+            {formatRupees(unpaidAmount)}
           </span>
         </div>
 
@@ -387,8 +381,8 @@ function PaidUnpaidSection({
 
             <p className="rounded-lg border border-dashed border-border bg-background px-4 py-3 text-sm text-card-foreground">
               {splitCount > 1
-                ? `${splitCount} receivables of ₹${formatRupees(perInstallment)} each, starting ${formatDueDateDisplay(payroll.unpaidFirstDueDate)}`
-                : `1 receivable of ₹${formatRupees(unpaidAmount)} due ${formatDueDateDisplay(payroll.unpaidFirstDueDate)}`}
+                ? `${splitCount} receivables of ${formatRupees(perInstallment)} each, starting ${formatDueDateDisplay(payroll.unpaidFirstDueDate)}`
+                : `1 receivable of ${formatRupees(unpaidAmount)} due ${formatDueDateDisplay(payroll.unpaidFirstDueDate)}`}
             </p>
           </>
         )}
