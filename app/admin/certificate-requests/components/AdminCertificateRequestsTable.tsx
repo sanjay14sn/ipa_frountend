@@ -5,6 +5,7 @@ import { DataTable, StatusBadge } from "@/components/shared";
 import type { DataTableColumn } from "@/components/shared";
 import type { CertificateFranchiseSummary } from "@/services/student.service";
 import { useAdminCertificateSummaries } from "@/hooks/api/student.hooks";
+import { usePaginatedListState } from "@/hooks/use-paginated-list-state";
 import FranchiseCertificateDetails from "./FranchiseCertificateDetails";
 
 interface AdminCertificateRequestsTableProps {
@@ -31,10 +32,12 @@ export default function AdminCertificateRequestsTable({
   );
 
   const summariesQuery = useAdminCertificateSummaries(requestParams);
-  const summaries = summariesQuery.data?.data ?? [];
-  const total = summariesQuery.data?.meta.total ?? 0;
-  const totalPages = summariesQuery.data?.meta.totalPages ?? 1;
-  const loading = summariesQuery.isLoading && !summariesQuery.data;
+  const {
+    rows: summaries,
+    total,
+    totalPages,
+    loading,
+  } = usePaginatedListState(summariesQuery);
 
   const columns: DataTableColumn<CertificateFranchiseSummary>[] = [
     {

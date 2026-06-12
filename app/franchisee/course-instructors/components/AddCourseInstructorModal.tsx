@@ -27,6 +27,8 @@ import {
   type StepDef,
 } from "@/components/shared/dialog";
 import { cn } from "@/lib/utils";
+import { makeFieldChangeHandler } from "@/lib/form-utils";
+import { useFormSteps } from "@/hooks/use-form-steps";
 import { sendClientLog } from "@/lib/client-telemetry";
 import { calculateAge } from "@/lib/date-utils";
 
@@ -77,7 +79,8 @@ export default function AddCourseInstructorModal({
   onOpenChange,
   onSuccess,
 }: AddCourseInstructorModalProps) {
-  const [currentStep, setCurrentStep] = useState(1);
+  const { currentStep, setCurrentStep, handleNext, handlePrevious } =
+    useFormSteps(FORM_STEPS.length, () => validateCurrentStep());
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -154,31 +157,11 @@ export default function AddCourseInstructorModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = () => {
-    if (validateCurrentStep()) {
-      setCurrentStep((prev) => Math.min(prev + 1, FORM_STEPS.length));
-    }
-  };
-
-  const handlePrevious = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
-  };
-
-  const handleInputChange = (field: string, value: string | boolean) => {
-    let convertedValue: any = value;
-    if (
-      (field === "programId" ||
-        field === "trainingLevelId" ||
-        field === "numberOfLevels") &&
-      typeof value === "string"
-    ) {
-      convertedValue = parseInt(value, 10) || 0;
-    }
-    setFormData((prev) => ({ ...prev, [field]: convertedValue }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
-    }
-  };
+  const handleInputChange = makeFieldChangeHandler(setFormData, errors, setErrors, [
+    "programId",
+    "trainingLevelId",
+    "numberOfLevels",
+  ]);
 
   const handleProgramSelectOpen = (open: boolean) => {
     if (open && programs.length === 0 && !loadingPrograms) {

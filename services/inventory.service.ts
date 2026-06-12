@@ -292,20 +292,27 @@ async function assignInventoryToProgramKit(
   return normalizeProgramKitRow(unwrapData(response));
 }
 
+async function bulkAssignInventory(
+  url: string,
+  items: Array<{ inventoryId: number; quantity?: number }>,
+): Promise<{ assigned: number; failed: number[] }> {
+  const response = await api.post(url, {
+    items: items.map((item) => ({
+      inventoryId: item.inventoryId,
+      ...(item.quantity !== undefined ? { defaultQuantity: item.quantity } : {}),
+    })),
+  });
+  return unwrapData(response) as { assigned: number; failed: number[] };
+}
+
 export async function bulkAssignInventoryToProgramKit(
   programId: number,
   items: Array<{ inventoryId: number; quantity?: number }>,
 ): Promise<{ assigned: number; failed: number[] }> {
-  const response = await api.post(
+  return bulkAssignInventory(
     `/inventory/program/${programId}/kit-items/bulk-assign`,
-    {
-      items: items.map((item) => ({
-        inventoryId: item.inventoryId,
-        ...(item.quantity !== undefined ? { defaultQuantity: item.quantity } : {}),
-      })),
-    },
+    items,
   );
-  return unwrapData(response) as { assigned: number; failed: number[] };
 }
 
 export async function updateProgramKitItem(
@@ -342,16 +349,7 @@ export async function bulkAssignInventoryToLevel(
   levelId: number,
   items: Array<{ inventoryId: number; quantity?: number }>,
 ): Promise<{ assigned: number; failed: number[] }> {
-  const response = await api.post(
-    `/inventory/level/${levelId}/items/bulk-assign`,
-    {
-      items: items.map((item) => ({
-        inventoryId: item.inventoryId,
-        ...(item.quantity !== undefined ? { defaultQuantity: item.quantity } : {}),
-      })),
-    },
-  );
-  return unwrapData(response) as { assigned: number; failed: number[] };
+  return bulkAssignInventory(`/inventory/level/${levelId}/items/bulk-assign`, items);
 }
 
 export async function unassignInventoryFromLevel(
@@ -376,16 +374,10 @@ export async function bulkAssignInventoryToTrainingLevel(
   trainingLevelId: number,
   items: Array<{ inventoryId: number; quantity?: number }>,
 ): Promise<{ assigned: number; failed: number[] }> {
-  const response = await api.post(
+  return bulkAssignInventory(
     `/inventory/training-level/${trainingLevelId}/items/bulk-assign`,
-    {
-      items: items.map((item) => ({
-        inventoryId: item.inventoryId,
-        ...(item.quantity !== undefined ? { defaultQuantity: item.quantity } : {}),
-      })),
-    },
+    items,
   );
-  return unwrapData(response) as { assigned: number; failed: number[] };
 }
 
 export async function unassignInventoryFromTrainingLevel(

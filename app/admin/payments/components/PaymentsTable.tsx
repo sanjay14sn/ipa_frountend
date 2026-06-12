@@ -14,6 +14,7 @@ import { DataTable, StatusBadge } from "@/components/shared";
 import type { DataTableColumn } from "@/components/shared";
 import type { FranchisePaymentSummary } from "@/services/payment.service";
 import { useAdminFranchisePaymentSummaries } from "@/hooks/api/payment.hooks";
+import { usePaginatedListState } from "@/hooks/use-paginated-list-state";
 import FranchisePaymentsDetails from "./FranchisePaymentsDetails";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
@@ -42,10 +43,12 @@ export default function PaymentsTable({ franchiseId }: PaymentsTableProps = {}) 
   );
 
   const summariesQuery = useAdminFranchisePaymentSummaries(queryParams);
-  const summaries = summariesQuery.data?.data ?? [];
-  const total = summariesQuery.data?.meta.total ?? 0;
-  const totalPages = summariesQuery.data?.meta.totalPages ?? 1;
-  const loading = summariesQuery.isLoading && !summariesQuery.data;
+  const {
+    rows: summaries,
+    total,
+    totalPages,
+    loading,
+  } = usePaginatedListState(summariesQuery);
 
   const columns: DataTableColumn<FranchisePaymentSummary>[] = [
     {

@@ -31,6 +31,8 @@ import {
 import { useCreateStudentWithRevalidation } from "@/hooks/api/student.hooks";
 import { useUser } from "@/context/user-context";
 import { sendClientLog } from "@/lib/client-telemetry";
+import { makeFieldChangeHandler } from "@/lib/form-utils";
+import { useFormSteps } from "@/hooks/use-form-steps";
 import {
   PersonalInfoFields,
   ParentInfoFields,
@@ -136,7 +138,8 @@ export default function AddStudentModal({
   onOpenChange,
   onSuccess,
 }: AddStudentModalProps) {
-  const [currentStep, setCurrentStep] = useState(1);
+  const { currentStep, setCurrentStep, handleNext, handlePrevious } =
+    useFormSteps(FORM_STEPS.length, () => validateCurrentStep());
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -287,39 +290,13 @@ export default function AddStudentModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = () => {
-    if (validateCurrentStep()) {
-      setCurrentStep((prev) => Math.min(prev + 1, FORM_STEPS.length));
-    }
-  };
-
-  const handlePrevious = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
-  };
-
-  const handleInputChange = (field: string, value: string | boolean) => {
-    let convertedValue: string | boolean | number = value;
-
-    if (
-      (field === "programId" ||
-        field === "streamId" ||
-        field === "levelId" ||
-        field === "previousLevelId" ||
-        field === "previousInstructorId") &&
-      typeof value === "string"
-    ) {
-      convertedValue = parseInt(value, 10) || 0;
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      [field]: convertedValue,
-    }));
-
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
-    }
-  };
+  const handleInputChange = makeFieldChangeHandler(setFormData, errors, setErrors, [
+    "programId",
+    "streamId",
+    "levelId",
+    "previousLevelId",
+    "previousInstructorId",
+  ]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

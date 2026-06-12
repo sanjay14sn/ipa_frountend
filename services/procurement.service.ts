@@ -216,6 +216,27 @@ function normalizeSupplierTerm(row: any): SupplierItemTerm {
   };
 }
 
+function normalizeLineInventoryItem(line: any) {
+  return line?.inventoryItem
+    ? {
+        id: Number(line.inventoryItem.id ?? 0),
+        name: String(line.inventoryItem.name ?? ""),
+        sku: String(line.inventoryItem.sku ?? ""),
+      }
+    : null;
+}
+
+function normalizeReceiptLine(line: any) {
+  return {
+    id: Number(line?.id ?? 0),
+    inventoryItemId: Number(line?.inventoryItemId ?? 0),
+    receivedQty: Number(line?.receivedQty ?? 0),
+    rejectedQty: Number(line?.rejectedQty ?? 0),
+    unitCost: Number(line?.unitCost ?? 0),
+    inventoryItem: normalizeLineInventoryItem(line),
+  };
+}
+
 function normalizePurchaseOrder(row: any): PurchaseOrderSummary {
   return {
     id: Number(row?.id ?? 0),
@@ -240,13 +261,7 @@ function normalizePurchaseOrder(row: any): PurchaseOrderSummary {
           orderedQty: Number(line?.orderedQty ?? 0),
           receivedQty: Number(line?.receivedQty ?? 0),
           unitCost: Number(line?.unitCost ?? 0),
-          inventoryItem: line?.inventoryItem
-            ? {
-                id: Number(line.inventoryItem.id ?? 0),
-                name: String(line.inventoryItem.name ?? ""),
-                sku: String(line.inventoryItem.sku ?? ""),
-              }
-            : null,
+          inventoryItem: normalizeLineInventoryItem(line),
         }))
       : [],
     receipts: Array.isArray(row?.receipts)
@@ -268,20 +283,7 @@ function normalizePurchaseOrder(row: any): PurchaseOrderSummary {
               }
             : null,
           lines: Array.isArray(receipt?.lines)
-            ? receipt.lines.map((line: any) => ({
-                id: Number(line?.id ?? 0),
-                inventoryItemId: Number(line?.inventoryItemId ?? 0),
-                receivedQty: Number(line?.receivedQty ?? 0),
-                rejectedQty: Number(line?.rejectedQty ?? 0),
-                unitCost: Number(line?.unitCost ?? 0),
-                inventoryItem: line?.inventoryItem
-                  ? {
-                      id: Number(line.inventoryItem.id ?? 0),
-                      name: String(line.inventoryItem.name ?? ""),
-                      sku: String(line.inventoryItem.sku ?? ""),
-                    }
-                  : null,
-              }))
+            ? receipt.lines.map(normalizeReceiptLine)
             : [],
         }))
       : [],
@@ -303,20 +305,7 @@ function normalizePurchaseReceipt(row: any): PurchaseReceiptSummary {
         }
       : null,
     lines: Array.isArray(row?.lines)
-      ? row.lines.map((line: any) => ({
-          id: Number(line?.id ?? 0),
-          inventoryItemId: Number(line?.inventoryItemId ?? 0),
-          receivedQty: Number(line?.receivedQty ?? 0),
-          rejectedQty: Number(line?.rejectedQty ?? 0),
-          unitCost: Number(line?.unitCost ?? 0),
-          inventoryItem: line?.inventoryItem
-            ? {
-                id: Number(line.inventoryItem.id ?? 0),
-                name: String(line.inventoryItem.name ?? ""),
-                sku: String(line.inventoryItem.sku ?? ""),
-              }
-            : null,
-        }))
+      ? row.lines.map(normalizeReceiptLine)
       : [],
   };
 }

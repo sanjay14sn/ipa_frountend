@@ -99,6 +99,35 @@ function defaultSourcingDraft(): SourcingDraft {
   };
 }
 
+function DraftNumberField({
+  label,
+  value,
+  step,
+  onValueChange,
+}: {
+  label: string;
+  value: number;
+  step?: string;
+  onValueChange: (value: number) => void;
+}) {
+  return (
+    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      <span className="w-12 shrink-0">{label}</span>
+      <Input
+        type="number"
+        min={0}
+        step={step}
+        className="h-7 w-full min-w-0 px-2 text-sm"
+        value={value || ""}
+        placeholder="0"
+        onChange={(e) =>
+          onValueChange(e.target.value === "" ? 0 : Number(e.target.value))
+        }
+      />
+    </label>
+  );
+}
+
 export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps) {
   const {
     mode,
@@ -366,71 +395,29 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                         }
                       />
                     </label>
-                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <span className="w-12 shrink-0">Cost</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        className="h-7 w-full min-w-0 px-2 text-sm"
-                        value={d.currentUnitCost || ""}
-                        placeholder="0"
-                        onChange={(e) =>
-                          patchDraft(id, {
-                            currentUnitCost:
-                              e.target.value === "" ? 0 : Number(e.target.value),
-                          })
-                        }
-                      />
-                    </label>
-                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <span className="w-12 shrink-0">Lead</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        className="h-7 w-full min-w-0 px-2 text-sm"
-                        value={d.leadTimeDays || ""}
-                        placeholder="0"
-                        onChange={(e) =>
-                          patchDraft(id, {
-                            leadTimeDays:
-                              e.target.value === "" ? 0 : Number(e.target.value),
-                          })
-                        }
-                      />
-                    </label>
-                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <span className="w-12 shrink-0">MOQ</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        className="h-7 w-full min-w-0 px-2 text-sm"
-                        value={d.moq || ""}
-                        placeholder="0"
-                        onChange={(e) =>
-                          patchDraft(id, {
-                            moq:
-                              e.target.value === "" ? 0 : Number(e.target.value),
-                          })
-                        }
-                      />
-                    </label>
-                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <span className="w-12 shrink-0">Pack</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        className="h-7 w-full min-w-0 px-2 text-sm"
-                        value={d.casePack || ""}
-                        placeholder="0"
-                        onChange={(e) =>
-                          patchDraft(id, {
-                            casePack:
-                              e.target.value === "" ? 0 : Number(e.target.value),
-                          })
-                        }
-                      />
-                    </label>
+                    <DraftNumberField
+                      label="Cost"
+                      step="0.01"
+                      value={d.currentUnitCost}
+                      onValueChange={(v) =>
+                        patchDraft(id, { currentUnitCost: v })
+                      }
+                    />
+                    <DraftNumberField
+                      label="Lead"
+                      value={d.leadTimeDays}
+                      onValueChange={(v) => patchDraft(id, { leadTimeDays: v })}
+                    />
+                    <DraftNumberField
+                      label="MOQ"
+                      value={d.moq}
+                      onValueChange={(v) => patchDraft(id, { moq: v })}
+                    />
+                    <DraftNumberField
+                      label="Pack"
+                      value={d.casePack}
+                      onValueChange={(v) => patchDraft(id, { casePack: v })}
+                    />
                   </div>
                   <ToggleField
                     variant="inline"

@@ -35,6 +35,60 @@ interface PayrollTermsDialogProps {
   extraContent?: ReactNode;
 }
 
+function RupeeField({
+  label,
+  field,
+  value,
+  onProgramChange,
+  gstField,
+  gstChecked,
+}: {
+  label: string;
+  field: keyof ProgramPayroll;
+  value: number;
+  onProgramChange: PayrollTermsDialogProps["onProgramChange"];
+  gstField?: keyof ProgramPayroll;
+  gstChecked?: boolean;
+}) {
+  const labelNode = (
+    <Label className="text-sm font-medium text-card-foreground">{label}</Label>
+  );
+  return (
+    <div className="space-y-2">
+      {gstField ? (
+        <div className="flex items-center gap-2">
+          {labelNode}
+          <label className="flex cursor-pointer items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5">
+            <input
+              type="checkbox"
+              checked={gstChecked}
+              onChange={(e) => onProgramChange(gstField, e.target.checked)}
+            />
+            <span className="text-xs text-primary">GST Inc.</span>
+          </label>
+        </div>
+      ) : (
+        labelNode
+      )}
+      <div className="relative">
+        <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="number"
+          value={value || ""}
+          onChange={(e) =>
+            onProgramChange(
+              field,
+              e.target.value === "" ? 0 : Number(e.target.value),
+            )
+          }
+          className="h-10 pl-10"
+          placeholder="0"
+        />
+      </div>
+    </div>
+  );
+}
+
 export function PayrollTermsDialog({
   open,
   onOpenChange,
@@ -90,198 +144,60 @@ export function PayrollTermsDialog({
 
               <CardContent className="p-4">
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  {/* Franchise Fee */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Label className="text-sm font-medium text-card-foreground">
-                        Franchise Fee
-                      </Label>
-                      <label className="flex cursor-pointer items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5">
-                        <input
-                          type="checkbox"
-                          checked={program.gstFranchiseFee}
-                          onChange={(e) =>
-                            onProgramChange("gstFranchiseFee", e.target.checked)
-                          }
-                        />
-                        <span className="text-xs text-primary">GST Inc.</span>
-                      </label>
-                    </div>
-                    <div className="relative">
-                      <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="number"
-                        value={program.franchiseFee || ""}
-                        onChange={(e) =>
-                          onProgramChange(
-                            "franchiseFee",
-                            e.target.value === "" ? 0 : Number(e.target.value),
-                          )
-                        }
-                        className="h-10 pl-10"
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
+                  <RupeeField
+                    label="Franchise Fee"
+                    field="franchiseFee"
+                    value={program.franchiseFee}
+                    onProgramChange={onProgramChange}
+                    gstField="gstFranchiseFee"
+                    gstChecked={program.gstFranchiseFee}
+                  />
 
-                  {/* Kit Cost */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-card-foreground">
-                      Kit Cost
-                    </Label>
-                    <div className="relative">
-                      <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="number"
-                        value={program.kitCost || ""}
-                        onChange={(e) =>
-                          onProgramChange(
-                            "kitCost",
-                            e.target.value === "" ? 0 : Number(e.target.value),
-                          )
-                        }
-                        className="h-10 pl-10"
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
+                  <RupeeField
+                    label="Kit Cost"
+                    field="kitCost"
+                    value={program.kitCost}
+                    onProgramChange={onProgramChange}
+                  />
 
-                  {/* Material Cost */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Label className="text-sm font-medium text-card-foreground">
-                        Material Cost
-                      </Label>
-                      <label className="flex cursor-pointer items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5">
-                        <input
-                          type="checkbox"
-                          checked={program.gstMaterialCost}
-                          onChange={(e) =>
-                            onProgramChange(
-                              "gstMaterialCost",
-                              e.target.checked,
-                            )
-                          }
-                        />
-                        <span className="text-xs text-primary">GST Inc.</span>
-                      </label>
-                    </div>
-                    <div className="relative">
-                      <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="number"
-                        value={program.materialCost || ""}
-                        onChange={(e) =>
-                          onProgramChange(
-                            "materialCost",
-                            e.target.value === "" ? 0 : Number(e.target.value),
-                          )
-                        }
-                        className="h-10 pl-10"
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
+                  <RupeeField
+                    label="Material Cost"
+                    field="materialCost"
+                    value={program.materialCost}
+                    onProgramChange={onProgramChange}
+                    gstField="gstMaterialCost"
+                    gstChecked={program.gstMaterialCost}
+                  />
 
-                  {/* Monthly Fee */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-card-foreground">
-                      Monthly Fee
-                    </Label>
-                    <div className="relative">
-                      <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="number"
-                        value={program.monthlyFee || ""}
-                        onChange={(e) =>
-                          onProgramChange(
-                            "monthlyFee",
-                            e.target.value === "" ? 0 : Number(e.target.value),
-                          )
-                        }
-                        className="h-10 pl-10"
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
+                  <RupeeField
+                    label="Monthly Fee"
+                    field="monthlyFee"
+                    value={program.monthlyFee}
+                    onProgramChange={onProgramChange}
+                  />
 
-                  {/* Royalty */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Label className="text-sm font-medium text-card-foreground">
-                        Royalty
-                      </Label>
-                      <label className="flex cursor-pointer items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5">
-                        <input
-                          type="checkbox"
-                          checked={program.gstRoyalty}
-                          onChange={(e) =>
-                            onProgramChange("gstRoyalty", e.target.checked)
-                          }
-                        />
-                        <span className="text-xs text-primary">GST Inc.</span>
-                      </label>
-                    </div>
-                    <div className="relative">
-                      <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="number"
-                        value={program.royalty || ""}
-                        onChange={(e) =>
-                          onProgramChange(
-                            "royalty",
-                            e.target.value === "" ? 0 : Number(e.target.value),
-                          )
-                        }
-                        className="h-10 pl-10"
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
+                  <RupeeField
+                    label="Royalty"
+                    field="royalty"
+                    value={program.royalty}
+                    onProgramChange={onProgramChange}
+                    gstField="gstRoyalty"
+                    gstChecked={program.gstRoyalty}
+                  />
 
-                  {/* CI Share */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-card-foreground">
-                      CI Share
-                    </Label>
-                    <div className="relative">
-                      <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="number"
-                        value={program.ciShare || ""}
-                        onChange={(e) =>
-                          onProgramChange(
-                            "ciShare",
-                            e.target.value === "" ? 0 : Number(e.target.value),
-                          )
-                        }
-                        className="h-10 pl-10"
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
+                  <RupeeField
+                    label="CI Share"
+                    field="ciShare"
+                    value={program.ciShare}
+                    onProgramChange={onProgramChange}
+                  />
 
-                  {/* Franchise Share */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-card-foreground">
-                      Franchise Share
-                    </Label>
-                    <div className="relative">
-                      <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="number"
-                        value={program.franchiseShare || ""}
-                        onChange={(e) =>
-                          onProgramChange(
-                            "franchiseShare",
-                            e.target.value === "" ? 0 : Number(e.target.value),
-                          )
-                        }
-                        className="h-10 pl-10"
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
+                  <RupeeField
+                    label="Franchise Share"
+                    field="franchiseShare"
+                    value={program.franchiseShare}
+                    onProgramChange={onProgramChange}
+                  />
 
                   {/* Tenure */}
                   <div className="space-y-2">

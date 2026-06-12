@@ -1,3 +1,5 @@
+import { api } from "@/lib/axios";
+
 /** Axios interceptor sets `response.data` to `{ result: T }` for JSON. */
 export function unwrapData<T>(response: { data: unknown }): T {
   const d = response.data as {
@@ -71,4 +73,24 @@ export function compactRequestParams(
     out[k] = v as string | number | boolean;
   }
   return Object.keys(out).length ? out : undefined;
+}
+
+/** GET `url` with compacted query params and unwrap the response envelope. */
+async function getUnwrapped<T>(url: string, params?: object): Promise<T> {
+  const response = await api.get(url, {
+    params: compactRequestParams(
+      params as
+        | Record<string, string | number | boolean | undefined | null>
+        | undefined,
+    ),
+  });
+  return unwrapData<T>(response);
+}
+
+/** GET a paginated list endpoint and normalize to `{ rows, total, page, limit }`. */
+export async function getPaginated<T = unknown>(
+  url: string,
+  params?: object,
+): Promise<PaginatedResult<T>> {
+  return normalizePaginatedResult<T>(await getUnwrapped<unknown>(url, params));
 }

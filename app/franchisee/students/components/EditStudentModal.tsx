@@ -32,6 +32,7 @@ import {
 } from "@/hooks/api/student.hooks";
 import { getLevelsByProgram } from "@/services/level.service";
 import { sendClientLog } from "@/lib/client-telemetry";
+import { makeFieldChangeHandler } from "@/lib/form-utils";
 import {
   PersonalInfoFields,
   ParentInfoFields,
@@ -223,30 +224,11 @@ export default function EditStudentModal({
     }
   }, [open, student]);
 
-  const handleInputChange = (
-    field: string,
-    value: string | boolean | number
-  ) => {
-    let convertedValue: string | boolean | number = value;
-
-    if (
-      (field === "programId" ||
-        field === "streamId" ||
-        field === "levelId") &&
-      typeof value === "string"
-    ) {
-      convertedValue = parseInt(value, 10) || 0;
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      [field]: convertedValue,
-    }));
-
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
-    }
-  };
+  const handleInputChange = makeFieldChangeHandler(setFormData, errors, setErrors, [
+    "programId",
+    "streamId",
+    "levelId",
+  ]);
 
   const validateCurrentTab = () => {
     const newErrors: Record<string, string> = {};

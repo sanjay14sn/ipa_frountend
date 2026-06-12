@@ -20,6 +20,7 @@ import {
 } from "@/services/franchisee.service";
 import { Program } from "@/services/program.service";
 import { sendClientLog } from "@/lib/client-telemetry";
+import { useFormSteps } from "@/hooks/use-form-steps";
 import {
   StepBasicInfo,
   StepFranchiseDetails,
@@ -86,7 +87,8 @@ export function CreateFranchiseDialog({
   programs,
   onSuccess,
 }: CreateFranchiseDialogProps) {
-  const [currentStep, setCurrentStep] = useState(1);
+  const { currentStep, setCurrentStep, handleNext, handlePrevious } =
+    useFormSteps(FORM_STEPS.length, () => validateCurrentStep());
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -214,20 +216,6 @@ export function CreateFranchiseDialog({
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  // ---------------------------------------------------------------------------
-  // Navigation
-  // ---------------------------------------------------------------------------
-
-  const handleNext = () => {
-    if (validateCurrentStep()) {
-      setCurrentStep((prev) => Math.min(prev + 1, FORM_STEPS.length));
-    }
-  };
-
-  const handlePrevious = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
   // ---------------------------------------------------------------------------

@@ -11,6 +11,7 @@ import { api } from "@/lib/axios";
 import { getApiBaseUrl } from "@/lib/api-utils";
 import {
   compactRequestParams,
+  getPaginated,
   normalizePaginatedResult,
   unwrapData,
 } from "@/lib/unwrap-api";
@@ -414,13 +415,10 @@ export async function getAdminCertificateSummaries(
   data: CertificateFranchiseSummary[];
   meta: { total: number; totalPages: number };
 }> {
-  const response = await api.get("/admin/certification/summary", {
-    params: compactRequestParams(
-      params as Record<string, string | number | boolean | undefined | null>,
-    ),
-  });
-  const result = unwrapData<unknown>(response);
-  const normalized = normalizePaginatedResult<Record<string, unknown>>(result);
+  const normalized = await getPaginated<Record<string, unknown>>(
+    "/admin/certification/summary",
+    params,
+  );
   const data = normalized.rows.map((row) => ({
     franchiseId: String(row.franchiseId ?? ""),
     franchiseName: String(row.franchiseName ?? ""),

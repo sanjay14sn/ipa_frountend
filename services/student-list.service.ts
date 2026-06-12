@@ -1,9 +1,5 @@
 import { api } from "@/lib/axios";
-import {
-  compactRequestParams,
-  normalizePaginatedResult,
-  unwrapData,
-} from "@/lib/unwrap-api";
+import { getPaginated, unwrapData } from "@/lib/unwrap-api";
 import { withProgramScope } from "@/services/_scope";
 
 export interface Response {
@@ -253,13 +249,7 @@ export async function getAllStudents(
     limit: params?.limit ?? 10_000,
     ...params,
   });
-  const response = await api.get("/student", {
-    params: compactRequestParams(
-      merged as Record<string, string | number | boolean | undefined | null>,
-    ),
-  });
-  const result = unwrapData<unknown>(response);
-  const { rows } = normalizePaginatedResult<unknown>(result);
+  const { rows } = await getPaginated("/student", merged);
   const list = rows.map((r) => mapStudentRow(r as Record<string, unknown>));
   return { result: list };
 }
@@ -326,24 +316,21 @@ export async function deleteStudent(_studentId: number): Promise<void> {
 export async function getPaginatedStudents(
   params: StudentPaginationParams,
 ): Promise<PaginatedStudentsResponse> {
-  const response = await api.get("/student", {
-    params: compactRequestParams(
-      withProgramScope({
-        page: params.page,
-        limit: params.limit,
-        search: params.search,
-        status: params.status,
-        sortBy: params.sortBy,
-        sortOrder: params.sortOrder,
-        levelId: params.levelId,
-        idStatus: params.idStatus,
-        agreementId: params.agreementId,
-        programId: params.programId,
-      }) as Record<string, string | number | boolean | undefined | null>,
-    ),
-  });
-  const result = unwrapData<unknown>(response);
-  const { rows: raw, total, page, limit } = normalizePaginatedResult<unknown>(result);
+  const { rows: raw, total, page, limit } = await getPaginated(
+    "/student",
+    withProgramScope({
+      page: params.page,
+      limit: params.limit,
+      search: params.search,
+      status: params.status,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+      levelId: params.levelId,
+      idStatus: params.idStatus,
+      agreementId: params.agreementId,
+      programId: params.programId,
+    }),
+  );
   const data = raw.map((r) => mapStudentRow(r as Record<string, unknown>));
   const lim = limit || 20;
   const totalPages = Math.ceil(total / lim) || 1;
@@ -365,19 +352,15 @@ export async function getPaginatedStudents(
 export async function getPaginatedStudentsAdmin(
   params: StudentPaginationParams,
 ): Promise<PaginatedStudentsResponse> {
-  const response = await api.get("/admin/student", {
-    params: compactRequestParams({
-      page: params.page,
-      limit: params.limit,
-      search: params.search,
-      status: params.status,
-      sortBy: params.sortBy,
-      sortOrder: params.sortOrder,
-      franchiseId: params.franchiseId,
-    } as Record<string, string | number | boolean | undefined | null>),
+  const { rows: raw, total, page, limit } = await getPaginated("/admin/student", {
+    page: params.page,
+    limit: params.limit,
+    search: params.search,
+    status: params.status,
+    sortBy: params.sortBy,
+    sortOrder: params.sortOrder,
+    franchiseId: params.franchiseId,
   });
-  const result = unwrapData<unknown>(response);
-  const { rows: raw, total, page, limit } = normalizePaginatedResult<unknown>(result);
   const data = raw.map((r) => mapStudentRow(r as Record<string, unknown>));
   const lim = limit || 20;
   const totalPages = Math.ceil(total / lim) || 1;

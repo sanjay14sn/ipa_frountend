@@ -1,9 +1,5 @@
 import { api } from "@/lib/axios";
-import {
-  compactRequestParams,
-  normalizePaginatedResult,
-  unwrapData,
-} from "@/lib/unwrap-api";
+import { getPaginated, unwrapData } from "@/lib/unwrap-api";
 import {
   PaginationMeta,
   StudentPaginationParams,
@@ -233,8 +229,9 @@ export async function getEligibleStudents(): Promise<EligibleStudentsResponse> {
 export async function getAdminStudentLifecycle(
   params: StudentPaginationParams,
 ): Promise<PaginatedStudentLifecycleResponse> {
-  const response = await api.get("/admin/student/lifecycle", {
-    params: compactRequestParams({
+  const { rows: raw, total, page, limit } = await getPaginated(
+    "/admin/student/lifecycle",
+    {
       page: params.page,
       limit: params.limit,
       search: params.search,
@@ -242,10 +239,8 @@ export async function getAdminStudentLifecycle(
       sortBy: params.sortBy,
       sortOrder: params.sortOrder,
       franchiseId: params.franchiseId,
-    } as Record<string, string | number | boolean | undefined | null>),
-  });
-  const result = unwrapData<unknown>(response);
-  const { rows: raw, total, page, limit } = normalizePaginatedResult<unknown>(result);
+    },
+  );
   const data = raw.map((r) => mapLifecycleRow(r as Record<string, unknown>));
   const lim = limit || 20;
   const totalPages = Math.ceil(total / lim) || 1;

@@ -6,6 +6,7 @@ import { DataTable, StatusBadge } from "@/components/shared";
 import type { DataTableColumn } from "@/components/shared";
 import type { IdCardFranchiseSummary } from "@/services/student.service";
 import { useAdminIdCardSummaries } from "@/hooks/api/student.hooks";
+import { usePaginatedListState } from "@/hooks/use-paginated-list-state";
 import FranchiseIdDetails from "./FranchiseIdDetails";
 
 interface RequestedIdTableProps {
@@ -36,10 +37,12 @@ export default function RequestedIdTable({
   );
 
   const summariesQuery = useAdminIdCardSummaries(requestParams, refreshTrigger);
-  const summaries = summariesQuery.data?.data ?? [];
-  const total = summariesQuery.data?.meta.total ?? 0;
-  const totalPages = summariesQuery.data?.meta.totalPages ?? 1;
-  const loading = summariesQuery.isLoading && !summariesQuery.data;
+  const {
+    rows: summaries,
+    total,
+    totalPages,
+    loading,
+  } = usePaginatedListState(summariesQuery);
 
   const columns: DataTableColumn<IdCardFranchiseSummary>[] = [
     {

@@ -5,7 +5,9 @@
   "duplicates": {
     // Hide pair-only clones; focus on widespread copy-paste
     // worth refactoring. Lower to 2 to report every duplicate pair.
-    "minOccurrences": 3
+    "minOccurrences": 3,
+    // Legal contract text data — repeated literal blocks are intentional.
+    "ignore": ["lib/agreementContent.ts"]
   },
   // tailwindcss-animate: loaded via require() in tailwind.config.ts, which
   // fallow classifies as a non-production file (reported "test-only").

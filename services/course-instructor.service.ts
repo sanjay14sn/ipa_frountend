@@ -1,6 +1,7 @@
 import { api } from "@/lib/axios";
 import {
   compactRequestParams,
+  getPaginated,
   normalizePaginatedResult,
   unwrapData,
 } from "@/lib/unwrap-api";
@@ -299,13 +300,7 @@ export async function getAllCourseInstructors(
     limit: params?.limit ?? 10_000,
     ...params,
   });
-  const response = await api.get("/course-instructor", {
-    params: compactRequestParams(
-      merged as Record<string, string | number | boolean | undefined | null>,
-    ),
-  });
-  const result = unwrapData<unknown>(response);
-  const { rows } = normalizePaginatedResult<unknown>(result);
+  const { rows } = await getPaginated("/course-instructor", merged);
   const list = rows.map((r) => mapRow(r as Record<string, unknown>));
   return { result: list };
 }
@@ -381,13 +376,7 @@ export async function getAllAdminCourseInstructors(
     limit: params?.limit ?? 10_000,
     ...params,
   };
-  const response = await api.get("/admin/course-instructor", {
-    params: compactRequestParams(
-      merged as Record<string, string | number | boolean | undefined | null>,
-    ),
-  });
-  const result = unwrapData<unknown>(response);
-  const { rows } = normalizePaginatedResult<unknown>(result);
+  const { rows } = await getPaginated("/admin/course-instructor", merged);
   const list = rows.map((r) => mapRow(r as Record<string, unknown>));
   return { result: list };
 }
@@ -401,14 +390,10 @@ export async function getPaginatedAdminCourseInstructors(
     limit: params?.limit ?? 20,
     ...params,
   };
-  const response = await api.get("/admin/course-instructor", {
-    params: compactRequestParams(
-      merged as Record<string, string | number | boolean | undefined | null>,
-    ),
-  });
-  const result = unwrapData<unknown>(response);
-  const { rows: raw, total, page, limit } =
-    normalizePaginatedResult<unknown>(result);
+  const { rows: raw, total, page, limit } = await getPaginated(
+    "/admin/course-instructor",
+    merged,
+  );
   const data = raw.map((r) => mapRow(r as Record<string, unknown>));
   const lim = limit || 20;
   const pageNum = page || 1;
@@ -813,13 +798,10 @@ export async function getAdminCISummaries(params: {
   data: CIFranchiseSummary[];
   meta: { total: number; totalPages: number; page: number; limit: number };
 }> {
-  const response = await api.get("/admin/course-instructor/summary", {
-    params: compactRequestParams(
-      params as Record<string, string | number | boolean | undefined | null>,
-    ),
-  });
-  const result = unwrapData<unknown>(response);
-  const normalized = normalizePaginatedResult<Record<string, unknown>>(result);
+  const normalized = await getPaginated<Record<string, unknown>>(
+    "/admin/course-instructor/summary",
+    params,
+  );
   const data = normalized.rows.map((row) => ({
     franchiseId: String(row.franchiseId ?? ""),
     franchiseName: String(row.franchiseName ?? ""),
