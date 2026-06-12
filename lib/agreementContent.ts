@@ -20,7 +20,7 @@ export interface AgreementContent {
   sections: AgreementSection[];
 }
 
-export const defaultAgreementContent: AgreementContent = {
+const defaultAgreementContent: AgreementContent = {
   title: "Franchisee Agreement Terms & Conditions",
   description:
     "Please read all terms and conditions carefully before proceeding.",
@@ -1763,7 +1763,7 @@ document and any version of the same, the English version shall be definitive an
 };
 
 // Helper function to replace dynamic placeholders with actual values
-export const replacePlaceholders = (text: string, data: any): string => {
+const replacePlaceholders = (text: string, data: any): string => {
   return text.replace(/\{(\w+)\}/g, (match, key) => {
     // Handle nested object properties like paymentDetails.royaltyGst
     const keys = key.split(".");

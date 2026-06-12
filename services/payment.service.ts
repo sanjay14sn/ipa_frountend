@@ -5,7 +5,7 @@ import {
   unwrapData,
 } from "@/lib/unwrap-api";
 
-export enum PaymentStatus {
+enum PaymentStatus {
   PENDING = "Pending",
   COMPLETED = "Completed",
   FAILED = "Failed",
@@ -243,7 +243,7 @@ export interface CITrainingPaymentOrderResponse {
   message?: string;
 }
 
-export async function initiateCITrainingPayment(
+async function initiateCITrainingPayment(
   ciId: number,
 ): Promise<CITrainingPaymentOrderResponse> {
   const response = await api.post("/billing/payment/initiate", {
@@ -260,7 +260,7 @@ export async function initiateCITrainingPayment(
   };
 }
 
-export async function verifyCITrainingPayment(data: VerifyPaymentDto) {
+async function verifyCITrainingPayment(data: VerifyPaymentDto) {
   const response = await api.post("/billing/payment/verify", {
     razorpayOrderId: data.orderId,
     razorpayPaymentId: data.paymentId,
@@ -269,7 +269,7 @@ export async function verifyCITrainingPayment(data: VerifyPaymentDto) {
   return unwrapData(response);
 }
 
-export async function initiateMultiLevelCITrainingPayment(
+async function initiateMultiLevelCITrainingPayment(
   ciId: number,
   body: { trainingLevelIds: number[] },
 ): Promise<CITrainingPaymentOrderResponse> {
@@ -288,6 +288,6 @@ export async function initiateMultiLevelCITrainingPayment(
   };
 }
 
-export async function verifyMultiLevelCITrainingPayment(data: VerifyPaymentDto) {
+async function verifyMultiLevelCITrainingPayment(data: VerifyPaymentDto) {
   return verifyCITrainingPayment(data);
 }

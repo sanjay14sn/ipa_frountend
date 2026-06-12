@@ -58,7 +58,7 @@ export function usePaginatedFranchiseApplicationsAdmin(
   });
 }
 
-export function usePaginatedFranchiseesGrouped(
+function usePaginatedFranchiseesGrouped(
   params: PaginationParams,
   enabled = true,
 ) {
@@ -71,7 +71,7 @@ export function usePaginatedFranchiseesGrouped(
   });
 }
 
-export function useFranchiseStartingKits(
+function useFranchiseStartingKits(
   franchiseId: string | null,
   enabled = true,
 ) {

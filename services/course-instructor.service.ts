@@ -26,11 +26,6 @@ export enum BloodGroup {
   O_NEGATIVE = "O-",
 }
 
-export enum CITrainingType {
-  ELEMENTARY = "Elementary",
-  REGULAR = "Regular",
-  GRAND = "Grand",
-}
 
 export interface CourseInstructorData {
   id: number;
@@ -315,7 +310,7 @@ export async function getAllCourseInstructors(
   return { result: list };
 }
 
-export async function getCourseInstructorById(
+async function getCourseInstructorById(
   courseInstructorId: number,
 ): Promise<CourseInstructorData> {
   const all = await getAllCourseInstructors();
@@ -471,7 +466,7 @@ export async function getAllCITraining(): Promise<CITrainingByFranchise> {
   return grouped;
 }
 
-export async function getNextCompletableTrainingId(
+async function getNextCompletableTrainingId(
   instructorId: number,
 ): Promise<number | null> {
   const response = await api.get(
@@ -509,7 +504,7 @@ export async function rejectCourseInstructor(courseInstructorId: number) {
   return unwrapData(response);
 }
 
-export async function resendCourseInstructorCredentialsEmail(
+async function resendCourseInstructorCredentialsEmail(
   courseInstructorId: number,
 ): Promise<void> {
   await api.post(
@@ -599,7 +594,7 @@ export async function getPaginatedCourseInstructors(
   };
 }
 
-export async function getPaginatedFranchiseeCourseInstructors(
+async function getPaginatedFranchiseeCourseInstructors(
   params: CourseInstructorPaginationParams,
 ): Promise<PaginatedCourseInstructorsResponse> {
   const all = await getAllCourseInstructors({ agreementId: params.agreementId });
@@ -621,13 +616,13 @@ export async function getPaginatedFranchiseeCourseInstructors(
   };
 }
 
-export async function getCIGraduations(
+async function getCIGraduations(
   _instructorId: number,
 ): Promise<CILevelGraduation[]> {
   return [];
 }
 
-export async function getAllCIGraduations(): Promise<CIGraduationsByFranchise> {
+async function getAllCIGraduations(): Promise<CIGraduationsByFranchise> {
   return {};
 }
 
@@ -713,13 +708,13 @@ export async function getAdminCITrainingProgress(
 
 
 /** Legacy UI: synchronous count from instructor row (ipa-new has no embedded levels). */
-export function getInstructorTrainingLevelCount(
+function getInstructorTrainingLevelCount(
   _instructor: CourseInstructorData,
 ): number {
   return 0;
 }
 
-export function getInstructorTrainingLevels(
+function getInstructorTrainingLevels(
   _instructor: CourseInstructorData,
 ): Array<{
   id: number;
@@ -730,7 +725,7 @@ export function getInstructorTrainingLevels(
   return [];
 }
 
-export async function getAvailableTrainingLevelsForCI(
+async function getAvailableTrainingLevelsForCI(
   _instructorId: number,
 ): Promise<AvailableNextTrainingLevelCounts> {
   void _instructorId;
@@ -741,7 +736,7 @@ export async function getAvailableTrainingLevelsForCI(
   };
 }
 
-export async function requestAdditionalTraining(
+async function requestAdditionalTraining(
   instructorId: number,
   requestData: RequestAdditionalTrainingRequest,
 ): Promise<void> {
@@ -753,14 +748,14 @@ export async function requestAdditionalTraining(
 }
 
 
-export async function scheduleTrainingAdmin(ciId: number) {
+async function scheduleTrainingAdmin(ciId: number) {
   const response = await api.post(
     `/admin/course-instructor/${ciId}/schedule-training`,
   );
   return unwrapData(response);
 }
 
-export async function getActiveTrainingLevelForCi(ciId: number) {
+async function getActiveTrainingLevelForCi(ciId: number) {
   const response = await api.get(
     `/course-instructor/${ciId}/active-training-level`,
   );

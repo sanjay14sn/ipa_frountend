@@ -112,7 +112,7 @@ export function useStudents(params?: StudentPaginationParams) {
   };
 }
 
-export function useRequestedIdDetails() {
+function useRequestedIdDetails() {
   const q = useQuery({
     queryKey: queryKeys.studentAdmin.requestedIds,
     queryFn: getAllRequestedIdDetails,
@@ -125,7 +125,7 @@ export function useRequestedIdDetails() {
   };
 }
 
-export function useIssuedIdDetails() {
+function useIssuedIdDetails() {
   const q = useQuery({
     queryKey: queryKeys.studentAdmin.issuedIds,
     queryFn: getIssuedIdDetails,
@@ -138,7 +138,7 @@ export function useIssuedIdDetails() {
   };
 }
 
-export function useRequestedCertificateDetails() {
+function useRequestedCertificateDetails() {
   const q = useQuery({
     queryKey: queryKeys.studentAdmin.requestedCerts,
     queryFn: getAllRequestedCertificateDetails,
@@ -151,7 +151,7 @@ export function useRequestedCertificateDetails() {
   };
 }
 
-export function useIssuedCertificateDetails() {
+function useIssuedCertificateDetails() {
   const q = useQuery({
     queryKey: queryKeys.studentAdmin.issuedCerts,
     queryFn: getIssuedCertificateDetails,
@@ -177,7 +177,7 @@ export function useEligibleStudents() {
   };
 }
 
-export function useAdminCertificateRequests(
+function useAdminCertificateRequests(
   params?: CertificatePaginationParams,
 ) {
   const q = useQuery({
@@ -296,7 +296,7 @@ function invalidateStudentLists(qc: ReturnType<typeof getQueryClientBridge>) {
   void qc.invalidateQueries({ queryKey: ["admin-id-card-details", "list"] });
 }
 
-export async function createStudentWithRevalidation(
+async function createStudentWithRevalidation(
   studentData: Parameters<typeof createStudent>[0],
 ) {
   const result = await createStudent(studentData);
@@ -409,7 +409,7 @@ export async function rejectCertificateRequestWithRevalidation(
   return result;
 }
 
-export async function revalidateCertificateRequests() {
+async function revalidateCertificateRequests() {
   try {
     const qc = getQueryClientBridge();
     void qc.invalidateQueries({ queryKey: CERT_LIST_PREFIX });
@@ -418,7 +418,7 @@ export async function revalidateCertificateRequests() {
   }
 }
 
-export function useApproveCertificateRequest() {
+function useApproveCertificateRequest() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: approveCertificateRequest,
@@ -433,7 +433,7 @@ export function useApproveCertificateRequest() {
   });
 }
 
-export function useRejectCertificateRequest() {
+function useRejectCertificateRequest() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (certificateRequestId: number) =>
@@ -498,7 +498,7 @@ export function useReactivateStudentLifecycle() {
   });
 }
 
-export function useRequestCertificateForStudent() {
+function useRequestCertificateForStudent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: requestCertificateForStudent,
@@ -528,7 +528,7 @@ export function useDispatchEligibleOrders(franchiseId: string, enabled = false) 
   });
 }
 
-export function useBulkApproveCertificates() {
+function useBulkApproveCertificates() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (vars: { ids: number[] }) => bulkApproveCertificates(vars),

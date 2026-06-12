@@ -82,7 +82,7 @@ export async function getTrainingLevelsForProgram(
   return getTrainingLevelsByProgram(programId);
 }
 
-export async function getActiveTrainingLevels(): Promise<TrainingLevel[]> {
+async function getActiveTrainingLevels(): Promise<TrainingLevel[]> {
   const programsResponse = await api.get("/catalog/program");
   const programs = unwrapData<Array<{ id: number }>>(programsResponse);
   const lists = await Promise.all(
@@ -119,7 +119,7 @@ export async function deleteTrainingLevel(id: number): Promise<void> {
   await api.delete(`/catalog/ci-training-level/${id}`);
 }
 
-export async function getStudentLevelsForTrainingLevel(
+async function getStudentLevelsForTrainingLevel(
   trainingLevelId: number,
 ): Promise<Level[]> {
   const response = await api.get(
@@ -129,7 +129,7 @@ export async function getStudentLevelsForTrainingLevel(
   return Array.isArray(data) ? (data as Level[]) : [];
 }
 
-export async function setStudentLevelsForTrainingLevel(
+async function setStudentLevelsForTrainingLevel(
   trainingLevelId: number,
   levelIds: number[],
   programId: number,

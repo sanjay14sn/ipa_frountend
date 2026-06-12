@@ -12,7 +12,7 @@ interface NestedSectionProps {
   showConnector?: boolean;
 }
 
-export function NestedSection({
+function NestedSection({
   id,
   title,
   badge,

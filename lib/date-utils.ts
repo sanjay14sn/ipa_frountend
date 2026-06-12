@@ -52,7 +52,7 @@ export function formatDateTime(value?: string | Date | null): string {
  *
  * Returns "-" for falsy / unparseable input.
  */
-export function formatShortDate(date: Date | string | null | undefined): string {
+function formatShortDate(date: Date | string | null | undefined): string {
   if (!date) return "-";
   const d = date instanceof Date ? date : new Date(date);
   if (Number.isNaN(d.getTime())) return String(date);
@@ -69,7 +69,7 @@ export function formatShortDate(date: Date | string | null | undefined): string 
  *
  * Returns "-" for falsy / unparseable input.
  */
-export function formatTimelineDate(date: Date | string | null | undefined): string {
+function formatTimelineDate(date: Date | string | null | undefined): string {
   if (!date) return "-";
   const d = date instanceof Date ? date : new Date(date);
   if (Number.isNaN(d.getTime())) return String(date);

@@ -50,7 +50,7 @@ export type StandardValue = (typeof STANDARDS)[number];
  * Useful for `<Select>` options — avoids calling `Object.values(BloodGroup)`
  * (which is not order-guaranteed for TS enums at runtime).
  */
-export const BLOOD_GROUPS: BloodGroup[] = [
+const BLOOD_GROUPS: BloodGroup[] = [
   BloodGroup.A_POSITIVE,
   BloodGroup.A_NEGATIVE,
   BloodGroup.B_POSITIVE,
@@ -70,7 +70,7 @@ export const BLOOD_GROUPS: BloodGroup[] = [
  *
  * Used by `AddStudentModal` and `EditStudentModal`.
  */
-export const STUDENT_FORM_STEPS: StepDef[] = [
+const STUDENT_FORM_STEPS: StepDef[] = [
   { id: 1, title: "Basic Information" },
   { id: 2, title: "Parent Details" },
   { id: 3, title: "Contact & Address" },
@@ -82,7 +82,7 @@ export const STUDENT_FORM_STEPS: StepDef[] = [
  *
  * Used by `AddCourseInstructorModal` and `SetupExistingCIDialog`.
  */
-export const CI_FORM_STEPS: StepDef[] = [
+const CI_FORM_STEPS: StepDef[] = [
   { id: 1, title: "Basic Information" },
   { id: 2, title: "Personal Details" },
   { id: 3, title: "Contact & Address" },
@@ -94,7 +94,7 @@ export const CI_FORM_STEPS: StepDef[] = [
  *
  * Used by `CreateFranchiseDialog`.
  */
-export const FRANCHISE_FORM_STEPS: StepDef[] = [
+const FRANCHISE_FORM_STEPS: StepDef[] = [
   { id: 1, title: "Basic Information" },
   { id: 2, title: "Owner Details" },
   { id: 3, title: "Agreement" },

@@ -42,7 +42,7 @@ export function useFranchiseeOrders(
   };
 }
 
-export function useAdminOrders(
+function useAdminOrders(
   params?: Parameters<typeof getAllOrdersAdmin>[0],
   options?: { enabled?: boolean },
 ) {

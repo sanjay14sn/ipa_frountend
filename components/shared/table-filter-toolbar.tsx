@@ -20,7 +20,7 @@ interface TableFilterToolbarProps {
  * Drop filter inputs in as children. Omit `onApply` / `onClear` to render
  * just the surface without a button row.
  */
-export function TableFilterToolbar({
+function TableFilterToolbar({
   title,
   children,
   onApply,

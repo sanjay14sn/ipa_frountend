@@ -38,7 +38,7 @@ export function withProgramScope<T extends Record<string, unknown> | undefined>(
  * Like {@link withProgramScope}, but merges into a request body (object) for
  * POST/PATCH/PUT endpoints that expect programId in the body, not query.
  */
-export function withProgramScopeBody<
+function withProgramScopeBody<
   T extends Record<string, unknown> | undefined,
 >(
   body?: T,

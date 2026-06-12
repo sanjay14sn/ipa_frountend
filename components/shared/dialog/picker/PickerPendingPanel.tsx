@@ -25,7 +25,7 @@ export interface PickerPendingPanelProps<T> {
  * Pending-selections preview panel. Sits between the picker list and the save action.
  * Shows the in-flight changes so the user can review before committing.
  */
-export function PickerPendingPanel<T>({
+function PickerPendingPanel<T>({
   items,
   renderRow,
   getLabel,

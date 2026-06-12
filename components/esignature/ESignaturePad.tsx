@@ -19,9 +19,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { buildTypedSignatureSvg } from "./typed-signature";
 
-export const ESIGNATURE_CONSENT_VERSION = "v1";
+const ESIGNATURE_CONSENT_VERSION = "v1";
 
-export const ESIGNATURE_CONSENT_TEXT =
+const ESIGNATURE_CONSENT_TEXT =
   "By clicking Adopt & Sign, I agree that this signature and initials will be the electronic representation of my signature for all purposes when I (or my agent) use them on documents, including legally binding contracts — just the same as a pen-and-paper signature.";
 
 export type ESignatureMethod = "drawn" | "typed";

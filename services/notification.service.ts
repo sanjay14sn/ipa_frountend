@@ -88,7 +88,7 @@ export async function markAllAsRead(
   return (response.data.result as { count: number }).count;
 }
 
-export async function deleteNotification(
+async function deleteNotification(
   userType: UserType,
   notificationId: number,
 ): Promise<void> {

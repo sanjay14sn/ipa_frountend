@@ -22,7 +22,7 @@ const COL_CLASS: Record<2 | 3 | 4, string> = {
  * Responsive row of stat tiles. Container for one or more <InfoGridCard /> children.
  * Degrades from N cols → 2 → 1 across breakpoints.
  */
-export function InfoGrid({ cols = 4, className, children }: InfoGridProps) {
+function InfoGrid({ cols = 4, className, children }: InfoGridProps) {
   return (
     <div
       className={cn(

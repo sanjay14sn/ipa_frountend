@@ -25,7 +25,7 @@ export function fmtShortDate(value: string | null | undefined): string {
   }
 }
 
-export function formatFranchiseFee(
+function formatFranchiseFee(
   data: Pick<AgreementScheduleBView, "franchiseFee" | "gstFranchiseFee">,
 ): string {
   const payable = getFranchiseFeePayable(data.franchiseFee, data.gstFranchiseFee);
@@ -36,7 +36,7 @@ export function formatFranchiseFee(
 }
 
 /** Same shape as `formatFranchiseFee` but reads the material-cost GST flag. */
-export function formatMaterialCharges(
+function formatMaterialCharges(
   data: Pick<AgreementScheduleBView, "materialCost" | "gstMaterialCost">,
 ): string {
   const inclusive = data.gstMaterialCost !== false;
@@ -55,7 +55,7 @@ export function prettifyToken(value: string | null | undefined): string {
     .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-export function paymentStatusTone(status: string | null | undefined) {
+function paymentStatusTone(status: string | null | undefined) {
   switch ((status ?? "").toLowerCase()) {
     case "completed":
     case "captured":

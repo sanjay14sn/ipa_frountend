@@ -18,7 +18,7 @@ export interface StudentLevelMapping {
 }
 
 
-export async function listCITrainingLevels(params?: { programId?: number }): Promise<CITrainingLevel[]> {
+async function listCITrainingLevels(params?: { programId?: number }): Promise<CITrainingLevel[]> {
   if (!params?.programId) return [];
   const res = await api.get(`/catalog/ci-training-level/by-program/${params.programId}`);
   return unwrapData<CITrainingLevel[]>(res) ?? [];

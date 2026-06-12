@@ -17,7 +17,7 @@ export function getInitials(
     .toUpperCase();
 }
 
-export function getSinceLabel(
+function getSinceLabel(
   iso: string | null | undefined,
 ): string | null {
   if (!iso) return null;
@@ -28,7 +28,7 @@ export function getSinceLabel(
   }
 }
 
-export function getTimeRemaining(
+function getTimeRemaining(
   expiresIso: string | null | undefined,
 ): string {
   if (!expiresIso) return "-";
@@ -45,7 +45,7 @@ export function getTimeRemaining(
   }
 }
 
-export function fmtShort(iso: string | null | undefined): string {
+function fmtShort(iso: string | null | undefined): string {
   if (!iso) return "-";
   try {
     return format(parseISO(iso), "PP");
@@ -54,7 +54,7 @@ export function fmtShort(iso: string | null | undefined): string {
   }
 }
 
-export function fmtTime(iso: string | null | undefined): string {
+function fmtTime(iso: string | null | undefined): string {
   if (!iso) return "";
   try {
     return format(parseISO(iso), "p");
@@ -80,7 +80,7 @@ export function money(value: number | string | null | undefined): string {
   }).format(Number(value ?? 0));
 }
 
-export function stripIdSuffix(value: string | null | undefined): string {
+function stripIdSuffix(value: string | null | undefined): string {
   if (!value) return "";
   return value
     .replace(/\s+[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i, "")

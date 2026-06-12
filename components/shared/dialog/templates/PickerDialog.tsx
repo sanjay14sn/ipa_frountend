@@ -61,7 +61,7 @@ export interface PickerDialogProps<T>
  * Search + checkbox-list + pending-panel picker. Works as a dialog (default) or inline panel (`as="panel"`).
  * In panel mode renders a plain div shell (no portal, no overlay) so it can be embedded in pages like inventory.
  */
-export function PickerDialog<T>({
+function PickerDialog<T>({
   as = "dialog",
   open,
   onOpenChange,

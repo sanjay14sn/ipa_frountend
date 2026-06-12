@@ -105,7 +105,7 @@ export function formatCurrency(value: number) {
   }).format(value);
 }
 
-export function formatStatusLabel(value: string) {
+function formatStatusLabel(value: string) {
   return value.replaceAll("_", " ");
 }
 

@@ -36,7 +36,7 @@ interface UserContextType {
   switchAgreement: (agreementId: number | null) => Promise<void>;
 }
 
-export const UserContext = createContext<UserContextType | null>(null);
+const UserContext = createContext<UserContextType | null>(null);
 
 function normalizeFranchiseeProfile(
   profileData: Record<string, unknown>,

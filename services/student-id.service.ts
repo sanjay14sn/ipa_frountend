@@ -145,7 +145,7 @@ export async function issueIdCard(studentId: number): Promise<unknown> {
   return unwrapData(response);
 }
 
-export async function issueStudentId(_studentId: number): Promise<StudentData> {
+async function issueStudentId(_studentId: number): Promise<StudentData> {
   const row = await issueIdCard(_studentId);
   return mapStudentRow(row as Record<string, unknown>);
 }
@@ -174,7 +174,7 @@ export async function getIssuedIdDetails(): Promise<RequestedIdDetailsByFranchis
   return (await getPaginatedIssuedIds({ page: 1, limit: 5000 })).data;
 }
 
-export async function getPaginatedRequestedIdDetails(
+async function getPaginatedRequestedIdDetails(
   params: StudentPaginationParams,
 ): Promise<PaginatedIdDetailsResponse> {
   const response = await api.get("/admin/id-card", {
@@ -196,7 +196,7 @@ export async function getPaginatedRequestedIdDetails(
   };
 }
 
-export async function getPaginatedIssuedIds(
+async function getPaginatedIssuedIds(
   params: StudentPaginationParams,
 ): Promise<PaginatedIdDetailsResponse> {
   const response = await api.get("/admin/id-card", {

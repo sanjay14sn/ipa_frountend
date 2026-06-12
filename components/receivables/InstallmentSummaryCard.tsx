@@ -52,7 +52,7 @@ function statusVariant(status: string | null | undefined) {
   }
 }
 
-export function isFullInstallmentSummary(
+function isFullInstallmentSummary(
   summary:
     | ReceivableInstallmentSummary
     | ReceivableFranchiseeSummary
@@ -63,7 +63,7 @@ export function isFullInstallmentSummary(
   return Boolean(summary && "items" in summary && Array.isArray(summary.items));
 }
 
-export function ReceivableStatusBadge({
+function ReceivableStatusBadge({
   summary,
 }: {
   summary:
@@ -250,7 +250,7 @@ function ItemRows({
   );
 }
 
-export function InstallmentSummaryCard({
+function InstallmentSummaryCard({
   summary,
   gstFranchiseFee = null,
   title = "Franchise fee EMI schedule",

@@ -61,7 +61,7 @@ export function useCourseInstructors(
   };
 }
 
-export async function createCourseInstructorWithRevalidation(
+async function createCourseInstructorWithRevalidation(
   courseInstructorData: CreateCourseInstructorRequest,
 ): Promise<CourseInstructorData> {
   const created = await createCourseInstructor(courseInstructorData);
@@ -74,7 +74,7 @@ export async function createCourseInstructorWithRevalidation(
   return created;
 }
 
-export async function updateCourseInstructorWithRevalidation(
+async function updateCourseInstructorWithRevalidation(
   id: number,
   updates: Partial<CourseInstructorData>,
 ) {
@@ -98,7 +98,7 @@ export async function deleteCourseInstructorWithRevalidation(id: number) {
   }
 }
 
-export function useAdminCourseInstructors() {
+function useAdminCourseInstructors() {
   const q = useQuery({
     queryKey: queryKeys.courseInstructors.adminByStatus(),
     queryFn: getAllAdminCourseInstructorsByStatus,
@@ -115,7 +115,7 @@ export function useAdminCourseInstructors() {
  * Client-side status filter + slice. Shares one GET with {@link useCourseInstructors}
  * (same `search` → same cache entry; status/page do not trigger extra requests).
  */
-export function usePaginatedFranchiseeCourseInstructors(
+function usePaginatedFranchiseeCourseInstructors(
   params: CourseInstructorPaginationParams,
 ) {
   const searchKey =

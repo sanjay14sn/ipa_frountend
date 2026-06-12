@@ -1,4 +1,4 @@
-export enum NotificationType {
+enum NotificationType {
   // Student notifications
   STUDENT_ID_REQUESTED = 'student_id_requested',
   STUDENT_LEVEL_STUCK = 'student_level_stuck',

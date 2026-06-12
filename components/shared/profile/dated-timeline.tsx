@@ -13,7 +13,7 @@ interface DatedTimelineProps {
   className?: string;
 }
 
-export function DatedTimeline({ steps, className }: DatedTimelineProps) {
+function DatedTimeline({ steps, className }: DatedTimelineProps) {
   return (
     <div className={cn("flex items-start", className)}>
       {steps.map((step, i) => {

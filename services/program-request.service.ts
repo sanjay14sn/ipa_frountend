@@ -110,7 +110,7 @@ export async function getPaginatedProgramRequestsAdmin(params: {
 }
 
 /** @deprecated Use getPaginatedProgramRequestsAdmin */
-export async function listProgramRequestsForAdmin(params?: {
+async function listProgramRequestsForAdmin(params?: {
   status?: string;
   franchiseId?: string;
 }): Promise<ProgramRequestItem[]> {

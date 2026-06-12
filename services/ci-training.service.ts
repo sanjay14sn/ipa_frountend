@@ -204,7 +204,7 @@ export async function getCIAgreement(): Promise<CIAgreementRecord | null> {
   return unwrapData<CIAgreementRecord | null>(res) ?? null;
 }
 
-export async function signCIAgreement(agreementId: number, signaturePath: string): Promise<void> {
+async function signCIAgreement(agreementId: number, signaturePath: string): Promise<void> {
   await api.post(`/ci/agreement/${agreementId}/sign`, { signaturePath });
 }
 

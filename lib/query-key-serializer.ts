@@ -3,7 +3,7 @@
  * Convention: invalidate list families with `queryKey: [scope, "list"]` (partial match).
  */
 
-export function serializeListParams(
+function serializeListParams(
   params: Record<string, unknown> | undefined | null,
 ): string {
   if (params == null || typeof params !== "object") return "";

@@ -9,7 +9,7 @@ import {
 import { queryKeys } from "./query-keys";
 import { getQueryClientBridge } from "./query-client-bridge";
 
-export function useStreams() {
+function useStreams() {
   return useQuery({
     queryKey: queryKeys.streams.all,
     queryFn: getAllStreams,

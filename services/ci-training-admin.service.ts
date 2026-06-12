@@ -140,7 +140,7 @@ export async function listWaiting(params?: {
   return Array.isArray(payload) ? payload : [];
 }
 
-export async function getInstructorProgress(instructorId: number): Promise<InstructorProgress> {
+async function getInstructorProgress(instructorId: number): Promise<InstructorProgress> {
   const res = await api.get(`/admin/ci-training/instructors/${instructorId}/progress`);
   return res.data.result;
 }
@@ -159,7 +159,7 @@ export async function completeAssignment(
   await api.patch(`/admin/ci-training/assignment/${assignmentId}/complete`, input);
 }
 
-export async function completeSession(sessionId: number): Promise<CITrainingSession> {
+async function completeSession(sessionId: number): Promise<CITrainingSession> {
   const res = await api.patch(`/admin/ci-training/session/${sessionId}/complete`);
   return unwrapData<CITrainingSession>(res);
 }

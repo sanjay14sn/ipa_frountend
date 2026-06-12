@@ -17,5 +17,27 @@
   ],
   "rules": {
     "unused-dependencies": "warn"
-  }
+  },
+  "ignoreExports": [
+    {
+      "file": "services/course-instructor.service.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "services/franchisee.service.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "lib/currency-utils.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "lib/gst.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "lib/payment-details-display.ts",
+      "exports": ["*"]
+    }
+  ]
 }

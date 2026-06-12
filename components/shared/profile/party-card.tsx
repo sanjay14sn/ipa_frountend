@@ -11,7 +11,7 @@ export interface PartyCardProps {
   className?: string;
 }
 
-export function PartyCard({
+function PartyCard({
   initials,
   name,
   role,
@@ -47,7 +47,7 @@ interface PartiesBlockProps {
   className?: string;
 }
 
-export function PartiesBlock({
+function PartiesBlock({
   left,
   right,
   connectorLabel = "AGREEMENT",

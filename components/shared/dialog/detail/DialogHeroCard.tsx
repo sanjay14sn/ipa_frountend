@@ -41,7 +41,7 @@ const TONE_CLASS: Record<HeroBadgeTone, string> = {
  * Hero card placed at the top of a DetailDialog. Bordered card with title + description + optional status badge + action.
  * Matches the existing CIAgreementDetail top-card pattern.
  */
-export function DialogHeroCard({
+function DialogHeroCard({
   title,
   description,
   status,

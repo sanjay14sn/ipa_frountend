@@ -450,7 +450,7 @@ export async function setupExistingFranchise(
  * the franchisee + franchise inputs. Per-program terms are NOT included
  * here — callers should call `setupExistingFranchise` directly.
  */
-export async function createFranchiseeByAdmin(
+async function createFranchiseeByAdmin(
   application: FranchiseeApplication,
 ): Promise<{
   result: { franchise: FranchiseResponse; franchisee: FranchiseeResponse };
@@ -723,18 +723,18 @@ export async function createPayrollDetails(
   return unwrapData(response);
 }
 
-export async function updatePayrollDetails(
+async function updatePayrollDetails(
   _id: number,
   _payrollDetails: Partial<ProgramPayrollRequest>,
 ) {
   throw new Error("updatePayrollDetails is not supported in ipa-new — use set-terms");
 }
 
-export async function onboardingPayment(_franchiseId: string) {
+async function onboardingPayment(_franchiseId: string) {
   throw new Error("onboardingPayment is not supported in ipa-new");
 }
 
-export async function updateFranchiseStatus(
+async function updateFranchiseStatus(
   _franchiseId: string,
   _dto: { status: "Approved" | "Rejected" | "Pending" },
 ) {
@@ -779,7 +779,7 @@ export interface PaymentVerificationResponse {
   status?: string;
 }
 
-export async function initiateFranchiseFeePayment(
+async function initiateFranchiseFeePayment(
   _franchiseId: string,
   _amount: number,
 ): Promise<PaymentOrderResponse> {

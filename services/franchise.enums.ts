@@ -1,10 +1,3 @@
-export enum FranchiseStatus {
-  ACTIVE = "Active",
-  INACTIVE = "Inactive",
-  PENDING = "Pending",
-  APPROVED = "Approved",
-  REJECTED = "Rejected",
-}
 
 export enum FranchiseType {
   AREA = "Area",

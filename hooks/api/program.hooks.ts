@@ -6,7 +6,7 @@ import { getAllPrograms, type Program } from "@/services/program.service";
 import { queryKeys } from "./query-keys";
 import { getQueryClientBridge } from "./query-client-bridge";
 
-export const PROGRAMS_KEY = queryKeys.programs.all;
+const PROGRAMS_KEY = queryKeys.programs.all;
 
 export function usePrograms() {
   const q = useQuery({

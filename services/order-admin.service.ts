@@ -29,14 +29,9 @@ export interface Response {
 export enum OrderStatus {
   PENDING = "Pending",
   PROCESSING = "Processing",
-  VERIFIED = "Verified",
   SHIPPED = "Shipped",
-  SHIPPING = "Shipped",
   DELIVERED = "Delivered",
   CANCELLED = "Cancelled",
-  READY_TO_SHIP = "Ready to ship",
-  BACKORDERED = "Backordered",
-  ALLOCATED = "Allocated",
 }
 
 export type OrderAllocationStatus =
@@ -406,11 +401,11 @@ type RawOrderLine = {
   } | null;
 };
 
-export function toCurrencyString(value: number | string | null | undefined): string {
+function toCurrencyString(value: number | string | null | undefined): string {
   return Number(value ?? 0).toFixed(2);
 }
 
-export function normalizeDispatchItem(raw: unknown): DispatchOrderItemAdmin {
+function normalizeDispatchItem(raw: unknown): DispatchOrderItemAdmin {
   const r = raw as Record<string, unknown>;
   return {
     id: Number(r?.id ?? 0),
@@ -459,7 +454,7 @@ function paymentDetailsFromEmbeddedPayment(p: Record<string, unknown>): PaymentD
   };
 }
 
-export function normalizeOrderLine(raw: any): OrderItemData {
+function normalizeOrderLine(raw: any): OrderItemData {
   return {
     id: Number(raw?.id ?? 0),
     quantity: Number(raw?.quantity ?? 0),
@@ -487,7 +482,7 @@ export function normalizeOrderLine(raw: any): OrderItemData {
   };
 }
 
-export function groupOrderItems(lines: OrderItemData[]): Record<string, OrderItemData[]> {
+function groupOrderItems(lines: OrderItemData[]): Record<string, OrderItemData[]> {
   return lines.reduce(
     (acc, line) => {
       const key = line.studentId
@@ -919,7 +914,7 @@ export async function getAdminOrdersFlat(params?: AdminOrderListParams) {
   };
 }
 
-export async function getOrdersByFranchise(): Promise<Record<string, OrderData[]>> {
+async function getOrdersByFranchise(): Promise<Record<string, OrderData[]>> {
   return (await getAllOrdersAdmin()).data;
 }
 
@@ -950,17 +945,17 @@ export async function refreshOrderAllocationAdmin(
   return unwrapData<RefreshOrderAllocationResult>(response);
 }
 
-export function getDcPdfUrl(dcPdfPath: string): string {
+function getDcPdfUrl(dcPdfPath: string): string {
   if (!dcPdfPath) return "";
   const baseUrl = api.defaults.baseURL || getApiBaseUrl();
   return `${baseUrl}/uploads/${dcPdfPath}`;
 }
 
-export async function regenerateDcPdf(orderId: number): Promise<OrderData> {
+async function regenerateDcPdf(orderId: number): Promise<OrderData> {
   return getOrderByIdAdmin(orderId);
 }
 
-export async function verifyOrderAdmin(
+async function verifyOrderAdmin(
   orderId: number,
   action: "verify" | "ship" | "deliver" | "cancel" = "verify",
 ): Promise<OrderData> {

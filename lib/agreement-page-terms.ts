@@ -2,7 +2,7 @@ import type { User } from "@/lib/auth";
 import type { AgreementRecord } from "@/services/agreement.service";
 import { getFranchiseFeePayable } from "@/lib/gst";
 
-export function parseMoney(value: unknown): number | null {
+function parseMoney(value: unknown): number | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
@@ -55,7 +55,7 @@ export function resolveAgreementPayableAmount(
   return sumPayrollFranchiseFees(profilePayrolls);
 }
 
-export function programNameForAgreement(
+function programNameForAgreement(
   profile: User["profile"] | undefined,
   programId: number | null | undefined,
 ): string {
@@ -67,7 +67,7 @@ export function programNameForAgreement(
 /**
  * Shape expected by PaymentBreakdown (single-program agreement terms on the agreement row).
  */
-export function agreementToPaymentBreakdownRows(
+function agreementToPaymentBreakdownRows(
   feeAgreement: AgreementRecord | null,
   programName: string,
 ): unknown[] | null {

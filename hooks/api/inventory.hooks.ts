@@ -11,7 +11,6 @@
 export type { InventoryPaginatedFilters, Inventory, ProgramKitItemSummary } from "@/hooks/api/inventory-lists.hooks";
 export {
   useInventoryPaginatedQuery,
-  useInventoryMonitoring,
   useAllInventory,
   useKitCatalog,
   useProgramKitItems,

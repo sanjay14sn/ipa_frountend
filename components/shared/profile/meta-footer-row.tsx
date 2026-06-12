@@ -11,7 +11,7 @@ interface MetaFooterRowProps {
   className?: string;
 }
 
-export function MetaFooterRow({ items, className }: MetaFooterRowProps) {
+function MetaFooterRow({ items, className }: MetaFooterRowProps) {
   const cols =
     items.length === 1
       ? "grid-cols-1"

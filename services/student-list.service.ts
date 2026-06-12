@@ -14,13 +14,12 @@ export interface Response {
   message: string;
 }
 
-export enum StudentLevel {
+enum StudentLevel {
   EL1 = "EL1",
 }
 
 export enum StudentStream {
   REGULAR = "Regular",
-  SUMMER_CAMP = "Summer Camp",
 }
 
 export enum StudentIdStatus {
@@ -265,7 +264,7 @@ export async function getAllStudents(
   return { result: list };
 }
 
-export async function getStudentById(studentId: number): Promise<StudentData> {
+async function getStudentById(studentId: number): Promise<StudentData> {
   const response = await api.get(`/student/${studentId}`);
   const row = unwrapData<Record<string, unknown>>(response);
   return mapStudentRow(row);

@@ -27,7 +27,7 @@ const CI_LIST_PREFIX = ["course-instructors", "list"] as const;
 const CI_TRAINING_KEY = queryKeys.courseInstructors.ciTraining;
 const TRAINING_COURSE_INSTRUCTORS_KEY = queryKeys.courseInstructors.trainingList;
 
-export function useCITrainingData() {
+function useCITrainingData() {
   const q = useQuery({
     queryKey: CI_TRAINING_KEY,
     queryFn: getAllCITraining,
@@ -40,7 +40,7 @@ export function useCITrainingData() {
   };
 }
 
-export async function approveTrainingWithRevalidation(
+async function approveTrainingWithRevalidation(
   instructorId: string,
   trainingData?: ApproveTrainingRequest,
 ) {
@@ -55,7 +55,7 @@ export async function approveTrainingWithRevalidation(
   }
 }
 
-export async function completeTrainingWithRevalidation(
+async function completeTrainingWithRevalidation(
   instructorId: number,
   data?: Parameters<typeof completeTraining>[1],
 ) {
@@ -69,7 +69,7 @@ export async function completeTrainingWithRevalidation(
   }
 }
 
-export function useTrainingCourseInstructors() {
+function useTrainingCourseInstructors() {
   const q = useQuery({
     queryKey: TRAINING_COURSE_INSTRUCTORS_KEY,
     queryFn: async () => (await getTrainingCourseInstructors()).result ?? [],

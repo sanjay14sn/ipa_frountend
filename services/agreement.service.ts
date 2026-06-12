@@ -391,14 +391,14 @@ export async function getAgreementAdmin(id: number): Promise<AgreementRecord> {
   return unwrapData<AgreementRecord>(response);
 }
 
-export async function createAgreementAdmin(
+async function createAgreementAdmin(
   dto: CreateAgreementAdminDto,
 ): Promise<AgreementRecord> {
   const response = await api.post("/admin/agreement", dto);
   return unwrapData<AgreementRecord>(response);
 }
 
-export async function sendAgreementForSignature(
+async function sendAgreementForSignature(
   id: number,
 ): Promise<AgreementRecord> {
   const response = await api.patch(`/admin/agreement/${id}/send`);
@@ -493,7 +493,7 @@ export async function updateFranchiseeSignatureOnly(
 // All three return the updated `AgreementRecord`.
 // -----------------------------------------------------------------------------
 
-export async function suspendAgreementAdmin(
+async function suspendAgreementAdmin(
   agreementId: number,
   reason?: string,
 ): Promise<AgreementRecord> {
@@ -503,7 +503,7 @@ export async function suspendAgreementAdmin(
   return unwrapData<AgreementRecord>(response);
 }
 
-export async function reactivateAgreementAdmin(
+async function reactivateAgreementAdmin(
   agreementId: number,
 ): Promise<AgreementRecord> {
   const response = await api.post(
@@ -513,7 +513,7 @@ export async function reactivateAgreementAdmin(
   return unwrapData<AgreementRecord>(response);
 }
 
-export async function voidAgreementAdmin(
+async function voidAgreementAdmin(
   agreementId: number,
   reason?: string,
 ): Promise<AgreementRecord> {
@@ -548,7 +548,7 @@ export async function renewProgramAgreementAdmin(
 }
 
 
-export function storedSignatureToPublicPath(
+function storedSignatureToPublicPath(
   stored: string | null | undefined,
 ): string | null {
   if (stored == null || String(stored).trim() === "") return null;
@@ -682,13 +682,13 @@ export interface AgreementSwitcherItem {
 }
 
 /** GET /agreement/switcher — switcher feed for the active franchise. */
-export async function getAgreementSwitcherMine(): Promise<AgreementSwitcherItem[]> {
+async function getAgreementSwitcherMine(): Promise<AgreementSwitcherItem[]> {
   const response = await api.get("/agreement/switcher");
   return unwrapData<AgreementSwitcherItem[]>(response);
 }
 
 /** GET /admin/agreement/franchise/:franchiseId/switcher — admin switcher feed. */
-export async function getAgreementSwitcherAdmin(
+async function getAgreementSwitcherAdmin(
   franchiseId: string,
 ): Promise<AgreementSwitcherItem[]> {
   const response = await api.get(

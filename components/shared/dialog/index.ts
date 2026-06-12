@@ -23,7 +23,7 @@ export {
   type FooterButtonVariant,
 } from "./AppDialogFooter"
 
-export { DIALOG_TOKENS, SIZE_CLASS, type DialogSize } from "./tokens"
+export { type DialogSize } from "./tokens"
 
 export {
   DialogStateMessage,
@@ -40,8 +40,8 @@ export {
 // Re-exports of the generally-reusable primitives that ALSO work in dialogs.
 // Prefer importing these from `@/components/shared/stepper` and `@/components/shared/form-section`
 // when used outside of a dialog.
-export { Stepper, type StepperProps } from "@/components/shared/stepper"
-export { FormSection, type FormSectionProps } from "@/components/shared/form-section"
+export { type StepperProps } from "@/components/shared/stepper"
+export { type FormSectionProps } from "@/components/shared/form-section"
 
 export * from "./form"
 export * from "./detail"

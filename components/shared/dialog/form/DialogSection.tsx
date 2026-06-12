@@ -20,7 +20,7 @@ export interface DialogSectionProps {
  * Titled section wrapper inside a dialog body. Provides a consistent
  * (optional) title row and a content area beneath it.
  */
-export function DialogSection({
+function DialogSection({
   title,
   description,
   actions,

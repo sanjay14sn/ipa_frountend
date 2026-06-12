@@ -13,7 +13,7 @@ import {
 import { AlertCircle } from "lucide-react";
 import { calculateAge } from "@/lib/date-utils";
 
-export const STANDARDS = [
+const STANDARDS = [
   "Pre-KG",
   "LKG",
   "UKG",

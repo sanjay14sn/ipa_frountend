@@ -11,7 +11,7 @@ interface FeeHeroBlockProps {
   className?: string;
 }
 
-export function FeeHeroBlock({
+function FeeHeroBlock({
   amount,
   label,
   inclusive,

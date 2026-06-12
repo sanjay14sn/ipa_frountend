@@ -15,7 +15,7 @@ interface SignatureCardProps {
   className?: string;
 }
 
-export function SignatureCard({
+function SignatureCard({
   title = "Signature",
   imageSrc,
   onFile,

@@ -115,7 +115,7 @@ interface OnFileBadgeProps {
  * (signatures on file, document captured, etc.). Distinct from full status —
  * this is for binary "present vs absent" indicators inside detail cards.
  */
-export function OnFileBadge({ label = "On file", className }: OnFileBadgeProps) {
+function OnFileBadge({ label = "On file", className }: OnFileBadgeProps) {
   return (
     <Badge
       variant="outline"

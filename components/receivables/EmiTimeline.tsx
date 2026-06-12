@@ -514,4 +514,3 @@ function SummaryCell({ label, value }: { label: string; value: string }) {
 
 // Re-export the icon for compatibility with consumers replacing
 // InstallmentSummaryCard.
-export { CalendarDays };

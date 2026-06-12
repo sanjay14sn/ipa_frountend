@@ -84,7 +84,7 @@ export function useAgreementAdmin(id: number | undefined) {
   });
 }
 
-export async function invalidateAgreementLists() {
+async function invalidateAgreementLists() {
   const client = getQueryClientBridge();
   await client.invalidateQueries({ queryKey: ["agreements", "list"] });
 }

@@ -56,7 +56,7 @@ function mapActiveProgramToSwitcher(
  * Read the active scope (franchiseId / agreementId / programId). Components
  * subscribe selectively so they only re-render when their slice changes.
  */
-export function useScope() {
+function useScope() {
   const franchiseId = useScopeStore((s) => s.franchiseId);
   const agreementId = useScopeStore((s) => s.agreementId);
   const programId = useScopeStore((s) => s.programId);

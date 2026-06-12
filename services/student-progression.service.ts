@@ -147,7 +147,7 @@ export interface UpdateProgressionDto {
   notes?: string;
 }
 
-export async function getStudentProgressions(
+async function getStudentProgressions(
   studentId: number,
 ): Promise<StudentLevelProgression[]> {
   const response = await api.get(`/student/${studentId}/progressions`);
@@ -168,7 +168,7 @@ export async function getStudentProgressions(
   });
 }
 
-export async function updateStudentProgression(
+async function updateStudentProgression(
   studentId: number,
   progressionId: number,
   dto: UpdateProgressionDto,

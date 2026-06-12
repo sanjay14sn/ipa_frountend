@@ -109,7 +109,7 @@ export async function listCIAgreementsForAdmin(params?: {
   return { ...paginated, rows };
 }
 
-export async function getCIAgreementForAdmin(
+async function getCIAgreementForAdmin(
   agreementId: number,
 ): Promise<CIAgreementAdminRow | null> {
   const res = await api.get(`/admin/ci-agreement/${agreementId}`);

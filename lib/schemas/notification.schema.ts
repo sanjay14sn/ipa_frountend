@@ -22,7 +22,7 @@ export const NotificationRowSchema = z.object({
 
 export type NotificationRow = z.infer<typeof NotificationRowSchema>;
 
-export const UnreadCountSchema = z.object({
+const UnreadCountSchema = z.object({
   count: z.number().default(0),
 });
 

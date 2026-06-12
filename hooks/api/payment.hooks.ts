@@ -26,7 +26,7 @@ export interface PaymentListParams {
   dateTo?: string;
 }
 
-export function useAdminPaymentsPaginated(params: PaymentListParams) {
+function useAdminPaymentsPaginated(params: PaymentListParams) {
   const p = params as Record<string, unknown>;
   return useQuery({
     queryKey: queryKeys.payments.adminPaginated(p),

@@ -9,7 +9,7 @@ import { getQueryClientBridge } from "@/hooks/api/query-client-bridge";
 
 const CI_LIST_PREFIX = ["course-instructors", "list"] as const;
 
-export async function approveCourseInstructorWithRevalidation(
+async function approveCourseInstructorWithRevalidation(
   id: number,
   body: ApproveCourseInstructorRequest,
 ) {
@@ -23,7 +23,7 @@ export async function approveCourseInstructorWithRevalidation(
   return r;
 }
 
-export async function rejectCourseInstructorWithRevalidation(id: number) {
+async function rejectCourseInstructorWithRevalidation(id: number) {
   const r = await rejectCourseInstructor(id);
   try {
     const qc = getQueryClientBridge();

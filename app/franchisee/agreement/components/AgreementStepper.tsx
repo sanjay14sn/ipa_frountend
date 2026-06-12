@@ -2,14 +2,14 @@
 
 import { Stepper } from "@/components/shared/stepper";
 
-export const AGREEMENT_STEP_LABELS = [
+const AGREEMENT_STEP_LABELS = [
   "Review",
   "Terms",
   "Sign",
   "Pay",
 ] as const;
 
-export const AGREEMENT_STEP_QUERY = [
+const AGREEMENT_STEP_QUERY = [
   "review",
   "terms",
   "sign",

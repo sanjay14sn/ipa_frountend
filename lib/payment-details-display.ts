@@ -102,7 +102,7 @@ export function agreementTypeBadgeClass(type?: string | null): string {
   }
 }
 
-export function normalizeMethod(method?: string | null): string {
+function normalizeMethod(method?: string | null): string {
   return (method ?? "").trim().toLowerCase();
 }
 
@@ -162,7 +162,7 @@ export function formatRsAmount(value?: number | null, currency = "INR") {
   }
 }
 
-export function boolToYesNo(value?: boolean) {
+function boolToYesNo(value?: boolean) {
   if (value == null) return "N/A";
   return value ? "Yes" : "No";
 }

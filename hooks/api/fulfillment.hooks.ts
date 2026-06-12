@@ -22,7 +22,7 @@ export function useAdminShipments(
   });
 }
 
-export async function invalidateAdminShipments() {
+async function invalidateAdminShipments() {
   try {
     await getQueryClientBridge().invalidateQueries({
       queryKey: ["shipments", "list"],

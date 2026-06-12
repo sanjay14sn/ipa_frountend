@@ -48,7 +48,7 @@ function formatStatus(value?: string | null) {
   return value.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
 }
 
-export function StudentLifecycleDetailContent({ row }: { row: StudentLifecycleRow }) {
+function StudentLifecycleDetailContent({ row }: { row: StudentLifecycleRow }) {
   return (
     <ExpandedDetailSurface className="rounded-lg">
       <ExpandedDetailSection title="Deadlines">

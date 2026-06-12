@@ -14,7 +14,7 @@ import { fmtShortDate } from "@/components/agreements/record-detail/agreement-ut
 
 // ── OverviewPanel ─────────────────────────────────────────────────────────────
 
-export function OverviewPanel({
+function OverviewPanel({
   title,
   rows,
   icon: Icon,
@@ -54,7 +54,7 @@ export function OverviewPanel({
 
 // ── LevelRoyaltyCard ──────────────────────────────────────────────────────────
 
-export function LevelRoyaltyCard({
+function LevelRoyaltyCard({
   label,
   sublabel,
   level,

@@ -95,7 +95,7 @@ export function useInventoryPaginatedQuery(filters: InventoryPaginatedFilters) {
   };
 }
 
-export function useInventoryMonitoring() {
+function useInventoryMonitoring() {
   return useQuery({
     queryKey: queryKeys.inventory.monitoring,
     queryFn: getInventoryMonitoring,

@@ -39,7 +39,7 @@ export function useConfirmBulkDispatch() {
   });
 }
 
-export function useDispatchEligibleCertificates(
+function useDispatchEligibleCertificates(
   params: { franchiseId?: string; programId?: number; levelId?: number; page?: number; limit?: number; search?: string },
   enabled = true,
 ) {

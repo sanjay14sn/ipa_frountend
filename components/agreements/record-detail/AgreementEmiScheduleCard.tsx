@@ -30,7 +30,7 @@ import {
 
 // ── statusVariant ────────────────────────────────────────────────────────────
 
-export function statusVariant(status: string | null | undefined) {
+function statusVariant(status: string | null | undefined) {
   switch ((status ?? "").toLowerCase()) {
     case "paid":
     case "completed":
@@ -52,7 +52,7 @@ export function statusVariant(status: string | null | undefined) {
 
 // ── EmiMetric ────────────────────────────────────────────────────────────────
 
-export function EmiMetric({
+function EmiMetric({
   label,
   value,
   hint,
@@ -85,7 +85,7 @@ export function EmiMetric({
 
 // ── EmiScheduleRow ───────────────────────────────────────────────────────────
 
-export function EmiScheduleRow({
+function EmiScheduleRow({
   item,
   onWaiveItem,
 }: {

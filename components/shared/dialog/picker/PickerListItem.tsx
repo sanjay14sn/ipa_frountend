@@ -21,7 +21,7 @@ export interface PickerListItemProps {
 /**
  * Single selectable row in a PickerList. Renders a checkbox + title/subtitle + optional trailing slot.
  */
-export function PickerListItem({
+function PickerListItem({
   checked,
   onCheckedChange,
   title,

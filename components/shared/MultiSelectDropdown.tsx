@@ -29,7 +29,7 @@ interface MultiSelectDropdownProps {
   emptyMessage?: string;
 }
 
-export function MultiSelectDropdown({
+function MultiSelectDropdown({
   options,
   selected,
   onChange,

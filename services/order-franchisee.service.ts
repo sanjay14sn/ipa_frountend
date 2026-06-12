@@ -199,7 +199,7 @@ export interface CIMaterialsPreview {
 // Franchisee API functions
 // ---------------------------------------------------------------------------
 
-export async function createOrderFromPayload(
+async function createOrderFromPayload(
   payload: CreateOrderDto,
 ): Promise<OrderData> {
   const response = await api.post("/order", payload);
@@ -278,7 +278,7 @@ export async function getAvailableItemsForStudents(
   return unwrapData<StudentAvailableItems[]>(response) ?? [];
 }
 
-export async function getInvoiceDetails(
+async function getInvoiceDetails(
   studentIds: number[],
 ): Promise<InvoiceItem[]> {
   const preview = await previewOrderInvoice({ studentIds });
@@ -431,7 +431,7 @@ export async function abandonOrderPayment(input: {
 // CI (Course Instructor) order functions
 // ---------------------------------------------------------------------------
 
-export async function previewCIOrderInvoice(
+async function previewCIOrderInvoice(
   instructorIds: number[],
 ): Promise<InvoicePreview> {
   const response = await api.post("/order/ci/preview-invoice", { instructorIds });
@@ -455,7 +455,7 @@ export async function previewCIOrderInvoice(
   };
 }
 
-export async function initiateCIOrderPayment(data: {
+async function initiateCIOrderPayment(data: {
   instructorIds: number[];
   notes?: string;
 }): Promise<OrderPaymentResponse> {

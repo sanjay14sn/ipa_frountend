@@ -23,7 +23,7 @@ export function getStudentLevelName(student: StudentData): string {
 /**
  * Gets level name for filtering/comparison
  */
-export function getStudentLevelForFilter(student: StudentData): string {
+function getStudentLevelForFilter(student: StudentData): string {
   return getStudentLevelName(student);
 }
 

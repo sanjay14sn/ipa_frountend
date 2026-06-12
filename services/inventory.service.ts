@@ -280,7 +280,7 @@ export async function getProgramKitItems(
   return Array.isArray(data) ? data.map(normalizeProgramKitRow) : [];
 }
 
-export async function assignInventoryToProgramKit(
+async function assignInventoryToProgramKit(
   programId: number,
   inventoryId: number,
   defaultQuantity?: number,
@@ -327,7 +327,7 @@ export async function removeInventoryFromProgramKit(
   await api.delete(`/inventory/program/${programId}/kit-items/${programKitId}`);
 }
 
-export async function assignInventoryToLevel(
+async function assignInventoryToLevel(
   levelId: number,
   inventoryId: number,
   defaultQuantity?: number,
@@ -361,7 +361,7 @@ export async function unassignInventoryFromLevel(
   await api.delete(`/inventory/level/${levelId}/items/${inventoryId}`);
 }
 
-export async function assignInventoryToTrainingLevel(
+async function assignInventoryToTrainingLevel(
   trainingLevelId: number,
   inventoryId: number,
   defaultQuantity?: number,
@@ -451,7 +451,7 @@ export async function getInventoryMonitoring(): Promise<InventoryMonitoringSumma
   };
 }
 
-export async function getFranchiseProgramKitItems(
+async function getFranchiseProgramKitItems(
   franchiseId: string,
   programId: number,
 ): Promise<FranchiseProgramKitItemSummary[]> {

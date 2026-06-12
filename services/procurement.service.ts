@@ -352,7 +352,7 @@ export async function getPaginatedSuppliers(
   );
 }
 
-export async function getAllSuppliers(
+async function getAllSuppliers(
   params?: SupplierListParams,
 ): Promise<Supplier[]> {
   const page = await getPaginatedSuppliers({
@@ -364,7 +364,7 @@ export async function getAllSuppliers(
   return page.rows;
 }
 
-export async function getSupplierById(id: number): Promise<Supplier> {
+async function getSupplierById(id: number): Promise<Supplier> {
   const all = await getAllSuppliers();
   const row = all.find((supplier) => supplier.id === id);
   if (!row) throw new Error("Supplier not found");
@@ -390,7 +390,7 @@ export async function getPaginatedSupplierTerms(
   );
 }
 
-export async function getSupplierTerms(
+async function getSupplierTerms(
   params?: SupplierTermListParams | number,
 ): Promise<SupplierItemTerm[]> {
   const page = await getPaginatedSupplierTerms(
@@ -401,7 +401,7 @@ export async function getSupplierTerms(
   return page.rows;
 }
 
-export async function upsertSupplierItemTerm(
+async function upsertSupplierItemTerm(
   body: UpsertSupplierItemTermDto,
 ): Promise<SupplierItemTerm> {
   const response = await api.post("/admin/procurement/supplier-term", body);
@@ -445,7 +445,7 @@ export async function getPaginatedPurchaseOrders(
   );
 }
 
-export async function getPurchaseOrders(
+async function getPurchaseOrders(
   params?: PurchaseOrderListParams | string,
 ): Promise<PurchaseOrderSummary[]> {
   const page = await getPaginatedPurchaseOrders(
@@ -502,7 +502,7 @@ export async function getPaginatedReplenishmentDrafts(
   );
 }
 
-export async function getReplenishmentDrafts(
+async function getReplenishmentDrafts(
   params?: PurchaseOrderListParams,
 ): Promise<PurchaseOrderSummary[]> {
   const page = await getPaginatedReplenishmentDrafts({
@@ -513,7 +513,7 @@ export async function getReplenishmentDrafts(
   return page.rows;
 }
 
-export async function createSupplierOrder(body: {
+async function createSupplierOrder(body: {
   supplierId: number;
   referenceNo?: string;
   lines: { inventoryId: number; orderedQty: number; unitCost: number }[];
@@ -529,7 +529,7 @@ export async function createSupplierOrder(body: {
   });
 }
 
-export async function receiveSupplierOrder(
+async function receiveSupplierOrder(
   id: number,
   lines?: { itemId: number; receivedQty: number }[],
 ) {
@@ -543,17 +543,17 @@ export async function receiveSupplierOrder(
   });
 }
 
-export async function getAllSupplierOrders(): Promise<PurchaseOrderSummary[]> {
+async function getAllSupplierOrders(): Promise<PurchaseOrderSummary[]> {
   return getPurchaseOrders();
 }
 
-export async function getSupplierOrderById(
+async function getSupplierOrderById(
   id: number,
 ): Promise<PurchaseOrderSummary> {
   return getPurchaseOrderById(id);
 }
 
-export async function getOrderHistoryForInventory(
+async function getOrderHistoryForInventory(
   _inventoryId: number,
 ): Promise<unknown[]> {
   return [];

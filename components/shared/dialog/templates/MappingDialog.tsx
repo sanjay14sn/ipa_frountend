@@ -57,7 +57,7 @@ export interface MappingDialogProps<TOption, TRow>
  * Combobox + selected-rows-table editor used for many-to-many mappings (kit items, supplier sourcing, etc.).
  * Caller supplies the picker control (a Command/Popover combo, a Select, etc.) and the row renderer.
  */
-export function MappingDialog<TOption, TRow>({
+function MappingDialog<TOption, TRow>({
   as = "dialog",
   open,
   onOpenChange,

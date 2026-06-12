@@ -20,14 +20,14 @@ export function useLevelsByProgram(programId: number | undefined) {
   });
 }
 
-export function useAllLevels() {
+function useAllLevels() {
   return useQuery({
     queryKey: queryKeys.levels.all,
     queryFn: getAllLevels,
   });
 }
 
-export function useLevelsByStream(streamId: number | undefined) {
+function useLevelsByStream(streamId: number | undefined) {
   return useQuery({
     queryKey: queryKeys.levels.byStream(streamId ?? 0),
     queryFn: () => getLevelsByStream(streamId!),

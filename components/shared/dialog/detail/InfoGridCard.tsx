@@ -20,7 +20,7 @@ export interface InfoGridCardProps {
  * Single stat tile inside an InfoGrid. Renders an uppercase label and a prominent value.
  * Pattern matches the 4-card info row in Program Agreement / CI Agreement modals.
  */
-export function InfoGridCard({
+function InfoGridCard({
   label,
   value,
   icon: Icon,

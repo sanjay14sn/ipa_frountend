@@ -1,4 +1,4 @@
-export { PersonalInfoFields, STANDARDS } from "./PersonalInfoFields";
+export { PersonalInfoFields } from "./PersonalInfoFields";
 export type {
   PersonalInfoFieldsData,
   PersonalInfoFieldsProps,

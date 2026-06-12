@@ -68,13 +68,13 @@ export interface ProgramRequestRow {
 
 export type { ProgramRequestPayroll, ApproveProgramRequestPayload } from "./program-request.service";
 
-export async function getProgramRequests(_params?: {
+async function getProgramRequests(_params?: {
   status?: string;
 }): Promise<ProgramRequestRow[]> {
   return [];
 }
 
-export async function getPaginatedProgramRequests(_params?: {
+async function getPaginatedProgramRequests(_params?: {
   page?: number;
   limit?: number;
   search?: string;
@@ -88,14 +88,14 @@ export async function getPaginatedProgramRequests(_params?: {
   return { data: [], meta: { total: 0, totalPages: 0 } };
 }
 
-export async function approveProgramRequest(
+async function approveProgramRequest(
   id: number,
   payload: ApproveProgramRequestPayload,
 ) {
   return approveProgramRequestAdmin(id, payload);
 }
 
-export async function rejectProgramRequest(id: number) {
+async function rejectProgramRequest(id: number) {
   return rejectProgramRequestAdmin(id, '');
 }
 
@@ -113,17 +113,17 @@ export interface ProgramAgreement {
   franchiseProgram?: { program?: { id: number; name: string } };
 }
 
-export async function getProgramAgreements(): Promise<ProgramAgreement[]> {
+async function getProgramAgreements(): Promise<ProgramAgreement[]> {
   return [];
 }
 
-export async function initiateProgramFeePayment(
+async function initiateProgramFeePayment(
   _agreementId: number,
 ): Promise<PaymentOrderResponse> {
   throw new Error("Not supported in ipa-new");
 }
 
-export async function verifyProgramFeePayment(_payload: unknown) {
+async function verifyProgramFeePayment(_payload: unknown) {
   throw new Error("Not supported in ipa-new");
 }
 

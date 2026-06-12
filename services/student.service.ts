@@ -373,7 +373,7 @@ export async function getDispatchEligibleCertificates(params: {
   return unwrapData(response);
 }
 
-export async function classifyForApproveAndDispatch(
+async function classifyForApproveAndDispatch(
   ids: number[],
 ): Promise<ApproveAndDispatchClassification> {
   const response = await api.post(
@@ -461,7 +461,7 @@ export async function getAdminCertificatesByFranchise(
   };
 }
 
-export async function getPaginatedCertificates(
+async function getPaginatedCertificates(
   params: CertificatePaginationParams,
 ): Promise<PaginatedCertificatesResponse> {
   const response = await api.get("/admin/certification/requests", {
@@ -498,7 +498,7 @@ export async function getFranchiseeCertificates(
   return { result: list };
 }
 
-export function getCertificatePdfUrl(certificatePdfPath: string): string {
+function getCertificatePdfUrl(certificatePdfPath: string): string {
   if (!certificatePdfPath) return "";
   const baseUrl = api.defaults.baseURL || getApiBaseUrl();
   const normalized = certificatePdfPath.replace(/\\/g, "/").trim();

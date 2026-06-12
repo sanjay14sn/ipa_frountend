@@ -19,7 +19,7 @@ interface MoneySplitCardProps {
   className?: string;
 }
 
-export function MoneySplitCard({
+function MoneySplitCard({
   label,
   sublabel,
   badge,
