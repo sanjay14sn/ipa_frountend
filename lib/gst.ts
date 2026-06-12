@@ -1,5 +1,6 @@
-export const GST_RATE = 0.18;
-export const GST_RATE_LABEL = "18% GST";
+const _parsed = Number(process.env.NEXT_PUBLIC_GST_RATE);
+export const GST_RATE = Number.isFinite(_parsed) && _parsed > 0 && _parsed < 1 ? _parsed : 0.18;
+export const GST_RATE_LABEL = `${Math.round(GST_RATE * 100)}% GST`;
 
 export interface FranchiseFeePayable {
   base: number;
