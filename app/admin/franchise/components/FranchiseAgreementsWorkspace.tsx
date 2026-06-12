@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DetailField, DetailFieldsGrid, DetailMessage } from "@/components/shared";
-import type { AgreementRecord } from "@/services/agreement.service";
+import type { AgreementRecord, ReceivableSummaryItem } from "@/services/agreement.service";
 import { ReceivableCompactLine } from "@/components/receivables/InstallmentSummaryCard";
 import { EmiTimeline } from "@/components/receivables/EmiTimeline";
 import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
 import { AgreementKitItemsDialog } from "./AgreementKitItemsDialog";
+import { EditDueDateDialog } from "./EditDueDateDialog";
+import { useUpdateReceivableDueDateMutation } from "@/hooks/api/agreement.hooks";
 import { formatDate } from "@/lib/date-utils";
 import { formatRupees } from "@/lib/currency-utils";
 
@@ -94,6 +96,15 @@ export function FranchiseAgreementsWorkspace({
     initialAgreementId != null ? String(initialAgreementId) : "",
   );
   const [kitDialogOpen, setKitDialogOpen] = useState(false);
+  const [editDueDateItem, setEditDueDateItem] =
+    useState<ReceivableSummaryItem | null>(null);
+
+  const resolvedActiveIdForMutation =
+    sortedAgreements.find((agreement) => String(agreement.id) === activeAgreementId)
+      ?.id ?? sortedAgreements[0]?.id ?? 0;
+
+  const { mutateAsync: updateDueDate, isPending: isDueDatePending } =
+    useUpdateReceivableDueDateMutation(resolvedActiveIdForMutation);
 
   if (sortedAgreements.length === 0) {
     return <DetailMessage>No agreements on file.</DetailMessage>;
@@ -182,6 +193,7 @@ export function FranchiseAgreementsWorkspace({
                 agreementRef={
                   agreement.id ? `Agreement #${agreement.id}` : null
                 }
+                onEditDueDate={setEditDueDateItem}
               />
             </div>
           </TabsContent>
@@ -192,6 +204,20 @@ export function FranchiseAgreementsWorkspace({
         agreement={activeAgreement}
         open={kitDialogOpen}
         onOpenChange={setKitDialogOpen}
+      />
+
+      <EditDueDateDialog
+        item={editDueDateItem}
+        open={!!editDueDateItem}
+        onOpenChange={(v) => {
+          if (!v) setEditDueDateItem(null);
+        }}
+        onSubmit={async (dueAt) => {
+          if (!editDueDateItem) return;
+          await updateDueDate({ itemId: editDueDateItem.receivableItemId, dueAt });
+          setEditDueDateItem(null);
+        }}
+        isSubmitting={isDueDatePending}
       />
     </>
   );

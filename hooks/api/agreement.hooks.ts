@@ -8,6 +8,7 @@ import {
   getAgreementAdmin,
   getAgreementMine,
   waiveReceivableItem,
+  updateReceivableItemDueDate,
   type AgreementRecord,
   type AgreementListParams,
 } from "@/services/agreement.service";
@@ -99,6 +100,23 @@ export function useWaiveReceivableItemMutation(agreementId: number) {
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error, "Failed to waive receivable"));
+    },
+  });
+}
+
+export function useUpdateReceivableDueDateMutation(agreementId: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, dueAt }: { itemId: number; dueAt: string }) =>
+      updateReceivableItemDueDate(itemId, dueAt),
+    onSuccess: async () => {
+      await client.invalidateQueries({
+        queryKey: queryKeys.agreements.detail(agreementId),
+      });
+      toast.success("Due date updated");
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error, "Failed to update due date"));
     },
   });
 }

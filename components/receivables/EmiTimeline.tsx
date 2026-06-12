@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CreditCard,
+  Pencil,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,11 @@ export interface EmiTimelineProps {
   /** Hide the bottom Principal / GST / EMIs-paid summary row. */
   hideSummaryRow?: boolean;
   className?: string;
+  /**
+   * When provided, renders a pencil button next to the date label on
+   * unpaid, non-waived items. Admin-only — omit on franchisee pages.
+   */
+  onEditDueDate?: (item: ReceivableSummaryItem) => void;
 }
 
 function isFullInstallmentSummary(
@@ -124,11 +130,13 @@ function TimelineStop({
   gstFranchiseFee,
   isFirst,
   isLast,
+  onEditDueDate,
 }: {
   item: ReceivableSummaryItem;
   gstFranchiseFee: boolean | null | undefined;
   isFirst: boolean;
   isLast: boolean;
+  onEditDueDate?: (item: ReceivableSummaryItem) => void;
 }) {
   // Prefer the item's own GST flag; fall back to the parent agreement's.
   const itemInclusive = item.isGstInclusive ?? (gstFranchiseFee === true);
@@ -166,9 +174,26 @@ function TimelineStop({
 
       {/* Stop content */}
       <div className="mt-3 text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-          {timelineDateLabel(item)}
-        </p>
+        <div className="flex items-center justify-center gap-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            {timelineDateLabel(item)}
+          </p>
+          {onEditDueDate &&
+            !item.paidAt &&
+            item.status !== "paid" &&
+            item.status !== "waived" ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Edit due date"
+              className="h-4 w-4 shrink-0 text-muted-foreground hover:text-foreground"
+              onClick={() => onEditDueDate(item)}
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+          ) : null}
+        </div>
         <p className="mt-1 text-lg font-semibold tabular-nums text-card-foreground">
           {formatRupees(payable)}
         </p>
@@ -200,6 +225,7 @@ export function EmiTimeline({
   emptyMessage = "No EMI plan is linked to this agreement.",
   hideSummaryRow = false,
   className,
+  onEditDueDate,
 }: EmiTimelineProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -392,6 +418,7 @@ export function EmiTimeline({
                   gstFranchiseFee={gstFranchiseFee}
                   isFirst={idx === 0}
                   isLast={idx === items.length - 1}
+                  onEditDueDate={onEditDueDate}
                 />
               ))}
             </div>

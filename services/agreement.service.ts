@@ -643,6 +643,13 @@ export async function waiveReceivableItem(
   await api.post(`/admin/receivables/item/${itemId}/waive`, { reason });
 }
 
+export async function updateReceivableItemDueDate(
+  itemId: number,
+  dueAt: string,
+): Promise<void> {
+  await api.patch(`/admin/receivables/item/${itemId}/due-date`, { dueAt });
+}
+
 /** One row in the agreement switcher feed (mirrors backend `AgreementSwitcherItem`). */
 export interface AgreementSwitcherItem {
   kind: "agreement" | "request";
