@@ -59,4 +59,21 @@ describe("EditableDueDateCell", () => {
     ).not.toBeInTheDocument();
     expect(onConfirm).not.toHaveBeenCalled();
   });
+
+  it("reverts to view without calling onConfirm when the dialog is cancelled", async () => {
+    const onConfirm = vi.fn();
+    render(<EditableDueDateCell item={item()} onConfirm={onConfirm} />);
+    fireEvent.click(screen.getByRole("button", { name: /edit due date/i }));
+    fireEvent.change(screen.getByLabelText("Due date"), {
+      target: { value: "2026-07-20" },
+    });
+    const cancel = await screen.findByRole("button", { name: /^cancel$/i });
+    fireEvent.click(cancel);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /edit due date/i }),
+      ).toBeInTheDocument(),
+    );
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
 });

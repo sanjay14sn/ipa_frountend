@@ -32,6 +32,7 @@ export function EditableDueDateCell({
   // Set synchronously in onChange so the deferred blur handler can tell a
   // picker-selection (change → blur in the same tick) from a true dismissal.
   const confirmPendingRef = useRef(false);
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const current = toDateValue(item.dueAt);
 
@@ -59,6 +60,13 @@ export function EditableDueDateCell({
     }
   }, [mode]);
 
+  // Cancel any pending deferred-blur timer on unmount.
+  useEffect(() => {
+    return () => {
+      if (blurTimerRef.current !== null) clearTimeout(blurTimerRef.current);
+    };
+  }, []);
+
   function startEdit() {
     setDraft(current);
     confirmPendingRef.current = false;
@@ -83,7 +91,7 @@ export function EditableDueDateCell({
 
   function handleBlur() {
     // Defer so an in-progress picker selection can flag a pending confirm first.
-    setTimeout(() => {
+    blurTimerRef.current = setTimeout(() => {
       if (!confirmPendingRef.current) toView();
     }, 0);
   }
