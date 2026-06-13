@@ -73,4 +73,17 @@ describe("AgreementEmiScheduleCard date editing", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText("Jul 15, 2026")).toBeInTheDocument();
   });
+
+  it("renders the due date as plain text for a waived item", () => {
+    render(
+      <AgreementEmiScheduleCard
+        summary={summary([ritem({ receivableItemId: 3, status: "waived" })])}
+        onEditDueDate={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: /edit due date/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Jul 15, 2026")).toBeInTheDocument();
+  });
 });
