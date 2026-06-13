@@ -27,6 +27,7 @@ import {
   isFullInstallmentSummary,
   prettifyToken,
 } from "@/components/agreements/record-detail/agreement-utils";
+import { EditableDueDateCell } from "@/components/agreements/record-detail/EditableDueDateCell";
 
 // ── statusVariant ────────────────────────────────────────────────────────────
 
@@ -88,9 +89,13 @@ function EmiMetric({
 function EmiScheduleRow({
   item,
   onWaiveItem,
+  onEditDueDate,
+  isUpdatingDueDate,
 }: {
   item: ReceivableSummaryItem;
   onWaiveItem?: (item: ReceivableSummaryItem) => void;
+  onEditDueDate?: (itemId: number, dueAtISO: string) => Promise<void>;
+  isUpdatingDueDate?: boolean;
 }) {
   return (
     <TableRow>
@@ -104,7 +109,19 @@ function EmiScheduleRow({
       <TableCell>
         <Badge variant={statusVariant(item.status)}>{prettifyToken(item.status)}</Badge>
       </TableCell>
-      <TableCell>{fmtShortDate(item.dueAt)}</TableCell>
+      <TableCell>
+        {onEditDueDate &&
+        item.status !== "paid" &&
+        item.status !== "waived" ? (
+          <EditableDueDateCell
+            item={item}
+            onConfirm={onEditDueDate}
+            isSubmitting={isUpdatingDueDate}
+          />
+        ) : (
+          fmtShortDate(item.dueAt)
+        )}
+      </TableCell>
       <TableCell>{fmtShortDate(item.paidAt)}</TableCell>
       <TableCell className="text-right font-medium">{formatRupees(item.amount)}</TableCell>
       <TableCell className="text-right">
@@ -134,6 +151,8 @@ export function AgreementEmiScheduleCard({
   onPayReceivableItem,
   isInitiatingReceivablePayment = false,
   onWaiveItem,
+  onEditDueDate,
+  isUpdatingDueDate,
 }: {
   summary:
     | ReceivableInstallmentSummary
@@ -146,6 +165,8 @@ export function AgreementEmiScheduleCard({
   onPayReceivableItem?: () => void;
   isInitiatingReceivablePayment?: boolean;
   onWaiveItem?: (item: ReceivableSummaryItem) => void;
+  onEditDueDate?: (itemId: number, dueAtISO: string) => Promise<void>;
+  isUpdatingDueDate?: boolean;
 }) {
   const hasPlan = hasReceivablePlan(summary);
 
@@ -196,7 +217,7 @@ export function AgreementEmiScheduleCard({
       ) : null}
 
       {/* Admin-only schedule table with waive actions */}
-      {onWaiveItem && fullSummary ? (
+      {(onWaiveItem || onEditDueDate) && fullSummary ? (
         <div className="overflow-x-auto rounded-xl border border-border">
           <Table>
             <TableHeader>
@@ -218,6 +239,8 @@ export function AgreementEmiScheduleCard({
                     key={item.receivableItemId}
                     item={item}
                     onWaiveItem={onWaiveItem}
+                    onEditDueDate={onEditDueDate}
+                    isUpdatingDueDate={isUpdatingDueDate}
                   />
                 ))}
             </TableBody>
