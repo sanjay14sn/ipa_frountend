@@ -33,16 +33,22 @@ export function EditableDueDateCell({
   // picker-selection (change → blur in the same tick) from a true dismissal.
   const confirmPendingRef = useRef(false);
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track the due date we last rendered against so we can reset edit state
+  // during render when the parent refetch lands a new value. This is React's
+  // "adjust state when a prop changes" pattern — preferred over setState inside
+  // an effect (which triggers cascading renders). startEdit()/toView() own the
+  // confirmPendingRef reset, so it does not need to be repeated here.
+  const [prevDueAt, setPrevDueAt] = useState(item.dueAt);
 
   const current = toDateValue(item.dueAt);
 
   // After a successful save the parent refetches and item.dueAt changes —
   // collapse back to the view box.
-  useEffect(() => {
+  if (item.dueAt !== prevDueAt) {
+    setPrevDueAt(item.dueAt);
     setMode("view");
     setConfirmOpen(false);
-    confirmPendingRef.current = false;
-  }, [item.dueAt]);
+  }
 
   // On entering edit mode, focus the field and open the native picker if the
   // browser allows it without a fresh user gesture.
