@@ -12,6 +12,53 @@ import { useNotifications } from "../../context/notification-context";
 import { Notification } from "../../lib/notification.types";
 import { useRouter } from "next/navigation";
 
+const NOTIFICATION_REDIRECT_MAP = {
+  student_id_requested: "/admin/students?tab=ids",
+  student_id_issued: "/admin/students?tab=ids",
+  student_deactivated: "/admin/students?tab=ids",
+  student_reactivated: "/admin/students?tab=ids",
+  student_level_promoted: "/admin/students?tab=ids",
+  student_level_stuck: "/admin/students?tab=ids",
+  student_registered: "/admin/students?tab=ids",
+  franchise_application_submitted: "/admin/franchise?tab=franchises",
+  franchise_payment_pending: "/admin/operations?tab=payments",
+  franchise_payment_received: "/admin/operations?tab=payments",
+  franchise_payment_due: "/admin/operations?tab=payments",
+  franchise_payment_confirmed: "/admin/operations?tab=payments",
+  franchise_approved: "/admin/franchise?tab=applications",
+  franchise_rejected: "/admin/franchise?tab=applications",
+  ci_application_submitted: "/admin/course-instructors?tab=applications",
+  ci_application_approved: "/admin/course-instructors?tab=applications",
+  ci_application_rejected: "/admin/course-instructors?tab=applications",
+  ci_training_requested: "/admin/course-instructors?tab=training",
+  ci_training_approved: "/admin/course-instructors?tab=training",
+  ci_training_rejected: "/admin/course-instructors?tab=training",
+  ci_training_scheduled: "/admin/course-instructors?tab=training",
+  certificate_requested: "/admin/students?tab=certificates",
+  certificate_approved: "/admin/students?tab=certificates",
+  certificate_rejected: "/admin/students?tab=certificates",
+  certificate_sent: "/admin/students?tab=certificates",
+  order_placed: "/admin/operations?tab=orders",
+  order_updated: "/admin/operations?tab=orders",
+  ORDER_PLACED: "/admin/operations?tab=orders",
+  ORDER_CREATED: "/admin/operations?tab=orders",
+  ORDER_SHIPPED: "/admin/operations?tab=orders",
+  ORDER_CANCELLED: "/admin/operations?tab=orders",
+  ORDER_BACKORDERED: "/admin/operations?tab=orders",
+  SHIPMENT_CREATED: "/admin/operations?tab=orders",
+  LOW_STOCK: "/admin/operations?tab=inventory",
+  REPLENISHMENT_DRAFT_CREATED: "/admin/operations?tab=inventory",
+  FRANCHISE_APPROVED: "/admin/franchise?tab=franchises",
+  AGREEMENT_PENDING_SIGNATURE: "/admin/franchise?tab=franchises",
+  PAYMENT_RECEIVED: "/admin/franchise?tab=franchises",
+  RECEIVABLE_ITEM_PAID: "/admin/franchise?tab=franchises",
+  RECEIVABLE_REMINDER: "/admin/franchise?tab=franchises",
+  AGREEMENT_HOLD_APPLIED: "/admin/franchise?tab=franchises",
+  AGREEMENT_HOLD_CLEARED: "/admin/franchise?tab=franchises",
+  CI_CREDENTIALS_ISSUED: "/admin/course-instructors?tab=applications",
+  CI_AGREEMENT_ISSUED: "/admin/course-instructors?tab=applications",
+} as const;
+
 export function NotificationBell() {
   const {
     notifications: notificationsRaw,
@@ -44,75 +91,7 @@ export function NotificationBell() {
     if (notification.action?.href) {
       return notification.action.href;
     }
-
-    switch (notification.type) {
-      // Student notifications
-      case "student_id_requested":
-      case "student_id_issued":
-      case "student_deactivated":
-      case "student_reactivated":
-      case "student_level_promoted":
-      case "student_level_stuck":
-      case "student_registered":
-        return "/admin/students?tab=ids";
-
-      // Franchise notifications
-      case "franchise_application_submitted":
-        return "/admin/franchise?tab=franchises";
-      case "franchise_payment_pending":
-      case "franchise_payment_received":
-      case "franchise_payment_due":
-      case "franchise_payment_confirmed":
-        return "/admin/operations?tab=payments";
-      case "franchise_approved":
-      case "franchise_rejected":
-        return "/admin/franchise?tab=applications";
-
-      // Course Instructor (CI) notifications
-      case "ci_application_submitted":
-      case "ci_application_approved":
-      case "ci_application_rejected":
-        return "/admin/course-instructors?tab=applications";
-      case "ci_training_requested":
-      case "ci_training_approved":
-      case "ci_training_rejected":
-      case "ci_training_scheduled":
-        return "/admin/course-instructors?tab=training";
-
-      // Certificate notifications
-      case "certificate_requested":
-      case "certificate_approved":
-      case "certificate_rejected":
-      case "certificate_sent":
-        return "/admin/students?tab=certificates";
-
-      // Order notifications
-      case "order_placed":
-      case "order_updated":
-      case "ORDER_PLACED":
-      case "ORDER_CREATED":
-      case "ORDER_SHIPPED":
-      case "ORDER_CANCELLED":
-      case "ORDER_BACKORDERED":
-      case "SHIPMENT_CREATED":
-        return "/admin/operations?tab=orders";
-      case "LOW_STOCK":
-      case "REPLENISHMENT_DRAFT_CREATED":
-        return "/admin/operations?tab=inventory";
-      case "FRANCHISE_APPROVED":
-      case "AGREEMENT_PENDING_SIGNATURE":
-      case "PAYMENT_RECEIVED":
-      case "RECEIVABLE_ITEM_PAID":
-      case "RECEIVABLE_REMINDER":
-      case "AGREEMENT_HOLD_APPLIED":
-      case "AGREEMENT_HOLD_CLEARED":
-        return "/admin/franchise?tab=franchises";
-      case "CI_CREDENTIALS_ISSUED":
-      case "CI_AGREEMENT_ISSUED":
-        return "/admin/course-instructors?tab=applications";
-      default:
-        return undefined;
-    }
+    return NOTIFICATION_REDIRECT_MAP[notification.type as keyof typeof NOTIFICATION_REDIRECT_MAP];
   };
 
   const handleNotificationClick = async (notification: Notification) => {

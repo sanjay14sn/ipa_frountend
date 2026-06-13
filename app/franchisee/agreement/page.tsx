@@ -45,6 +45,7 @@ import {
   type AgreementRecord,
   type ESignaturePayload,
   type ReceivableInstallmentSummary,
+  type ReceivableCompactSummary,
 } from "@/services/agreement.service";
 
 const RazorpayPayment = dynamic(
@@ -107,6 +108,287 @@ function normalizeFranchiseeProfile(
  */
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function AgreementPageSpinner({ message }: { message: string }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="rounded-2xl border bg-card px-6 py-5 text-center shadow-sm">
+        <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <p className="text-sm text-muted-foreground">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+function AgreementNoUserView({ onLogin }: { onLogin: () => void }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="rounded-2xl border bg-card px-6 py-5 text-center shadow-sm">
+        <p className="text-sm text-destructive">
+          Unable to load franchise data. Please try logging in again.
+        </p>
+        <Button onClick={onLogin} className="mt-4 rounded-lg">
+          Back to Login
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function AgreementWaitingView({ franchiseStatus }: { franchiseStatus: string | null | undefined }) {
+  const title =
+    franchiseStatus === "Approved"
+      ? "Agreement is being prepared"
+      : "Application under review";
+  const message =
+    franchiseStatus === "Approved"
+      ? "Your agreement is being prepared. You will be able to sign and pay here as soon as it is issued."
+      : "Your application is still waiting for admin review. Agreement and payment steps will unlock after approval.";
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-lg overflow-hidden rounded-2xl border-border bg-card shadow-sm">
+        <CardHeader className="border-b bg-accent/30 px-5 py-5 text-left">
+          <CardTitle className="text-2xl font-normal text-card-foreground">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="px-5 py-5">
+          <p className="text-sm text-muted-foreground">{message}</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function AgreementPaymentSuccessView({ isProgramAgreement }: { isProgramAgreement: boolean }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-lg overflow-hidden rounded-2xl border-border bg-card shadow-sm">
+        <CardHeader className="border-b bg-accent/30 px-5 py-5 text-left">
+          <div className="mb-4 flex">
+            <div className="rounded-full border border-primary/20 bg-primary/10 p-3">
+              <CheckCircle className="h-10 w-10 text-primary" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-normal text-card-foreground">
+            {isProgramAgreement ? "Program activated!" : "Welcome to Abacus Family!"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-5 py-5">
+          <p className="mb-4 text-sm text-muted-foreground">
+            {isProgramAgreement
+              ? "Your program agreement is signed and the payment is verified. The program scope is now active for your franchise."
+              : "Your agreement and payment are complete, and your franchise has been activated. You now have full access to your franchise dashboard."}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Redirecting to your dashboard in a few seconds...
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function AgreementStep1Review({
+  franchiseData,
+  installmentSummary,
+  feeAgreement,
+}: {
+  franchiseData: Parameters<typeof FranchiseeInformation>[0]["franchiseData"];
+  installmentSummary: ReceivableInstallmentSummary | ReceivableCompactSummary | null;
+  feeAgreement: AgreementRecord | null;
+}) {
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-normal text-card-foreground">Review your details</h2>
+      <p className="text-sm text-muted-foreground">
+        Confirm the information below matches your approved application.
+      </p>
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm divide-y divide-border">
+        <FranchiseeInformation franchiseData={franchiseData} />
+        <LocationDetails franchiseData={franchiseData} />
+        <FranchiseDetails franchiseData={franchiseData} />
+      </div>
+      <PaymentBreakdown
+        paymentDetails={franchiseData.paymentDetails}
+        installmentSummary={installmentSummary}
+      />
+      <EmiTimeline
+        summary={installmentSummary}
+        gstFranchiseFee={feeAgreement?.gstFranchiseFee ?? null}
+        title="Your franchise fee EMI plan"
+        agreementRef={feeAgreement?.id ? `Agreement #${feeAgreement.id}` : null}
+      />
+    </div>
+  );
+}
+
+function AgreementStep2Terms({
+  agreementContent,
+  expandedSections,
+  agreementAccepted,
+  onToggleSection,
+  onExpandAll,
+  onCollapseAll,
+  onDownloadPDF,
+  onAgreementChange,
+}: {
+  agreementContent: AgreementContent;
+  expandedSections: Set<string>;
+  agreementAccepted: boolean;
+  onToggleSection: (id: string) => void;
+  onExpandAll: () => void;
+  onCollapseAll: () => void;
+  onDownloadPDF: () => void;
+  onAgreementChange: (checked: boolean | "indeterminate") => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <h2 className="text-xl font-normal text-card-foreground">Terms and conditions</h2>
+      <p className="text-sm text-muted-foreground">
+        Read the agreement sections and confirm acceptance below.
+      </p>
+      <AgreementTerms
+        agreementContent={agreementContent}
+        expandedSections={expandedSections}
+        agreementAccepted={agreementAccepted}
+        onToggleSection={onToggleSection}
+        onExpandAll={onExpandAll}
+        onCollapseAll={onCollapseAll}
+        onDownloadPDF={onDownloadPDF}
+        onAgreementChange={onAgreementChange}
+      />
+    </div>
+  );
+}
+
+function AgreementStep3Signature({
+  isSigned,
+  userProfile,
+  feeAgreement,
+  feeAgreementLoading,
+}: {
+  isSigned: boolean;
+  userProfile: NonNullable<User["profile"]>;
+  feeAgreement: AgreementRecord | null;
+  feeAgreementLoading: boolean;
+}) {
+  const hint = isSigned
+    ? "Your signature is on this agreement. Continue to payment to activate."
+    : franchiseeProfileSignatureSrc(userProfile?.franchiseeSignature)
+      ? "Apply your on-file signature to this agreement, or upload a new one."
+      : "Upload your signature to sign this agreement. Payment unlocks after signing.";
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-normal text-card-foreground">Your signature</h2>
+      <p className="text-sm text-muted-foreground">{hint}</p>
+      <FranchiseAgreementSignaturePanel agreement={feeAgreement} loading={feeAgreementLoading} />
+    </div>
+  );
+}
+
+function AgreementStep4Payment({
+  installmentInitialPayable,
+  installmentSummary,
+  feeAgreement,
+  agreementAccepted,
+  isProcessingPayment,
+  activationSyncing,
+  signatureHint,
+  payableHeadline,
+  onPaymentSubmit,
+}: {
+  installmentInitialPayable: { kind: "down-payment" | "installment"; label: string; amount: number; principal: number; gst: number } | null;
+  installmentSummary: ReceivableInstallmentSummary | ReceivableCompactSummary | null;
+  feeAgreement: AgreementRecord | null;
+  agreementAccepted: boolean;
+  isProcessingPayment: boolean;
+  activationSyncing: boolean;
+  signatureHint: string | null;
+  payableHeadline: { label: string; amount: number; principal: number; gst: number } | null;
+  onPaymentSubmit: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+          Step 4 of 4 · Final step
+        </p>
+        <h2 className="mt-1 text-2xl font-normal text-card-foreground">Confirm and pay</h2>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+          {installmentInitialPayable
+            ? `Settle the ${installmentInitialPayable.kind === "down-payment" ? "down payment" : "first installment"} to activate your franchise. The remaining principal is collected over the EMI schedule below.`
+            : "Complete the agreement payment to activate your franchise. Activation is confirmed after payment is verified."}
+        </p>
+      </div>
+      <EmiTimeline
+        summary={installmentSummary}
+        gstFranchiseFee={feeAgreement?.gstFranchiseFee ?? null}
+        title="Your payment plan"
+        agreementRef={feeAgreement?.id ? `Agreement #${feeAgreement.id}` : null}
+      />
+      <PaymentAction
+        agreementAccepted={agreementAccepted}
+        isProcessingPayment={isProcessingPayment || activationSyncing}
+        onPaymentSubmit={onPaymentSubmit}
+        signatureHint={signatureHint}
+        variant="final"
+        payableAmount={payableHeadline?.amount ?? null}
+        payablePrincipal={payableHeadline?.principal ?? null}
+        payableGst={payableHeadline?.gst ?? null}
+        payableLabel={payableHeadline?.label ?? null}
+      />
+      <div>
+        <h3 className="text-base font-medium text-card-foreground">What happens after you pay</h3>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <PostPayStep step="Step 1" title="Payment verified" description="Usually within 2 minutes of a successful transaction." />
+          <PostPayStep step="Step 2" title="Franchise dashboard opens" description="You'll be redirected automatically — no extra steps." />
+          <PostPayStep step="Step 3" title="Welcome email sent" description="Receipt, GST invoice and onboarding playbook." />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AgreementStep3SignButton({
+  isSigned,
+  feeAgreement,
+  feeAgreementLoading,
+  signing,
+  userProfile,
+  onSignWithStored,
+  onOpenESignature,
+}: {
+  isSigned: boolean;
+  feeAgreement: AgreementRecord | null;
+  feeAgreementLoading: boolean;
+  signing: boolean;
+  userProfile: NonNullable<User["profile"]>;
+  onSignWithStored: () => void;
+  onOpenESignature: () => void;
+}) {
+  if (isSigned || feeAgreement?.status !== "Approved") return null;
+  const hasStoredSig = Boolean(franchiseeProfileSignatureSrc(userProfile?.franchiseeSignature));
+  return hasStoredSig ? (
+    <Button
+      type="button"
+      className="rounded-lg"
+      onClick={onSignWithStored}
+      disabled={signing || feeAgreementLoading}
+    >
+      {signing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PenLine className="mr-2 h-4 w-4" />}
+      Sign
+    </Button>
+  ) : (
+    <Button
+      type="button"
+      className="rounded-lg"
+      onClick={onOpenESignature}
+      disabled={signing || feeAgreementLoading}
+    >
+      {signing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PenLine className="mr-2 h-4 w-4" />}
+      Sign agreement
+    </Button>
+  );
 }
 
 function FranchiseAgreementContent() {
@@ -803,31 +1085,11 @@ function FranchiseAgreementContent() {
   };
 
   if (pageLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <div className="rounded-2xl border bg-card px-6 py-5 text-center shadow-sm">
-          <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">
-            Loading your franchise agreement...
-          </p>
-        </div>
-      </div>
-    );
+    return <AgreementPageSpinner message="Loading your franchise agreement..." />;
   }
 
   if (!user || !user.profile) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <div className="rounded-2xl border bg-card px-6 py-5 text-center shadow-sm">
-          <p className="text-sm text-destructive">
-            Unable to load franchise data. Please try logging in again.
-          </p>
-          <Button onClick={() => router.push("/login")} className="mt-4 rounded-lg">
-            Back to Login
-          </Button>
-        </div>
-      </div>
-    );
+    return <AgreementNoUserView onLogin={() => router.push("/login")} />;
   }
 
   // The agreement detail loads after the page chrome is ready (pageLoading is
@@ -836,16 +1098,7 @@ function FranchiseAgreementContent() {
   // the expired view or the sign+pay stepper — keep the loader up rather than
   // briefly flashing the stepper and then swapping to the expired view.
   if (feeAgreementLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <div className="rounded-2xl border bg-card px-6 py-5 text-center shadow-sm">
-          <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">
-            Loading your franchise agreement...
-          </p>
-        </div>
-      </div>
-    );
+    return <AgreementPageSpinner message="Loading your franchise agreement..." />;
   }
 
   if (feeAgreement?.status === "Expired") {
@@ -858,27 +1111,7 @@ function FranchiseAgreementContent() {
   }
 
   if (!feeAgreement && !feeAgreementLoading && !isFranchiseOperational(user, franchiseIdParam)) {
-    const waitingMessage =
-      franchiseStatus === "Approved"
-        ? "Your agreement is being prepared. You will be able to sign and pay here as soon as it is issued."
-        : "Your application is still waiting for admin review. Agreement and payment steps will unlock after approval.";
-
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-lg overflow-hidden rounded-2xl border-border bg-card shadow-sm">
-          <CardHeader className="border-b bg-accent/30 px-5 py-5 text-left">
-            <CardTitle className="text-2xl font-normal text-card-foreground">
-              {franchiseStatus === "Approved"
-                ? "Agreement is being prepared"
-                : "Application under review"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-5 py-5">
-            <p className="text-sm text-muted-foreground">{waitingMessage}</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <AgreementWaitingView franchiseStatus={franchiseStatus} />;
   }
 
   if (user.profile.franchise === undefined || !agreementContent) {
@@ -891,34 +1124,7 @@ function FranchiseAgreementContent() {
   ) as Parameters<typeof FranchiseeInformation>[0]["franchiseData"];
 
   if (showPaymentSuccess) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-lg overflow-hidden rounded-2xl border-border bg-card shadow-sm">
-          <CardHeader className="border-b bg-accent/30 px-5 py-5 text-left">
-            <div className="mb-4 flex">
-              <div className="rounded-full border border-primary/20 bg-primary/10 p-3">
-                <CheckCircle className="h-10 w-10 text-primary" />
-              </div>
-            </div>
-            <CardTitle className="text-2xl font-normal text-card-foreground">
-              {isProgramAgreement
-                ? "Program activated!"
-                : "Welcome to Abacus Family!"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-5 py-5">
-            <p className="mb-4 text-sm text-muted-foreground">
-              {isProgramAgreement
-                ? "Your program agreement is signed and the payment is verified. The program scope is now active for your franchise."
-                : "Your agreement and payment are complete, and your franchise has been activated. You now have full access to your franchise dashboard."}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Redirecting to your dashboard in a few seconds...
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <AgreementPaymentSuccessView isProgramAgreement={isProgramAgreement} />;
   }
 
   const signatureHint = activationSyncing
@@ -980,137 +1186,47 @@ function FranchiseAgreementContent() {
 
           <div className="p-4 sm:p-5">
             {currentStep === 1 ? (
-              <div className="space-y-4">
-                <h2 className="text-xl font-normal text-card-foreground">
-                  Review your details
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Confirm the information below matches your approved application.
-                </p>
-                <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm divide-y divide-border">
-                  <FranchiseeInformation franchiseData={franchiseData} />
-                  <LocationDetails franchiseData={franchiseData} />
-                  <FranchiseDetails franchiseData={franchiseData} />
-                </div>
-                <PaymentBreakdown
-                  paymentDetails={franchiseData.paymentDetails}
-                  installmentSummary={installmentSummary}
-                />
-                <EmiTimeline
-                  summary={installmentSummary}
-                  gstFranchiseFee={feeAgreement?.gstFranchiseFee ?? null}
-                  title="Your franchise fee EMI plan"
-                  agreementRef={
-                    feeAgreement?.id ? `Agreement #${feeAgreement.id}` : null
-                  }
-                />
-              </div>
+              <AgreementStep1Review
+                franchiseData={franchiseData}
+                installmentSummary={installmentSummary}
+                feeAgreement={feeAgreement}
+              />
             ) : null}
 
             {currentStep === 2 ? (
-              <div className="space-y-3">
-                <h2 className="text-xl font-normal text-card-foreground">
-                  Terms and conditions
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Read the agreement sections and confirm acceptance below.
-                </p>
-                <AgreementTerms
-                  agreementContent={agreementContent}
-                  expandedSections={expandedSections}
-                  agreementAccepted={agreementAccepted}
-                  onToggleSection={toggleSection}
-                  onExpandAll={expandAllSections}
-                  onCollapseAll={collapseAllSections}
-                  onDownloadPDF={handleDownloadPDF}
-                  onAgreementChange={handleCheckboxChange}
-                />
-              </div>
+              <AgreementStep2Terms
+                agreementContent={agreementContent}
+                expandedSections={expandedSections}
+                agreementAccepted={agreementAccepted}
+                onToggleSection={toggleSection}
+                onExpandAll={expandAllSections}
+                onCollapseAll={collapseAllSections}
+                onDownloadPDF={handleDownloadPDF}
+                onAgreementChange={handleCheckboxChange}
+              />
             ) : null}
 
             {currentStep === 3 ? (
-              <div className="space-y-4">
-                <h2 className="text-xl font-normal text-card-foreground">
-                  Your signature
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {isSigned
-                    ? "Your signature is on this agreement. Continue to payment to activate."
-                    : franchiseeProfileSignatureSrc(
-                          user?.profile?.franchiseeSignature,
-                        )
-                      ? "Apply your on-file signature to this agreement, or upload a new one."
-                      : "Upload your signature to sign this agreement. Payment unlocks after signing."}
-                </p>
-                <FranchiseAgreementSignaturePanel
-                  agreement={feeAgreement}
-                  loading={feeAgreementLoading}
-                />
-              </div>
+              <AgreementStep3Signature
+                isSigned={isSigned}
+                userProfile={user.profile}
+                feeAgreement={feeAgreement}
+                feeAgreementLoading={feeAgreementLoading}
+              />
             ) : null}
 
             {currentStep === 4 ? (
-              <div className="space-y-6">
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                    Step 4 of 4 · Final step
-                  </p>
-                  <h2 className="mt-1 text-2xl font-normal text-card-foreground">
-                    {installmentInitialPayable
-                      ? "Confirm and pay"
-                      : "Confirm and pay"}
-                  </h2>
-                  <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                    {installmentInitialPayable
-                      ? `Settle the ${installmentInitialPayable.kind === "down-payment" ? "down payment" : "first installment"} to activate your franchise. The remaining principal is collected over the EMI schedule below.`
-                      : "Complete the agreement payment to activate your franchise. Activation is confirmed after payment is verified."}
-                  </p>
-                </div>
-
-                <EmiTimeline
-                  summary={installmentSummary}
-                  gstFranchiseFee={feeAgreement?.gstFranchiseFee ?? null}
-                  title="Your payment plan"
-                  agreementRef={
-                    feeAgreement?.id ? `Agreement #${feeAgreement.id}` : null
-                  }
-                />
-
-                <PaymentAction
-                  agreementAccepted={agreementAccepted}
-                  isProcessingPayment={isProcessingPayment || activationSyncing}
-                  onPaymentSubmit={handlePaymentSubmit}
-                  signatureHint={signatureHint}
-                  variant="final"
-                  payableAmount={payableHeadline?.amount ?? null}
-                  payablePrincipal={payableHeadline?.principal ?? null}
-                  payableGst={payableHeadline?.gst ?? null}
-                  payableLabel={payableHeadline?.label ?? null}
-                />
-
-                <div>
-                  <h3 className="text-base font-medium text-card-foreground">
-                    What happens after you pay
-                  </h3>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                    <PostPayStep
-                      step="Step 1"
-                      title="Payment verified"
-                      description="Usually within 2 minutes of a successful transaction."
-                    />
-                    <PostPayStep
-                      step="Step 2"
-                      title="Franchise dashboard opens"
-                      description="You'll be redirected automatically — no extra steps."
-                    />
-                    <PostPayStep
-                      step="Step 3"
-                      title="Welcome email sent"
-                      description="Receipt, GST invoice and onboarding playbook."
-                    />
-                  </div>
-                </div>
-              </div>
+              <AgreementStep4Payment
+                installmentInitialPayable={installmentInitialPayable}
+                installmentSummary={installmentSummary}
+                feeAgreement={feeAgreement}
+                agreementAccepted={agreementAccepted}
+                isProcessingPayment={isProcessingPayment}
+                activationSyncing={activationSyncing}
+                signatureHint={signatureHint}
+                payableHeadline={payableHeadline}
+                onPaymentSubmit={handlePaymentSubmit}
+              />
             ) : null}
 
             <div className={cn("mt-5 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between")}>
@@ -1127,52 +1243,17 @@ function FranchiseAgreementContent() {
 
               {currentStep < 4 ? (
                 <div className="flex flex-col gap-2 sm:order-2 sm:flex-row sm:items-center">
-                  {/*
-                    Step 3 sign action sits BESIDE Next (per UX spec). Which
-                    button shows is data-driven, mutually exclusive:
-                      - signed already → no sign button (Next is live)
-                      - has on-file signature → "Sign with this signature"
-                      - no on-file signature → "Sign agreement" (opens e-sig pad)
-                    The Next button stays visible throughout so the user has a
-                    consistent forward affordance; it goes live as soon as
-                    signing completes (isSigned flips true via setFeeAgreement).
-                  */}
-                  {currentStep === 3 &&
-                  !isSigned &&
-                  feeAgreement?.status === "Approved" ? (
-                    franchiseeProfileSignatureSrc(
-                      user?.profile?.franchiseeSignature,
-                    ) ? (
-                      <Button
-                        type="button"
-                        className="rounded-lg"
-                        onClick={() => void handleSignWithStored()}
-                        disabled={signing || feeAgreementLoading}
-                      >
-                        {signing ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <PenLine className="mr-2 h-4 w-4" />
-                        )}
-                        Sign
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        className="rounded-lg"
-                        onClick={openESignatureDialog}
-                        disabled={signing || feeAgreementLoading}
-                      >
-                        {signing ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <PenLine className="mr-2 h-4 w-4" />
-                        )}
-                        Sign agreement
-                      </Button>
-                    )
+                  {currentStep === 3 ? (
+                    <AgreementStep3SignButton
+                      isSigned={isSigned}
+                      feeAgreement={feeAgreement}
+                      feeAgreementLoading={feeAgreementLoading}
+                      signing={signing}
+                      userProfile={user.profile}
+                      onSignWithStored={() => void handleSignWithStored()}
+                      onOpenESignature={openESignatureDialog}
+                    />
                   ) : null}
-
                   <Button
                     type="button"
                     className="rounded-lg"

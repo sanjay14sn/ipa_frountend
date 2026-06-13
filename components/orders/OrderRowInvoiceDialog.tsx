@@ -60,6 +60,17 @@ function TabCount({ n }: { n: number }) {
   );
 }
 
+function TotalFooter({ snapshot }: { snapshot: InvoicePreview }) {
+  return (
+    <div className="flex shrink-0 items-center justify-between gap-6 border-t border-border bg-muted/30 px-6 py-4">
+      <div className="text-sm font-semibold text-card-foreground">Total</div>
+      <div className="shrink-0 text-2xl font-semibold tabular-nums text-card-foreground">
+        {formatRupees(snapshot.totalAmount)}
+      </div>
+    </div>
+  );
+}
+
 function materialSelectionFromSnapshot(snapshot: InvoicePreview) {
   const studentIds = snapshot.studentGroups?.length
     ? snapshot.studentGroups.map((g) => g.studentId)
@@ -81,6 +92,176 @@ function invoiceGroupCount(snapshot: InvoicePreview): number {
   n += snapshot.students.length;
   n += (snapshot.instructorGroups ?? []).length;
   return n;
+}
+
+function lookupStudentName(snapshot: InvoicePreview, id: number) {
+  const g = snapshot.studentGroups?.find((x) => x.studentId === id);
+  if (g) return { name: g.studentName };
+  const st = snapshot.students.find((x) => x.studentId === id);
+  return st ? { name: st.studentName } : undefined;
+}
+
+function lookupInstructorName(snapshot: InvoicePreview, id: number) {
+  const g = snapshot.instructorGroups?.find((x) => x.instructorId === id);
+  return g ? { name: g.name, instructorId: g.instructorCode } : undefined;
+}
+
+interface EmptyBodyProps {
+  order: OrderData | undefined;
+}
+
+function EmptyBody({ order }: EmptyBodyProps) {
+  return (
+    <div className="px-6 py-6">
+      <p className="text-sm text-muted-foreground">
+        No stored material invoice or dispatch lines for this order.
+      </p>
+      {order?.payment ? (
+        <OrderPaymentDetailsPanel
+          payment={order.payment}
+          className="mt-4"
+          fallbackGoodsGstAmount={order.gstAmount ?? null}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+interface InlineInvoiceBodyProps {
+  snapshot: InvoicePreview;
+  groupedSummary: React.ReactNode;
+  order: OrderData | undefined;
+}
+
+function InlineInvoiceBody({ snapshot, groupedSummary, order }: InlineInvoiceBodyProps) {
+  return (
+    <>
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+        {groupedSummary ?? (
+          <p className="text-sm text-muted-foreground">
+            No stored invoice snapshot for this order.
+          </p>
+        )}
+        {order?.payment ? (
+          <OrderPaymentDetailsPanel
+            payment={order.payment}
+            className="mt-4"
+            fallbackGoodsGstAmount={order.gstAmount ?? null}
+          />
+        ) : null}
+      </div>
+      <TotalFooter snapshot={snapshot} />
+    </>
+  );
+}
+
+interface TabbedBodyProps {
+  orderId: number | null;
+  showInvoiceTab: boolean;
+  hasCustom: boolean;
+  hasDispatch: boolean;
+  invoiceTabCount: number;
+  certCount: number;
+  idCount: number;
+  customGroups: NonNullable<InvoicePreview["customGroups"]>;
+  certificates: NonNullable<OrderData["dispatchItems"]>;
+  idCards: NonNullable<OrderData["dispatchItems"]>;
+  groupedSummary: React.ReactNode;
+  order: OrderData | undefined;
+  snapshot: InvoicePreview | null;
+  showFooter: boolean;
+}
+
+function TabbedBody({
+  orderId,
+  showInvoiceTab,
+  hasCustom,
+  hasDispatch,
+  invoiceTabCount,
+  certCount,
+  idCount,
+  customGroups,
+  certificates,
+  idCards,
+  groupedSummary,
+  order,
+  snapshot,
+  showFooter,
+}: TabbedBodyProps) {
+  return (
+    <Tabs
+      key={orderId ?? "closed"}
+      defaultValue={
+        showInvoiceTab
+          ? "invoice"
+          : hasCustom
+            ? "custom-materials"
+            : defaultDispatchTab(certCount, idCount)
+      }
+      className="flex min-h-0 flex-1 flex-col"
+    >
+      <TabsList className="mx-6 mt-3 flex h-auto w-auto flex-shrink-0 flex-wrap justify-start gap-1 self-start rounded-xl border border-border bg-muted/40 p-1 text-muted-foreground">
+        {showInvoiceTab ? (
+          <TabsTrigger value="invoice" className="group gap-2">
+            Invoice
+            <TabCount n={invoiceTabCount} />
+          </TabsTrigger>
+        ) : null}
+        {hasCustom ? (
+          <TabsTrigger value="custom-materials" className="group gap-2">
+            Custom materials
+            <TabCount n={customGroups.length} />
+          </TabsTrigger>
+        ) : null}
+        {hasDispatch ? (
+          <TabsTrigger value="certificates" className="group gap-2">
+            Certificates
+            <TabCount n={certCount} />
+          </TabsTrigger>
+        ) : null}
+        {hasDispatch ? (
+          <TabsTrigger value="id-cards" className="group gap-2">
+            ID cards
+            <TabCount n={idCount} />
+          </TabsTrigger>
+        ) : null}
+      </TabsList>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+        {showInvoiceTab ? (
+          <TabsContent value="invoice" className="mt-0 space-y-3 focus-visible:ring-0">
+            {groupedSummary}
+          </TabsContent>
+        ) : null}
+        {hasCustom ? (
+          <TabsContent
+            value="custom-materials"
+            className="mt-0 focus-visible:ring-0"
+          >
+            <CustomMaterialsList groups={customGroups} />
+          </TabsContent>
+        ) : null}
+        {hasDispatch ? (
+          <TabsContent value="certificates" className="mt-0 focus-visible:ring-0">
+            <DispatchRecipientTable rows={certificates} emptyLabel="None on this order." />
+          </TabsContent>
+        ) : null}
+        {hasDispatch ? (
+          <TabsContent value="id-cards" className="mt-0 focus-visible:ring-0">
+            <DispatchRecipientTable rows={idCards} emptyLabel="None on this order." />
+          </TabsContent>
+        ) : null}
+        {order?.payment ? (
+          <OrderPaymentDetailsPanel
+            payment={order.payment}
+            className="mt-4"
+            fallbackGoodsGstAmount={order.gstAmount ?? null}
+          />
+        ) : null}
+      </div>
+      {showFooter && snapshot ? <TotalFooter snapshot={snapshot} /> : null}
+    </Tabs>
+  );
 }
 
 export interface OrderRowInvoiceDialogProps {
@@ -127,14 +308,12 @@ export function OrderRowInvoiceDialog({
   );
   const hasCustom = customGroups.length > 0;
 
-  const materialSelection = useMemo(() => {
-    if (!snapshot) return null;
-    return materialSelectionFromSnapshot(snapshot);
-  }, [snapshot]);
+  const materialSelection = useMemo(
+    () => (snapshot ? materialSelectionFromSnapshot(snapshot) : null),
+    [snapshot],
+  );
 
   const invoiceTabCount = snapshot ? invoiceGroupCount(snapshot) : 0;
-
-  const orderFailed = isError;
 
   const tabsMode =
     hasDispatch && hasMaterialSnapshot
@@ -145,37 +324,24 @@ export function OrderRowInvoiceDialog({
           ? "invoice-only"
           : "empty";
 
-  // The Invoice tab is only meaningful when there are standard (student/kit/CI)
-  // groups; a custom-only order shows just the Custom materials tab.
   const showInvoiceTab = hasMaterialSnapshot && invoiceTabCount > 0;
-
-  // Invoice-only orders render inline (no tabs) UNLESS they also carry custom
-  // materials, which get their own tab alongside the invoice.
   const inlineInvoiceOnly = tabsMode === "invoice-only" && !hasCustom;
+  const showTabbedFooter = hasMaterialSnapshot && (tabsMode === "mixed" || hasCustom);
 
-  const dialogPreviewFooter =
-    hasMaterialSnapshot && (tabsMode === "mixed" || hasCustom);
-
-  const groupedSummary =
-    snapshot && materialSelection ? (
+  const groupedSummary = useMemo(() => {
+    if (!snapshot || !materialSelection) return null;
+    return (
       <UnifiedInvoiceGroupedSummary
         preview={snapshot}
         startingKitRows={materialSelection.kitRows}
         selectedStudentIds={materialSelection.studentIds}
         selectedInstructorIds={materialSelection.instructorIds}
-        getStudentById={(id) => {
-          const g = snapshot.studentGroups?.find((x) => x.studentId === id);
-          if (g) return { name: g.studentName };
-          const st = snapshot.students.find((x) => x.studentId === id);
-          return st ? { name: st.studentName } : undefined;
-        }}
-        getInstructorById={(id) => {
-          const g = snapshot.instructorGroups?.find((x) => x.instructorId === id);
-          return g ? { name: g.name, instructorId: g.instructorCode } : undefined;
-        }}
+        getStudentById={(id) => lookupStudentName(snapshot, id)}
+        getInstructorById={(id) => lookupInstructorName(snapshot, id)}
         readOnly
       />
-    ) : null;
+    );
+  }, [snapshot, materialSelection]);
 
   return (
     <Dialog open={orderId != null} onOpenChange={(open) => !open && onClose()}>
@@ -191,134 +357,34 @@ export function OrderRowInvoiceDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {orderFailed ? (
+        {isError ? (
           <p className="px-6 py-4 text-sm text-destructive">
             Failed to load order. Please try again later.
           </p>
         ) : isLoading ? (
           <p className="px-6 py-6 text-sm text-muted-foreground">Loading order…</p>
         ) : tabsMode === "empty" ? (
-          <div className="px-6 py-6">
-            <p className="text-sm text-muted-foreground">
-              No stored material invoice or dispatch lines for this order.
-            </p>
-            {order?.payment ? (
-              <OrderPaymentDetailsPanel
-                payment={order.payment}
-                className="mt-4"
-                fallbackGoodsGstAmount={order.gstAmount ?? null}
-              />
-            ) : null}
-          </div>
-        ) : inlineInvoiceOnly ? (
-          <>
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-              {hasMaterialSnapshot && snapshot && groupedSummary ? (
-                groupedSummary
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No stored invoice snapshot for this order.
-                </p>
-              )}
-              {order?.payment ? (
-                <OrderPaymentDetailsPanel
-                payment={order.payment}
-                className="mt-4"
-                fallbackGoodsGstAmount={order.gstAmount ?? null}
-              />
-              ) : null}
-            </div>
-            {snapshot ? (
-              <div className="flex shrink-0 items-center justify-between gap-6 border-t border-border bg-muted/30 px-6 py-4">
-                <div className="text-sm font-semibold text-card-foreground">Total</div>
-                <div className="shrink-0 text-2xl font-semibold tabular-nums text-card-foreground">
-                  {formatRupees(snapshot.totalAmount)}
-                </div>
-              </div>
-            ) : null}
-          </>
+          <EmptyBody order={order} />
+        ) : inlineInvoiceOnly && snapshot ? (
+          <InlineInvoiceBody snapshot={snapshot} groupedSummary={groupedSummary} order={order} />
         ) : (
-          <Tabs
-            key={orderId ?? "closed"}
-            defaultValue={
-              showInvoiceTab
-                ? "invoice"
-                : hasCustom
-                  ? "custom-materials"
-                  : defaultDispatchTab(certCount, idCount)
-            }
-            className="flex min-h-0 flex-1 flex-col"
-          >
-            <TabsList className="mx-6 mt-3 flex h-auto w-auto flex-shrink-0 flex-wrap justify-start gap-1 self-start rounded-xl border border-border bg-muted/40 p-1 text-muted-foreground">
-              {showInvoiceTab ? (
-                <TabsTrigger value="invoice" className="group gap-2">
-                  Invoice
-                  <TabCount n={invoiceTabCount} />
-                </TabsTrigger>
-              ) : null}
-              {hasCustom ? (
-                <TabsTrigger value="custom-materials" className="group gap-2">
-                  Custom materials
-                  <TabCount n={customGroups.length} />
-                </TabsTrigger>
-              ) : null}
-              {hasDispatch ? (
-                <TabsTrigger value="certificates" className="group gap-2">
-                  Certificates
-                  <TabCount n={certCount} />
-                </TabsTrigger>
-              ) : null}
-              {hasDispatch ? (
-                <TabsTrigger value="id-cards" className="group gap-2">
-                  ID cards
-                  <TabCount n={idCount} />
-                </TabsTrigger>
-              ) : null}
-            </TabsList>
-
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-              {showInvoiceTab ? (
-                <TabsContent value="invoice" className="mt-0 space-y-3 focus-visible:ring-0">
-                  {groupedSummary}
-                </TabsContent>
-              ) : null}
-              {hasCustom ? (
-                <TabsContent
-                  value="custom-materials"
-                  className="mt-0 focus-visible:ring-0"
-                >
-                  <CustomMaterialsList groups={customGroups} />
-                </TabsContent>
-              ) : null}
-              {hasDispatch ? (
-                <TabsContent value="certificates" className="mt-0 focus-visible:ring-0">
-                  <DispatchRecipientTable rows={certificates} emptyLabel="None on this order." />
-                </TabsContent>
-              ) : null}
-              {hasDispatch ? (
-                <TabsContent value="id-cards" className="mt-0 focus-visible:ring-0">
-                  <DispatchRecipientTable rows={idCards} emptyLabel="None on this order." />
-                </TabsContent>
-              ) : null}
-              {order?.payment ? (
-                <OrderPaymentDetailsPanel
-                payment={order.payment}
-                className="mt-4"
-                fallbackGoodsGstAmount={order.gstAmount ?? null}
-              />
-              ) : null}
-            </div>
-          </Tabs>
+          <TabbedBody
+            orderId={orderId}
+            showInvoiceTab={showInvoiceTab}
+            hasCustom={hasCustom}
+            hasDispatch={hasDispatch}
+            invoiceTabCount={invoiceTabCount}
+            certCount={certCount}
+            idCount={idCount}
+            customGroups={customGroups ?? []}
+            certificates={certificates}
+            idCards={idCards}
+            groupedSummary={groupedSummary}
+            order={order}
+            snapshot={snapshot}
+            showFooter={showTabbedFooter}
+          />
         )}
-
-        {dialogPreviewFooter && snapshot ? (
-          <div className="flex shrink-0 items-center justify-between gap-6 border-t border-border bg-muted/30 px-6 py-4">
-            <div className="text-sm font-semibold text-card-foreground">Total</div>
-            <div className="shrink-0 text-2xl font-semibold tabular-nums text-card-foreground">
-              {formatRupees(snapshot.totalAmount)}
-            </div>
-          </div>
-        ) : null}
       </DialogContent>
     </Dialog>
   );

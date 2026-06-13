@@ -205,6 +205,153 @@ function resolveEmiAgreement(agreements: AgreementRecord[]) {
     .sort((left, right) => right.id - left.id)[0];
 }
 
+function PayrollItem({ p, index }: { p: any; index: number }) {
+  return (
+    <div className={cn("rounded-xl border bg-accent/30 p-3", index > 0 && "mt-3")}>
+      {p?.program?.name && (
+        <p className="mb-2 text-xs text-muted-foreground">{p.program.name}</p>
+      )}
+      <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm">
+        {(
+          [
+            ["Fee", p?.franchiseFee],
+            ["Monthly", p?.monthlyFee],
+            ["Royalty", p?.royalty],
+          ] as [string, number | undefined][]
+        ).map(([label, val]) => (
+          <div key={label}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              {label}
+            </p>
+            <p className="font-medium text-card-foreground">
+              {"₹"}
+              {Number(val ?? 0).toLocaleString()}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProfileCard({ profile }: { profile: NonNullable<ReturnType<typeof import("@/context/user-context").useUser>["user"]>["profile"] }) {
+  if (!profile) return null;
+  const rows: ([string, string | undefined] | null)[] = [
+    ["Name", profile.name],
+    ["Phone", profile.phone],
+    ["Email", profile.mail],
+    ["City", profile.city],
+    ["Franchise", profile.franchise?.name],
+    ["Type", profile.franchise?.type],
+    ["Status", profile.franchise?.status],
+    profile.franchise?.approvedAt
+      ? ["Approved", new Date(profile.franchise.approvedAt).toLocaleDateString()]
+      : null,
+  ];
+  const filteredRows = rows.filter((row): row is [string, string | undefined] => row != null);
+  return (
+    <Card className="rounded-2xl border-border bg-card shadow-sm">
+      <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
+        <CardTitle className="flex items-center gap-3 text-xl font-normal text-card-foreground">
+          <ModulePill label="Profile" />
+          Profile
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4 p-4 pt-2 sm:p-5 sm:pt-2">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+          {filteredRows.map(([label, value]) => (
+            <div
+              key={label}
+              className="col-span-1 flex justify-between gap-3 border-b border-border/60 pb-2 last:border-b-0"
+            >
+              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                {label}
+              </span>
+              <span className="text-right font-medium text-card-foreground">
+                {value ?? "-"}
+              </span>
+            </div>
+          ))}
+        </div>
+        {profile.franchise?.franchisePayroll && (
+          <div className="border-t border-border pt-3">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+              Payroll
+            </p>
+            {[profile.franchise.franchisePayroll]
+              .filter(Boolean)
+              .map((p: any, i: number) => (
+                <PayrollItem key={i} p={p} index={i} />
+              ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function OrderRow({ order }: { order: import("@/services/order.service").OrderData }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-sm transition-colors hover:border-primary/30 hover:bg-accent">
+      <div>
+        <p className="text-sm font-medium text-card-foreground">{order.orderType}</p>
+        <p className="text-xs text-muted-foreground">
+          {new Date(order.createdAt).toLocaleDateString()}
+        </p>
+      </div>
+      <div className="text-right">
+        <p className="text-sm font-medium text-card-foreground">
+          {"₹"}
+          {Number(order.totalAmount).toLocaleString()}
+        </p>
+        <p
+          className={cn(
+            "text-xs font-medium",
+            order.status === "Delivered" && "text-emerald-600",
+            order.status === "Pending" && "text-amber-600",
+            order.status !== "Delivered" && order.status !== "Pending" && "text-sky-600",
+          )}
+        >
+          {order.status}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function RecentOrdersCard({ orders }: { orders: import("@/services/order.service").OrderData[] }) {
+  return (
+    <Card className="rounded-2xl border-border bg-card shadow-sm">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2 sm:p-5 sm:pb-2">
+        <CardTitle className="flex items-center gap-3 text-xl font-normal text-card-foreground">
+          <ModulePill label="Orders" />
+          Recent orders
+        </CardTitle>
+        <Link
+          href="/franchisee/orders"
+          className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
+        >
+          View all
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </CardHeader>
+      <CardContent className="p-4 pt-2 sm:p-5 sm:pt-2">
+        {orders.length === 0 ? (
+          <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+            No recent orders.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {orders.map((order) => (
+              <OrderRow key={order.id} order={order} />
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 const EMPTY_STATS: FranchiseeDashboardStats = {
   students: { total: 0, active: 0, pending: 0 },
   courseInstructors: { total: 0, active: 0, pending: 0 },
@@ -498,156 +645,8 @@ export default function FranchiseeDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {user.profile && (
-          <Card className="rounded-2xl border-border bg-card shadow-sm">
-            <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
-              <CardTitle className="flex items-center gap-3 text-xl font-normal text-card-foreground">
-                <ModulePill label="Profile" />
-                Profile
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-4 pt-2 sm:p-5 sm:pt-2">
-              <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-                {(
-                  [
-                    ["Name", user.profile.name],
-                    ["Phone", user.profile.phone],
-                    ["Email", user.profile.mail],
-                    ["City", user.profile.city],
-                    ["Franchise", user.profile.franchise?.name],
-                    ["Type", user.profile.franchise?.type],
-                    ["Status", user.profile.franchise?.status],
-                    user.profile.franchise?.approvedAt
-                      ? [
-                          "Approved",
-                          new Date(
-                            user.profile.franchise.approvedAt,
-                          ).toLocaleDateString(),
-                        ]
-                      : null,
-                  ] as ([string, string | undefined] | null)[]
-                )
-                  .filter(
-                    (row): row is [string, string | undefined] => row != null,
-                  )
-                  .map(([label, value]) => (
-                    <div
-                      key={label}
-                      className="col-span-1 flex justify-between gap-3 border-b border-border/60 pb-2 last:border-b-0"
-                    >
-                      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                        {label}
-                      </span>
-                      <span className="text-right font-medium text-card-foreground">
-                        {value ?? "-"}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-
-              {user.profile.franchise?.franchisePayroll && (
-                <div className="border-t border-border pt-3">
-                  <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-                    Payroll
-                  </p>
-                  {[user.profile.franchise.franchisePayroll]
-                    .filter(Boolean)
-                    .map((p: any, i: number) => (
-                      <div
-                        key={i}
-                        className={cn(
-                          "rounded-xl border bg-accent/30 p-3",
-                          i > 0 && "mt-3",
-                        )}
-                      >
-                        {p?.program?.name && (
-                          <p className="mb-2 text-xs text-muted-foreground">
-                            {p.program.name}
-                          </p>
-                        )}
-                        <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm">
-                          {[
-                            ["Fee", p?.franchiseFee],
-                            ["Monthly", p?.monthlyFee],
-                            ["Royalty", p?.royalty],
-                          ].map(([label, val]) => (
-                            <div key={label as string}>
-                              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                                {label}
-                              </p>
-                              <p className="font-medium text-card-foreground">
-                                {"\u20B9"}
-                                {Number(val ?? 0).toLocaleString()}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        <Card className="rounded-2xl border-border bg-card shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2 sm:p-5 sm:pb-2">
-            <CardTitle className="flex items-center gap-3 text-xl font-normal text-card-foreground">
-              <ModulePill label="Orders" />
-              Recent orders
-            </CardTitle>
-            <Link
-              href="/franchisee/orders"
-              className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
-            >
-              View all
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </CardHeader>
-          <CardContent className="p-4 pt-2 sm:p-5 sm:pt-2">
-            {recentOrders.length === 0 ? (
-              <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
-                No recent orders.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-sm transition-colors hover:border-primary/30 hover:bg-accent"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-card-foreground">
-                        {order.orderType}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-card-foreground">
-                        {"\u20B9"}
-                        {Number(order.totalAmount).toLocaleString()}
-                      </p>
-                      <p
-                        className={cn(
-                          "text-xs font-medium",
-                          order.status === "Delivered" && "text-emerald-600",
-                          order.status === "Pending" && "text-amber-600",
-                          order.status !== "Delivered" &&
-                            order.status !== "Pending" &&
-                            "text-sky-600",
-                        )}
-                      >
-                        {order.status}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {user.profile && <ProfileCard profile={user.profile} />}
+        <RecentOrdersCard orders={recentOrders} />
       </div>
     </div>
   );
