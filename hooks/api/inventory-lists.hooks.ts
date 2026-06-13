@@ -153,5 +153,4 @@ export function useInventoryItemsForTrainingLevel(
   });
 }
 
-export type { Inventory };
 export type { ProgramKitItemSummary };

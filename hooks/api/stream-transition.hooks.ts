@@ -29,4 +29,3 @@ export async function invalidateStreamTransitionsByProgram(programId: number) {
   }
 }
 
-export type { StreamTransition };

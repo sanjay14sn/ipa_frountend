@@ -38,4 +38,3 @@ function useLevelsByStream(streamId: number | undefined) {
   });
 }
 
-export type { Level };

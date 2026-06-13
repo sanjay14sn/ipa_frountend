@@ -42,11 +42,11 @@ export interface RequestedIdDetailsByFranchise {
   [franchiseName: string]: RequestedIdDetail[];
 }
 
-export interface GroupedIdDetailsData {
+interface GroupedIdDetailsData {
   [franchiseName: string]: RequestedIdDetail[];
 }
 
-export interface PaginatedIdDetailsResponse {
+interface PaginatedIdDetailsResponse {
   data: GroupedIdDetailsData;
   meta: PaginationMeta;
 }

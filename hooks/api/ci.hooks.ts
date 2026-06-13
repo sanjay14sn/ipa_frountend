@@ -23,7 +23,7 @@ import { getQueryClientBridge } from "@/hooks/api/query-client-bridge";
 import { toast } from "sonner";
 import { extractErrorMessage } from "@/lib/error-utils";
 
-export type { CourseInstructorData, CreateCourseInstructorRequest, CIFranchiseSummary };
+export type { CIFranchiseSummary };
 
 const CI_LIST_PREFIX = ["course-instructors", "list"] as const;
 

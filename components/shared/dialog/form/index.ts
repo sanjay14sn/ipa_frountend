@@ -1,3 +1,2 @@
-export { DialogFormField, type DialogFormFieldProps } from "./DialogFormField"
-export { DialogFormGrid, type DialogFormGridProps } from "./DialogFormGrid"
-export { type DialogSectionProps } from "./DialogSection"
+export { DialogFormField } from "./DialogFormField"
+export { DialogFormGrid } from "./DialogFormGrid"

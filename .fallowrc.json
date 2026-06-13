@@ -22,6 +22,12 @@
   },
   "ignoreExports": [
     {
+      // shadcn/ui component library — exports the full component API by design;
+      // only a subset is consumed by each app. Suppress wholesale.
+      "file": "components/ui/**",
+      "exports": ["*"]
+    },
+    {
       "file": "services/course-instructor.service.ts",
       "exports": ["*"]
     },

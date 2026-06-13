@@ -1,7 +1,7 @@
 import { AxiosError } from 'axios';
 import { sendClientLog } from '@/lib/client-telemetry';
 
-export interface BackendErrorResponse {
+interface BackendErrorResponse {
   code?: string;
   title?: string;
   message: string;

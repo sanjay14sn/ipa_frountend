@@ -37,7 +37,7 @@ export interface WaitingInstructor {
   trainingLevelId: number;
 }
 
-export interface InstructorProgress {
+interface InstructorProgress {
   instructorId: number;
   levels: {
     trainingLevelId: number;

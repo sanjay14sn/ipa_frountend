@@ -63,7 +63,7 @@ function fmtTime(iso: string | null | undefined): string {
   }
 }
 
-export function fmtDateTime(iso: string | null | undefined): string {
+function fmtDateTime(iso: string | null | undefined): string {
   if (!iso) return "-";
   try {
     return format(parseISO(iso), "PPpp");
@@ -72,7 +72,7 @@ export function fmtDateTime(iso: string | null | undefined): string {
   }
 }
 
-export function money(value: number | string | null | undefined): string {
+function money(value: number | string | null | undefined): string {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",

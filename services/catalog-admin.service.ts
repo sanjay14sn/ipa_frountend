@@ -1,7 +1,7 @@
 import { api } from "@/lib/axios";
 import { unwrapData } from "@/lib/unwrap-api";
 
-export interface CITrainingLevel {
+interface CITrainingLevel {
   id: number;
   programId: number;
   name: string;

@@ -37,4 +37,3 @@ export async function invalidateStreamsByProgram(programId: number) {
   }
 }
 
-export type { Stream };

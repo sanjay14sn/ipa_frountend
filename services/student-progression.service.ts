@@ -125,7 +125,7 @@ function mapLifecycleRow(row: Record<string, unknown>): StudentLifecycleRow {
 // Student level progression types + functions
 // ---------------------------------------------------------------------------
 
-export interface StudentLevelProgression {
+interface StudentLevelProgression {
   id: number;
   studentId: number;
   levelId: number;
@@ -136,7 +136,7 @@ export interface StudentLevelProgression {
   notes: string | null;
 }
 
-export interface UpdateProgressionDto {
+interface UpdateProgressionDto {
   status?: string;
   startDate?: string;
   endDate?: string;

@@ -5,4 +5,4 @@
  * Prefer importing `Stepper` directly from `@/components/shared/stepper` for non-dialog use.
  */
 
-export { Stepper as DialogStepper, type StepDef, type StepperProps as DialogStepperProps } from "@/components/shared/stepper"
+export { type StepDef } from "@/components/shared/stepper"

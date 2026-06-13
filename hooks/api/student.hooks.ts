@@ -54,16 +54,7 @@ import { getQueryClientBridge } from "./query-client-bridge";
 
 const STUDENTS_LIST_PREFIX = ["students", "list"] as const;
 
-export {
-  type StudentData,
-  type RequestedIdDetailsByFranchise,
-  type RequestedCertificateDetailsByFranchise,
-  type EligibleStudent,
-  type AdminCertificateRequest,
-  type AdminCertificateRequestsByFranchise,
-  type FranchiseeCertificate,
-  type StudentLifecycleRow,
-} from "@/services/student.service";
+export { type StudentData } from "@/services/student.service";
 
 function wantsStudentPagination(params?: StudentPaginationParams): boolean {
   if (params == null) return false;

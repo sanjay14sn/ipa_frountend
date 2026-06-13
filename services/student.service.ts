@@ -174,7 +174,7 @@ export interface StudentCertificatesResponse {
   result: StudentCertificate[];
 }
 
-export interface ApproveAndDispatchClassification {
+interface ApproveAndDispatchClassification {
   approveIds: number[];
   alreadyIssuedIds: number[];
   ineligible: Array<{ id: number; reason: string }>;

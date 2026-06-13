@@ -4,9 +4,9 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatRupees } from "@/lib/currency-utils";
 
-export type CheckoutGroupKind = "KIT" | "STUDENT" | "CI";
+type CheckoutGroupKind = "KIT" | "STUDENT" | "CI";
 
-export interface CheckoutCostRow {
+interface CheckoutCostRow {
   label: string;
   /** Per-unit (multiplied by kitQty when present) */
   unit?: number;
@@ -18,12 +18,12 @@ export interface CheckoutCostRow {
   gstAmount?: number;
 }
 
-export interface CheckoutLineItem {
+interface CheckoutLineItem {
   name: string;
   quantity: number;
 }
 
-export interface CheckoutTshirtBreakdownRow {
+interface CheckoutTshirtBreakdownRow {
   tshirtItemId: number | null;
   tshirtName: string | null;
   quantity: number;

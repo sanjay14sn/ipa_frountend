@@ -24,4 +24,3 @@ export function useFranchiseeDashboardStats(enabled = true) {
   });
 }
 
-export type { AdminDashboardStats, FranchiseeDashboardApi };

@@ -162,4 +162,3 @@ export function useSendReceivableReminderMutation(agreementId: number) {
   });
 }
 
-export type { AgreementRecord };

@@ -71,4 +71,3 @@ export function AdminCIAgreementDialog({
   );
 }
 
-export type { AdminCourseInstructorAgreementRecord };

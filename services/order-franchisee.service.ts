@@ -43,7 +43,7 @@ export interface CreateOrderDto {
   paymentRecordId?: number;
 }
 
-export interface UpdateOrderDto {
+interface UpdateOrderDto {
   status?: string;
   notes?: string;
 }
@@ -140,7 +140,7 @@ export interface StudentAvailableItems {
   items: AvailableInventoryItem[];
 }
 
-export interface StudentOrderHistory {
+interface StudentOrderHistory {
   studentId: number;
   studentName: string;
   levelId: number;
@@ -156,7 +156,7 @@ export interface StudentOrderHistory {
   }>;
 }
 
-export interface InvoiceItem {
+interface InvoiceItem {
   studentId: number;
   studentName: string;
   rollNo: string;
@@ -175,7 +175,7 @@ export interface InvoiceItem {
   }>;
 }
 
-export interface CIMaterialsPreview {
+interface CIMaterialsPreview {
   ciId: number;
   ciName: string;
   trainingLevel: {

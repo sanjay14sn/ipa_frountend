@@ -66,7 +66,6 @@ export interface ProgramRequestRow {
   createdAt?: string;
 }
 
-export type { ProgramRequestPayroll, ApproveProgramRequestPayload } from "./program-request.service";
 
 async function getProgramRequests(_params?: {
   status?: string;
@@ -104,7 +103,7 @@ export async function bulkUploadFranchises(_file: File) {
 }
 
 /** Per-program fee agreement row (legacy UI) */
-export interface ProgramAgreement {
+interface ProgramAgreement {
   id: number;
   programId: number;
   franchiseId: string;

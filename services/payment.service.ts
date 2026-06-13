@@ -48,7 +48,7 @@ export interface PaymentData {
   goodsGstAmount?: number | null;
 }
 
-export interface FranchisePaymentGroup {
+interface FranchisePaymentGroup {
   franchiseId: string;
   franchiseName: string;
   payments: PaymentData[];
@@ -69,7 +69,7 @@ export interface FranchisePaymentSummary {
 /** @alias Legacy grouped payments table */
 export type GroupedPaymentData = Record<string, PaymentData[]>;
 
-export interface VerifyPaymentDto {
+interface VerifyPaymentDto {
   paymentId: string;
   orderId: string;
   signature: string;
@@ -235,7 +235,7 @@ export async function getAdminFranchisePayments(
 }
 
 /** Razorpay checkout bootstrap (legacy franchisee CI flows) */
-export interface CITrainingPaymentOrderResponse {
+interface CITrainingPaymentOrderResponse {
   key: string;
   amount: number;
   currency: string;

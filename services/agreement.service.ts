@@ -219,7 +219,7 @@ export interface AgreementReceivablesView {
   } | null;
 }
 
-export interface AgreementFranchisePayrollRow {
+interface AgreementFranchisePayrollRow {
   id: number;
   franchiseFee: number;
   gstFranchiseFee?: boolean;
@@ -275,7 +275,7 @@ export interface AgreementTermsSnapshot {
  * - `PendingSignature` — equivalent to `Approved`
  * - `Expired`   — collapsed into `Void`
  */
-export type AgreementStatus =
+type AgreementStatus =
   | "Draft"
   | "Approved"
   | "Valid"
@@ -344,7 +344,7 @@ export interface AgreementRecord extends AgreementTermsSnapshot {
   receivables?: AgreementReceivablesView | null;
 }
 
-export interface CreateAgreementAdminDto {
+interface CreateAgreementAdminDto {
   type: string;
   franchiseId: string;
   franchiseeId: number;

@@ -68,4 +68,3 @@ export async function invalidatePrograms() {
   }
 }
 
-export type { Program };

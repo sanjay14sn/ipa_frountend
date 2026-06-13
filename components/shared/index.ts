@@ -2,7 +2,6 @@ export {
   TablePageShell,
   TableSectionSurface,
   TableToolbarPanel,
-  TableStatusBar,
   RawTableSurface,
   TableLoadingState,
   TableEmptyState,
@@ -16,8 +15,6 @@ export type {
   DataTableMultiSelectFilter,
   DataTableSortOption,
   DataTablePaginationMeta,
-  DataTableExpandedSection,
-  DataTableProps,
 } from "./data-table";
 
 export {
@@ -28,8 +25,6 @@ export {
   DetailCard,
   DetailMessage,
 } from "./detail-layout";
-
-export type { MultiSelectOption } from "./MultiSelectDropdown";
 
 export { StatusBadge } from "./status-badge";
 export type { StatusTone } from "./status-badge";

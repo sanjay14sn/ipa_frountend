@@ -82,4 +82,3 @@ function useFranchiseStartingKits(
   });
 }
 
-export type { FranchiseData, FranchiseeGroupedItem, FranchiseStartingKitRow };

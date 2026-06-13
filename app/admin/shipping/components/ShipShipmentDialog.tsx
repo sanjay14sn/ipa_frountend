@@ -13,7 +13,7 @@ function suggestedTrackingNumber(orderId: number): string {
   return `SHP-${orderId}-${Date.now().toString(36).toUpperCase()}`;
 }
 
-export type ShipDialogTrackingSeed = {
+type ShipDialogTrackingSeed = {
   orderId: number;
   tracking?: string | null;
   carrier?: string | null;

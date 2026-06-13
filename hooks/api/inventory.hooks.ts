@@ -8,7 +8,7 @@
  *   @/hooks/api/inventory-mutations.hooks
  */
 
-export type { InventoryPaginatedFilters, Inventory, ProgramKitItemSummary } from "@/hooks/api/inventory-lists.hooks";
+export type { ProgramKitItemSummary } from "@/hooks/api/inventory-lists.hooks";
 export {
   useInventoryPaginatedQuery,
   useAllInventory,

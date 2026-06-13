@@ -135,10 +135,6 @@ export async function invalidateProcurementQueries() {
 }
 
 export type {
-  Supplier,
-  SupplierItemTerm,
-  PurchaseOrderSummary,
-  PurchaseReceiptSummary,
   SupplierListParams,
   SupplierTermListParams,
   PurchaseOrderListParams,

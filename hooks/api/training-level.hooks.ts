@@ -29,4 +29,3 @@ export async function invalidateTrainingLevelsForProgram(programId: number) {
   }
 }
 
-export type { TrainingLevel };

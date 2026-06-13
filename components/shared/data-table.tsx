@@ -734,13 +734,3 @@ export default function DataTable<T>({
   );
 }
 
-/** @deprecated Use `DataTable` */
-export { DataTable as AdminTable };
-
-export type AdminTableColumn<T> = DataTableColumn<T>;
-export type AdminTableFilter = DataTableFilter;
-export type AdminTableMultiSelectFilter = DataTableMultiSelectFilter;
-export type AdminTableSortOption = DataTableSortOption;
-export type AdminTablePaginationMeta = DataTablePaginationMeta;
-export type AdminTableExpandedSection = DataTableExpandedSection;
-export type AdminTableProps<T> = DataTableProps<T>;
