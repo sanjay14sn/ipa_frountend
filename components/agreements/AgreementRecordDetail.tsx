@@ -617,12 +617,16 @@ export function AgreementRecordDetail({
   isInitiatingReceivablePayment,
   onSign,
   onWaiveItem,
+  onEditDueDate,
+  isUpdatingDueDate,
 }: {
   data: AgreementRecord;
   onPayReceivableItem?: () => void;
   isInitiatingReceivablePayment?: boolean;
   onSign?: (result: ESignatureResult) => Promise<void>;
   onWaiveItem?: (item: ReceivableSummaryItem) => void;
+  onEditDueDate?: (itemId: number, dueAtISO: string) => Promise<void>;
+  isUpdatingDueDate?: boolean;
 }) {
   const pathname = usePathname();
   const isAdminContext = pathname?.startsWith("/admin") ?? false;
@@ -719,6 +723,8 @@ export function AgreementRecordDetail({
         onPayReceivableItem={isAdminContext ? undefined : onPayReceivableItem}
         isInitiatingReceivablePayment={isInitiatingReceivablePayment}
         onWaiveItem={onWaiveItem}
+        onEditDueDate={onEditDueDate}
+        isUpdatingDueDate={isUpdatingDueDate}
       />
 
       <Tabs defaultValue="overview" className="space-y-4">
