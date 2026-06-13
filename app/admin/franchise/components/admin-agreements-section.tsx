@@ -35,6 +35,7 @@ import { getErrorMessage } from "@/lib/error-utils";
 import {
   useAgreementAdmin,
   useAgreementsAdmin,
+  useUpdateReceivableDueDateMutation,
   useWaiveReceivableItemMutation,
 } from "@/hooks/api/agreement.hooks";
 import { WaiveReceivableDialog } from "./WaiveReceivableDialog";
@@ -52,6 +53,7 @@ function AdminAgreementViewDialog({
   const [waiveItem, setWaiveItem] = useState<ReceivableSummaryItem | null>(null);
   const [waiveDialogOpen, setWaiveDialogOpen] = useState(false);
   const waiveMutation = useWaiveReceivableItemMutation(agreementId ?? 0);
+  const updateDueDate = useUpdateReceivableDueDateMutation(agreementId ?? 0);
 
   useEffect(() => {
     if (agreementQuery.error) {
@@ -104,6 +106,10 @@ function AdminAgreementViewDialog({
                   setWaiveItem(item);
                   setWaiveDialogOpen(true);
                 }}
+                onEditDueDate={(itemId, dueAt) =>
+                  updateDueDate.mutateAsync({ itemId, dueAt })
+                }
+                isUpdatingDueDate={updateDueDate.isPending}
               />
             ) : (
               <p className="py-10 text-center text-sm text-muted-foreground">
