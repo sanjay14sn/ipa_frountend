@@ -414,6 +414,119 @@ export async function verifyOrderPayment(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Franchise kit re-orders (paid, pay-first like the unified flow)
+// ---------------------------------------------------------------------------
+
+export interface FranchiseKitOrderItem {
+  inventoryItemId: number;
+  quantity: number;
+}
+
+export interface FranchiseKitOrderPreview {
+  franchiseId: string;
+  lines: Array<{
+    inventoryItemId: number;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+  }>;
+  totalAmount: number;
+  subtotalAmount: number;
+  gstAmount: number;
+  isGstInclusive: boolean;
+}
+
+export async function previewFranchiseKitOrder(
+  programId: number,
+  items: FranchiseKitOrderItem[],
+): Promise<FranchiseKitOrderPreview> {
+  const response = await api.post(
+    `/order/programs/${programId}/franchise-kit/preview-invoice`,
+    { items },
+  );
+  return unwrapData(response) as FranchiseKitOrderPreview;
+}
+
+export async function createFranchiseKitOrder(input: {
+  programId: number;
+  items: FranchiseKitOrderItem[];
+  notes?: string;
+  paymentRecordId?: number;
+}): Promise<OrderData> {
+  const { programId, ...body } = input;
+  const response = await api.post(
+    `/order/programs/${programId}/franchise-kit`,
+    body,
+  );
+  return normalizeOrder(unwrapData(response));
+}
+
+/**
+ * Pay-first initiation for a franchise kit re-order. Zero-amount totals
+ * create the FREE order immediately; otherwise a Razorpay payment is
+ * initiated and the order is created (PAID) after verification, passing the
+ * verified `paymentRecordId` to `createFranchiseKitOrder`. Kit lines are
+ * GST-exempt, so `goodsGstAmount` is always 0.
+ */
+export async function initiateFranchiseKitPayment(input: {
+  programId: number;
+  items: FranchiseKitOrderItem[];
+  totalAmount: number;
+  notes?: string;
+}): Promise<OrderPaymentResponse> {
+  if (input.totalAmount <= 0) {
+    const createdOrder = await createFranchiseKitOrder({
+      programId: input.programId,
+      items: input.items,
+      notes: input.notes,
+    });
+    return {
+      orderId: "",
+      businessOrderId: createdOrder.id,
+      amount: 0,
+      currency: "INR",
+      franchiseId: createdOrder.franchiseId ?? "",
+      franchiseName: createdOrder.franchise?.name ?? "",
+      paymentType: "ORDER_PAYMENT",
+      key: RAZORPAY_KEY_ID,
+      studentIds: [],
+      notes: input.notes,
+      isZeroAmount: true,
+    };
+  }
+
+  const response = await api.post("/billing/payment/initiate", {
+    type: "ORDER_PAYMENT",
+    amount: input.totalAmount,
+    goodsGstAmount: 0,
+    acquirerData: {
+      franchiseKitItems: input.items,
+    },
+  });
+  const billing = unwrapData<{
+    razorpayOrderId: string;
+    paymentId: number;
+    amount: number;
+    keyId?: string;
+  }>(response);
+
+  return {
+    orderId: billing.razorpayOrderId,
+    businessOrderId: 0,
+    paymentRecordId: Number(billing.paymentId ?? 0),
+    amount: Number(billing.amount ?? input.totalAmount),
+    currency: "INR",
+    franchiseId: "",
+    franchiseName: "",
+    paymentType: "ORDER_PAYMENT",
+    key: billing.keyId || RAZORPAY_KEY_ID,
+    studentIds: [],
+    notes: input.notes,
+    isZeroAmount: false,
+  };
+}
+
 export async function abandonOrderPayment(input: {
   paymentId?: number;
   razorpayOrderId?: string;

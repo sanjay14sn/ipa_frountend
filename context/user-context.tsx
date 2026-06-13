@@ -25,6 +25,8 @@ interface UserContextType {
   user: User | null;
   loading: boolean;
   setUser: (user: User | ((prev: User | null) => User | null)) => void;
+  /** Synchronously clears the user session (state, localStorage, scope store). Safe to call from event handlers. */
+  clearUser: () => void;
   switchFranchise: (franchiseId: string) => Promise<void>;
   /**
    * Switch the currently active program scope (agreementId) for the active
@@ -406,15 +408,27 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [profileQuery.isError, adminProfileQuery.isError]);
 
+  // Clears all session state synchronously. Called from event handlers (e.g.
+  // logout), NOT from inside React state updaters, so it is safe to call
+  // Zustand's setState directly here without triggering "setState during render".
+  const clearUser = useCallback(() => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("user");
+    }
+    useScopeStore.getState().clear();
+    setUserState(null);
+  }, []);
+
   const contextValue = useMemo(
     () => ({
       user,
       loading,
       setUser: setUserWithStorage,
+      clearUser,
       switchFranchise,
       switchAgreement,
     }),
-    [user, loading, setUserWithStorage, switchFranchise, switchAgreement],
+    [user, loading, setUserWithStorage, clearUser, switchFranchise, switchAgreement],
   );
 
   return (

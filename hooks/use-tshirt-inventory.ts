@@ -2,18 +2,23 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
-  getTshirtInventory,
+  getMyAgreementTshirts,
   type InventoryByCategoryItem,
 } from "@/services/inventory.service";
-import { INVENTORY_CATEGORIES } from "@/lib/inventory-categories";
 
-const TSHIRT_CATEGORY = INVENTORY_CATEGORIES[1]; // "T-Shirts"
-
-export function useTshirtInventory(enabled: boolean) {
+/**
+ * T-shirt options for the order screen, scoped to the program-kit items the
+ * admin configured for the franchise's agreement on `programId`. Disabled
+ * (empty list) until a program is selected.
+ */
+export function useTshirtInventory(
+  enabled: boolean,
+  programId: number | null | undefined,
+) {
   return useQuery<InventoryByCategoryItem[]>({
-    queryKey: ["inventory", "by-category", TSHIRT_CATEGORY],
-    queryFn: () => getTshirtInventory(TSHIRT_CATEGORY),
-    enabled,
+    queryKey: ["inventory", "agreement-tshirts", programId ?? null],
+    queryFn: () => getMyAgreementTshirts(programId as number),
+    enabled: enabled && programId != null,
     staleTime: 5 * 60 * 1000,
   });
 }

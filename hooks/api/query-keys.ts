@@ -210,6 +210,12 @@ export const queryKeys = {
     trainingLevelItems: (trainingLevelId: number) =>
       ["inventory", "training-level-items", trainingLevelId] as const,
     monitoring: ["inventory", "monitoring"] as const,
+    franchiseKitTemplate: (programId: number) =>
+      ["inventory", "franchise-kit-template", programId] as const,
+    franchiseKit: (franchiseId: string, programId: number) =>
+      ["inventory", "franchise-kit", franchiseId, programId] as const,
+    myFranchiseKit: (programId: number) =>
+      ["inventory", "franchise-kit", "mine", programId] as const,
   },
   fulfillment: {
     shipments: (params?: Record<string, unknown> | null) =>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Package } from "lucide-react";
+import { Loader2, Package, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -12,9 +12,11 @@ import { ReceivableCompactLine } from "@/components/receivables/InstallmentSumma
 import { EmiTimeline } from "@/components/receivables/EmiTimeline";
 import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
 import { AgreementKitItemsDialog } from "./AgreementKitItemsDialog";
+import { FranchiseKitEditor } from "./FranchiseKitEditor";
 import { EditDueDateDialog } from "./EditDueDateDialog";
 import { RecordReceivablePaymentDialog } from "./RecordReceivablePaymentDialog";
 import {
+  useDispatchFranchiseKitMutation,
   useUpdateReceivableDueDateMutation,
   useRecordReceivablePaymentMutation,
   useSendReceivableReminderMutation,
@@ -101,6 +103,7 @@ export function FranchiseAgreementsWorkspace({
     initialAgreementId != null ? String(initialAgreementId) : "",
   );
   const [kitDialogOpen, setKitDialogOpen] = useState(false);
+  const [franchiseKitOpen, setFranchiseKitOpen] = useState(false);
   const [editDueDateItem, setEditDueDateItem] =
     useState<ReceivableSummaryItem | null>(null);
   const [recordPaymentItem, setRecordPaymentItem] =
@@ -118,6 +121,9 @@ export function FranchiseAgreementsWorkspace({
 
   const { mutate: sendReminder } =
     useSendReceivableReminderMutation(resolvedActiveIdForMutation);
+
+  const { mutate: dispatchKit, isPending: dispatchingKit } =
+    useDispatchFranchiseKitMutation(resolvedActiveIdForMutation);
 
   if (sortedAgreements.length === 0) {
     return <DetailMessage>No agreements on file.</DetailMessage>;
@@ -174,16 +180,69 @@ export function FranchiseAgreementsWorkspace({
                   </p>
                 </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-9"
-                  onClick={() => setKitDialogOpen(true)}
-                  disabled={agreement.programId == null}
-                >
-                  <Package className="mr-2 h-4 w-4" />
-                  Manage kit items
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {agreement.type === "NEW_FRANCHISE" ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-9"
+                      onClick={() => setFranchiseKitOpen(true)}
+                      disabled={
+                        !agreement.franchiseId || agreement.programId == null
+                      }
+                    >
+                      <Package className="mr-2 h-4 w-4" />
+                      Franchise kit
+                    </Button>
+                  ) : null}
+                  {agreement.type === "NEW_FRANCHISE" &&
+                  agreement.status === "Valid" ? (
+                    agreement.franchiseKitOrderId != null ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9"
+                        disabled
+                        title="The free franchise kit order has already been created"
+                      >
+                        <Truck className="mr-2 h-4 w-4" />
+                        Kit dispatched (Order #{agreement.franchiseKitOrderId})
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        className="h-9"
+                        disabled={dispatchingKit}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              "Create the one-time free franchise kit order for this agreement?",
+                            )
+                          ) {
+                            dispatchKit();
+                          }
+                        }}
+                      >
+                        {dispatchingKit ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Truck className="mr-2 h-4 w-4" />
+                        )}
+                        Dispatch franchise kit
+                      </Button>
+                    )
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-9"
+                    onClick={() => setKitDialogOpen(true)}
+                    disabled={agreement.programId == null}
+                  >
+                    <Package className="mr-2 h-4 w-4" />
+                    Manage kit items
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -221,6 +280,13 @@ export function FranchiseAgreementsWorkspace({
         agreement={activeAgreement}
         open={kitDialogOpen}
         onOpenChange={setKitDialogOpen}
+      />
+
+      <FranchiseKitEditor
+        franchiseId={activeAgreement?.franchiseId ?? null}
+        programId={activeAgreement?.programId ?? null}
+        open={franchiseKitOpen}
+        onOpenChange={setFranchiseKitOpen}
       />
 
       <EditDueDateDialog

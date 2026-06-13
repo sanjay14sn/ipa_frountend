@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CreditCard, Eye, ShieldCheck, X, Download, Loader2, RefreshCw, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
+import { orderTypeLabel } from "@/lib/payment-details-display";
 import {
   cancelOrderAdmin,
   markOrderPaidAdmin,
@@ -510,7 +511,7 @@ export default function AdminOrdersTable({
 
           <ExpandedDetailSection title="Order details">
             <DetailFieldsGrid columns={4}>
-              <DetailField label="Order type" value={order.orderType} />
+              <DetailField label="Order type" value={orderTypeLabel(order.orderType)} />
               <DetailField
                 label="Ready to ship"
                 value={

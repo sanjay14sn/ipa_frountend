@@ -24,6 +24,8 @@ export function orderTypeLabel(type?: string | null): string {
       return "Certificate Dispatch";
     case "ID_CARD_DISPATCH":
       return "ID Card Dispatch";
+    case "FRANCHISE_KIT":
+      return "Franchise Kit";
     default:
       return type ? type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Order";
   }
@@ -41,6 +43,8 @@ export function orderTypeBadgeClass(type?: string | null): string {
       return "bg-emerald-100 text-emerald-800 border-emerald-200";
     case "ID_CARD_DISPATCH":
       return "bg-teal-100 text-teal-800 border-teal-200";
+    case "FRANCHISE_KIT":
+      return "bg-indigo-100 text-indigo-800 border-indigo-200";
     default:
       return "bg-gray-100 text-gray-600 border-gray-200";
   }

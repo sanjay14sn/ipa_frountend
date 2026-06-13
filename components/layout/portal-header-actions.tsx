@@ -15,10 +15,10 @@ import { NotificationBell } from "@/components/shared/notification-bell";
 import { useUser } from "@/context/user-context";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { getUserFromStorage } from "@/lib/auth";
-import { useScopeStore } from "@/lib/stores/scope-store";
 import { usePathname, useRouter } from "next/navigation";
 import { franchiseeLogout, logout } from "@/services/auth.service";
 import { logoutCI } from "@/services/ci-auth.service";
+import { markLogoutStart, markLogoutEnd } from "@/lib/axios";
 import { sendClientLog } from "@/lib/client-telemetry";
 
 function headerEmail(user: ReturnType<typeof useUser>["user"]): string {
@@ -31,7 +31,7 @@ function headerEmail(user: ReturnType<typeof useUser>["user"]): string {
 }
 
 export function PortalHeaderActions() {
-  const { user } = useUser();
+  const { user, clearUser } = useUser();
   const { user: ciUser, clear: clearCI } = useCIAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -44,10 +44,20 @@ export function PortalHeaderActions() {
   const isPortalRoute = isAdminPortal || pathname.startsWith("/franchisee") || isCiPortal;
 
   const handleLogout = async () => {
+    // Cancel all in-flight React Query fetches before sending the logout
+    // request. Any already-in-flight requests returning 401 while the logout
+    // is in progress would otherwise trigger the refresh cycle, which fires
+    // an inner logout that can race with and cancel the outer one.
+    queryClient.cancelQueries();
+
+    // Tell the refresh interceptor not to start a new refresh cycle while
+    // the logout is in-flight. Any 401 that arrives after this point (from
+    // queries re-triggered after the cancel) is silently rejected instead of
+    // kicking off a refresh → inner logout that competes with ours.
+    markLogoutStart();
     try {
       if (isCiPortal) {
         await logoutCI();
-        clearCI();
       } else if (isAdminPortal) {
         await logout();
       } else {
@@ -55,13 +65,20 @@ export function PortalHeaderActions() {
       }
     } catch (e) {
       sendClientLog({ level: "error", event: "logout-error", message: "Error during logout", context: { error: e } });
+    } finally {
+      markLogoutEnd();
+      // Clear local state AFTER the server responds. Clearing before the
+      // await causes layout auth guards (useEffect: if (!user) router.replace)
+      // to fire mid-flight — proxy still sees the HttpOnly cookie and
+      // redirects back to the dashboard, canceling the logout and leaving
+      // cookies intact.
+      clearUser();
+      queryClient.clear();
+      if (isCiPortal) clearCI();
     }
-    localStorage.removeItem("user");
-    // Drop the previous user's scope so a different franchisee logging in
-    // on the same browser tab doesn't inherit their programId / cached
-    // responses keyed by that programId.
-    useScopeStore.getState().clear();
-    queryClient.clear();
+
+    // Navigate after the server has cleared the session cookies so the
+    // proxy middleware allows the login page through.
     if (isCiPortal) {
       router.push("/ci/login");
     } else if (isAdminPortal) {

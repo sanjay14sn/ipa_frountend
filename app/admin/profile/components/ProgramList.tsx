@@ -7,6 +7,7 @@ import { PageTabs, TabsContent as PageTabsContent } from "@/components/shared/pa
 import { LevelManagement } from "@/app/admin/profile/components/LevelManagement";
 import { CITrainingLevelManagement } from "@/app/admin/profile/components/CITrainingLevelManagement";
 import { ProgramKitManagement } from "@/app/admin/profile/components/ProgramKitManagement";
+import { FranchiseKitManagement } from "@/app/admin/profile/components/FranchiseKitManagement";
 import { StreamManagement } from "@/app/admin/profile/components/StreamManagement";
 import { CertificateTemplateSection } from "@/app/admin/profile/components/CertificateTemplateSection";
 import { useStreamsByProgram } from "@/hooks/api/stream.hooks";
@@ -70,7 +71,12 @@ function BasicProgramCatalogPanel({
 
 // ── ProgramList ──────────────────────────────────────────────────────────────
 
-type ProgramTabMode = "basic" | "ci-training" | "kit-items" | "certificate";
+type ProgramTabMode =
+  | "basic"
+  | "ci-training"
+  | "kit-items"
+  | "franchise-kit"
+  | "certificate";
 
 interface ProgramListProps {
   programs: Program[];
@@ -163,6 +169,7 @@ export function ProgramList({
                   <TabsTrigger value="basic">Basic</TabsTrigger>
                   <TabsTrigger value="ci-training">CI Training</TabsTrigger>
                   <TabsTrigger value="kit-items">Kit Items</TabsTrigger>
+                  <TabsTrigger value="franchise-kit">Franchise Kit</TabsTrigger>
                   <TabsTrigger value="certificate">Certificate</TabsTrigger>
                 </TabsList>
                 <div className="flex shrink-0 items-center gap-1">
@@ -209,6 +216,12 @@ export function ProgramList({
                   onCountChange={(count) =>
                     onKitCountChange(program.id, count)
                   }
+                />
+              </TabsContent>
+              <TabsContent value="franchise-kit">
+                <FranchiseKitManagement
+                  programId={program.id}
+                  programName={program.name}
                 />
               </TabsContent>
               <TabsContent value="certificate">

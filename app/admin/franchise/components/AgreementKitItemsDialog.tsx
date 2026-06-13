@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronsUpDown, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { Loader2, Save, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import type { AgreementRecord } from "@/services/agreement.service";
 import {
@@ -15,7 +15,7 @@ import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -23,19 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { LinkPicker } from "@/components/shared/dialog/picker/LinkPicker";
 
 type SelectedRow = {
   programKitId: number;
@@ -74,11 +62,12 @@ export function AgreementKitItemsDialog({
   const agreementId = agreement?.id ?? null;
   const canManage = agreementId != null && agreement?.programId != null;
   const [selectedRows, setSelectedRows] = useState<SelectedRow[]>([]);
-  const [catalogOpen, setCatalogOpen] = useState(false);
-  const [selectedProgramKitId, setSelectedProgramKitId] = useState<number | null>(
-    null,
+  // Multi-select "add" bucket: programKitId -> quantity. Items are merged into
+  // selectedRows on "Add items", then committed to the server via "Save changes".
+  const [pendingAdditions, setPendingAdditions] = useState<Record<number, number>>(
+    {},
   );
-  const [addQuantity, setAddQuantity] = useState("1");
+  const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
 
   const queryKey = ["inventory", "agreement-kit-items", agreementId] as const;
@@ -97,8 +86,19 @@ export function AgreementKitItemsDialog({
     () => allRows.filter((row) => !selectedIdSet.has(row.programKitId)),
     [allRows, selectedIdSet],
   );
-  const selectedToAdd =
-    availableRows.find((row) => row.programKitId === selectedProgramKitId) ?? null;
+  const filteredAvailable = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return availableRows;
+    return availableRows.filter(
+      (row) =>
+        row.name.toLowerCase().includes(q) ||
+        (row.sku ?? "").toLowerCase().includes(q) ||
+        (row.category ?? "").toLowerCase().includes(q),
+    );
+  }, [availableRows, search]);
+
+  const pendingEntries = Object.entries(pendingAdditions);
+  const pendingCount = pendingEntries.length;
 
   useEffect(() => {
     if (!agreementKitQuery.data) return;
@@ -107,9 +107,8 @@ export function AgreementKitItemsDialog({
 
   useEffect(() => {
     if (!open) {
-      setCatalogOpen(false);
-      setSelectedProgramKitId(null);
-      setAddQuantity("1");
+      setPendingAdditions({});
+      setSearch("");
     }
   }, [open]);
 
@@ -128,26 +127,44 @@ export function AgreementKitItemsDialog({
     );
   };
 
-  const handleAdd = () => {
-    if (!selectedToAdd) {
-      toast.error("Select a program kit item to add.");
-      return;
+  const togglePending = (row: FranchiseProgramKitItemSummary) => {
+    setPendingAdditions((prev) => {
+      if (row.programKitId in prev) {
+        const next = { ...prev };
+        delete next[row.programKitId];
+        return next;
+      }
+      const qty = Math.max(1, Math.floor(Number(row.defaultQuantity ?? 1)) || 1);
+      return { ...prev, [row.programKitId]: qty };
+    });
+  };
+
+  const setPendingQty = (programKitId: number, value: string) => {
+    const parsed = Math.max(1, Math.floor(Number(value) || 1));
+    setPendingAdditions((prev) =>
+      programKitId in prev ? { ...prev, [programKitId]: parsed } : prev,
+    );
+  };
+
+  const handleAddSelected = () => {
+    if (pendingCount === 0) return;
+    const additions: SelectedRow[] = [];
+    for (const [idStr, qty] of pendingEntries) {
+      const row = availableRows.find((r) => r.programKitId === Number(idStr));
+      if (!row) continue;
+      additions.push({
+        programKitId: row.programKitId,
+        name: row.name,
+        sku: row.sku ?? null,
+        quantity: Math.max(1, Math.floor(Number(qty) || 1)),
+        availableQty: Number(row.availableQty ?? 0),
+        categoryName: row.category ?? null,
+      });
     }
-    const qty = Math.max(1, Math.floor(Number(addQuantity) || 1));
-    setSelectedRows((prev) => [
-      ...prev,
-      {
-        programKitId: selectedToAdd.programKitId,
-        name: selectedToAdd.name,
-        sku: selectedToAdd.sku ?? null,
-        quantity: qty,
-        availableQty: Number(selectedToAdd.availableQty ?? 0),
-        categoryName: selectedToAdd.category ?? null,
-      },
-    ]);
-    setSelectedProgramKitId(null);
-    setAddQuantity("1");
-    setCatalogOpen(false);
+    if (additions.length === 0) return;
+    setSelectedRows((prev) => [...prev, ...additions]);
+    setPendingAdditions({});
+    setSearch("");
   };
 
   const handleSave = async () => {
@@ -273,104 +290,96 @@ export function AgreementKitItemsDialog({
               )}
             </div>
 
-            <div className="rounded-lg border border-dashed bg-muted/20 p-3">
-              <h4 className="text-sm font-medium">Add item</h4>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Pick from available program kit items and set quantity.
-              </p>
-
-              <div className="mt-3 space-y-3">
-                <Popover open={catalogOpen} onOpenChange={setCatalogOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={catalogOpen}
-                      className="w-full justify-between"
-                    >
-                      <span className="truncate">
-                        {selectedToAdd
-                          ? selectedToAdd.name
-                          : "Select program kit item"}
-                      </span>
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-70" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    align="start"
-                    className="w-[var(--radix-popover-trigger-width)] p-0"
-                  >
-                    <Command>
-                      <CommandInput placeholder="Search kit item..." />
-                      <CommandList className="max-h-60">
-                        <CommandEmpty>
-                          {availableRows.length === 0
-                            ? "All available items are already selected."
-                            : "No item matches your search."}
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {availableRows.map((row) => (
-                            <CommandItem
-                              key={row.programKitId}
-                              value={`${row.name} ${row.sku ?? ""} ${row.category ?? ""}`}
-                              onSelect={() =>
-                                setSelectedProgramKitId(row.programKitId)
-                              }
-                              className="gap-2"
-                            >
-                              <Check
-                                className={`h-4 w-4 ${
-                                  row.programKitId === selectedProgramKitId
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                }`}
-                              />
-                              <div className="min-w-0">
-                                <div className="truncate">{row.name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {row.sku ?? "-"} | {row.category ?? "-"}
-                                </div>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-
-                <div className="flex items-end gap-2">
-                  <div className="w-24">
-                    <Label
-                      htmlFor="agreement-kit-qty"
-                      className="text-xs text-muted-foreground"
-                    >
-                      Quantity
-                    </Label>
-                    <Input
-                      id="agreement-kit-qty"
-                      type="number"
-                      min={1}
-                      value={addQuantity}
-                      onChange={(event) => setAddQuantity(event.target.value)}
-                      onFocus={selectInputValueOnFocus}
-                      className="mt-1 h-9"
-                      disabled={saving}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={handleAdd}
-                    disabled={!selectedToAdd || saving}
-                    className="h-9"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add item
-                  </Button>
+            <LinkPicker
+              addTitle="Add items"
+              pendingCount={pendingCount}
+              onSave={handleAddSelected}
+              saveLabel={`Add ${pendingCount} item${pendingCount === 1 ? "" : "s"}`}
+              pendingTitle={
+                pendingCount > 0
+                  ? `${pendingCount} item${pendingCount === 1 ? "" : "s"} to add`
+                  : "To add"
+              }
+              pendingEmptyMessage="Tick items on the left to add them, then click “Add items”."
+              search={{
+                value: search,
+                onChange: setSearch,
+                placeholder: "Search by name, SKU, or category…",
+              }}
+              renderPending={() => (
+                <div className="space-y-1.5">
+                  {pendingEntries.map(([idStr, qty]) => {
+                    const id = Number(idStr);
+                    const row = availableRows.find((r) => r.programKitId === id);
+                    if (!row) return null;
+                    return (
+                      <div
+                        key={id}
+                        className="space-y-1.5 rounded-md border border-border bg-card px-2.5 py-2"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-card-foreground">
+                            {row.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => togglePending(row)}
+                            aria-label={`Remove ${row.name} from selection`}
+                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                          <span className="w-8 shrink-0">Qty</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            inputMode="numeric"
+                            value={String(qty)}
+                            onChange={(event) =>
+                              setPendingQty(id, event.target.value)
+                            }
+                            onFocus={selectInputValueOnFocus}
+                            aria-label={`Quantity for ${row.name}`}
+                            className="h-7 w-full min-w-0 px-2 text-sm"
+                          />
+                        </label>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-            </div>
+              )}
+              list={{
+                items: filteredAvailable,
+                isLoading: false,
+                getKey: (row) => row.programKitId,
+                isChecked: (row) => row.programKitId in pendingAdditions,
+                onToggle: (row) => togglePending(row),
+                emptyMessage:
+                  availableRows.length === 0
+                    ? "All available items are already selected."
+                    : "No item matches your search.",
+                renderRow: (row, checked) => (
+                  <label className="flex cursor-pointer items-center gap-2.5 px-3 py-2">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => togglePending(row)}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-card-foreground">
+                        {row.name}
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-muted-foreground">
+                        {row.sku ? <span>{row.sku}</span> : null}
+                        {row.category ? <span>{row.category}</span> : null}
+                        <span>Avail {row.availableQty}</span>
+                      </div>
+                    </div>
+                  </label>
+                ),
+              }}
+            />
 
             <div className="flex justify-end gap-2">
               <Button

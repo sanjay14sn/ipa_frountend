@@ -132,6 +132,12 @@ api.interceptors.request.use((config) => {
 
 let refreshPromise: Promise<void> | null = null;
 
+// Set to true while the user has explicitly initiated logout so the refresh
+// interceptor's hard-redirect doesn't fire mid-flight and cancel the call.
+let userLogoutInProgress = false;
+export function markLogoutStart(): void { userLogoutInProgress = true; }
+export function markLogoutEnd(): void   { userLogoutInProgress = false; }
+
 api.interceptors.response.use(
   (response) => {
     const rt = response.config.responseType;
@@ -160,6 +166,13 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+
+      // Logout is tearing down the session deliberately — don't try to
+      // refresh. The 401 is expected; starting a refresh cycle here would
+      // fire an inner logout that races with / can cancel the outer one.
+      if (userLogoutInProgress) {
+        return Promise.reject(error);
+      }
 
       if (!refreshPromise) {
         const role = parseStoredRole();
@@ -208,8 +221,10 @@ api.interceptors.response.use(
                 /* bridge not mounted yet — nothing to clear */
               }
               const loginPath = loginPathForSession(role);
-              const already = loginPath === "/ci/login" && window.location.pathname.startsWith("/ci");
-              if (!already) {
+              const already =
+                window.location.pathname === loginPath ||
+                (loginPath === "/ci/login" && window.location.pathname.startsWith("/ci"));
+              if (!already && !userLogoutInProgress) {
                 window.location.href = loginPath;
               }
             }

@@ -297,6 +297,8 @@ export interface AgreementRecord extends AgreementTermsSnapshot {
    * awaiting payment, and only becomes `Valid` once payment is also linked.
    */
   signed?: boolean;
+  /** Order id of the one-time free franchise kit dispatch; null = not yet dispatched. */
+  franchiseKitOrderId?: number | null;
   dateOfSigning: string | null;
   franchiseId: string | null;
   franchiseeId: number | null;
@@ -342,6 +344,14 @@ export interface AgreementRecord extends AgreementTermsSnapshot {
   programs?: AgreementProgramItem[] | null;
   scheduleB?: AgreementScheduleBView | null;
   receivables?: AgreementReceivablesView | null;
+}
+
+/** Admin: one-time free franchise kit dispatch for a Valid NEW_FRANCHISE agreement. */
+export async function dispatchFranchiseKit(agreementId: number) {
+  const response = await api.post(
+    `/admin/order/agreement/${agreementId}/dispatch-franchise-kit`,
+  );
+  return unwrapData(response);
 }
 
 interface CreateAgreementAdminDto {

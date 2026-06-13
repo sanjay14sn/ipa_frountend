@@ -1,0 +1,451 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Check, ChevronsUpDown, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  getFranchiseKit,
+  setFranchiseKit,
+  type FranchiseKitSelectionItem,
+} from "@/services/inventory.service";
+import { getErrorMessage } from "@/lib/error-utils";
+import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
+import { queryKeys } from "@/hooks/api/query-keys";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+
+type SelectedRow = {
+  franchiseKitItemId: number;
+  name: string;
+  sku: string | null;
+  categoryName: string | null;
+  catalogPrice: number;
+  quantity: number;
+  /** Empty string = inherit catalog price. */
+  priceDraft: string;
+};
+
+function toSelectedRows(rows: FranchiseKitSelectionItem[]): SelectedRow[] {
+  return rows
+    .filter((row) => row.selected)
+    .map((row) => ({
+      franchiseKitItemId: row.franchiseKitItemId,
+      name: row.name,
+      sku: row.sku ?? null,
+      categoryName: row.category ?? null,
+      catalogPrice: Number(row.unitPrice ?? 0),
+      quantity: Number(row.quantity ?? row.defaultQuantity ?? 1),
+      priceDraft:
+        row.unitPriceOverride != null ? String(row.unitPriceOverride) : "",
+    }));
+}
+
+interface FranchiseKitEditorProps {
+  franchiseId: string | null;
+  programId: number | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+/**
+ * Per-franchise kit editor for a program: which template items the franchise
+ * receives, with quantity and an optional unit-price override (blank = catalog
+ * price). Used for the free first dispatch and as the franchisee's re-order
+ * catalog.
+ */
+export function FranchiseKitEditor({
+  franchiseId,
+  programId,
+  open,
+  onOpenChange,
+}: FranchiseKitEditorProps) {
+  const queryClient = useQueryClient();
+  const [selectedRows, setSelectedRows] = useState<SelectedRow[]>([]);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [selectedKitItemId, setSelectedKitItemId] = useState<number | null>(null);
+  const [addQuantity, setAddQuantity] = useState("1");
+  const [saving, setSaving] = useState(false);
+
+  const queryKey = queryKeys.inventory.franchiseKit(
+    franchiseId ?? "",
+    programId ?? 0,
+  );
+  const kitQuery = useQuery({
+    queryKey,
+    queryFn: () => getFranchiseKit(franchiseId!, programId!),
+    enabled: open && franchiseId != null && programId != null,
+  });
+
+  const allRows = useMemo(() => kitQuery.data ?? [], [kitQuery.data]);
+  const selectedIdSet = useMemo(
+    () => new Set(selectedRows.map((row) => row.franchiseKitItemId)),
+    [selectedRows],
+  );
+  const availableRows = useMemo(
+    () =>
+      allRows.filter(
+        (row) => row.isActive && !selectedIdSet.has(row.franchiseKitItemId),
+      ),
+    [allRows, selectedIdSet],
+  );
+  const selectedToAdd =
+    availableRows.find((row) => row.franchiseKitItemId === selectedKitItemId) ??
+    null;
+
+  useEffect(() => {
+    if (!kitQuery.data) return;
+    setSelectedRows(toSelectedRows(kitQuery.data));
+  }, [kitQuery.data]);
+
+  useEffect(() => {
+    if (!open) {
+      setCatalogOpen(false);
+      setSelectedKitItemId(null);
+      setAddQuantity("1");
+    }
+  }, [open]);
+
+  const updateRow = (
+    franchiseKitItemId: number,
+    patch: Partial<SelectedRow>,
+  ) => {
+    setSelectedRows((prev) =>
+      prev.map((row) =>
+        row.franchiseKitItemId === franchiseKitItemId
+          ? { ...row, ...patch }
+          : row,
+      ),
+    );
+  };
+
+  const handleAdd = () => {
+    if (!selectedToAdd) {
+      toast.error("Select a kit item to add.");
+      return;
+    }
+    const qty = Math.max(1, Math.floor(Number(addQuantity) || 1));
+    setSelectedRows((prev) => [
+      ...prev,
+      {
+        franchiseKitItemId: selectedToAdd.franchiseKitItemId,
+        name: selectedToAdd.name,
+        sku: selectedToAdd.sku ?? null,
+        categoryName: selectedToAdd.category ?? null,
+        catalogPrice: Number(selectedToAdd.unitPrice ?? 0),
+        quantity: qty,
+        priceDraft: "",
+      },
+    ]);
+    setSelectedKitItemId(null);
+    setAddQuantity("1");
+    setCatalogOpen(false);
+  };
+
+  const handleSave = async () => {
+    if (!franchiseId || programId == null) return;
+
+    for (const row of selectedRows) {
+      if (row.priceDraft !== "" && !(Number(row.priceDraft) >= 0)) {
+        toast.error(`Invalid price override for ${row.name}`);
+        return;
+      }
+    }
+
+    setSaving(true);
+    try {
+      const updated = await setFranchiseKit(
+        franchiseId,
+        programId,
+        selectedRows.map((row) => ({
+          franchiseKitItemId: row.franchiseKitItemId,
+          quantity: Math.max(1, Math.floor(Number(row.quantity) || 1)),
+          unitPriceOverride:
+            row.priceDraft === "" ? null : Number(row.priceDraft),
+        })),
+      );
+      setSelectedRows(toSelectedRows(updated));
+      await queryClient.invalidateQueries({ queryKey });
+      toast.success("Franchise kit updated.");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Failed to update franchise kit."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>
+            {franchiseId
+              ? `Franchise kit - ${franchiseId}`
+              : "Franchise kit"}
+          </DialogTitle>
+          <DialogDescription>
+            Items this franchise receives in its kit. Leave price blank to use
+            the inventory catalog price.
+          </DialogDescription>
+        </DialogHeader>
+
+        {kitQuery.isLoading ? (
+          <div className="flex items-center gap-2 rounded-lg border bg-muted/20 px-3 py-3 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading franchise kit...
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-lg border">
+              <div className="border-b bg-muted/40 px-3 py-2.5 text-sm font-medium">
+                Selected items
+              </div>
+              {selectedRows.length === 0 ? (
+                <p className="px-3 py-4 text-sm text-muted-foreground">
+                  No kit items selected for this franchise.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/20 text-left text-xs text-muted-foreground">
+                        <th className="px-3 py-2 font-medium">Item</th>
+                        <th className="px-3 py-2 text-center font-medium">
+                          Quantity
+                        </th>
+                        <th className="px-3 py-2 text-center font-medium">
+                          Unit price (₹)
+                        </th>
+                        <th className="px-3 py-2 text-right font-medium">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedRows.map((row) => (
+                        <tr
+                          key={row.franchiseKitItemId}
+                          className="border-b last:border-0"
+                        >
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{row.name}</span>
+                              {row.sku ? (
+                                <Badge variant="outline" className="text-[10px]">
+                                  {row.sku}
+                                </Badge>
+                              ) : null}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {row.categoryName ?? "-"}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <Input
+                              type="number"
+                              min={1}
+                              className="mx-auto h-8 w-20 text-center"
+                              value={row.quantity}
+                              onChange={(event) =>
+                                updateRow(row.franchiseKitItemId, {
+                                  quantity: Math.max(
+                                    1,
+                                    Math.floor(Number(event.target.value) || 1),
+                                  ),
+                                })
+                              }
+                              onFocus={selectInputValueOnFocus}
+                              disabled={saving}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              className="mx-auto h-8 w-28 text-center"
+                              placeholder={row.catalogPrice.toFixed(2)}
+                              value={row.priceDraft}
+                              onChange={(event) =>
+                                updateRow(row.franchiseKitItemId, {
+                                  priceDraft: event.target.value,
+                                })
+                              }
+                              onFocus={selectInputValueOnFocus}
+                              disabled={saving}
+                              title="Leave blank to use the catalog price"
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-destructive"
+                              onClick={() =>
+                                setSelectedRows((prev) =>
+                                  prev.filter(
+                                    (r) =>
+                                      r.franchiseKitItemId !==
+                                      row.franchiseKitItemId,
+                                  ),
+                                )
+                              }
+                              disabled={saving}
+                              title={`Remove ${row.name}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-dashed bg-muted/20 p-3">
+              <h4 className="text-sm font-medium">Add item</h4>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Pick from the franchise kit template and set quantity.
+              </p>
+
+              <div className="mt-3 space-y-3">
+                <Popover open={catalogOpen} onOpenChange={setCatalogOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={catalogOpen}
+                      className="w-full justify-between"
+                    >
+                      <span className="truncate">
+                        {selectedToAdd ? selectedToAdd.name : "Select kit item"}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-70" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    className="w-[var(--radix-popover-trigger-width)] p-0"
+                  >
+                    <Command>
+                      <CommandInput placeholder="Search kit item..." />
+                      <CommandList className="max-h-60">
+                        <CommandEmpty>
+                          {availableRows.length === 0
+                            ? "All template items are already selected."
+                            : "No item matches your search."}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {availableRows.map((row) => (
+                            <CommandItem
+                              key={row.franchiseKitItemId}
+                              value={`${row.name} ${row.sku ?? ""} ${row.category ?? ""}`}
+                              onSelect={() =>
+                                setSelectedKitItemId(row.franchiseKitItemId)
+                              }
+                              className="gap-2"
+                            >
+                              <Check
+                                className={`h-4 w-4 ${
+                                  row.franchiseKitItemId === selectedKitItemId
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                }`}
+                              />
+                              <div className="min-w-0">
+                                <div className="truncate">{row.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {row.sku ?? "-"} | ₹
+                                  {Number(row.unitPrice ?? 0).toFixed(2)}
+                                </div>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+
+                <div className="flex items-end gap-2">
+                  <div className="w-24">
+                    <Label
+                      htmlFor="franchise-kit-add-qty"
+                      className="text-xs text-muted-foreground"
+                    >
+                      Quantity
+                    </Label>
+                    <Input
+                      id="franchise-kit-add-qty"
+                      type="number"
+                      min={1}
+                      value={addQuantity}
+                      onChange={(event) => setAddQuantity(event.target.value)}
+                      onFocus={selectInputValueOnFocus}
+                      className="mt-1 h-9"
+                      disabled={saving}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleAdd}
+                    disabled={!selectedToAdd || saving}
+                    className="h-9"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add item
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={saving}
+              >
+                Close
+              </Button>
+              <Button type="button" onClick={handleSave} disabled={saving}>
+                {saving ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
+                Save changes
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

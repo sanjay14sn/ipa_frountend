@@ -21,7 +21,7 @@ export default function AdminProgramsPage() {
   }
 
   return (
-    <div className="min-h-full space-y-6">
+    <div className="min-h-full">
       <ProgramManagement />
     </div>
   );

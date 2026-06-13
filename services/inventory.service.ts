@@ -272,6 +272,30 @@ export async function getTshirtInventory(
     : [];
 }
 
+/**
+ * T-shirt options scoped to the program-kit items the admin configured for the
+ * franchise's agreement on this program (not the global T-Shirts category).
+ */
+export async function getMyAgreementTshirts(
+  programId: number,
+): Promise<InventoryByCategoryItem[]> {
+  const response = await api.get(
+    `/inventory/programs/${programId}/agreement-tshirts`,
+  );
+  const data = unwrapData<unknown[]>(response);
+  return Array.isArray(data)
+    ? data.map((row) => {
+        const r = row as Record<string, unknown>;
+        return {
+          id: Number(r?.id ?? 0),
+          sku: String(r?.sku ?? ""),
+          name: String(r?.name ?? ""),
+          unitPrice: Number(r?.unitPrice ?? 0),
+        };
+      })
+    : [];
+}
+
 export async function getProgramKitItems(
   programId: number,
 ): Promise<ProgramKitItemSummary[]> {
@@ -484,4 +508,142 @@ export async function setAgreementProgramKitItems(
   });
   const data = unwrapData<unknown[]>(response);
   return Array.isArray(data) ? data.map(normalizeFranchiseProgramKitRow) : [];
+}
+
+// ---------------------------------------------------------------------------
+// Franchise kit (global template + per-franchise selections)
+// ---------------------------------------------------------------------------
+
+export type FranchiseKitTemplateItem = {
+  franchiseKitItemId: number;
+  programId: number;
+  inventoryId: number;
+  name: string;
+  sku: string | null;
+  category: string | null;
+  unitPrice: number;
+  inventoryIsActive: boolean;
+  defaultQuantity: number;
+  isActive: boolean;
+};
+
+export type FranchiseKitSelectionItem = FranchiseKitTemplateItem & {
+  selected: boolean;
+  quantity: number;
+  unitPriceOverride: number | null;
+  effectiveUnitPrice: number;
+};
+
+function normalizeFranchiseKitTemplateRow(row: unknown): FranchiseKitTemplateItem {
+  const r = row as Record<string, unknown>;
+  return {
+    franchiseKitItemId: Number(r?.franchiseKitItemId ?? 0),
+    programId: Number(r?.programId ?? 0),
+    inventoryId: Number(r?.inventoryId ?? 0),
+    name: String(r?.name ?? ""),
+    sku: r?.sku != null ? String(r.sku) : null,
+    category: r?.category != null ? String(r.category) : null,
+    unitPrice: Number(r?.unitPrice ?? 0),
+    inventoryIsActive: Boolean(r?.inventoryIsActive ?? true),
+    defaultQuantity: Number(r?.defaultQuantity ?? 1),
+    isActive: Boolean(r?.isActive ?? true),
+  };
+}
+
+function normalizeFranchiseKitSelectionRow(row: unknown): FranchiseKitSelectionItem {
+  const r = row as Record<string, unknown>;
+  return {
+    ...normalizeFranchiseKitTemplateRow(row),
+    selected: Boolean(r?.selected ?? false),
+    quantity: Number(r?.quantity ?? 1),
+    unitPriceOverride:
+      r?.unitPriceOverride != null ? Number(r.unitPriceOverride) : null,
+    effectiveUnitPrice: Number(r?.effectiveUnitPrice ?? r?.unitPrice ?? 0),
+  };
+}
+
+export async function getFranchiseKitTemplateItems(
+  programId: number,
+): Promise<FranchiseKitTemplateItem[]> {
+  const response = await api.get(
+    `/inventory/programs/${programId}/franchise-kit/items`,
+  );
+  const data = unwrapData<unknown[]>(response);
+  return Array.isArray(data) ? data.map(normalizeFranchiseKitTemplateRow) : [];
+}
+
+export async function bulkAssignFranchiseKitTemplateItems(
+  programId: number,
+  items: Array<{ inventoryId: number; quantity?: number }>,
+): Promise<{ assigned: number; failed: number[] }> {
+  const response = await api.post(
+    `/inventory/programs/${programId}/franchise-kit/items/bulk-assign`,
+    {
+      items: items.map((item) => ({
+        inventoryId: item.inventoryId,
+        ...(item.quantity !== undefined
+          ? { defaultQuantity: item.quantity }
+          : {}),
+      })),
+    },
+  );
+  return unwrapData(response) as { assigned: number; failed: number[] };
+}
+
+export async function updateFranchiseKitTemplateItem(
+  franchiseKitItemId: number,
+  body: { defaultQuantity?: number; isActive?: boolean },
+): Promise<FranchiseKitTemplateItem> {
+  const response = await api.patch(
+    `/inventory/franchise-kit/items/${franchiseKitItemId}`,
+    body,
+  );
+  return normalizeFranchiseKitTemplateRow(unwrapData(response));
+}
+
+export async function removeFranchiseKitTemplateItem(
+  franchiseKitItemId: number,
+): Promise<void> {
+  await api.delete(`/inventory/franchise-kit/items/${franchiseKitItemId}`);
+}
+
+/** Admin: a franchise's kit selections for a program (seeded on first read). */
+export async function getFranchiseKit(
+  franchiseId: string,
+  programId: number,
+): Promise<FranchiseKitSelectionItem[]> {
+  const response = await api.get(
+    `/inventory/programs/${programId}/franchise/${franchiseId}/franchise-kit`,
+  );
+  const data = unwrapData<unknown[]>(response);
+  return Array.isArray(data) ? data.map(normalizeFranchiseKitSelectionRow) : [];
+}
+
+/** Admin: replace a franchise's kit selections for a program (qty + optional price override). */
+export async function setFranchiseKit(
+  franchiseId: string,
+  programId: number,
+  items: Array<{
+    franchiseKitItemId: number;
+    quantity: number;
+    unitPriceOverride?: number | null;
+  }>,
+): Promise<FranchiseKitSelectionItem[]> {
+  const response = await api.put(
+    `/inventory/programs/${programId}/franchise/${franchiseId}/franchise-kit`,
+    { items },
+  );
+  const data = unwrapData<unknown[]>(response);
+  return Array.isArray(data) ? data.map(normalizeFranchiseKitSelectionRow) : [];
+}
+
+/** Franchisee: own franchise kit for a program with effective prices. */
+export async function getMyFranchiseKit(
+  programId: number,
+): Promise<FranchiseKitSelectionItem[]> {
+  const response = await api.get(
+    `/inventory/programs/${programId}/franchise-kit`,
+  );
+  const data = unwrapData<unknown[]>(response);
+  return Array.isArray(data) ? data.map(normalizeFranchiseKitSelectionRow) : [];
 }

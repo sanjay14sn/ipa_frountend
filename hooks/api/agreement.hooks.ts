@@ -11,6 +11,7 @@ import {
   updateReceivableItemDueDate,
   recordReceivablePayment,
   sendReceivableReminder,
+  dispatchFranchiseKit,
   type AgreementRecord,
   type AgreementListParams,
 } from "@/services/agreement.service";
@@ -87,6 +88,29 @@ export function useAgreementAdmin(id: number | undefined) {
 async function invalidateAgreementLists() {
   const client = getQueryClientBridge();
   await client.invalidateQueries({ queryKey: ["agreements", "list"] });
+}
+
+/** Admin: one-time free franchise kit dispatch for a Valid NEW_FRANCHISE agreement. */
+export function useDispatchFranchiseKitMutation(agreementId: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => dispatchFranchiseKit(agreementId),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: queryKeys.agreements.detail(agreementId),
+        }),
+        client.invalidateQueries({ queryKey: ["agreements", "list"] }),
+        client.invalidateQueries({ queryKey: ["orders"] }),
+      ]);
+      toast.success("Franchise kit order created");
+    },
+    onError: (error) => {
+      toast.error(
+        extractErrorMessage(error, "Failed to dispatch franchise kit"),
+      );
+    },
+  });
 }
 
 export function useWaiveReceivableItemMutation(agreementId: number) {

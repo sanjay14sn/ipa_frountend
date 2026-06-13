@@ -135,7 +135,7 @@ export default function UnifiedMaterialRequestDialog({
     open && programId != null ? programId : undefined,
   );
 
-  const tshirtQuery = useTshirtInventory(open);
+  const tshirtQuery = useTshirtInventory(open, programId);
   const tshirts = tshirtQuery.data ?? [];
 
   // Aggregate kitRows into API payload: merge duplicate (streamId, tshirtItemId) pairs
