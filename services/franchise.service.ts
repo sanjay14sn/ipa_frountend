@@ -98,10 +98,6 @@ async function rejectProgramRequest(id: number) {
   return rejectProgramRequestAdmin(id, '');
 }
 
-export async function bulkUploadFranchises(_file: File) {
-  throw new Error("Bulk upload is not supported in ipa-new");
-}
-
 /** Per-program fee agreement row (legacy UI) */
 interface ProgramAgreement {
   id: number;
