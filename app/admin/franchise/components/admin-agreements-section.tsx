@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Download, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -18,9 +17,9 @@ import { IssueRenewalButton } from "@/components/agreements/IssueRenewalButton";
 import {
   DataTable,
   type DataTableColumn,
-  TableLoadingState,
+  type DataTableFilter,
+  type DataTableSortOption,
   TablePageShell,
-  TableToolbarPanel,
 } from "@/components/shared";
 import {
   downloadScheduleBPdfAdmin,
@@ -141,17 +140,60 @@ export function AdminAgreementsSection({
   embed,
 }: AdminAgreementsSectionProps = {}) {
   const fixedFilter = fixedFranchiseId?.trim() || undefined;
-  const [franchiseFilter, setFranchiseFilter] = useState(
-    fixedFranchiseId ?? "",
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC");
+
+  const listParams = useMemo(
+    () => ({
+      search: searchTerm || undefined,
+      status: statusFilter !== "all" ? statusFilter : undefined,
+      type: typeFilter !== "all" ? typeFilter : undefined,
+      sortBy: sortBy || undefined,
+      sortOrder,
+    }),
+    [searchTerm, statusFilter, typeFilter, sortBy, sortOrder],
   );
-  const [appliedFilter, setAppliedFilter] = useState<string | undefined>(
-    fixedFilter,
-  );
-  const effectiveFilter = fixedFilter ?? appliedFilter;
-  const agreementsQuery = useAgreementsAdmin(effectiveFilter);
+
+  const agreementsQuery = useAgreementsAdmin(fixedFilter, listParams);
   const rows = agreementsQuery.data ?? [];
   const loading = agreementsQuery.isLoading;
   const [viewAgreementId, setViewAgreementId] = useState<number | null>(null);
+
+  const filters: DataTableFilter[] = [
+    {
+      key: "status",
+      label: "Status",
+      options: [
+        { value: "all", label: "All statuses" },
+        { value: "Draft", label: "Draft" },
+        { value: "Approved", label: "Approved" },
+        { value: "Valid", label: "Valid" },
+        { value: "Suspended", label: "Suspended" },
+        { value: "Void", label: "Void" },
+        { value: "Expired", label: "Expired" },
+      ],
+      defaultValue: "all",
+    },
+    {
+      key: "type",
+      label: "Type",
+      options: [
+        { value: "all", label: "All types" },
+        { value: "NEW_FRANCHISE", label: agreementTypeLabel("NEW_FRANCHISE") },
+        { value: "NEW_PROGRAM", label: agreementTypeLabel("NEW_PROGRAM") },
+        { value: "RENEWAL", label: agreementTypeLabel("RENEWAL") },
+      ],
+      defaultValue: "all",
+    },
+  ];
+
+  const sortOptions: DataTableSortOption[] = [
+    { value: "title", label: "Name" },
+    { value: "createdAt", label: "Date" },
+  ];
 
   useEffect(() => {
     if (agreementsQuery.error) {
@@ -234,69 +276,34 @@ export function AdminAgreementsSection({
           : undefined
       }
     >
-      {!fixedFranchiseId?.trim() ? (
-        <TableToolbarPanel>
-          <div className="mb-3">
-            <h2 className="text-base font-semibold text-card-foreground">
-              Filter by franchise
-            </h2>
-          </div>
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="flex min-w-[200px] flex-1 flex-col gap-1">
-              <label className="text-xs text-muted-foreground">
-                Franchise ID
-              </label>
-              <Input
-                placeholder="e.g. FR-DEL-001"
-                value={franchiseFilter}
-                onChange={(event) => setFranchiseFilter(event.target.value)}
-              />
-            </div>
-            <Button
-              type="button"
-              onClick={() =>
-                setAppliedFilter(
-                  franchiseFilter.trim() ? franchiseFilter.trim() : undefined,
-                )
-              }
-            >
-              Apply
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setFranchiseFilter("");
-                setAppliedFilter(undefined);
-              }}
-            >
-              Clear
-            </Button>
-          </div>
-        </TableToolbarPanel>
-      ) : null}
-
-      {loading && rows.length === 0 ? (
-        <TableLoadingState message="Loading agreements..." />
-      ) : (
-        <DataTable<AgreementRecord>
-          data={rows}
-          loading={loading}
-          columns={columns}
-          getRowId={(record) => String(record.id)}
-          renderMainCell={(record) => (
-            <span className="font-medium">
-              {record.franchise?.name ?? record.franchiseId ?? "—"}
-              <span className="mx-1 text-muted-foreground">-</span>
-              {record.program?.name ?? record.programName ?? "—"}
-            </span>
-          )}
-          emptyMessage="No agreements found."
-          resultsText={(_count, total) =>
-            `${total} agreement${total === 1 ? "" : "s"}${effectiveFilter ? " (filtered)" : ""}`
-          }
-        />
-      )}
+      <DataTable<AgreementRecord>
+        data={rows}
+        loading={loading}
+        columns={columns}
+        getRowId={(record) => String(record.id)}
+        renderMainCell={(record) => (
+          <span className="font-medium">
+            {record.franchise?.name ?? record.franchiseId ?? "—"}
+            <span className="mx-1 text-muted-foreground">-</span>
+            {record.program?.name ?? record.programName ?? "—"}
+          </span>
+        )}
+        searchPlaceholder="Search agreements by title..."
+        onSearchChange={(value) => setSearchTerm(value)}
+        filters={filters}
+        onFilterChange={(key, value) => {
+          if (key === "status") setStatusFilter(value as string);
+          if (key === "type") setTypeFilter(value as string);
+        }}
+        sortOptions={sortOptions}
+        defaultSortBy={sortBy}
+        defaultSortOrder={sortOrder}
+        onSortChange={(newSortBy, newSortOrder) => {
+          setSortBy(newSortBy);
+          setSortOrder(newSortOrder);
+        }}
+        emptyMessage="No agreements found."
+      />
 
       <AdminAgreementViewDialog
         agreementId={viewAgreementId}
