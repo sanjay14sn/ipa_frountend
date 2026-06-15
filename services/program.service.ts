@@ -8,6 +8,7 @@ import {
 export interface Program {
   id: number;
   name: string;
+  code?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -42,28 +43,30 @@ export async function getAllPrograms(): Promise<Program[]> {
   return Array.isArray(data) ? data : [];
 }
 
-function programNamePayload(nameOrData: string | { name: string }): {
-  name: string;
-} {
-  const name =
-    typeof nameOrData === "string" ? nameOrData : nameOrData.name;
-  return { name };
+function programPayload(
+  nameOrData: string | { name: string; code?: string | null },
+): { name: string; code?: string } {
+  if (typeof nameOrData === "string") return { name: nameOrData };
+  const payload: { name: string; code?: string } = { name: nameOrData.name };
+  const code = nameOrData.code?.trim();
+  if (code) payload.code = code;
+  return payload;
 }
 
 export async function createProgram(
-  nameOrData: string | { name: string },
+  nameOrData: string | { name: string; code?: string | null },
 ): Promise<Program> {
-  const response = await api.post("/catalog/program", programNamePayload(nameOrData));
+  const response = await api.post("/catalog/program", programPayload(nameOrData));
   return unwrapData<Program>(response);
 }
 
 export async function updateProgram(
   id: number,
-  nameOrData: string | { name: string },
+  nameOrData: string | { name: string; code?: string | null },
 ): Promise<Program> {
   const response = await api.patch(
     `/catalog/program/update/${id}`,
-    programNamePayload(nameOrData),
+    programPayload(nameOrData),
   );
   return unwrapData<Program>(response);
 }

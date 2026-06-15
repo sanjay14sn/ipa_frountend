@@ -28,6 +28,7 @@ export function ProgramManagement() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [newProgramName, setNewProgramName] = useState("");
+  const [newProgramCode, setNewProgramCode] = useState("");
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [editProgramName, setEditProgramName] = useState("");
   const [deletingProgram, setDeletingProgram] = useState<Program | null>(null);
@@ -66,9 +67,13 @@ export function ProgramManagement() {
       return;
     }
     try {
-      await createProgram(newProgramName.trim());
+      await createProgram({
+        name: newProgramName.trim(),
+        code: newProgramCode.trim() || null,
+      });
       toast.success("Program created successfully");
       setNewProgramName("");
+      setNewProgramCode("");
       setIsAddDialogOpen(false);
       void invalidatePrograms();
     } catch {
@@ -143,6 +148,8 @@ export function ProgramManagement() {
         onOpenChange={setIsAddDialogOpen}
         programName={newProgramName}
         onProgramNameChange={setNewProgramName}
+        programCode={newProgramCode}
+        onProgramCodeChange={setNewProgramCode}
         onSubmit={() => void handleAddProgram()}
       />
       <EditProgramDialog

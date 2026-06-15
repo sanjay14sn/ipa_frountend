@@ -16,6 +16,8 @@ interface AddProgramDialogProps {
   onOpenChange: (open: boolean) => void;
   programName: string;
   onProgramNameChange: (name: string) => void;
+  programCode: string;
+  onProgramCodeChange: (code: string) => void;
   onSubmit: () => void;
 }
 
@@ -24,6 +26,8 @@ export function AddProgramDialog({
   onOpenChange,
   programName,
   onProgramNameChange,
+  programCode,
+  onProgramCodeChange,
   onSubmit,
 }: AddProgramDialogProps) {
   return (
@@ -46,6 +50,15 @@ export function AddProgramDialog({
           placeholder="e.g., Reading Literacy"
           value={programName}
           onChange={(e) => onProgramNameChange(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && onSubmit()}
+        />
+      </DialogFormField>
+      <DialogFormField id="programCode" label="Program Code">
+        <Input
+          id="programCode"
+          placeholder="e.g., AB"
+          value={programCode}
+          onChange={(e) => onProgramCodeChange(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && onSubmit()}
         />
       </DialogFormField>
