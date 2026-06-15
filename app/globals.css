@@ -331,20 +331,3 @@
   background-color: transparent;
 }
 
-/* ── DateInput field layout ─────────────────────────────────────────────────
-   react-datepicker wraps its <input> in two inline-block divs; stretch them so
-   the field fills its container like every other form input. Scoped to
-   `.dp-field` (set on the DateInput wrapper) so the inline `Calendar` is
-   unaffected. The popup z-index keeps the calendar above dialog content.
-   ────────────────────────────────────────────────────────────────────────── */
-
-.dp-field .react-datepicker-wrapper,
-.dp-field .react-datepicker__input-container {
-  display: block;
-  width: 100%;
-}
-
-.react-datepicker-popper.dp-theme {
-  z-index: 60;
-}
-
