@@ -12,6 +12,9 @@ import {
   recordReceivablePayment,
   sendReceivableReminder,
   dispatchFranchiseKit,
+  suspendAgreementAdmin,
+  reactivateAgreementAdmin,
+  voidAgreementAdmin,
   type AgreementRecord,
   type AgreementListParams,
 } from "@/services/agreement.service";
@@ -182,6 +185,66 @@ export function useSendReceivableReminderMutation(agreementId: number) {
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error, "Failed to send reminder"));
+    },
+  });
+}
+
+/** Admin: suspend a Valid agreement (optional reason). */
+export function useSuspendAgreementMutation(agreementId: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (reason?: string) => suspendAgreementAdmin(agreementId, reason),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: queryKeys.agreements.detail(agreementId),
+        }),
+        client.invalidateQueries({ queryKey: ["agreements", "list"] }),
+      ]);
+      toast.success("Agreement suspended");
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error, "Failed to suspend agreement"));
+    },
+  });
+}
+
+/** Admin: reactivate a Suspended agreement. */
+export function useReactivateAgreementMutation(agreementId: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => reactivateAgreementAdmin(agreementId),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: queryKeys.agreements.detail(agreementId),
+        }),
+        client.invalidateQueries({ queryKey: ["agreements", "list"] }),
+      ]);
+      toast.success("Agreement reactivated");
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error, "Failed to reactivate agreement"));
+    },
+  });
+}
+
+/** Admin: void an agreement — terminal (optional reason). */
+export function useVoidAgreementMutation(agreementId: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (reason?: string) => voidAgreementAdmin(agreementId, reason),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: queryKeys.agreements.detail(agreementId),
+        }),
+        client.invalidateQueries({ queryKey: ["agreements", "list"] }),
+      ]);
+      toast.success("Agreement voided");
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error, "Failed to void agreement"));
     },
   });
 }

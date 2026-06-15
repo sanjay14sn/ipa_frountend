@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { format, parseISO } from "date-fns";
@@ -619,6 +619,9 @@ export function AgreementRecordDetail({
   onWaiveItem,
   onEditDueDate,
   isUpdatingDueDate,
+  onRecordPayment,
+  onSendReminder,
+  actionBar,
 }: {
   data: AgreementRecord;
   onPayReceivableItem?: () => void;
@@ -627,6 +630,16 @@ export function AgreementRecordDetail({
   onWaiveItem?: (item: ReceivableSummaryItem) => void;
   onEditDueDate?: (itemId: number, dueAtISO: string) => Promise<void>;
   isUpdatingDueDate?: boolean;
+  /** Admin-only: record an offline payment against an EMI item. */
+  onRecordPayment?: (item: ReceivableSummaryItem) => void;
+  /** Admin-only: send a manual reminder for a due/overdue EMI item. */
+  onSendReminder?: (item: ReceivableSummaryItem) => void;
+  /**
+   * Optional context-aware action toolbar rendered above the EMI card. The
+   * admin surface composes `<AgreementActionBar />` here; franchisee callers
+   * omit it, so their detail renders unchanged.
+   */
+  actionBar?: ReactNode;
 }) {
   const pathname = usePathname();
   const isAdminContext = pathname?.startsWith("/admin") ?? false;
@@ -710,6 +723,8 @@ export function AgreementRecordDetail({
 
   return (
     <div className="space-y-4">
+      {actionBar}
+
       <AgreementEmiScheduleCard
         summary={installmentSummary}
         onViewFullSchedule={
@@ -725,6 +740,8 @@ export function AgreementRecordDetail({
         onWaiveItem={onWaiveItem}
         onEditDueDate={onEditDueDate}
         isUpdatingDueDate={isUpdatingDueDate}
+        onRecordPayment={onRecordPayment}
+        onSendReminder={onSendReminder}
       />
 
       <Tabs defaultValue="overview" className="space-y-4">

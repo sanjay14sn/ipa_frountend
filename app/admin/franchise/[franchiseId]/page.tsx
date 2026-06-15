@@ -18,7 +18,7 @@ import { FranchiseCiSummary } from "./components/FranchiseCiSummary";
 import { FranchiseStudentsSummary } from "./components/FranchiseStudentsSummary";
 import { FranchiseOrdersSummary } from "./components/FranchiseOrdersSummary";
 import { FranchisePaymentsTab } from "./components/FranchisePaymentsTab";
-import { FranchiseAgreementsWorkspace } from "@/app/admin/franchise/components/FranchiseAgreementsWorkspace";
+import { AdminAgreementsSection } from "@/app/admin/franchise/components/admin-agreements-section";
 import { formatDate } from "@/lib/date-utils";
 
 const TABS = ["students", "ci", "orders", "payments", "agreements"] as const;
@@ -190,9 +190,7 @@ function FranchiseDetailInner() {
       </TabsContent>
 
       <TabsContent value="agreements" className="mt-0">
-        <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-5">
-          <FranchiseAgreementsWorkspace agreements={detail?.agreements ?? []} />
-        </div>
+        <AdminAgreementsSection fixedFranchiseId={franchiseId} embed />
       </TabsContent>
     </Tabs>
   );

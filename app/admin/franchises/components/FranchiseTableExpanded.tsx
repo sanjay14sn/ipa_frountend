@@ -8,7 +8,7 @@ import {
   ExpandedDetailSurface,
 } from "@/components/shared";
 import type { FranchiseData } from "@/services/franchisee.service";
-import { FranchiseAgreementsWorkspace } from "@/app/admin/franchise/components/FranchiseAgreementsWorkspace";
+import { FranchiseAgreementsSummary } from "./FranchiseAgreementsSummary";
 import { formatDate } from "@/lib/date-utils";
 
 function franchiseeMail(fe: FranchiseData["franchisee"]): string {
@@ -65,8 +65,8 @@ export function FranchiseTableExpanded({ item }: { item: FranchiseData }) {
 
       <Separator />
 
-      <ExpandedDetailSection title="Agreement & financial terms">
-        <FranchiseAgreementsWorkspace agreements={agreements} />
+      <ExpandedDetailSection title="Agreements">
+        <FranchiseAgreementsSummary franchiseId={item.id} agreements={agreements} />
       </ExpandedDetailSection>
     </ExpandedDetailSurface>
   );

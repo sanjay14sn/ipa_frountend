@@ -1,18 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Download, Eye, Loader2 } from "lucide-react";
+import { Download, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { AgreementRecordDetail } from "@/components/agreements/AgreementRecordDetail";
 import { IssueRenewalButton } from "@/components/agreements/IssueRenewalButton";
 import {
   DataTable,
@@ -24,111 +16,15 @@ import {
 import {
   downloadScheduleBPdfAdmin,
   type AgreementRecord,
-  type ReceivableSummaryItem,
 } from "@/services/agreement.service";
 import { agreementTypeBadgeClass, agreementTypeLabel } from "@/lib/payment-details-display";
 import {
   ReceivableCompactProgress,
 } from "@/components/receivables/InstallmentSummaryCard";
 import { getErrorMessage } from "@/lib/error-utils";
-import {
-  useAgreementAdmin,
-  useAgreementsAdmin,
-  useUpdateReceivableDueDateMutation,
-  useWaiveReceivableItemMutation,
-} from "@/hooks/api/agreement.hooks";
-import { WaiveReceivableDialog } from "./WaiveReceivableDialog";
-
-function AdminAgreementViewDialog({
-  agreementId,
-  open,
-  onOpenChange,
-}: {
-  agreementId: number | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const agreementQuery = useAgreementAdmin(open ? agreementId ?? undefined : undefined);
-  const [waiveItem, setWaiveItem] = useState<ReceivableSummaryItem | null>(null);
-  const [waiveDialogOpen, setWaiveDialogOpen] = useState(false);
-  const waiveMutation = useWaiveReceivableItemMutation(agreementId ?? 0);
-  const updateDueDate = useUpdateReceivableDueDateMutation(agreementId ?? 0);
-
-  useEffect(() => {
-    if (agreementQuery.error) {
-      toast.error(
-        getErrorMessage(agreementQuery.error, "Failed to load agreement"),
-      );
-    }
-  }, [agreementQuery.error]);
-
-  const agreement = agreementQuery.data ?? null;
-
-  const handleWaiveSubmit = async (itemId: number, reason: string) => {
-    try {
-      await waiveMutation.mutateAsync({ itemId, reason });
-      toast.success("Receivable waived successfully");
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Failed to waive receivable"));
-      throw error;
-    }
-  };
-
-  return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-[min(1200px,94vw)]">
-          <DialogHeader className="border-b border-border px-4 py-4 text-left sm:px-5">
-            <DialogTitle>
-              {(() => {
-                const cleaned = (agreement?.title ?? "")
-                  .replace(/\s+\S*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\S*$/i, "")
-                  .replace(/\s+#?\d+\s*$/, "")
-                  .trim();
-                return cleaned || "Franchise Agreement";
-              })()}
-            </DialogTitle>
-            <DialogDescription>
-              View the agreement without leaving the franchise agreements table.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="p-4 sm:p-5">
-            {agreementQuery.isLoading ? (
-              <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                Loading agreement...
-              </div>
-            ) : agreement ? (
-              <AgreementRecordDetail
-                data={agreement}
-                onWaiveItem={(item) => {
-                  setWaiveItem(item);
-                  setWaiveDialogOpen(true);
-                }}
-                onEditDueDate={(itemId, dueAt) =>
-                  updateDueDate.mutateAsync({ itemId, dueAt })
-                }
-                isUpdatingDueDate={updateDueDate.isPending}
-              />
-            ) : (
-              <p className="py-10 text-center text-sm text-muted-foreground">
-                Agreement not found.
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <WaiveReceivableDialog
-        item={waiveItem}
-        open={waiveDialogOpen}
-        onOpenChange={setWaiveDialogOpen}
-        onSubmit={handleWaiveSubmit}
-        isSubmitting={waiveMutation.isPending}
-      />
-    </>
-  );
-}
+import { useAgreementsAdmin } from "@/hooks/api/agreement.hooks";
+import { useAgreementIdFromUrl } from "@/hooks/use-agreement-id-from-url";
+import { AdminAgreementDetailSheet } from "./AdminAgreementDetailSheet";
 
 export interface AdminAgreementsSectionProps {
   fixedFranchiseId?: string;
@@ -160,7 +56,7 @@ export function AdminAgreementsSection({
   const agreementsQuery = useAgreementsAdmin(fixedFilter, listParams);
   const rows = agreementsQuery.data ?? [];
   const loading = agreementsQuery.isLoading;
-  const [viewAgreementId, setViewAgreementId] = useState<number | null>(null);
+  const [agreementId, setAgreementId] = useAgreementIdFromUrl();
 
   const filters: DataTableFilter[] = [
     {
@@ -236,7 +132,7 @@ export function AdminAgreementsSection({
             className="h-8 w-8 p-0"
             title="View agreement"
             aria-label="View agreement"
-            onClick={() => setViewAgreementId(record.id)}
+            onClick={() => setAgreementId(record.id)}
           >
             <Eye className="h-4 w-4" />
           </Button>
@@ -305,11 +201,11 @@ export function AdminAgreementsSection({
         emptyMessage="No agreements found."
       />
 
-      <AdminAgreementViewDialog
-        agreementId={viewAgreementId}
-        open={viewAgreementId != null}
+      <AdminAgreementDetailSheet
+        agreementId={agreementId}
+        open={agreementId != null}
         onOpenChange={(open) => {
-          if (!open) setViewAgreementId(null);
+          if (!open) setAgreementId(null);
         }}
       />
     </TablePageShell>

@@ -511,7 +511,7 @@ export async function updateFranchiseeSignatureOnly(
 // All three return the updated `AgreementRecord`.
 // -----------------------------------------------------------------------------
 
-async function suspendAgreementAdmin(
+export async function suspendAgreementAdmin(
   agreementId: number,
   reason?: string,
 ): Promise<AgreementRecord> {
@@ -521,7 +521,7 @@ async function suspendAgreementAdmin(
   return unwrapData<AgreementRecord>(response);
 }
 
-async function reactivateAgreementAdmin(
+export async function reactivateAgreementAdmin(
   agreementId: number,
 ): Promise<AgreementRecord> {
   const response = await api.post(
@@ -531,7 +531,7 @@ async function reactivateAgreementAdmin(
   return unwrapData<AgreementRecord>(response);
 }
 
-async function voidAgreementAdmin(
+export async function voidAgreementAdmin(
   agreementId: number,
   reason?: string,
 ): Promise<AgreementRecord> {

@@ -153,6 +153,8 @@ export function AgreementEmiScheduleCard({
   onWaiveItem,
   onEditDueDate,
   isUpdatingDueDate,
+  onRecordPayment,
+  onSendReminder,
 }: {
   summary:
     | ReceivableInstallmentSummary
@@ -167,6 +169,10 @@ export function AgreementEmiScheduleCard({
   onWaiveItem?: (item: ReceivableSummaryItem) => void;
   onEditDueDate?: (itemId: number, dueAtISO: string) => Promise<void>;
   isUpdatingDueDate?: boolean;
+  /** Admin-only: record an offline payment for an unpaid item (rendered on EMI stops). */
+  onRecordPayment?: (item: ReceivableSummaryItem) => void;
+  /** Admin-only: send a manual reminder for a due/overdue item (rendered on EMI stops). */
+  onSendReminder?: (item: ReceivableSummaryItem) => void;
 }) {
   const hasPlan = hasReceivablePlan(summary);
 
@@ -208,6 +214,8 @@ export function AgreementEmiScheduleCard({
         summary={summary}
         title="Franchise fee EMI plan"
         agreementRef={agreementId ? `Agreement #${agreementId}` : null}
+        onRecordPayment={onRecordPayment}
+        onSendReminder={onSendReminder}
       />
 
       {summary.holdReason ? (
