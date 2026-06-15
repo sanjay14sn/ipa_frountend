@@ -299,6 +299,14 @@ export interface AgreementRecord extends AgreementTermsSnapshot {
   signed?: boolean;
   /** Order id of the one-time free franchise kit dispatch; null = not yet dispatched. */
   franchiseKitOrderId?: number | null;
+  /**
+   * Authoritative "franchise kit dispatched" flag. True after the admin's first
+   * free dispatch, or when preset at admin existing-franchise setup — so it can
+   * be true even while `franchiseKitOrderId` is null (no order was generated).
+   */
+  materialsDispatched?: boolean;
+  /** When the kit was dispatched through the system; null otherwise. */
+  materialsDispatchedAt?: string | null;
   dateOfSigning: string | null;
   franchiseId: string | null;
   franchiseeId: number | null;

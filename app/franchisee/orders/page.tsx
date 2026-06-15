@@ -28,7 +28,6 @@ import {
   abandonOrderPayment,
   cancelOrderFranchisee,
   createOrder,
-  createFranchiseKitOrder,
   verifyOrderPayment,
   OrderStatus,
   type OrderData,
@@ -37,7 +36,6 @@ import {
   type FranchiseKitOrderItem,
 } from "@/services/order.service";
 import UnifiedMaterialRequestDialog from "./components/UnifiedMaterialRequestDialog";
-import FranchiseKitOrderDialog from "./components/FranchiseKitOrderDialog";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { ComponentErrorBoundary } from "@/components/error/ComponentErrorBoundary";
 
@@ -52,14 +50,12 @@ export default function FranchiseeOrdersPage() {
 
   // --- Unified modal state ---
   const [isUnifiedModalOpen, setIsUnifiedModalOpen] = useState(false);
-  const [isKitModalOpen, setIsKitModalOpen] = useState(false);
   const [unifiedPaymentData, setUnifiedPaymentData] = useState<any>(null);
   const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
 
   // --- Retry state (preserved when payment is captured but createOrder fails) ---
   const [submitting, setSubmitting] = useState(false);
   const [pendingOrderRetry, setPendingOrderRetry] = useState<{
-    kind?: "FRANCHISE_KIT";
     studentIds?: number[];
     instructorIds?: number[];
     startingKitItems?: StartingKitItem[];
@@ -129,23 +125,16 @@ export default function FranchiseeOrdersPage() {
       return;
     }
     try {
-      if (pd.kind === "FRANCHISE_KIT") {
-        await createFranchiseKitOrder({
-          programId: pd.programId,
-          items: pd.franchiseKitItems,
-          notes: pd.notes,
-          paymentRecordId: pd.paymentRecordId,
-        });
-      } else {
-        await createOrder({
-          studentIds: pd.studentIds,
-          instructorIds: pd.instructorIds,
-          startingKitItems: pd.startingKitItems,
-          customItems: pd.customItems,
-          notes: pd.notes,
-          paymentRecordId: pd.paymentRecordId,
-        });
-      }
+      await createOrder({
+        studentIds: pd.studentIds,
+        instructorIds: pd.instructorIds,
+        startingKitItems: pd.startingKitItems,
+        customItems: pd.customItems,
+        franchiseKitItems: pd.franchiseKitItems,
+        franchiseKitProgramId: pd.franchiseKitProgramId,
+        notes: pd.notes,
+        paymentRecordId: pd.paymentRecordId,
+      });
       toast.success("Payment verified and order placed.");
       setUnifiedPaymentData(null);
       setPendingOrderRetry(null);
@@ -155,13 +144,12 @@ export default function FranchiseeOrdersPage() {
       setUnifiedPaymentData(null);
       if (pd.paymentRecordId != null) {
         setPendingOrderRetry({
-          kind: pd.kind,
           studentIds: pd.studentIds,
           instructorIds: pd.instructorIds,
           startingKitItems: pd.startingKitItems,
           customItems: pd.customItems,
           franchiseKitItems: pd.franchiseKitItems,
-          franchiseKitProgramId: pd.programId,
+          franchiseKitProgramId: pd.franchiseKitProgramId,
           notes: pd.notes,
           paymentRecordId: pd.paymentRecordId,
         });
@@ -188,23 +176,16 @@ export default function FranchiseeOrdersPage() {
     if (!pendingOrderRetry) return;
     try {
       setSubmitting(true);
-      if (pendingOrderRetry.kind === "FRANCHISE_KIT") {
-        await createFranchiseKitOrder({
-          programId: pendingOrderRetry.franchiseKitProgramId!,
-          items: pendingOrderRetry.franchiseKitItems ?? [],
-          notes: pendingOrderRetry.notes,
-          paymentRecordId: pendingOrderRetry.paymentRecordId,
-        });
-      } else {
-        await createOrder({
-          studentIds: pendingOrderRetry.studentIds,
-          instructorIds: pendingOrderRetry.instructorIds,
-          startingKitItems: pendingOrderRetry.startingKitItems,
-          customItems: pendingOrderRetry.customItems,
-          notes: pendingOrderRetry.notes,
-          paymentRecordId: pendingOrderRetry.paymentRecordId,
-        });
-      }
+      await createOrder({
+        studentIds: pendingOrderRetry.studentIds,
+        instructorIds: pendingOrderRetry.instructorIds,
+        startingKitItems: pendingOrderRetry.startingKitItems,
+        customItems: pendingOrderRetry.customItems,
+        franchiseKitItems: pendingOrderRetry.franchiseKitItems,
+        franchiseKitProgramId: pendingOrderRetry.franchiseKitProgramId,
+        notes: pendingOrderRetry.notes,
+        paymentRecordId: pendingOrderRetry.paymentRecordId,
+      });
       toast.success("Order placed successfully.");
       setPendingOrderRetry(null);
       await refetchOrders();
@@ -277,10 +258,6 @@ export default function FranchiseeOrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setIsKitModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Order Franchise Kit
-          </Button>
           <Button onClick={() => setIsUnifiedModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             New Material Request
@@ -328,20 +305,6 @@ export default function FranchiseeOrdersPage() {
         }}
         eligibleStudents={eligibleStudents}
         customEligibleStudents={customEligibleStudents}
-      />
-
-      <FranchiseKitOrderDialog
-        open={isKitModalOpen}
-        onClose={() => setIsKitModalOpen(false)}
-        onPaymentInitiated={(data) => {
-          setIsKitModalOpen(false);
-          if (data.isZeroAmount) {
-            void refetchOrders();
-            void invalidateAdminOrders();
-            return;
-          }
-          setUnifiedPaymentData(data);
-        }}
       />
 
       {unifiedPaymentData && !unifiedPaymentData.isZeroAmount && unifiedPaymentData.amount > 0 ? (

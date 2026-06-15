@@ -14,6 +14,7 @@ import {
   previewOrderInvoice,
   type InvoicePreview,
   type CustomGroupPreview,
+  type FranchiseKitGroupPreview,
 } from "@/services/order.service";
 
 export interface StartingKitSelectionItem {
@@ -82,6 +83,11 @@ export interface UseUnifiedInvoicePreviewArgs {
   /** Custom (re-order) inventory lines folded into the same order. Priced off
    * inventory unitPrice with no GST; fetched as a standalone preview block. */
   customItems?: CustomMaterialSelectionItem[];
+  /** Franchise-kit items folded into the same order. Priced server-side off the
+   * configured kit (GST-exempt); fetched as a standalone preview block. */
+  franchiseKitItems?: Array<{ inventoryItemId: number; quantity: number }>;
+  /** Program scope the franchise-kit items belong to (kits are per-program). */
+  franchiseKitProgramId?: number;
   franchiseId?: string | number;
 }
 
@@ -101,6 +107,8 @@ export function useUnifiedInvoicePreview({
   selectedInstructorIds,
   startingKitItems,
   customItems = [],
+  franchiseKitItems = [],
+  franchiseKitProgramId,
   franchiseId,
 }: UseUnifiedInvoicePreviewArgs): UseUnifiedInvoicePreviewResult {
   // Franchisee JWT: server resolves franchise from token; `franchiseId` here is for admin-style calls only.
@@ -118,6 +126,15 @@ export function useUnifiedInvoicePreview({
   } | null>(null);
   const [isCustomFetching, setIsCustomFetching] = useState(false);
   const customGenRef = useRef(0);
+
+  // Franchise-kit items are also priced as a standalone overlay block (server
+  // prices them off the configured kit; GST-exempt), mirroring the custom block.
+  const [franchiseKitBlock, setFranchiseKitBlock] = useState<{
+    franchiseKitGroups: FranchiseKitGroupPreview[];
+    totalAmount: number;
+  } | null>(null);
+  const [isFranchiseKitFetching, setIsFranchiseKitFetching] = useState(false);
+  const franchiseKitGenRef = useRef(0);
 
   const genRef = useRef(0);
   const mergedRef = useRef<InvoicePreview | null>(null);
@@ -148,6 +165,15 @@ export function useUnifiedInvoicePreview({
         .map((i) => `${i.studentId}:${i.inventoryItemId}:${i.quantity}`)
         .join(","),
     [customItems],
+  );
+  const franchiseKitKey = useMemo(
+    () =>
+      `${franchiseKitProgramId ?? "none"}|` +
+      [...franchiseKitItems]
+        .sort((a, b) => a.inventoryItemId - b.inventoryItemId)
+        .map((i) => `${i.inventoryItemId}:${i.quantity}`)
+        .join(","),
+    [franchiseKitItems, franchiseKitProgramId],
   );
 
   useEffect(() => {
@@ -335,10 +361,61 @@ export function useUnifiedInvoicePreview({
     };
   }, [open, customKey, franchiseId, refetchTick]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      if (
+        !open ||
+        franchiseKitItems.length === 0 ||
+        franchiseKitProgramId == null
+      ) {
+        franchiseKitGenRef.current += 1;
+        setFranchiseKitBlock(null);
+        setIsFranchiseKitFetching(false);
+        return;
+      }
+      const myGen = ++franchiseKitGenRef.current;
+      setIsFranchiseKitFetching(true);
+      try {
+        const dtoBase =
+          franchiseId != null && franchiseId !== ""
+            ? { franchiseId: String(franchiseId) }
+            : {};
+        const part = await previewOrderInvoice({
+          ...dtoBase,
+          franchiseKitItems: franchiseKitItems.map((i) => ({
+            inventoryItemId: i.inventoryItemId,
+            quantity: i.quantity,
+          })),
+          franchiseKitProgramId,
+        });
+        if (cancelled || myGen !== franchiseKitGenRef.current) return;
+        setFranchiseKitBlock({
+          franchiseKitGroups: part.franchiseKitGroups ?? [],
+          totalAmount: Number(part.totalAmount ?? 0),
+        });
+      } catch (e) {
+        if (cancelled || myGen !== franchiseKitGenRef.current) return;
+        setError(e instanceof Error ? e : new Error(String(e)));
+      } finally {
+        if (!cancelled && myGen === franchiseKitGenRef.current) {
+          setIsFranchiseKitFetching(false);
+        }
+      }
+    }
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, franchiseKitKey, franchiseId, refetchTick]);
+
   const refetch = useCallback(() => {
     mergedRef.current = null;
     setPreview(null);
     setCustomBlock(null);
+    setFranchiseKitBlock(null);
     setError(null);
     setRefetchTick((t) => t + 1);
   }, []);
@@ -346,40 +423,50 @@ export function useUnifiedInvoicePreview({
   // Overlay the custom block: custom items add to the grand total (and to the
   // pre-GST subtotal, since they carry no GST) and surface as `customGroups`.
   const combinedPreview = useMemo<InvoicePreview | undefined>(() => {
-    const hasCustom = (customBlock?.customGroups.length ?? 0) > 0;
+    const customGroups = customBlock?.customGroups ?? [];
+    const customTotal = customBlock?.totalAmount ?? 0;
+    const franchiseKitGroups = franchiseKitBlock?.franchiseKitGroups ?? [];
+    const franchiseKitTotal = franchiseKitBlock?.totalAmount ?? 0;
+    const overlayTotal = customTotal + franchiseKitTotal;
+    const hasOverlay =
+      customGroups.length > 0 || franchiseKitGroups.length > 0;
+
     if (preview == null) {
-      if (!hasCustom || customBlock == null) return preview ?? undefined;
+      if (!hasOverlay) return undefined;
+      // Custom + franchise-kit items carry no GST, so the overlay is all subtotal.
       return {
         ...emptyPreview({ franchiseId: String(franchiseId ?? "") }),
-        customGroups: customBlock.customGroups,
-        totalAmount: customBlock.totalAmount,
-        subtotalAmount: customBlock.totalAmount,
+        customGroups,
+        franchiseKitGroups,
+        totalAmount: overlayTotal,
+        subtotalAmount: overlayTotal,
         gstAmount: 0,
         isGstInclusive: true,
       };
     }
-    if (!hasCustom || customBlock == null) return preview;
+    if (!hasOverlay) return preview;
     const baseSubtotal = preview.subtotalAmount ?? preview.totalAmount;
     return {
       ...preview,
-      customGroups: customBlock.customGroups,
-      totalAmount: preview.totalAmount + customBlock.totalAmount,
-      subtotalAmount: baseSubtotal + customBlock.totalAmount,
+      customGroups,
+      franchiseKitGroups,
+      totalAmount: preview.totalAmount + overlayTotal,
+      subtotalAmount: baseSubtotal + overlayTotal,
     };
-  }, [preview, customBlock, franchiseId]);
+  }, [preview, customBlock, franchiseKitBlock, franchiseId]);
 
   const isLoading = Boolean(
     open &&
       hasSelection &&
       combinedPreview == null &&
       !error &&
-      (isFetching || isCustomFetching),
+      (isFetching || isCustomFetching || isFranchiseKitFetching),
   );
 
   return {
     preview: combinedPreview,
     isLoading,
-    isFetching: isFetching || isCustomFetching,
+    isFetching: isFetching || isCustomFetching || isFranchiseKitFetching,
     isError: error != null,
     error,
     refetch,

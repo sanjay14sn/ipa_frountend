@@ -266,6 +266,15 @@ export interface CustomGroupPreview {
   totalPrice: number;
 }
 
+/** One priced franchise-kit line folded into the unified order (franchise-level, GST-exempt). */
+export interface FranchiseKitGroupPreview {
+  inventoryItemId: number;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
 export interface InvoicePreview {
   franchiseId: string;
   programId: number;
@@ -287,6 +296,8 @@ export interface InvoicePreview {
   instructorGroups?: InstructorGroupPreview[];
   /** Custom (re-order) items folded into the unified order, grouped per student. */
   customGroups?: CustomGroupPreview[];
+  /** Franchise-kit items folded into the unified order (franchise-level, GST-exempt). */
+  franchiseKitGroups?: FranchiseKitGroupPreview[];
 }
 
 // ---------------------------------------------------------------------------
@@ -620,6 +631,22 @@ function normalizeCustomGroupPreview(raw: unknown): CustomGroupPreview | null {
   };
 }
 
+function normalizeFranchiseKitGroupPreview(
+  raw: unknown,
+): FranchiseKitGroupPreview | null {
+  if (raw == null || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const inventoryItemId = Number(r?.inventoryItemId ?? 0);
+  if (!inventoryItemId) return null;
+  return {
+    inventoryItemId,
+    name: String(r?.name ?? ""),
+    quantity: Number(r?.quantity ?? 0),
+    unitPrice: Number(r?.unitPrice ?? 0),
+    totalPrice: Number(r?.totalPrice ?? 0),
+  };
+}
+
 /** Normalize unified / stored preview payload (API or `order.invoicePreview` JSON). */
 export function parseInvoicePreviewPayload(data: unknown): InvoicePreview {
   if (data == null || typeof data !== "object") {
@@ -718,6 +745,11 @@ export function parseInvoicePreviewPayload(data: unknown): InvoicePreview {
       ? (d.customGroups as unknown[])
           .map(normalizeCustomGroupPreview)
           .filter((g): g is CustomGroupPreview => g != null)
+      : [],
+    franchiseKitGroups: Array.isArray(d?.franchiseKitGroups)
+      ? (d.franchiseKitGroups as unknown[])
+          .map(normalizeFranchiseKitGroupPreview)
+          .filter((g): g is FranchiseKitGroupPreview => g != null)
       : [],
   };
 }

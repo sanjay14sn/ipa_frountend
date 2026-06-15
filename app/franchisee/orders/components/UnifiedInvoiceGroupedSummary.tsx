@@ -26,6 +26,8 @@ export interface UnifiedInvoiceGroupedSummaryProps {
   /** Render the custom-materials groups inline. Off by default so the order
    * detail modal can surface them in a dedicated tab instead. */
   showCustomGroups?: boolean;
+  /** Render the franchise-kit items folded into the unified order. */
+  showFranchiseKitGroup?: boolean;
 }
 
 function displayInstructorCode(id: string | number | undefined | null): string {
@@ -78,9 +80,11 @@ export default function UnifiedInvoiceGroupedSummary({
   onRemoveStudent,
   onRemoveInstructor,
   showCustomGroups = false,
+  showFranchiseKitGroup = false,
 }: UnifiedInvoiceGroupedSummaryProps) {
   const selectedKitsTotalQty = startingKitRows.reduce((s, i) => s + i.quantity, 0);
   const customGroups = preview.customGroups ?? [];
+  const franchiseKitGroups = preview.franchiseKitGroups ?? [];
 
   return (
     <div className="space-y-6">
@@ -274,6 +278,36 @@ export default function UnifiedInvoiceGroupedSummary({
             </span>
           </div>
           <CustomMaterialsList groups={customGroups} />
+        </div>
+      )}
+
+      {showFranchiseKitGroup && franchiseKitGroups.length > 0 && (
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Franchise kit
+            </h4>
+            <span className="text-xs text-muted-foreground">
+              {franchiseKitGroups.length}{" "}
+              {franchiseKitGroups.length === 1 ? "item" : "items"}
+            </span>
+          </div>
+          <div className="space-y-3">
+            <InvoiceGroupCard
+              kind="KIT"
+              title="Franchise kit"
+              items={franchiseKitGroups.map((g) => ({
+                name: g.name,
+                quantity: g.quantity,
+                amount: g.totalPrice,
+              }))}
+              totalAmount={franchiseKitGroups.reduce(
+                (s, g) => s + g.totalPrice,
+                0,
+              )}
+              readOnly={readOnly}
+            />
+          </div>
         </div>
       )}
     </div>

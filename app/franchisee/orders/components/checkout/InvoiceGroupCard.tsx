@@ -21,6 +21,8 @@ interface CheckoutCostRow {
 interface CheckoutLineItem {
   name: string;
   quantity: number;
+  /** Optional per-item line amount; when present it's shown on the right. */
+  amount?: number;
 }
 
 interface CheckoutTshirtBreakdownRow {
@@ -197,12 +199,23 @@ export default function InvoiceGroupCard({
           items.map((it, i) => (
             <div
               key={`${it.name}-${i}`}
-              className="flex items-center justify-between px-4 py-2 text-sm"
+              className="flex items-center justify-between gap-2 px-4 py-2 text-sm"
             >
-              <span className="truncate text-card-foreground">{it.name}</span>
-              <span className="ml-2 shrink-0 tabular-nums text-muted-foreground">
-                ×{it.quantity}
+              <span className="min-w-0 truncate text-card-foreground">
+                {it.name}
+                {it.amount != null ? (
+                  <span className="text-muted-foreground"> ×{it.quantity}</span>
+                ) : null}
               </span>
+              {it.amount != null ? (
+                <span className="shrink-0 tabular-nums text-card-foreground">
+                  {formatRupees(it.amount)}
+                </span>
+              ) : (
+                <span className="ml-2 shrink-0 tabular-nums text-muted-foreground">
+                  ×{it.quantity}
+                </span>
+              )}
             </div>
           ))
         )}

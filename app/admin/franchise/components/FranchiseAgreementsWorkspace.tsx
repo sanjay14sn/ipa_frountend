@@ -197,16 +197,22 @@ export function FranchiseAgreementsWorkspace({
                   ) : null}
                   {agreement.type === "NEW_FRANCHISE" &&
                   agreement.status === "Valid" ? (
-                    agreement.franchiseKitOrderId != null ? (
+                    agreement.materialsDispatched ? (
                       <Button
                         type="button"
                         variant="outline"
                         className="h-9"
                         disabled
-                        title="The free franchise kit order has already been created"
+                        title={
+                          agreement.franchiseKitOrderId != null
+                            ? "The free franchise kit order has already been created"
+                            : "The franchise kit is already marked as dispatched for this franchise"
+                        }
                       >
                         <Truck className="mr-2 h-4 w-4" />
-                        Kit dispatched (Order #{agreement.franchiseKitOrderId})
+                        {agreement.franchiseKitOrderId != null
+                          ? `Kit dispatched (Order #${agreement.franchiseKitOrderId})`
+                          : "Kit dispatched"}
                       </Button>
                     ) : (
                       <Button

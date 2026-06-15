@@ -39,6 +39,10 @@ export interface CreateOrderDto {
   instructorIds?: number[];
   startingKitItems?: StartingKitItem[];
   customItems?: CustomMaterialLine[];
+  /** Franchise-kit items folded into the same unified order (one checkout). */
+  franchiseKitItems?: FranchiseKitOrderItem[];
+  /** Program scope the franchise-kit items belong to (kits are per-program). */
+  franchiseKitProgramId?: number;
   notes?: string;
   paymentRecordId?: number;
 }
@@ -68,6 +72,8 @@ export interface InitiateOrderPaymentDto {
   instructorIds?: number[];
   startingKitItems?: StartingKitItem[];
   customItems?: CustomMaterialLine[];
+  franchiseKitItems?: FranchiseKitOrderItem[];
+  franchiseKitProgramId?: number;
   notes?: string;
   paymentRecordId?: number;
   totalAmount: number;
@@ -94,6 +100,8 @@ export interface OrderPaymentResponse {
   instructorIds?: number[];
   startingKitItems?: StartingKitItem[];
   customItems?: CustomMaterialLine[];
+  franchiseKitItems?: FranchiseKitOrderItem[];
+  franchiseKitProgramId?: number;
   notes?: string;
   isZeroAmount?: boolean;
 }
@@ -241,7 +249,12 @@ export async function cancelOrderFranchisee(orderId: number): Promise<OrderData>
 export async function previewOrderInvoice(
   dto: Pick<
     CreateOrderDto,
-    "studentIds" | "instructorIds" | "startingKitItems" | "customItems"
+    | "studentIds"
+    | "instructorIds"
+    | "startingKitItems"
+    | "customItems"
+    | "franchiseKitItems"
+    | "franchiseKitProgramId"
   > & { franchiseId?: string | number },
 ): Promise<InvoicePreview> {
   const body: Record<string, unknown> = {};
@@ -256,6 +269,12 @@ export async function previewOrderInvoice(
   }
   if (dto.customItems != null && dto.customItems.length > 0) {
     body.customItems = dto.customItems;
+  }
+  if (dto.franchiseKitItems != null && dto.franchiseKitItems.length > 0) {
+    body.franchiseKitItems = dto.franchiseKitItems;
+    if (dto.franchiseKitProgramId != null) {
+      body.franchiseKitProgramId = dto.franchiseKitProgramId;
+    }
   }
   if (dto.franchiseId != null && dto.franchiseId !== "") {
     body.franchiseId = String(dto.franchiseId);
@@ -332,6 +351,8 @@ export async function initiateOrderPayment(
       instructorIds: paymentData.instructorIds,
       startingKitItems: paymentData.startingKitItems,
       customItems: paymentData.customItems,
+      franchiseKitItems: paymentData.franchiseKitItems,
+      franchiseKitProgramId: paymentData.franchiseKitProgramId,
       notes: paymentData.notes,
     });
     return {
@@ -347,6 +368,8 @@ export async function initiateOrderPayment(
       instructorIds: paymentData.instructorIds,
       startingKitItems: paymentData.startingKitItems,
       customItems: paymentData.customItems,
+      franchiseKitItems: paymentData.franchiseKitItems,
+      franchiseKitProgramId: paymentData.franchiseKitProgramId,
       notes: paymentData.notes,
       isZeroAmount: true,
     };
@@ -366,6 +389,8 @@ export async function initiateOrderPayment(
       instructorIds: paymentData.instructorIds,
       startingKitItems: paymentData.startingKitItems,
       customItems: paymentData.customItems,
+      franchiseKitItems: paymentData.franchiseKitItems,
+      franchiseKitProgramId: paymentData.franchiseKitProgramId,
     },
   });
   const billing = unwrapData<{
@@ -389,6 +414,8 @@ export async function initiateOrderPayment(
     instructorIds: paymentData.instructorIds,
     startingKitItems: paymentData.startingKitItems,
     customItems: paymentData.customItems,
+    franchiseKitItems: paymentData.franchiseKitItems,
+    franchiseKitProgramId: paymentData.franchiseKitProgramId,
     notes: paymentData.notes,
     isZeroAmount: false,
   };

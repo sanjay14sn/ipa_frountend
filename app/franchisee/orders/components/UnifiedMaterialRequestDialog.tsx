@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { Loader2, Plus, Search, X } from "lucide-react";
+import { Loader2, Minus, Package, Plus, Search, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import {
   AppDialog,
   AppDialogBody,
@@ -11,7 +12,12 @@ import {
 import { type StudentData } from "@/services/student.service";
 import {
   initiateOrderPayment,
+  type FranchiseKitOrderItem,
 } from "@/services/order.service";
+import { getMyFranchiseKit } from "@/services/inventory.service";
+import { queryKeys } from "@/hooks/api/query-keys";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useUnifiedInvoicePreview } from "@/hooks/use-unified-invoice-preview";
 import { useTshirtInventory } from "@/hooks/use-tshirt-inventory";
 import { useStreamsByProgram } from "@/hooks/api/stream.hooks";
@@ -109,6 +115,11 @@ export default function UnifiedMaterialRequestDialog({
   const [customLines, setCustomLines] = useState<CustomLine[]>([]);
   const [customStuQuery, setCustomStuQuery] = useState("");
 
+  // Franchise Kit tab: quantities per franchise-kit inventory item.
+  const [franchiseKitQuantities, setFranchiseKitQuantities] = useState<
+    Record<number, number>
+  >({});
+
   const [stuQuery, setStuQuery] = useState("");
   const [ciQuery, setCiQuery] = useState("");
 
@@ -138,6 +149,39 @@ export default function UnifiedMaterialRequestDialog({
   const tshirtQuery = useTshirtInventory(open, programId);
   const tshirts = tshirtQuery.data ?? [];
 
+  // Franchise kit catalog for the current program scope (re-orderable items).
+  const franchiseKitQuery = useQuery({
+    queryKey: queryKeys.inventory.myFranchiseKit(programId ?? 0),
+    queryFn: () => getMyFranchiseKit(programId!),
+    enabled: open && programId != null,
+  });
+  const franchiseKitCatalog = useMemo(
+    () =>
+      (franchiseKitQuery.data ?? []).filter(
+        (row) => row.selected && row.isActive,
+      ),
+    [franchiseKitQuery.data],
+  );
+  const franchiseKitItems = useMemo<FranchiseKitOrderItem[]>(
+    () =>
+      franchiseKitCatalog
+        .filter((row) => (franchiseKitQuantities[row.inventoryId] ?? 0) > 0)
+        .map((row) => ({
+          inventoryItemId: row.inventoryId,
+          quantity: franchiseKitQuantities[row.inventoryId]!,
+        })),
+    [franchiseKitCatalog, franchiseKitQuantities],
+  );
+  const setFranchiseKitQty = useCallback(
+    (inventoryId: number, value: number) => {
+      setFranchiseKitQuantities((prev) => ({
+        ...prev,
+        [inventoryId]: Math.max(0, Math.floor(value) || 0),
+      }));
+    },
+    [],
+  );
+
   // Aggregate kitRows into API payload: merge duplicate (streamId, tshirtItemId) pairs
   // and drop count===0 rows (which only exist as in-progress UI rows).
   const startingKitItems = useMemo(() => {
@@ -164,7 +208,8 @@ export default function UnifiedMaterialRequestDialog({
     selectedStudentIds.length > 0 ||
     selectedInstructorIds.length > 0 ||
     startingKitItems.length > 0 ||
-    customItems.length > 0;
+    customItems.length > 0 ||
+    franchiseKitItems.length > 0;
 
   const invoicePreview = useUnifiedInvoicePreview({
     open,
@@ -173,6 +218,8 @@ export default function UnifiedMaterialRequestDialog({
     selectedInstructorIds,
     startingKitItems,
     customItems,
+    franchiseKitItems,
+    franchiseKitProgramId: programId ?? undefined,
   });
 
   const preview = invoicePreview.preview;
@@ -358,6 +405,8 @@ export default function UnifiedMaterialRequestDialog({
             quantity: r.count,
           })),
         customItems,
+        franchiseKitItems,
+        franchiseKitProgramId: programId ?? undefined,
         notes: undefined,
         paymentRecordId: undefined,
         totalAmount,
@@ -413,7 +462,8 @@ export default function UnifiedMaterialRequestDialog({
                     selectedKitsTotalQty +
                     selectedStudentIds.length +
                     selectedInstructorIds.length +
-                    customItems.length;
+                    customItems.length +
+                    franchiseKitItems.length;
                   return totalSelected > 0 ? (
                     <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground tabular-nums">
                       {totalSelected}
@@ -421,13 +471,21 @@ export default function UnifiedMaterialRequestDialog({
                   ) : null;
                 })()}
               </div>
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="standard">Standard</TabsTrigger>
                 <TabsTrigger value="custom">
-                  Custom Materials
+                  Custom
                   {customItems.length > 0 ? (
                     <span className="ml-1.5 rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground tabular-nums">
                       {customItems.length}
+                    </span>
+                  ) : null}
+                </TabsTrigger>
+                <TabsTrigger value="kit">
+                  Franchise Kit
+                  {franchiseKitItems.length > 0 ? (
+                    <span className="ml-1.5 rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground tabular-nums">
+                      {franchiseKitItems.length}
                     </span>
                   ) : null}
                 </TabsTrigger>
@@ -1063,6 +1121,88 @@ export default function UnifiedMaterialRequestDialog({
                 </section>
               ) : null}
             </TabsContent>
+
+            <TabsContent
+              value="kit"
+              className="mt-0 min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 focus-visible:outline-none"
+            >
+              <section>
+                <h4 className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Package className="h-3.5 w-3.5" />
+                  Franchise kit
+                </h4>
+                {programId == null ? (
+                  <p className="rounded-lg border bg-muted/30 px-3 py-4 text-sm text-muted-foreground">
+                    Select a program from the switcher to order its franchise kit.
+                  </p>
+                ) : franchiseKitQuery.isLoading ? (
+                  <div className="flex items-center gap-2 px-1 py-6 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading your franchise kit…
+                  </div>
+                ) : franchiseKitCatalog.length === 0 ? (
+                  <p className="rounded-lg border bg-muted/30 px-3 py-4 text-sm text-muted-foreground">
+                    No franchise kit items are available for this program yet, or
+                    your kit hasn’t been dispatched by the admin.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {franchiseKitCatalog.map((row) => {
+                      const qty = franchiseKitQuantities[row.inventoryId] ?? 0;
+                      return (
+                        <div
+                          key={row.inventoryId}
+                          className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
+                        >
+                          <span className="min-w-0 truncate text-sm font-medium text-card-foreground">
+                            {row.name}
+                          </span>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() =>
+                                setFranchiseKitQty(row.inventoryId, qty - 1)
+                              }
+                              disabled={isSubmitting || qty === 0}
+                            >
+                              <Minus className="h-3.5 w-3.5" />
+                            </Button>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={qty}
+                              onChange={(e) =>
+                                setFranchiseKitQty(
+                                  row.inventoryId,
+                                  Number(e.target.value),
+                                )
+                              }
+                              className="h-8 w-14 text-center"
+                              disabled={isSubmitting}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() =>
+                                setFranchiseKitQty(row.inventoryId, qty + 1)
+                              }
+                              disabled={isSubmitting}
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            </TabsContent>
           </Tabs>
 
           {/* Right — live invoice */}
@@ -1117,6 +1257,7 @@ export default function UnifiedMaterialRequestDialog({
                   selectedStudentIds={selectedStudentIds}
                   selectedInstructorIds={selectedInstructorIds}
                   showCustomGroups
+                  showFranchiseKitGroup
                   getStudentById={(id) => {
                     const s = eligibleStudents.find((x) => x.id === id);
                     if (s) return { name: s.name };
