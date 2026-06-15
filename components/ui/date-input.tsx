@@ -3,14 +3,11 @@
 import * as React from "react";
 import { format, isValid, parse } from "date-fns";
 import { CalendarIcon } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 import { cn } from "@/lib/utils";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { dpYears, renderDpHeader } from "@/components/ui/date-picker-header";
 
 const ISO_FORMAT = "yyyy-MM-dd";
 
@@ -43,6 +40,54 @@ function dateToIso(d: Date): string {
   return format(d, ISO_FORMAT);
 }
 
+function assignRef(ref: React.Ref<HTMLInputElement> | undefined, node: HTMLInputElement | null) {
+  if (!ref) return;
+  if (typeof ref === "function") ref(node);
+  else (ref as React.MutableRefObject<HTMLInputElement | null>).current = node;
+}
+
+/**
+ * Styled text input handed to react-datepicker via `customInput`. It mirrors
+ * the shared shadcn `Input` so the date field is visually identical to every
+ * other form field (height, border, focus ring), with room for the trailing
+ * calendar icon (`pr-10`).
+ *
+ * react-datepicker injects its own ref through `inputRef` (see `customInputRef`
+ * below); we merge it with the consumer-forwarded `ref` so both reach the DOM.
+ */
+const FieldInput = React.forwardRef<
+  HTMLInputElement,
+  React.ComponentProps<"input"> & { inputRef?: React.Ref<HTMLInputElement> }
+>(({ className, inputRef, ...props }, ref) => {
+  const setRef = React.useCallback(
+    (node: HTMLInputElement | null) => {
+      assignRef(ref, node);
+      assignRef(inputRef, node);
+    },
+    [ref, inputRef],
+  );
+  return (
+    <input
+      ref={setRef}
+      className={cn(
+        "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pr-10 text-base ring-offset-background",
+        "placeholder:text-muted-foreground",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+        className,
+      )}
+      {...props}
+    />
+  );
+});
+FieldInput.displayName = "DateFieldInput";
+
+/**
+ * Date field backed by `react-datepicker`. Accepts/emits ISO `yyyy-MM-dd`
+ * strings, displays/parses `DD/MM/YYYY`, and supports both keyboard entry and
+ * a themed calendar popup. The popup is intentionally not portalled so it stays
+ * inside any surrounding Radix dialog's DOM (and never dismisses it).
+ */
 const DateInput = React.forwardRef<HTMLInputElement, DateInputProps>(
   (
     {
@@ -61,122 +106,47 @@ const DateInput = React.forwardRef<HTMLInputElement, DateInputProps>(
     },
     ref,
   ) => {
-    const [open, setOpen] = React.useState(false);
-    const [inputText, setInputText] = React.useState("");
-
-    const dateValue = isoToDate(value);
+    const selected = isoToDate(value);
     const minDate = isoToDate(min) ?? undefined;
     const maxDate = isoToDate(max) ?? undefined;
 
-    // Keep text in sync with external value changes
-    React.useEffect(() => {
-      setInputText(dateValue ? format(dateValue, "dd/MM/yyyy") : "");
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [value]);
-
-    function sanitize(raw: string): string {
-      let d = raw.replace(/\D/g, "");
-      // Day first digit > 3 → auto-prepend 0 (prevents "41", "51", etc.)
-      if (d.length >= 1 && parseInt(d[0]) > 3) d = "0" + d;
-      // Month first digit (position 2) > 1 → auto-prepend 0 (prevents "13", etc.)
-      if (d.length >= 3 && parseInt(d[2]) > 1) d = d.slice(0, 2) + "0" + d.slice(2);
-      return d.slice(0, 8);
-    }
-
-    function handleTyping(e: React.ChangeEvent<HTMLInputElement>) {
-      const rawValue = e.target.value;
-      const isDeleting = rawValue.length < inputText.length;
-
-      let digits = sanitize(rawValue);
-
-      // When backspacing into a trailing slash, also eat the last digit
-      if (isDeleting && inputText.endsWith("/")) {
-        const prevDigits = inputText.replace(/\D/g, "");
-        if (digits === prevDigits) digits = digits.slice(0, -1);
-      }
-
-      // Build DD/MM/YYYY string, inserting slashes at positions 2 and 4
-      let formatted = "";
-      for (let i = 0; i < digits.length; i++) {
-        if (i === 2 || i === 4) formatted += "/";
-        formatted += digits[i];
-      }
-      // Auto-append trailing slash after completing day (2) or month (4)
-      if (!isDeleting && (digits.length === 2 || digits.length === 4)) {
-        formatted += "/";
-      }
-
-      setInputText(formatted);
-
-      if (digits.length === 8) {
-        const dateStr =
-          digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4);
-        const parsed = parse(dateStr, "dd/MM/yyyy", new Date());
-        if (isValid(parsed)) onChange?.(dateToIso(parsed));
-      } else if (digits.length === 0) {
-        onChange?.("");
-      }
-    }
+    const startYear = minDate?.getFullYear() ?? 1950;
+    const endYear = maxDate?.getFullYear() ?? 2100;
+    const years = React.useMemo(
+      () => dpYears(startYear, endYear),
+      [startYear, endYear],
+    );
 
     return (
-      <div className="relative">
-        <input
-          ref={ref}
-          type="text"
-          id={id}
-          name={name}
+      <div className="dp-field relative">
+        <DatePicker
+          selected={selected}
+          onChange={(d: Date | null) =>
+            onChange?.(d && isValid(d) ? dateToIso(d) : "")
+          }
+          dateFormat="dd/MM/yyyy"
+          placeholderText={placeholder}
+          minDate={minDate}
+          maxDate={maxDate}
+          openToDate={selected ?? maxDate ?? minDate ?? undefined}
           disabled={disabled}
           required={required}
-          aria-invalid={ariaInvalid}
-          aria-describedby={ariaDescribedby}
-          value={inputText}
-          onChange={handleTyping}
-          placeholder={placeholder}
-          maxLength={10}
-          inputMode="numeric"
-          className={cn(
-            "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm ring-offset-background",
-            "placeholder:text-muted-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            "disabled:cursor-not-allowed disabled:opacity-50",
-            className,
-          )}
-        />
-        <Popover open={open} onOpenChange={disabled ? undefined : setOpen}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              disabled={disabled}
-              tabIndex={-1}
-              aria-label="Open date picker"
-              className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 focus-visible:outline-none"
-            >
-              <CalendarIcon className="h-4 w-4" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              selected={dateValue ?? undefined}
-              defaultMonth={dateValue ?? maxDate ?? minDate}
-              startMonth={minDate ?? new Date(1950, 0)}
-              endMonth={maxDate ?? new Date(2100, 11)}
-              disabled={
-                minDate || maxDate
-                  ? (d: Date) => {
-                      if (minDate && d < minDate) return true;
-                      if (maxDate && d > maxDate) return true;
-                      return false;
-                    }
-                  : undefined
-              }
-              onSelect={(d: Date | undefined) => {
-                if (!d) return;
-                onChange?.(dateToIso(d));
-                setOpen(false);
-              }}
+          id={id}
+          name={name}
+          showPopperArrow={false}
+          popperClassName="dp-theme"
+          customInputRef="inputRef"
+          renderCustomHeader={renderDpHeader(years)}
+          customInput={
+            <FieldInput
+              ref={ref}
+              className={className}
+              aria-invalid={ariaInvalid}
+              aria-describedby={ariaDescribedby}
             />
-          </PopoverContent>
-        </Popover>
+          }
+        />
+        <CalendarIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50" />
       </div>
     );
   },
