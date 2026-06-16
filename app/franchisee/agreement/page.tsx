@@ -535,9 +535,20 @@ function FranchiseAgreementContent() {
   // status until payment lands — so the legacy `agreementSignatureSrc(...)`
   // check (which read the snapshotted signature URL on the agreement row)
   // is no longer the right gate. Fall back to it for pre-refactor data that
-  // hasn't been migrated yet.
+  // hasn't been migrated yet — but ONLY the per-agreement snapshot, never the
+  // franchisee-profile signature join. A renewing franchisee always has a
+  // profile signature on file from their original onboarding; resolving that
+  // here would mark a brand-new (still unsigned) renewal as signed, unlock
+  // payment, and the backend would then reject it with INVALID_STATE
+  // ("cannot make payment in current state") because the renewal's own
+  // `signed` flag is still false. Gate on the agreement's own signature only.
   const isSigned = Boolean(
-    feeAgreement?.signed || (feeAgreement && agreementSignatureSrc(feeAgreement)),
+    feeAgreement?.signed ||
+      (feeAgreement &&
+        agreementSignatureSrc({
+          franchiseeSignatureUrl: feeAgreement.franchiseeSignatureUrl,
+          franchiseeSignature: feeAgreement.franchiseeSignature,
+        })),
   );
 
   const getMaxReachableStep = useCallback((): AgreementStepIndex => {
