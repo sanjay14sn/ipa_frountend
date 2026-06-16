@@ -70,7 +70,7 @@ export default function FranchiseeCertificatesGroupCard({
                     key={certificate.id}
                     className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-accent/40 transition-colors"
                   >
-                    {/* Left: name + roll + percentage */}
+                    {/* Left: name + roll + template + percentage */}
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="text-sm font-medium text-foreground truncate">
                         {certificate.studentName}
@@ -78,6 +78,11 @@ export default function FranchiseeCertificatesGroupCard({
                           &middot; {certificate.studentRollNo}
                         </span>
                       </span>
+                      {certificate.templateName ? (
+                        <Badge variant="outline" className="shrink-0 text-[10px]">
+                          {certificate.templateName}
+                        </Badge>
+                      ) : null}
                       <span className="text-xs text-muted-foreground shrink-0">
                         {pct}
                       </span>

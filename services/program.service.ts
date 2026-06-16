@@ -1,9 +1,5 @@
 import { api } from "@/lib/axios";
-import {
-  compactRequestParams,
-  normalizePaginatedResult,
-  unwrapData,
-} from "@/lib/unwrap-api";
+import { unwrapData } from "@/lib/unwrap-api";
 
 export interface Program {
   id: number;
@@ -32,6 +28,13 @@ export interface FieldCoordinate {
 export interface CertificateTemplate {
   id?: number;
   programId?: number;
+  /** Name of this pooled template (required by the backend). */
+  name?: string;
+  certificateTitle?: string;
+  issuerName?: string;
+  templatePdfPath?: string;
+  additionalText?: string | null;
+  isActive?: boolean;
   fieldCoordinates?: Record<string, FieldCoordinate> | null;
   templateImagePath?: string;
   [key: string]: unknown;
@@ -75,32 +78,33 @@ export async function deleteProgram(id: number): Promise<void> {
   await api.delete(`/catalog/program/delete/${id}`);
 }
 
-export async function getCertificateTemplate(
-  programId?: number,
-  listParams?: { page?: number; limit?: number; search?: string; streamId?: number },
-): Promise<CertificateTemplate> {
+/**
+ * The program's full pool of named certificate templates. Returns a plain
+ * array (NOT paginated).
+ */
+export async function listCertificateTemplates(
+  programId: number,
+): Promise<CertificateTemplate[]> {
   const response = await api.get("/admin/certification/template", {
-    params: compactRequestParams({
-      programId,
-      page: listParams?.page ?? 1,
-      limit: listParams?.limit ?? (programId != null ? 100 : 500),
-      search: listParams?.search,
-      streamId: listParams?.streamId,
-    } as Record<string, string | number | boolean | undefined | null>),
+    params: { programId },
   });
-  const result = unwrapData<unknown>(response);
-  const { rows } = normalizePaginatedResult<CertificateTemplate>(result);
-  if (programId != null) {
-    const row = rows.find((t) => Number(t.programId) === programId);
-    return row ?? rows[0] ?? { fieldCoordinates: {} };
-  }
-  return rows[0] ?? { fieldCoordinates: {} };
+  const data = unwrapData<CertificateTemplate[]>(response);
+  return Array.isArray(data) ? data : [];
 }
+
+export type CertificateTemplatePayload = {
+  name?: string;
+  certificateTitle?: string;
+  issuerName?: string;
+  fieldCoordinates?: Record<string, unknown>;
+  additionalText?: string;
+  isActive?: boolean;
+  templatePdfPath?: string;
+};
 
 export async function updateCertificateTemplate(
   programId: number,
-  data: Record<string, unknown> & { id?: number },
-  streamId?: number | null,
+  data: CertificateTemplatePayload & { id?: number },
 ): Promise<void> {
   const { id, ...payload } = data;
   if (id != null) {
@@ -109,7 +113,6 @@ export async function updateCertificateTemplate(
     await api.post("/admin/certification/template", {
       ...payload,
       programId,
-      ...(streamId != null ? { streamId } : {}),
       templatePdfPath: payload.templatePdfPath ?? "",
     });
   }
@@ -118,21 +121,24 @@ export async function updateCertificateTemplate(
 export async function uploadCertificateTemplate(
   programId: number,
   file: File,
-  data?: {
+  data: {
+    name: string;
     certificateTitle?: string;
     issuerName?: string;
     fieldCoordinates?: Record<string, unknown>;
     additionalText?: string;
     isActive?: boolean;
   },
-  streamId?: number | null,
 ): Promise<void> {
   const form = new FormData();
   form.append("file", file);
   form.append("programId", String(programId));
-  if (streamId != null) form.append("streamId", String(streamId));
-  if (data) form.append("data", JSON.stringify(data));
+  form.append("data", JSON.stringify(data));
   await api.post("/admin/certification/template/upload", form, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+}
+
+export async function deleteCertificateTemplate(id: number): Promise<void> {
+  await api.delete(`/admin/certification/template/${id}`);
 }

@@ -47,7 +47,14 @@ export async function getIssuedCertificateDetails(): Promise<RequestedCertificat
 }
 
 export interface AdminCertificateRequest {
+  /** The certificate id (per-cert handle — used for reject and view-PDF). */
   id: number;
+  /** The owning progression (used for approve — issues all its pending certs). */
+  progressionId: number;
+  /** The pooled certificate template this cert was issued from. */
+  certificateTemplateId: number;
+  /** Display name of the certificate template. */
+  templateName: string;
   studentId: number;
   instructorId: number;
   franchiseId: string;
@@ -117,7 +124,14 @@ export interface PaginatedCertificatesResponse {
 }
 
 export interface FranchiseeCertificate {
+  /** The certificate id (per-cert handle — used for view-PDF). */
   id: number;
+  /** The owning progression. */
+  progressionId: number;
+  /** The pooled certificate template this cert was issued from. */
+  certificateTemplateId: number;
+  /** Display name of the certificate template. */
+  templateName: string;
   studentId: number;
   instructorId: number;
   franchiseId: string;
@@ -236,6 +250,9 @@ function mapCertRow(c: CertificateRow): AdminCertificateRequest {
 
   return {
     id: Number(c.id),
+    progressionId: Number(c.progressionId ?? c.id ?? 0),
+    certificateTemplateId: Number(c.certificateTemplateId ?? 0),
+    templateName: String(c.templateName ?? ""),
     studentId: fallbackStudentId,
     instructorId: fallbackInstructorId,
     franchiseId: fid,

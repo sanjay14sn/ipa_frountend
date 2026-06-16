@@ -15,6 +15,7 @@ import type { Level, UpdateLevelDto } from "@/services/level.service";
 import type { Stream } from "@/services/stream.service";
 import type { StreamTransition } from "@/services/stream-transition.service";
 import { LevelMaterialsPicker } from "@/app/admin/profile/components/LevelMaterialsPicker";
+import { LevelCertificatesPicker } from "@/app/admin/profile/components/LevelCertificatesPicker";
 import { StatusBadge } from "@/components/shared/status-badge";
 
 export function sortLevelsByDisplayOrder(list: Level[]) {
@@ -160,11 +161,12 @@ export function LevelList({
               <div className="overflow-x-auto">
                 <table className="w-full table-fixed text-sm">
                   <colgroup>
-                    <col className="w-[26%]" />
-                    <col className="w-[22%]" />
-                    <col className="w-[22%]" />
+                    <col className="w-[24%]" />
+                    <col className="w-[18%]" />
+                    <col className="w-[16%]" />
                     <col className="w-[16%]" />
                     <col className="w-[14%]" />
+                    <col className="w-[12%]" />
                   </colgroup>
                   <thead>
                     <tr className="border-b border-border bg-muted/20">
@@ -176,6 +178,9 @@ export function LevelList({
                       </th>
                       <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                         Materials
+                      </th>
+                      <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                        Certificates
                       </th>
                       <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                         Status
@@ -252,6 +257,13 @@ export function LevelList({
                           <td className="px-3 py-2 align-middle">
                             <LevelMaterialsPicker
                               levelId={level.id}
+                              disabled={isLoading}
+                            />
+                          </td>
+                          <td className="px-3 py-2 align-middle">
+                            <LevelCertificatesPicker
+                              levelId={level.id}
+                              programId={programId}
                               disabled={isLoading}
                             />
                           </td>

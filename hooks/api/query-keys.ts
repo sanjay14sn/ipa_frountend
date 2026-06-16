@@ -246,4 +246,11 @@ export const queryKeys = {
     eligibleInstructors: (levelIds?: number[], programId?: number) =>
       ["certificates", "eligible-instructors", levelIds ?? null, programId ?? null] as const,
   },
+  /** Certificate template pool (per program) and level attachments (mirrors inventory.levelItems). */
+  certificateTemplates: {
+    forProgram: (programId: number) =>
+      ["certificate-templates", "program", programId] as const,
+    forLevel: (levelId: number) =>
+      ["certificate-templates", "level", levelId] as const,
+  },
 } as const;

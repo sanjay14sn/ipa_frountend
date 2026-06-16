@@ -29,12 +29,13 @@ declare global {
 }
 
 import { useState, useEffect, useRef } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Trash2, FileText } from "lucide-react";
 import { toast } from "sonner";
 import {
-  getCertificateTemplate,
+  listCertificateTemplates,
   updateCertificateTemplate,
   uploadCertificateTemplate,
+  deleteCertificateTemplate,
   type Program,
   type CertificateTemplate,
   type FieldCoordinate,
@@ -43,19 +44,14 @@ import { getApiBaseUrl } from "@/lib/api-utils";
 import { sendClientLog } from "@/lib/client-telemetry";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import dynamic from "next/dynamic";
-import { useStreamsByProgram } from "@/hooks/api/stream.hooks";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   CERTIFICATE_FIELDS,
   getFieldDef,
   type CertificateFieldDef,
 } from "./certificate-template-fields";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const CertificateTemplateEditor = dynamic(
   () =>
@@ -78,29 +74,42 @@ interface CertificateTemplateSectionProps {
   isActive: boolean;
 }
 
+// Default field placements for a brand-new template.
+const DEFAULT_COORDINATES: Record<string, FieldCoordinate> = {
+  student_name: { rect: [255, 338, 598, 354], label: "Student Name" },
+  student_level: { rect: [184, 299, 359, 315], label: "Student Level" },
+  student_program: { rect: [383, 298, 596, 314], label: "Student Program" },
+  franchise_name: { rect: [177, 223, 635, 239], label: "Franchise Name" },
+  year: { rect: [76, 100, 147, 116], label: "Year" },
+  franchisee: { rect: [431, 98, 539, 114], label: "Franchisee" },
+};
+
 export function CertificateTemplateSection({
   program,
   isActive,
 }: CertificateTemplateSectionProps) {
-  const [templateData, setTemplateData] = useState<
-    Partial<CertificateTemplate>
-  >({
-    certificateTitle: "",
-    issuerName: "",
-    signatureField1Label: "",
-    signatureField1Name: "",
-    signatureField2Label: "",
-    signatureField2Name: "",
-    additionalText: "",
-    isActive: true,
-  });
+  // ── Pool of templates for this program ───────────────────────────────────
+  const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
+  const [isLoadingPool, setIsLoadingPool] = useState(false);
+  // The selected template id; `"new"` means an unsaved draft.
+  const [selectedId, setSelectedId] = useState<number | "new" | null>(null);
+
+  // ── Editor state for the selected template ───────────────────────────────
+  const [templateName, setTemplateName] = useState("");
+  const [templateData, setTemplateData] = useState<Partial<CertificateTemplate>>(
+    {
+      certificateTitle: "",
+      issuerName: "",
+      additionalText: "",
+      isActive: true,
+    },
+  );
   const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [templatePreviewUrl, setTemplatePreviewUrl] = useState<string | null>(
     null,
   );
   const [templateImageUrl, setTemplateImageUrl] = useState<string | null>(null);
   const [templateId, setTemplateId] = useState<number | undefined>(undefined);
-  const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [fieldCoordinates, setFieldCoordinates] = useState<Record<
     string,
@@ -109,8 +118,6 @@ export function CertificateTemplateSection({
   const [selectedFieldKey, setSelectedFieldKey] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
-  const [selectedStreamId, setSelectedStreamId] = useState<number | null>(null);
-  const { data: streams } = useStreamsByProgram(program.id);
   const [pdfScale, setPdfScale] = useState({
     width: 612,
     height: 792,
@@ -120,98 +127,90 @@ export function CertificateTemplateSection({
   const pdfRenderSeqRef = useRef(0);
   const loadedForRef = useRef(false);
 
-  // Lazy-load template when tab first becomes active
+  // Lazy-load the pool when the tab first becomes active.
   useEffect(() => {
     if (!isActive || loadedForRef.current) return;
     loadedForRef.current = true;
-    void loadCertificateTemplate();
+    void loadPool();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive]);
 
-  // Reset editor state and reload when stream selection changes. Skips the
-  // initial mount run — otherwise this fires alongside the isActive effect
-  // and two concurrent loads race the PDF preview render.
-  const streamEffectRanRef = useRef(false);
-  useEffect(() => {
-    if (!streamEffectRanRef.current) {
-      streamEffectRanRef.current = true;
-      return;
+  const loadPool = async (preferId?: number) => {
+    setIsLoadingPool(true);
+    try {
+      const rows = await listCertificateTemplates(program.id);
+      setTemplates(rows);
+      const target =
+        preferId != null
+          ? rows.find((t) => t.id === preferId)
+          : selectedId != null && selectedId !== "new"
+            ? rows.find((t) => t.id === selectedId)
+            : rows[0];
+      if (target?.id != null) {
+        selectTemplate(target);
+      } else if (rows.length === 0) {
+        // Empty pool — start a fresh draft.
+        startNewTemplate();
+      }
+    } catch {
+      toast.error("Failed to load certificate templates");
+    } finally {
+      setIsLoadingPool(false);
     }
-    if (!isActive) return;
+  };
+
+  const resetEditorState = () => {
     setTemplateFile(null);
     setTemplatePreviewUrl(null);
     setTemplateImageUrl(null);
     setFieldCoordinates(null);
-    setTemplateId(undefined);
     setSelectedFieldKey(null);
     setIsEditMode(false);
     setIsDirty(false);
-    void loadCertificateTemplate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStreamId]);
-
-  // Stream templates print student_stream; level templates print student_level.
-  const defaultCoordinates: Record<string, FieldCoordinate> = {
-    student_name: { rect: [255, 338, 598, 354], label: "Student Name" },
-    ...(selectedStreamId == null
-      ? { student_level: { rect: [184, 299, 359, 315], label: "Student Level" } }
-      : { student_stream: { rect: [184, 299, 359, 315], label: "Student Stream" } }),
-    student_program: { rect: [383, 298, 596, 314], label: "Student Program" },
-    franchise_name: { rect: [177, 223, 635, 239], label: "Franchise Name" },
-    year: { rect: [76, 100, 147, 116], label: "Year" },
-    franchisee: { rect: [431, 98, 539, 114], label: "Franchisee" },
   };
 
-  const loadCertificateTemplate = async () => {
-    setIsLoadingTemplate(true);
-    setIsEditMode(false);
-    try {
-      const template = await getCertificateTemplate(program.id, { streamId: selectedStreamId ?? undefined });
-      setTemplateId(template?.id);
-      if (template) {
-        setTemplateData({
-          certificateTitle: template.certificateTitle,
-          issuerName: template.issuerName,
-          signatureField1Label: template.signatureField1Label || "",
-          signatureField1Name: template.signatureField1Name || "",
-          signatureField2Label: template.signatureField2Label || "",
-          signatureField2Name: template.signatureField2Name || "",
-          additionalText: template.additionalText || "",
-          isActive: template.isActive,
-        });
-        setFieldCoordinates(
-          template.fieldCoordinates ?? defaultCoordinates,
-        );
-        if (template.templatePdfPath) {
-          const baseUrl = getApiBaseUrl();
-          setTemplatePreviewUrl(
-            `${baseUrl}/uploads/${template.templatePdfPath}?t=${Date.now()}`,
-          );
-          setTemplateImageUrl(null);
-        }
-      } else {
-        setTemplateData({
-          certificateTitle: "Certificate of Completion",
-          issuerName: "Ideal Play Abacus",
-          signatureField1Label: "",
-          signatureField1Name: "",
-          signatureField2Label: "",
-          signatureField2Name: "",
-          additionalText: "",
-          isActive: true,
-        });
-        setTemplatePreviewUrl(null);
-        setFieldCoordinates(defaultCoordinates);
-      }
-      setIsDirty(false);
-    } catch {
-      toast.error("Failed to load certificate template");
-    } finally {
-      setIsLoadingTemplate(false);
+  const selectTemplate = (template: CertificateTemplate) => {
+    resetEditorState();
+    setSelectedId(template.id ?? null);
+    setTemplateId(template.id);
+    setTemplateName(template.name ?? "");
+    setTemplateData({
+      certificateTitle: template.certificateTitle ?? "",
+      issuerName: template.issuerName ?? "",
+      additionalText: template.additionalText ?? "",
+      isActive: template.isActive ?? true,
+    });
+    setFieldCoordinates(template.fieldCoordinates ?? DEFAULT_COORDINATES);
+    if (template.templatePdfPath) {
+      const baseUrl = getApiBaseUrl();
+      setTemplatePreviewUrl(
+        `${baseUrl}/uploads/${template.templatePdfPath}?t=${Date.now()}`,
+      );
     }
+    setIsDirty(false);
+  };
+
+  const startNewTemplate = () => {
+    resetEditorState();
+    setSelectedId("new");
+    setTemplateId(undefined);
+    setTemplateName("");
+    setTemplateData({
+      certificateTitle: "Certificate of Completion",
+      issuerName: "Ideal Play Abacus",
+      additionalText: "",
+      isActive: true,
+    });
+    setFieldCoordinates(DEFAULT_COORDINATES);
+    setIsDirty(false);
   };
 
   const handleSaveTemplate = async () => {
+    const name = templateName.trim();
+    if (!name) {
+      toast.error("Template name is required");
+      return;
+    }
     setIsSavingTemplate(true);
     try {
       const certificateTitle =
@@ -235,6 +234,7 @@ export function CertificateTemplateSection({
           : true;
 
       const templatePayload = {
+        name,
         certificateTitle,
         issuerName,
         additionalText,
@@ -243,46 +243,55 @@ export function CertificateTemplateSection({
       };
 
       if (templateFile) {
-        await uploadCertificateTemplate(
-          program.id,
-          templateFile,
-          templatePayload,
-          selectedStreamId,
-        );
+        await uploadCertificateTemplate(program.id, templateFile, templatePayload);
       } else {
-        await updateCertificateTemplate(
-          program.id,
-          { id: templateId, ...templatePayload },
-          selectedStreamId,
-        );
+        await updateCertificateTemplate(program.id, {
+          id: templateId,
+          ...templatePayload,
+        });
       }
 
       toast.success("Certificate template saved successfully");
-      setIsEditMode(false);
       setTemplateFile(null);
+      setIsEditMode(false);
       setIsDirty(false);
-
-      const updatedTemplate = await getCertificateTemplate(program.id, { streamId: selectedStreamId ?? undefined });
-      if (updatedTemplate?.id) setTemplateId(updatedTemplate.id);
-      if (updatedTemplate?.templatePdfPath) {
-        const baseUrl = getApiBaseUrl();
-        setTemplatePreviewUrl(
-          `${baseUrl}/uploads/${updatedTemplate.templatePdfPath}?t=${Date.now()}`,
-        );
-        setTemplateImageUrl(null);
-      }
-      if (updatedTemplate?.fieldCoordinates) {
-        setFieldCoordinates(updatedTemplate.fieldCoordinates);
-      }
+      // Reload the pool; keep the saved template selected when we know its id.
+      await loadPool(templateId);
     } catch (error: unknown) {
       toast.error(
-        getUserFriendlyMessage(
-          error,
-          "Failed to save certificate template",
-        ),
+        getUserFriendlyMessage(error, "Failed to save certificate template"),
       );
     } finally {
       setIsSavingTemplate(false);
+    }
+  };
+
+  const handleDeleteTemplate = async () => {
+    if (templateId == null) {
+      // Unsaved draft — just discard it.
+      if (templates.length > 0) {
+        selectTemplate(templates[0]);
+      } else {
+        startNewTemplate();
+      }
+      return;
+    }
+    if (
+      !window.confirm(
+        `Delete certificate template "${templateName || `#${templateId}`}"? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await deleteCertificateTemplate(templateId);
+      toast.success("Certificate template deleted");
+      setSelectedId(null);
+      await loadPool();
+    } catch (error: unknown) {
+      toast.error(
+        getUserFriendlyMessage(error, "Failed to delete certificate template"),
+      );
     }
   };
 
@@ -307,7 +316,7 @@ export function CertificateTemplateSection({
       const url = URL.createObjectURL(file);
       setTemplatePreviewUrl(url);
       setTemplateImageUrl(null);
-      setFieldCoordinates(defaultCoordinates);
+      setFieldCoordinates((prev) => prev ?? DEFAULT_COORDINATES);
       setIsDirty(true);
     }
   };
@@ -350,24 +359,23 @@ export function CertificateTemplateSection({
     setIsDirty(true);
   };
 
-  /** Throw away local edits and reload the saved template. */
+  /** Throw away local edits and reload the selected template. */
   const handleDiscard = () => {
-    setTemplateFile(null);
-    setTemplatePreviewUrl(null);
-    setTemplateImageUrl(null);
-    setFieldCoordinates(null);
-    setSelectedFieldKey(null);
-    setIsEditMode(false);
-    setIsDirty(false);
-    void loadCertificateTemplate();
+    if (selectedId === "new" || templateId == null) {
+      startNewTemplate();
+      return;
+    }
+    const saved = templates.find((t) => t.id === templateId);
+    if (saved) {
+      selectTemplate(saved);
+    } else {
+      void loadPool();
+    }
   };
 
-  // Fields valid for the current template type that are not yet placed.
+  // Fields that are not yet placed (all fields apply to every template now).
   const availableFields: CertificateFieldDef[] = CERTIFICATE_FIELDS.filter(
-    (f) =>
-      !(fieldCoordinates && fieldCoordinates[f.key]) &&
-      !(f.streamOnly && selectedStreamId == null) &&
-      !(f.levelOnly && selectedStreamId != null),
+    (f) => !(fieldCoordinates && fieldCoordinates[f.key]),
   );
 
   // Convert PDF coordinates to screen coordinates (PDF uses bottom-left origin)
@@ -545,66 +553,141 @@ export function CertificateTemplateSection({
   if (!isActive) {
     return (
       <div className="rounded-lg border border-dashed bg-card px-6 py-8 text-center text-sm text-muted-foreground">
-        Open this tab to load the certificate template…
+        Open this tab to load the certificate templates…
       </div>
     );
   }
 
-  if (isLoadingTemplate) {
+  if (isLoadingPool && templates.length === 0 && selectedId == null) {
     return (
       <div className="rounded-lg border border-dashed bg-card px-6 py-8 text-center text-sm text-muted-foreground">
-        Loading template…
+        Loading templates…
       </div>
     );
   }
 
   return (
-    <>
-      <div className="mb-4 max-w-sm">
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          Certificate type
-        </label>
-        <Select
-          value={selectedStreamId == null ? "level" : String(selectedStreamId)}
-          onValueChange={(v) =>
-            setSelectedStreamId(v === "level" ? null : Number(v))
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="level">Level certificate (program default)</SelectItem>
-            {(streams ?? []).map((s) => (
-              <SelectItem key={s.id} value={String(s.id)}>
-                Stream completion — {s.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <div className="space-y-4">
+      {/* ── Template pool selector ────────────────────────────────────────── */}
+      <div className="rounded-lg border border-border bg-card px-4 py-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-card-foreground">
+            Certificate templates
+          </h3>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-lg"
+            onClick={startNewTemplate}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            New template
+          </Button>
+        </div>
+        <p className="mb-3 text-xs text-muted-foreground">
+          This program owns a pool of named templates. Attach any of them to
+          levels from the Basic tab; each attached template is issued when a
+          student completes that level.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {templates.length === 0 && selectedId !== "new" ? (
+            <span className="text-sm text-muted-foreground">
+              No templates yet. Create your first one.
+            </span>
+          ) : null}
+          {templates.map((t) => {
+            const isSelected = selectedId === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => selectTemplate(t)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                  isSelected
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-card text-card-foreground hover:bg-muted/50"
+                }`}
+              >
+                <FileText className="h-3.5 w-3.5" />
+                <span className="max-w-[200px] truncate">
+                  {t.name || t.certificateTitle || `#${t.id}`}
+                </span>
+                {t.isActive === false ? (
+                  <span className="text-[10px] text-muted-foreground">
+                    (inactive)
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+          {selectedId === "new" ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary bg-primary/10 px-3 py-1.5 text-sm text-primary">
+              <FileText className="h-3.5 w-3.5" />
+              New template (unsaved)
+            </span>
+          ) : null}
+        </div>
       </div>
-      <CertificateTemplateEditor
-        programName={program.name}
-        templatePreviewUrl={templatePreviewUrl}
-        templateImageUrl={templateImageUrl}
-        fieldCoordinates={fieldCoordinates}
-        isEditMode={isEditMode}
-        setIsEditMode={setIsEditMode}
-        isSavingTemplate={isSavingTemplate}
-        isDirty={isDirty}
-        handleSaveTemplate={handleSaveTemplate}
-        handleDiscard={handleDiscard}
-        handleTemplateFileChange={handleTemplateFileChange}
-        pdfContainerRef={pdfContainerRef}
-        handleDragStart={handleDragStart}
-        selectedFieldKey={selectedFieldKey}
-        setSelectedFieldKey={setSelectedFieldKey}
-        updateField={updateField}
-        addField={addField}
-        removeField={removeField}
-        availableFields={availableFields}
-        pdfScale={pdfScale}
-      />
-    </>
+
+      {/* ── Name + delete controls ────────────────────────────────────────── */}
+      {selectedId != null ? (
+        <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card px-4 py-3">
+          <div className="min-w-[240px] flex-1 space-y-1">
+            <Label htmlFor="cert-template-name" className="text-sm font-medium">
+              Template name
+            </Label>
+            <Input
+              id="cert-template-name"
+              value={templateName}
+              placeholder="e.g. Level 3 Completion"
+              onChange={(e) => {
+                setTemplateName(e.target.value);
+                setIsDirty(true);
+              }}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-lg text-destructive hover:text-destructive"
+            onClick={handleDeleteTemplate}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {templateId == null ? "Discard draft" : "Delete template"}
+          </Button>
+        </div>
+      ) : null}
+
+      {selectedId != null ? (
+        <CertificateTemplateEditor
+          programName={program.name}
+          templatePreviewUrl={templatePreviewUrl}
+          templateImageUrl={templateImageUrl}
+          fieldCoordinates={fieldCoordinates}
+          isEditMode={isEditMode}
+          setIsEditMode={setIsEditMode}
+          isSavingTemplate={isSavingTemplate}
+          isDirty={isDirty}
+          handleSaveTemplate={handleSaveTemplate}
+          handleDiscard={handleDiscard}
+          handleTemplateFileChange={handleTemplateFileChange}
+          pdfContainerRef={pdfContainerRef}
+          handleDragStart={handleDragStart}
+          selectedFieldKey={selectedFieldKey}
+          setSelectedFieldKey={setSelectedFieldKey}
+          updateField={updateField}
+          addField={addField}
+          removeField={removeField}
+          availableFields={availableFields}
+          pdfScale={pdfScale}
+        />
+      ) : (
+        <div className="rounded-lg border border-dashed bg-card px-6 py-8 text-center text-sm text-muted-foreground">
+          Select a template above or create a new one.
+        </div>
+      )}
+    </div>
   );
 }

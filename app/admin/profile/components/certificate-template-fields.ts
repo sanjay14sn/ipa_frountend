@@ -14,10 +14,6 @@ export interface CertificateFieldDef {
   description: string;
   /** The franchisee signature image — placed, not typed. */
   signature?: boolean;
-  /** Only filled on stream-completion certificates. */
-  streamOnly?: boolean;
-  /** Only filled on level certificates. */
-  levelOnly?: boolean;
 }
 
 export const CERTIFICATE_FIELDS: CertificateFieldDef[] = [
@@ -32,14 +28,12 @@ export const CERTIFICATE_FIELDS: CertificateFieldDef[] = [
     label: "Student Level",
     sample: "3",
     description: "Completed level number",
-    levelOnly: true,
   },
   {
     key: "student_stream",
     label: "Student Stream",
     sample: "Junior Abacus",
     description: "Completed stream name",
-    streamOnly: true,
   },
   {
     key: "student_program",

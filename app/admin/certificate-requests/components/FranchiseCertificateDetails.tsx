@@ -100,9 +100,11 @@ export default function FranchiseCertificateDetails({
     ? getAdminCertificatePdfUrl(selectedCertificate.id)
     : "";
 
-  const handleApprove = async (requestId: number) => {
+  // Approve is per-PROGRESSION: issues ALL of that progression's pending certs
+  // at once. Reject is per-certificate.
+  const handleApprove = async (progressionId: number) => {
     try {
-      await approveCertificateRequestWithRevalidation(requestId);
+      await approveCertificateRequestWithRevalidation(progressionId);
       toast.success("Certificate request approved successfully");
       void detailsQuery.refetch();
     } catch {
@@ -110,9 +112,9 @@ export default function FranchiseCertificateDetails({
     }
   };
 
-  const handleReject = async (requestId: number) => {
+  const handleReject = async (certId: number) => {
     try {
-      await rejectCertificateRequestWithRevalidation(requestId);
+      await rejectCertificateRequestWithRevalidation(certId);
       toast.success("Certificate request rejected successfully");
       void detailsQuery.refetch();
     } catch {
@@ -143,6 +145,11 @@ export default function FranchiseCertificateDetails({
           {req.studentLevel}
         </Badge>
       ),
+    },
+    {
+      key: "certificate",
+      header: "Certificate",
+      render: (req) => req.templateName || "—",
     },
     {
       key: "instructor",
@@ -184,7 +191,7 @@ export default function FranchiseCertificateDetails({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => handleApprove(req.id)}
+              onClick={() => handleApprove(req.progressionId)}
               className="h-8 w-8"
               title="Issue Certificate"
               aria-label="Issue Certificate"
@@ -315,7 +322,11 @@ export default function FranchiseCertificateDetails({
             </DialogTitle>
             <DialogDescription>
               {selectedCertificate
-                ? `${selectedCertificate.studentName} - ${selectedCertificate.studentLevel}`
+                ? `${selectedCertificate.studentName} - ${selectedCertificate.studentLevel}${
+                    selectedCertificate.templateName
+                      ? ` · ${selectedCertificate.templateName}`
+                      : ""
+                  }`
                 : "Certificate preview"}
             </DialogDescription>
           </DialogHeader>
