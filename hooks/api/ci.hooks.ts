@@ -20,8 +20,6 @@ import {
 import { useProgramId } from "@/hooks/use-scope";
 import { queryKeys } from "@/hooks/api/query-keys";
 import { getQueryClientBridge } from "@/hooks/api/query-client-bridge";
-import { toast } from "sonner";
-import { extractErrorMessage } from "@/lib/error-utils";
 
 export type { CIFranchiseSummary };
 
@@ -162,11 +160,11 @@ export function useCreateCourseInstructor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: createCourseInstructor,
+    // The AddCourseInstructorModal handles errors inline (field-level errors +
+    // a single toast), so suppress the global error toast for this mutation.
+    meta: { suppressErrorToast: true },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: CI_LIST_PREFIX });
-    },
-    onError: (error) => {
-      toast.error(extractErrorMessage(error));
     },
   });
 }

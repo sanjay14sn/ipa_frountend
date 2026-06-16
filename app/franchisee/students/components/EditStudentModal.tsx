@@ -33,6 +33,7 @@ import {
 import { getLevelsByProgram } from "@/services/level.service";
 import { sendClientLog } from "@/lib/client-telemetry";
 import { makeFieldChangeHandler } from "@/lib/form-utils";
+import { handleFormApiError } from "@/lib/form-errors";
 import {
   PersonalInfoFields,
   ParentInfoFields,
@@ -362,7 +363,13 @@ export default function EditStudentModal({
         message: "Error updating student",
         context: { error },
       });
-      toast.error("Failed to update student. Please try again.");
+      handleFormApiError(error, {
+        setErrors,
+        fieldMap: { email: "mailId" },
+        fieldToStep: { mailId: 3 },
+        goToStep: setActiveTab,
+        fallback: "Failed to update student. Please try again.",
+      });
     } finally {
       setIsLoading(false);
     }

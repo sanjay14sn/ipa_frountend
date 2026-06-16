@@ -31,6 +31,7 @@ import { makeFieldChangeHandler } from "@/lib/form-utils";
 import { useFormSteps } from "@/hooks/use-form-steps";
 import { sendClientLog } from "@/lib/client-telemetry";
 import { calculateAge } from "@/lib/date-utils";
+import { handleFormApiError } from "@/lib/form-errors";
 
 const FORM_STEPS: StepDef[] = [
   { id: 1, title: "Basic Information" },
@@ -204,7 +205,13 @@ export default function AddCourseInstructorModal({
       onSuccess();
     } catch (error) {
       sendClientLog({ level: "error", event: "course-instructor-register-error", message: "Error registering course instructor", context: { error } });
-      toast.error("Failed to register course instructor. Please try again.");
+      handleFormApiError(error, {
+        setErrors,
+        fieldMap: { email: "mail", phone: "phone" },
+        fieldToStep: { mail: 2, phone: 2 },
+        goToStep: setCurrentStep,
+        fallback: "Failed to register course instructor. Please try again.",
+      });
     } finally {
       setIsLoading(false);
     }

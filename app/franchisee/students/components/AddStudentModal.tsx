@@ -32,6 +32,7 @@ import { useCreateStudentWithRevalidation } from "@/hooks/api/student.hooks";
 import { useUser } from "@/context/user-context";
 import { sendClientLog } from "@/lib/client-telemetry";
 import { makeFieldChangeHandler } from "@/lib/form-utils";
+import { handleFormApiError } from "@/lib/form-errors";
 import { useFormSteps } from "@/hooks/use-form-steps";
 import {
   PersonalInfoFields,
@@ -394,7 +395,13 @@ export default function AddStudentModal({
         message: "Error registering student",
         context: { error },
       });
-      toast.error("Failed to register student. Please try again.");
+      handleFormApiError(error, {
+        setErrors,
+        fieldMap: { email: "mailId" },
+        fieldToStep: { mailId: 3 },
+        goToStep: setCurrentStep,
+        fallback: "Failed to register student. Please try again.",
+      });
     } finally {
       setIsLoading(false);
     }

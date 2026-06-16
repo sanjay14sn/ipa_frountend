@@ -38,7 +38,13 @@ export default function QueryProvider({
           },
         }),
         mutationCache: new MutationCache({
-          onError: (error: any) => {
+          onError: (error: any, _vars, _ctx, mutation) => {
+            // Forms that surface their own inline field errors + toast opt out
+            // via `meta: { suppressErrorToast: true }` to avoid a double toast.
+            const meta = mutation?.meta as
+              | { suppressErrorToast?: boolean }
+              | undefined;
+            if (meta?.suppressErrorToast) return;
             const message = getUserFriendlyMessage(
               error,
               "An error occurred while performing the action",

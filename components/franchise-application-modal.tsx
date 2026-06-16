@@ -23,8 +23,7 @@ import { Calculator, Check, ChevronsUpDown } from "lucide-react";
 import React from "react";
 import { sendClientLog } from "@/lib/client-telemetry";
 import { applyFranchisee } from "@/services/franchisee.service";
-import { getErrorMessage } from "@/lib/error-utils";
-import { toast } from "sonner";
+import { handleFormApiError } from "@/lib/form-errors";
 import {
   FranchiseeApplication,
   Franchisee,
@@ -185,7 +184,13 @@ export function FranchiseApplicationModal({
       }
     } catch (error) {
       sendClientLog({ level: "error", event: "franchise-application-submit-error", message: "Error submitting franchise application", context: { error } });
-      toast.error(getErrorMessage(error, "Failed to submit application"));
+      handleFormApiError(error, {
+        setErrors,
+        fieldMap: { email: "mail", phone: "phone", franchiseName: "franchiseName" },
+        fieldToStep: { mail: 3, phone: 3, franchiseName: 4 },
+        goToStep: setCurrentStep,
+        fallback: "Failed to submit application",
+      });
     } finally {
       setIsLoading(false);
     }

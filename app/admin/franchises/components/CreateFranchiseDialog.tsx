@@ -8,8 +8,7 @@ import {
 } from "@/components/shared/dialog";
 import { FranchiseType, BloodGroup } from "@/services/franchise.enums";
 import { UserPlus } from "lucide-react";
-import { toast } from "sonner";
-import { getErrorMessage } from "@/lib/error-utils";
+import { handleFormApiError } from "@/lib/form-errors";
 import {
   setupExistingFranchise,
   listAllFranchisees,
@@ -405,7 +404,13 @@ export function CreateFranchiseDialog({
         message: "Failed to create franchise",
         context: { error },
       });
-      toast.error(getErrorMessage(error, "Failed to create franchise"));
+      handleFormApiError(error, {
+        setErrors,
+        fieldMap: { email: "email", phone: "phone", franchiseName: "franchiseName" },
+        fieldToStep: { email: 1, phone: 1, franchiseName: 2 },
+        goToStep: setCurrentStep,
+        fallback: "Failed to create franchise",
+      });
     } finally {
       setLoading(false);
     }

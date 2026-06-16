@@ -303,10 +303,10 @@ export function useCreateStudentWithRevalidation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: createStudent,
+    // AddStudentModal handles errors inline (field-level errors + a single
+    // toast), so suppress the global error toast for this mutation.
+    meta: { suppressErrorToast: true },
     onSuccess: () => invalidateStudentLists(qc),
-    onError: (error) => {
-      toast.error(extractErrorMessage(error));
-    },
   });
 }
 
