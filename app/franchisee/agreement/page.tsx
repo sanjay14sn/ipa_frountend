@@ -39,6 +39,7 @@ import {
   agreementSignatureSrc,
   downloadScheduleBPdfMine,
   franchiseeProfileSignatureSrc,
+  getFranchiseeAgreementContent,
   getReceivablePlanMine,
   submitFranchiseeSignature,
   submitFranchiseeSignatureWithStored,
@@ -803,16 +804,41 @@ function FranchiseAgreementContent() {
       return;
     }
 
+    let cancelled = false;
     try {
       const franchiseData = buildFranchiseDataForAgreementPage(user, feeAgreement);
-      setAgreementContent(getProcessedAgreementContent(franchiseData));
       setExpandedSections(new Set(["basic-terms", "financial-terms"]));
+
+      // Render the document that reflects this agreement. The backend resolves
+      // the legal text (all `{token}`s already replaced) from the agreement's
+      // linked template version.
+      if (feeAgreement?.id) {
+        const agreementId = feeAgreement.id;
+        // Optimistic default first render, then refine with the resolved doc.
+        setAgreementContent(getProcessedAgreementContent(franchiseData));
+        void (async () => {
+          try {
+            const resolved = await getFranchiseeAgreementContent(agreementId);
+            if (cancelled) return;
+            setAgreementContent(
+              getProcessedAgreementContent(franchiseData, resolved ?? undefined),
+            );
+          } catch {
+            // Keep the optimistic default content on failure.
+          }
+        })();
+      } else {
+        setAgreementContent(getProcessedAgreementContent(franchiseData));
+      }
     } catch (error) {
       sendClientLog({ level: "error", event: "agreement-content-build-error", message: "Failed to build agreement content", context: { error } });
       setAgreementContent(null);
     } finally {
       setPageLoading(false);
     }
+    return () => {
+      cancelled = true;
+    };
   }, [
     feeAgreement,
     franchiseIdParam,

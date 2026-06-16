@@ -6,6 +6,7 @@ import {
 } from "@/lib/unwrap-api";
 import { API_BASE_URL } from "@/lib/config";
 import { isAbsoluteUrl } from "@/lib/url-utils";
+import type { AgreementContent } from "@/lib/agreementContent";
 
 /** Sequelize/plain shape for payment linked to an agreement */
 export interface AgreementPaymentDetail {
@@ -352,6 +353,12 @@ export interface AgreementRecord extends AgreementTermsSnapshot {
   programs?: AgreementProgramItem[] | null;
   scheduleB?: AgreementScheduleBView | null;
   receivables?: AgreementReceivablesView | null;
+  /**
+   * Link to the immutable template VERSION this agreement renders from. The
+   * resolved document (with `{token}`s already replaced) is fetched on read via
+   * `getFranchiseeAgreementContent` / `getAdminAgreementContent`.
+   */
+  contentTemplateId?: number | null;
 }
 
 /** Admin: one-time free franchise kit dispatch for a Valid NEW_FRANCHISE agreement. */
@@ -446,6 +453,30 @@ export async function getAgreementsMine(
 export async function getAgreementMine(id: number): Promise<AgreementRecord> {
   const response = await api.get(`/agreement/${id}`);
   return unwrapData<AgreementRecord>(response);
+}
+
+/**
+ * Franchisee: fetch the resolved legal document for an agreement (clause text
+ * with all `{token}`s already replaced). Returns `null` when the backend has no
+ * content to render (e.g. no template linked).
+ */
+export async function getFranchiseeAgreementContent(
+  agreementId: number,
+): Promise<AgreementContent | null> {
+  const response = await api.get(`/agreement/${agreementId}/content`);
+  return unwrapData<AgreementContent | null>(response) ?? null;
+}
+
+/**
+ * Admin: fetch the resolved legal document for an agreement (clause text with
+ * all `{token}`s already replaced). Returns `null` when the backend has no
+ * content to render (e.g. no template linked).
+ */
+export async function getAdminAgreementContent(
+  agreementId: number,
+): Promise<AgreementContent | null> {
+  const response = await api.get(`/admin/agreement/${agreementId}/content`);
+  return unwrapData<AgreementContent | null>(response) ?? null;
 }
 
 export async function getReceivablePlanMine(

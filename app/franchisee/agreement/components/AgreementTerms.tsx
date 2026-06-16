@@ -63,7 +63,7 @@ export default function AgreementTerms({
       </p>
 
       <div className="max-h-[min(60vh,520px)] flex-1 overflow-y-auto rounded-xl border border-border bg-card">
-        {agreementContent.sections.map((section, index) => (
+        {agreementContent.sections.map((section) => (
           <div
             key={section.id}
             className="border-b border-border last:border-b-0"
@@ -75,7 +75,7 @@ export default function AgreementTerms({
             >
               <div>
                 <h4 className="text-sm font-medium text-card-foreground">
-                  {index + 1}. {section.title}
+                  {section.title}
                 </h4>
                 {section.description && (
                   <p className="mt-1 text-xs text-muted-foreground">

@@ -10,6 +10,7 @@ import { ProgramKitManagement } from "@/app/admin/profile/components/ProgramKitM
 import { FranchiseKitManagement } from "@/app/admin/profile/components/FranchiseKitManagement";
 import { StreamManagement } from "@/app/admin/profile/components/StreamManagement";
 import { CertificateTemplateSection } from "@/app/admin/profile/components/CertificateTemplateSection";
+import { ProgramAgreementTemplateEditor } from "@/app/admin/profile/components/ProgramAgreementTemplateEditor";
 import { useStreamsByProgram } from "@/hooks/api/stream.hooks";
 import { useStreamTransitionsByProgram } from "@/hooks/api/stream-transition.hooks";
 import type { Program } from "@/services/program.service";
@@ -71,12 +72,13 @@ function BasicProgramCatalogPanel({
 
 // ── ProgramList ──────────────────────────────────────────────────────────────
 
-type ProgramTabMode =
+export type ProgramTabMode =
   | "basic"
   | "ci-training"
   | "kit-items"
   | "franchise-kit"
-  | "certificate";
+  | "certificate"
+  | "agreement";
 
 interface ProgramListProps {
   programs: Program[];
@@ -171,6 +173,7 @@ export function ProgramList({
                   <TabsTrigger value="kit-items">Kit Items</TabsTrigger>
                   <TabsTrigger value="franchise-kit">Franchise Kit</TabsTrigger>
                   <TabsTrigger value="certificate">Certificate</TabsTrigger>
+                  <TabsTrigger value="agreement">Agreement</TabsTrigger>
                 </TabsList>
                 <div className="flex shrink-0 items-center gap-1">
                   <Button
@@ -231,6 +234,9 @@ export function ProgramList({
                     (openLevelModes[program.id] ?? "basic") === "certificate"
                   }
                 />
+              </TabsContent>
+              <TabsContent value="agreement">
+                <ProgramAgreementTemplateEditor programId={program.id} />
               </TabsContent>
             </Tabs>
           </div>

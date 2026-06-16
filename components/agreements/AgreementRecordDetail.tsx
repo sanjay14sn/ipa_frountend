@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { format, parseISO } from "date-fns";
@@ -10,11 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { getProcessedAgreementContent } from "@/lib/agreementContent";
+import {
+  getProcessedAgreementContent,
+  type AgreementContent,
+} from "@/lib/agreementContent";
 import {
   agreementSignatureSrc,
   downloadScheduleBPdfAdmin,
   downloadScheduleBPdfMine,
+  getAdminAgreementContent,
+  getFranchiseeAgreementContent,
   getReceivablePlanMine,
   type AgreementLinkedPayment,
   type AgreementRecord,
@@ -199,7 +204,7 @@ function ReadOnlyAgreementContent({
       </CardHeader>
       <CardContent className="p-0">
         <div className="max-h-[min(65vh,720px)] overflow-y-auto">
-          {sections.map((section, index) => (
+          {sections.map((section) => (
             <div
               key={section.id}
               className="border-b border-border last:border-b-0"
@@ -211,7 +216,7 @@ function ReadOnlyAgreementContent({
               >
                 <div>
                   <h4 className="text-sm font-medium text-card-foreground">
-                    {index + 1}. {section.title}
+                    {section.title}
                   </h4>
                   {section.description ? (
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -655,7 +660,43 @@ export function AgreementRecordDetail({
 
   const sigSrc = agreementSignatureSrc(data);
   const franchiseData = buildAgreementDetailFranchiseData(data);
-  const agreementContent = getProcessedAgreementContent(franchiseData);
+  // Render the document that reflects this agreement. The backend resolves the
+  // legal text (all `{token}`s already replaced) from the agreement's linked
+  // template version; we seed with the default and refine on fetch.
+  const [agreementContent, setAgreementContent] = useState<AgreementContent>(
+    () => getProcessedAgreementContent(franchiseData),
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const resolved = isAdminContext
+          ? await getAdminAgreementContent(data.id)
+          : await getFranchiseeAgreementContent(data.id);
+        if (cancelled) return;
+        // Re-running token replacement on already-resolved text is a harmless
+        // no-op and keeps section sorting consistent.
+        setAgreementContent(
+          resolved
+            ? getProcessedAgreementContent(franchiseData, resolved)
+            : getProcessedAgreementContent(franchiseData),
+        );
+      } catch {
+        if (!cancelled) {
+          setAgreementContent(getProcessedAgreementContent(franchiseData));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // franchiseData is derived from `data` each render; key the effect on the
+    // identifying fields rather than the fresh object reference.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.id, isAdminContext]);
   const installmentSummary =
     fullReceivablePlan ??
     data.receivables?.installmentSummary ??
