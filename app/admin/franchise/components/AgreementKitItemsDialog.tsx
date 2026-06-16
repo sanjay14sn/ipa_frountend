@@ -16,13 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { LinkPicker } from "@/components/shared/dialog/picker/LinkPicker";
 
 type SelectedRow = {
@@ -47,17 +40,18 @@ function toSelectedRows(rows: FranchiseProgramKitItemSummary[]): SelectedRow[] {
     }));
 }
 
-interface AgreementKitItemsDialogProps {
+interface AgreementKitItemsPanelProps {
   agreement: AgreementRecord | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
 }
 
-export function AgreementKitItemsDialog({
+/**
+ * Body for the "Kit items" tab of the Manage kit dialog. Edits the program kit
+ * items selected for a single agreement. Rendered without its own dialog chrome
+ * so it can live inside the tabbed `ManageKitDialog`.
+ */
+export function AgreementKitItemsPanel({
   agreement,
-  open,
-  onOpenChange,
-}: AgreementKitItemsDialogProps) {
+}: AgreementKitItemsPanelProps) {
   const queryClient = useQueryClient();
   const agreementId = agreement?.id ?? null;
   const canManage = agreementId != null && agreement?.programId != null;
@@ -74,7 +68,7 @@ export function AgreementKitItemsDialog({
   const agreementKitQuery = useQuery({
     queryKey,
     queryFn: () => getAgreementProgramKitItems(agreementId!),
-    enabled: open && canManage,
+    enabled: canManage,
   });
 
   const allRows = agreementKitQuery.data ?? [];
@@ -104,13 +98,6 @@ export function AgreementKitItemsDialog({
     if (!agreementKitQuery.data) return;
     setSelectedRows(toSelectedRows(agreementKitQuery.data));
   }, [agreementKitQuery.data]);
-
-  useEffect(() => {
-    if (!open) {
-      setPendingAdditions({});
-      setSearch("");
-    }
-  }, [open]);
 
   const handleRemove = (programKitId: number) => {
     setSelectedRows((prev) =>
@@ -189,31 +176,19 @@ export function AgreementKitItemsDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>
-            {agreementId
-              ? `Manage kit items - Agreement #${agreementId}`
-              : "Manage kit items"}
-          </DialogTitle>
-          <DialogDescription>
-            Edit selected program kit items for this agreement.
-          </DialogDescription>
-        </DialogHeader>
-
-        {!canManage ? (
-          <p className="rounded-lg border bg-muted/30 px-3 py-3 text-sm text-muted-foreground">
-            This agreement does not have a program mapped yet, so kit item
-            management is unavailable.
-          </p>
-        ) : agreementKitQuery.isLoading ? (
-          <div className="flex items-center gap-2 rounded-lg border bg-muted/20 px-3 py-3 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading kit items...
-          </div>
-        ) : (
-          <div className="space-y-4">
+    <div>
+      {!canManage ? (
+        <p className="rounded-lg border bg-muted/30 px-3 py-3 text-sm text-muted-foreground">
+          This agreement does not have a program mapped yet, so kit item
+          management is unavailable.
+        </p>
+      ) : agreementKitQuery.isLoading ? (
+        <div className="flex items-center gap-2 rounded-lg border bg-muted/20 px-3 py-3 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading kit items...
+        </div>
+      ) : (
+        <div className="space-y-4">
             <div className="overflow-hidden rounded-lg border">
               <div className="border-b bg-muted/40 px-3 py-2.5 text-sm font-medium">
                 Selected items
@@ -382,14 +357,6 @@ export function AgreementKitItemsDialog({
             />
 
             <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={saving}
-              >
-                Close
-              </Button>
               <Button type="button" onClick={handleSave} disabled={saving}>
                 {saving ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -401,7 +368,6 @@ export function AgreementKitItemsDialog({
             </div>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+    </div>
   );
 }

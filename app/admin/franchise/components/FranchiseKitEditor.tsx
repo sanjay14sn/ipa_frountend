@@ -17,13 +17,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -63,25 +56,22 @@ function toSelectedRows(rows: FranchiseKitSelectionItem[]): SelectedRow[] {
     }));
 }
 
-interface FranchiseKitEditorProps {
+interface FranchiseKitPanelProps {
   franchiseId: string | null;
   programId: number | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
 }
 
 /**
  * Per-franchise kit editor for a program: which template items the franchise
  * receives, with quantity and an optional unit-price override (blank = catalog
  * price). Used for the free first dispatch and as the franchisee's re-order
- * catalog.
+ * catalog. Rendered without dialog chrome so it can live inside the tabbed
+ * `ManageKitDialog`.
  */
-export function FranchiseKitEditor({
+export function FranchiseKitPanel({
   franchiseId,
   programId,
-  open,
-  onOpenChange,
-}: FranchiseKitEditorProps) {
+}: FranchiseKitPanelProps) {
   const queryClient = useQueryClient();
   const [selectedRows, setSelectedRows] = useState<SelectedRow[]>([]);
   const [catalogOpen, setCatalogOpen] = useState(false);
@@ -96,7 +86,7 @@ export function FranchiseKitEditor({
   const kitQuery = useQuery({
     queryKey,
     queryFn: () => getFranchiseKit(franchiseId!, programId!),
-    enabled: open && franchiseId != null && programId != null,
+    enabled: franchiseId != null && programId != null,
   });
 
   const allRows = useMemo(() => kitQuery.data ?? [], [kitQuery.data]);
@@ -119,14 +109,6 @@ export function FranchiseKitEditor({
     if (!kitQuery.data) return;
     setSelectedRows(toSelectedRows(kitQuery.data));
   }, [kitQuery.data]);
-
-  useEffect(() => {
-    if (!open) {
-      setCatalogOpen(false);
-      setSelectedKitItemId(null);
-      setAddQuantity("1");
-    }
-  }, [open]);
 
   const updateRow = (
     franchiseKitItemId: number,
@@ -197,27 +179,14 @@ export function FranchiseKitEditor({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>
-            {franchiseId
-              ? `Franchise kit - ${franchiseId}`
-              : "Franchise kit"}
-          </DialogTitle>
-          <DialogDescription>
-            Items this franchise receives in its kit. Leave price blank to use
-            the inventory catalog price.
-          </DialogDescription>
-        </DialogHeader>
-
-        {kitQuery.isLoading ? (
-          <div className="flex items-center gap-2 rounded-lg border bg-muted/20 px-3 py-3 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading franchise kit...
-          </div>
-        ) : (
-          <div className="space-y-4">
+    <div>
+      {kitQuery.isLoading ? (
+        <div className="flex items-center gap-2 rounded-lg border bg-muted/20 px-3 py-3 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading franchise kit...
+        </div>
+      ) : (
+        <div className="space-y-4">
             <div className="overflow-hidden rounded-lg border">
               <div className="border-b bg-muted/40 px-3 py-2.5 text-sm font-medium">
                 Selected items
@@ -426,14 +395,6 @@ export function FranchiseKitEditor({
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={saving}
-              >
-                Close
-              </Button>
               <Button type="button" onClick={handleSave} disabled={saving}>
                 {saving ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -445,7 +406,6 @@ export function FranchiseKitEditor({
             </div>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+    </div>
   );
 }

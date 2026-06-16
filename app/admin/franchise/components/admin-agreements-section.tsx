@@ -25,6 +25,7 @@ import { getErrorMessage } from "@/lib/error-utils";
 import { useAgreementsAdmin } from "@/hooks/api/agreement.hooks";
 import { useAgreementIdFromUrl } from "@/hooks/use-agreement-id-from-url";
 import { AdminAgreementDetailSheet } from "./AdminAgreementDetailSheet";
+import { AgreementRowActions } from "./AgreementRowActions";
 
 export interface AdminAgreementsSectionProps {
   fixedFranchiseId?: string;
@@ -122,7 +123,7 @@ export function AdminAgreementsSection({
     {
       key: "actions",
       header: "Actions",
-      className: "w-[140px] text-center",
+      className: "w-[200px] text-center",
       render: (record) => (
         <div className="flex items-center justify-center gap-1">
           <Button
@@ -156,6 +157,7 @@ export function AdminAgreementsSection({
           >
             <Download className="h-4 w-4" />
           </Button>
+          <AgreementRowActions agreement={record} />
           <IssueRenewalButton agreement={record} />
         </div>
       ),
