@@ -131,7 +131,8 @@ export function ScheduleBCard({
   signatureSrc: string | null;
   executedAt?: string | null;
   loading: boolean;
-  onDownload: () => void;
+  /** When omitted, the Download PDF action is hidden (e.g. franchisee view). */
+  onDownload?: () => void;
 }) {
   if (!data) {
     return (
@@ -180,20 +181,22 @@ export function ScheduleBCard({
               Commercial schedule and royalty breakup for this agreement.
             </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={loading}
-            onClick={onDownload}
-          >
-            {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="mr-2 h-4 w-4" />
-            )}
-            Download PDF
-          </Button>
+          {onDownload ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={loading}
+              onClick={onDownload}
+            >
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Download PDF
+            </Button>
+          ) : null}
         </div>
       </CardHeader>
 

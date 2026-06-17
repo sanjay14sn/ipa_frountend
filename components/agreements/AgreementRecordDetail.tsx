@@ -17,7 +17,6 @@ import {
 import {
   agreementSignatureSrc,
   downloadScheduleBPdfAdmin,
-  downloadScheduleBPdfMine,
   getAdminAgreementContent,
   getFranchiseeAgreementContent,
   getReceivablePlanMine,
@@ -157,7 +156,8 @@ function ReadOnlyAgreementContent({
   onToggleSection: (sectionId: string) => void;
   onExpandAll: () => void;
   onCollapseAll: () => void;
-  onDownloadPDF: () => void;
+  /** When omitted, the PDF download action is hidden (e.g. franchisee view). */
+  onDownloadPDF?: () => void;
   loading: boolean;
 }) {
   return (
@@ -169,20 +169,22 @@ function ReadOnlyAgreementContent({
             <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={onDownloadPDF}
-              variant="outline"
-              size="sm"
-              className="rounded-lg border-border text-xs"
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-              ) : (
-                <Download className="mr-1 h-3 w-3" />
-              )}
-              PDF
-            </Button>
+            {onDownloadPDF ? (
+              <Button
+                onClick={onDownloadPDF}
+                variant="outline"
+                size="sm"
+                className="rounded-lg border-border text-xs"
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                ) : (
+                  <Download className="mr-1 h-3 w-3" />
+                )}
+                PDF
+              </Button>
+            ) : null}
             <Button
               onClick={onExpandAll}
               variant="outline"
@@ -715,14 +717,12 @@ export function AgreementRecordDetail({
   const outstandingAmount =
     feePayable != null ? Math.max(0, feePayable.payable - totalReceived) : null;
 
+  // Schedule B download is admin-only; the franchisee surfaces hide the action
+  // entirely (no franchisee download endpoint exists).
   async function handleDownloadScheduleB() {
     setSchedulePdfLoading(true);
     try {
-      if (isAdminContext) {
-        await downloadScheduleBPdfAdmin(data.id);
-      } else {
-        await downloadScheduleBPdfMine(data.id);
-      }
+      await downloadScheduleBPdfAdmin(data.id);
       toast.success("Schedule B PDF download started");
     } catch (e) {
       toast.error(getErrorMessage(e, "Failed to download Schedule B PDF"));
@@ -815,7 +815,9 @@ export function AgreementRecordDetail({
             onToggleSection={toggleSection}
             onExpandAll={expandAllSections}
             onCollapseAll={collapseAllSections}
-            onDownloadPDF={() => void handleDownloadScheduleB()}
+            onDownloadPDF={
+              isAdminContext ? () => void handleDownloadScheduleB() : undefined
+            }
             sections={agreementContent.sections}
             loading={schedulePdfLoading}
           />
@@ -827,7 +829,9 @@ export function AgreementRecordDetail({
             signatureSrc={sigSrc}
             executedAt={data.franchiseeSignedAt ?? data.dateOfSigning}
             loading={schedulePdfLoading}
-            onDownload={() => void handleDownloadScheduleB()}
+            onDownload={
+              isAdminContext ? () => void handleDownloadScheduleB() : undefined
+            }
           />
         </TabsContent>
 

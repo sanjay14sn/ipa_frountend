@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Eye, Loader2 } from "lucide-react";
+import { Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,6 @@ import {
   TablePageShell,
 } from "@/components/shared";
 import {
-  downloadScheduleBPdfMine,
   submitFranchiseeSignature,
   updateFranchiseeSignatureOnly,
   type AgreementRecord,
@@ -249,25 +248,6 @@ export function MyAgreementsSection() {
             onClick={() => setViewAgreementId(record.id)}
           >
             <Eye className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            title="Download Schedule B PDF"
-            onClick={async () => {
-              try {
-                await downloadScheduleBPdfMine(record.id);
-                toast.success("Schedule B PDF download started");
-              } catch (error) {
-                toast.error(
-                  getErrorMessage(error, "Failed to download Schedule B PDF"),
-                );
-              }
-            }}
-          >
-            <Download className="h-4 w-4" />
           </Button>
         </div>
       ),

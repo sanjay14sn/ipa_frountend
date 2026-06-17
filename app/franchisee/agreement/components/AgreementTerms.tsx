@@ -10,7 +10,8 @@ interface AgreementTermsProps {
   onToggleSection: (sectionId: string) => void;
   onExpandAll: () => void;
   onCollapseAll: () => void;
-  onDownloadPDF: () => void;
+  /** When omitted, the PDF download button is hidden (e.g. franchisee view). */
+  onDownloadPDF?: () => void;
   onAgreementChange: (checked: boolean | "indeterminate") => void;
 }
 
@@ -31,15 +32,17 @@ export default function AgreementTerms({
           {agreementContent.title}
         </h3>
         <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={onDownloadPDF}
-            variant="outline"
-            size="sm"
-            className="rounded-lg border-border text-xs"
-          >
-            <Download className="mr-1 h-3 w-3" />
-            PDF
-          </Button>
+          {onDownloadPDF ? (
+            <Button
+              onClick={onDownloadPDF}
+              variant="outline"
+              size="sm"
+              className="rounded-lg border-border text-xs"
+            >
+              <Download className="mr-1 h-3 w-3" />
+              PDF
+            </Button>
+          ) : null}
           <Button
             onClick={onExpandAll}
             variant="outline"

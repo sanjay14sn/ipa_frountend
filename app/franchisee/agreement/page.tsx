@@ -37,7 +37,6 @@ import {
 } from "@/services/franchisee.service";
 import {
   agreementSignatureSrc,
-  downloadScheduleBPdfMine,
   franchiseeProfileSignatureSrc,
   getFranchiseeAgreementContent,
   getReceivablePlanMine,
@@ -230,7 +229,6 @@ function AgreementStep2Terms({
   onToggleSection,
   onExpandAll,
   onCollapseAll,
-  onDownloadPDF,
   onAgreementChange,
 }: {
   agreementContent: AgreementContent;
@@ -239,7 +237,6 @@ function AgreementStep2Terms({
   onToggleSection: (id: string) => void;
   onExpandAll: () => void;
   onCollapseAll: () => void;
-  onDownloadPDF: () => void;
   onAgreementChange: (checked: boolean | "indeterminate") => void;
 }) {
   return (
@@ -255,7 +252,6 @@ function AgreementStep2Terms({
         onToggleSection={onToggleSection}
         onExpandAll={onExpandAll}
         onCollapseAll={onCollapseAll}
-        onDownloadPDF={onDownloadPDF}
         onAgreementChange={onAgreementChange}
       />
     </div>
@@ -928,21 +924,6 @@ function FranchiseAgreementContent() {
     setExpandedSections(new Set());
   };
 
-  const handleDownloadPDF = async () => {
-    if (!feeAgreement?.id) {
-      toast.error(
-        "No agreement record is available yet. Your Schedule B PDF will be ready once the agreement is issued.",
-      );
-      return;
-    }
-    try {
-      await downloadScheduleBPdfMine(feeAgreement.id);
-      toast.success("Schedule B PDF download started");
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Failed to download Schedule B PDF"));
-    }
-  };
-
   const handlePaymentSubmit = async () => {
     if (!agreementAccepted) {
       toast.error("Please accept the terms and conditions before proceeding.");
@@ -1238,7 +1219,6 @@ function FranchiseAgreementContent() {
                 onToggleSection={toggleSection}
                 onExpandAll={expandAllSections}
                 onCollapseAll={collapseAllSections}
-                onDownloadPDF={handleDownloadPDF}
                 onAgreementChange={handleCheckboxChange}
               />
             ) : null}
