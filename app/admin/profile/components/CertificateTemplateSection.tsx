@@ -183,8 +183,11 @@ export function CertificateTemplateSection({
     setFieldCoordinates(template.fieldCoordinates ?? DEFAULT_COORDINATES);
     if (template.templatePdfPath) {
       const baseUrl = getApiBaseUrl();
+      // Cache-bust by the template's last-updated stamp (id fallback) so a
+      // re-uploaded PDF refetches, without calling an impure clock in render.
+      const version = String(template.updatedAt ?? template.id ?? "");
       setTemplatePreviewUrl(
-        `${baseUrl}/uploads/${template.templatePdfPath}?t=${Date.now()}`,
+        `${baseUrl}/uploads/${template.templatePdfPath}?t=${encodeURIComponent(version)}`,
       );
     }
     setIsDirty(false);
