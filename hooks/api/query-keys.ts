@@ -65,12 +65,19 @@ export const queryKeys = {
     trainingList: ["course-instructors", "training-list"] as const,
     franchiseeSessions: (params?: Record<string, unknown> | null) =>
       listQueryKey("course-instructors", { role: "franchisee-sessions", ...params }),
-    /** Per-session waiting-room (unassigned attendees) detail key. */
-    waitingSession: (sessionId: number) =>
-      ["ci-training-waiting-session", sessionId] as const,
-    /** Per-session assigned-attendees detail key. */
-    sessionAssignments: (sessionId: number) =>
-      ["ci-training-session-assignments", sessionId] as const,
+    /** Per-session waiting-room (unassigned attendees) detail key. Scoped by the
+     *  active program so switching the header program refetches. Omit
+     *  `programId` to get the prefix used for invalidation. */
+    waitingSession: (sessionId: number, programId?: number | null) =>
+      programId == null
+        ? (["ci-training-waiting-session", sessionId] as const)
+        : (["ci-training-waiting-session", sessionId, programId] as const),
+    /** Per-session assigned-attendees detail key. Scoped by the active program;
+     *  omit `programId` for the invalidation prefix. */
+    sessionAssignments: (sessionId: number, programId?: number | null) =>
+      programId == null
+        ? (["ci-training-session-assignments", sessionId] as const)
+        : (["ci-training-session-assignments", sessionId, programId] as const),
     /** Admin summary view for a list of CIs (refreshed on demand). */
     adminSummary: (params: Record<string, unknown>, refreshKey?: string) =>
       ["course-instructors", "admin", "summary", params, refreshKey ?? ""] as const,

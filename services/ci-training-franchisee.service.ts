@@ -1,5 +1,6 @@
 import { api } from "@/lib/axios";
 import { unwrapData } from "@/lib/unwrap-api";
+import { withProgramScope } from "./_scope";
 
 export interface FranchiseeTrainingSession {
   id: number;
@@ -52,7 +53,10 @@ export async function listFranchiseeTrainingSessions(params?: {
 }
 
 export async function listWaitingForSession(sessionId: number): Promise<WaitingCI[]> {
-  const res = await api.get(`/course-instructor/ci-training/sessions/${sessionId}/waiting`);
+  const res = await api.get(
+    `/course-instructor/ci-training/sessions/${sessionId}/waiting`,
+    { params: withProgramScope() },
+  );
   const payload = unwrapData<WaitingCI[]>(res);
   return Array.isArray(payload) ? payload : [];
 }
@@ -62,6 +66,7 @@ export async function listSessionAssignments(
 ): Promise<SessionAssignedCI[]> {
   const res = await api.get(
     `/course-instructor/ci-training/sessions/${sessionId}/assignments`,
+    { params: withProgramScope() },
   );
   const payload = unwrapData<SessionAssignedCI[]>(res);
   return Array.isArray(payload) ? payload : [];

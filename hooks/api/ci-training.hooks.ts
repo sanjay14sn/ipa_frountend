@@ -13,6 +13,7 @@ import {
 } from "@/services/course-instructor.service";
 import { queryKeys } from "@/hooks/api/query-keys";
 import { getQueryClientBridge } from "@/hooks/api/query-client-bridge";
+import { useProgramId } from "@/hooks/use-scope";
 import {
   listFranchiseeTrainingSessions,
   listWaitingForSession,
@@ -104,8 +105,12 @@ export function useFranchiseeTrainingSessions(params?: {
 }
 
 export function useWaitingForSession(sessionId: number | null) {
+  const programId = useProgramId();
   const q = useQuery({
-    queryKey: queryKeys.courseInstructors.waitingSession(sessionId as number),
+    queryKey: queryKeys.courseInstructors.waitingSession(
+      sessionId as number,
+      programId,
+    ),
     queryFn: () => listWaitingForSession(sessionId!),
     enabled: sessionId != null,
     placeholderData: (prev) => prev,
@@ -119,8 +124,12 @@ export function useWaitingForSession(sessionId: number | null) {
 }
 
 export function useSessionAssignments(sessionId: number | null) {
+  const programId = useProgramId();
   const q = useQuery({
-    queryKey: queryKeys.courseInstructors.sessionAssignments(sessionId as number),
+    queryKey: queryKeys.courseInstructors.sessionAssignments(
+      sessionId as number,
+      programId,
+    ),
     queryFn: () => listSessionAssignments(sessionId!),
     enabled: sessionId != null,
     placeholderData: (prev) => prev,
