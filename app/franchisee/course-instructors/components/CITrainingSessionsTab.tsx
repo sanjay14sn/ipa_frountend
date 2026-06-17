@@ -68,19 +68,12 @@ export default function CITrainingSessionsTab() {
 
   const columns: DataTableColumn<FranchiseeTrainingSession>[] = [
     {
+      // The body of the first column is supplied by `renderMainCell` below —
+      // DataTable replaces columns[0]'s cell with the main cell, so a `render`
+      // here would be ignored. The session date is rendered in `renderMainCell`.
       key: "sessionDate",
       header: "Session Date",
       className: "w-[140px]",
-      render: (s) => (
-        <div className="flex items-center gap-1 text-sm text-card-foreground">
-          <Calendar className="w-3 h-3 text-muted-foreground" />
-          {new Date(s.sessionDate).toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          })}
-        </div>
-      ),
     },
     {
       key: "trainingLevel",
@@ -208,11 +201,13 @@ export default function CITrainingSessionsTab() {
         columns={columns}
         getRowId={(s) => String(s.id)}
         renderMainCell={(s) => (
-          <div>
-            <div className="font-medium text-card-foreground">
-              {s.trainingLevelName ?? `Level ${s.trainingLevelId}`}
-            </div>
-            <div className="text-xs text-muted-foreground capitalize">{s.region}</div>
+          <div className="flex items-center gap-1 text-sm text-card-foreground">
+            <Calendar className="w-3 h-3 text-muted-foreground" />
+            {new Date(s.sessionDate).toLocaleDateString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
           </div>
         )}
         sortOptions={sortOptions}
