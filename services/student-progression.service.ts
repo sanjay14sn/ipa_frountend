@@ -42,6 +42,8 @@ export interface StudentLifecycleRow {
   lifecycleInvalidationReason: string | null;
   lifecycleReactivatedAt: string | null;
   lifecycleManagedBy: number | null;
+  /** When the prior level was completed (ISSUED). Null for first-level students. */
+  previousLevelCompletedAt: string | null;
 }
 
 export interface PaginatedStudentLifecycleResponse {
@@ -118,6 +120,9 @@ function mapLifecycleRow(row: Record<string, unknown>): StudentLifecycleRow {
       : null,
     lifecycleManagedBy:
       row.lifecycleManagedBy == null ? null : Number(row.lifecycleManagedBy),
+    previousLevelCompletedAt: row.previousLevelCompletedAt
+      ? String(row.previousLevelCompletedAt)
+      : null,
   };
 }
 

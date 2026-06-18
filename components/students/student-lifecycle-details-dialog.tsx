@@ -48,11 +48,74 @@ function formatStatus(value?: string | null) {
   return value.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
 }
 
+function parseDateOnly(value: string): Date {
+  return new Date(`${value.slice(0, 10)}T00:00:00.000Z`);
+}
+
+function lifecycleAnchorDate(row: StudentLifecycleRow): string | null {
+  return row.previousLevelCompletedAt ?? row.dateOfJoining;
+}
+
+function formatElapsedDuration(
+  start?: string | null,
+  end?: string | null,
+): string {
+  if (!start) return "—";
+  const startDate = parseDateOnly(start);
+  const endDate = end ? parseDateOnly(end) : new Date();
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return "—";
+  }
+  const totalDays = Math.floor(
+    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+  );
+  if (totalDays < 0) return "—";
+  const months = Math.floor(totalDays / 30);
+  const days = totalDays % 30;
+  if (months > 0 && days > 0) {
+    return `${months} month${months === 1 ? "" : "s"} ${days} day${days === 1 ? "" : "s"}`;
+  }
+  if (months > 0) {
+    return `${months} month${months === 1 ? "" : "s"}`;
+  }
+  return `${days} day${days === 1 ? "" : "s"}`;
+}
+
+function formatAllowedDuration(durationInMonths: number | null): string {
+  if (durationInMonths == null) return "—";
+  const graceMonths = 1;
+  const total = durationInMonths + graceMonths;
+  return `${total} months (${durationInMonths} + ${graceMonths} grace)`;
+}
+
 function StudentLifecycleDetailContent({ row }: { row: StudentLifecycleRow }) {
+  const anchorDate = lifecycleAnchorDate(row);
+  const elapsedEnd = row.lifecycleInvalidatedAt ?? null;
+
   return (
     <ExpandedDetailSurface className="rounded-lg">
       <ExpandedDetailSection title="Deadlines">
         <DetailFieldsGrid columns={4}>
+          <DetailField
+            label="Previous level completed"
+            value={
+              row.previousLevelCompletedAt
+                ? formatDate(row.previousLevelCompletedAt)
+                : "— (first level — uses joined date)"
+            }
+          />
+          <DetailField
+            label="Lifecycle anchor"
+            value={formatDate(anchorDate)}
+          />
+          <DetailField
+            label="Elapsed since anchor"
+            value={formatElapsedDuration(anchorDate, elapsedEnd)}
+          />
+          <DetailField
+            label="Allowed duration"
+            value={formatAllowedDuration(row.durationInMonths)}
+          />
           <DetailField
             label="Base duration"
             value={row.durationInMonths ? `${row.durationInMonths} months` : "—"}
