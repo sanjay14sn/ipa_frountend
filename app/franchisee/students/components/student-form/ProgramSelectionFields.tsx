@@ -173,7 +173,7 @@ export function ProgramSelectionFields({
           <SelectContent>
             {levels.map((level) => (
               <SelectItem key={level.id} value={level.id.toString()}>
-                {level.name}
+                {level.code}
               </SelectItem>
             ))}
           </SelectContent>
