@@ -211,6 +211,11 @@ export interface BulkCertificateRequestDto {
   groups: BulkCertificateRequestGroup[];
 }
 
+export interface BulkCertificateRequestResult {
+  succeeded: number[];
+  failed: Array<{ studentId: number; error: string }>;
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -539,9 +544,9 @@ export function getFranchiseeCertificatePdfUrl(certificateId: number): string {
 
 export async function bulkRequestCertificates(
   data: BulkCertificateRequestDto,
-): Promise<unknown> {
+): Promise<BulkCertificateRequestResult> {
   const response = await api.post("/certification/bulk-request", data);
-  return unwrapData(response);
+  return unwrapData<BulkCertificateRequestResult>(response);
 }
 
 export async function requestCertificateForStudent(body: {

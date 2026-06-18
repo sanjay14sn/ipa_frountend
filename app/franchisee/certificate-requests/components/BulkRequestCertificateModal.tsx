@@ -429,11 +429,25 @@ export default function BulkRequestCertificateModal({
           })),
         })),
       };
-      await bulkCert.mutateAsync(payload);
-      const totalStudents = groups.reduce((n, g) => n + g.students.length, 0);
-      toast.success(
-        `Certificate requests created for ${totalStudents} student(s) across ${groups.length} group(s)`
-      );
+      const result = await bulkCert.mutateAsync(payload);
+      const succeededCount = result.succeeded.length;
+      const failedCount = result.failed.length;
+
+      if (succeededCount > 0 && failedCount > 0) {
+        toast.success(
+          `Certificate requests created for ${succeededCount} student(s). ${failedCount} student(s) were not eligible.`
+        );
+        toast.error(
+          `${failedCount} student(s) not eligible for certificate request (marks below pass mark).`
+        );
+      } else if (succeededCount > 0) {
+        toast.success(
+          `Certificate requests created for ${succeededCount} student(s) across ${groups.length} group(s)`
+        );
+      } else {
+        toast.error("No certificate requests were created. All selected students are not eligible.");
+        return;
+      }
       // reset
       setForms(
         Object.fromEntries(
