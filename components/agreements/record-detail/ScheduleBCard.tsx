@@ -126,13 +126,18 @@ export function ScheduleBCard({
   executedAt,
   loading,
   onDownload,
+  downloadDisabled = false,
+  downloadDisabledTitle,
 }: {
   data: AgreementScheduleBView | null;
   signatureSrc: string | null;
   executedAt?: string | null;
   loading: boolean;
-  /** When omitted, the Download PDF action is hidden (e.g. franchisee view). */
+  /** When omitted and `downloadDisabled` is false, the Download PDF action is hidden. */
   onDownload?: () => void;
+  /** Franchisee: disabled while franchise-fee receivables are still pending. */
+  downloadDisabled?: boolean;
+  downloadDisabledTitle?: string;
 }) {
   if (!data) {
     return (
@@ -181,13 +186,14 @@ export function ScheduleBCard({
               Commercial schedule and royalty breakup for this agreement.
             </p>
           </div>
-          {onDownload ? (
+          {onDownload || downloadDisabled ? (
             <Button
               type="button"
               variant="outline"
               size="sm"
-              disabled={loading}
+              disabled={loading || downloadDisabled}
               onClick={onDownload}
+              title={downloadDisabled ? downloadDisabledTitle : undefined}
             >
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

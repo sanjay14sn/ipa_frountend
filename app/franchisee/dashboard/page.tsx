@@ -25,12 +25,13 @@ import { RequestProgramsModal } from "@/components/request-programs-modal";
 import { type FranchiseeDashboardStats } from "@/services/dashboard.service";
 import { type OrderData } from "@/services/order.service";
 import { useFranchiseeDashboardStats } from "@/hooks/api/dashboard.hooks";
-import { useAgreementsMine } from "@/hooks/api/agreement.hooks";
+import { useAgreementMine, useAgreementsMine } from "@/hooks/api/agreement.hooks";
 import { useFranchiseeOrders } from "@/hooks/api/order.hooks";
 import { cn } from "@/lib/utils";
 import { isFranchiseOperational } from "@/lib/auth";
 import { formatRupees } from "@/lib/currency-utils";
 import type {
+  AgreementLinkedPayment,
   AgreementRecord,
   ReceivableCompactSummary,
   ReceivableFranchiseeSummary,
@@ -90,7 +91,7 @@ function StatCard({ label, value, sub, icon: Icon, trend, href }: StatCardProps)
       <Link
         href={href}
         className="group block space-y-2 px-4 py-4 transition-colors hover:bg-accent sm:px-5"
-        aria-label={`${label}: open EMI payment details`}
+        aria-label={`${label}: open franchise fee payment details`}
       >
         {content}
       </Link>
@@ -203,6 +204,115 @@ function resolveEmiAgreement(agreements: AgreementRecord[]) {
         Boolean(agreement.receivables?.installmentSummary),
     )
     .sort((left, right) => right.id - left.id)[0];
+}
+
+const COMPLETED_PAYMENT_STATUSES = new Set(["completed", "paid", "captured"]);
+
+function isFranchiseFeePayment(payment: AgreementLinkedPayment): boolean {
+  const type = (payment.type ?? "").toUpperCase().replace(/-/g, "_");
+  return type === "FRANCHISE_FEE";
+}
+
+function isCompletedPayment(payment: AgreementLinkedPayment): boolean {
+  return COMPLETED_PAYMENT_STATUSES.has((payment.status ?? "").toLowerCase());
+}
+
+function sumFranchiseFeePaid(
+  payments: AgreementLinkedPayment[] | null | undefined,
+): number {
+  return (payments ?? [])
+    .filter((payment) => isFranchiseFeePayment(payment) && isCompletedPayment(payment))
+    .reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+}
+
+function resolveUpcomingDue(
+  summary:
+    | ReceivableInstallmentSummary
+    | ReceivableFranchiseeSummary
+    | ReceivableCompactSummary
+    | null
+    | undefined,
+) {
+  if (!summary) return { amount: null as number | null, dueAt: null as string | null };
+
+  if (isFullInstallmentSummary(summary)) {
+    const nextDue = summary.nextDueItem;
+    return {
+      amount: nextDue?.payableAmount ?? nextDue?.amount ?? null,
+      dueAt: nextDue?.dueAt ?? null,
+    };
+  }
+
+  if ("nextDueItem" in summary && summary.nextDueItem) {
+    return {
+      amount:
+        summary.nextDueItem.payableAmount ?? summary.nextDueItem.amount ?? null,
+      dueAt: summary.nextDueItem.dueAt ?? null,
+    };
+  }
+
+  return {
+    amount: summary.nextDueAmount ?? null,
+    dueAt: summary.nextDueAt ?? null,
+  };
+}
+
+function resolveFranchiseFeePaidFromSummary(
+  summary:
+    | ReceivableInstallmentSummary
+    | ReceivableFranchiseeSummary
+    | ReceivableCompactSummary
+    | null
+    | undefined,
+): number {
+  if (!summary) return 0;
+  if (isFullInstallmentSummary(summary)) {
+    return (
+      summary.totals.payablePaidAmount ??
+      summary.totals.paidAmount ??
+      0
+    );
+  }
+  return summary.payablePaidAmount ?? summary.paidAmount ?? 0;
+}
+
+function buildFranchiseFeeCardDisplay({
+  paidAmount,
+  upcomingAmount,
+  upcomingDueAt,
+  hasSchedule,
+}: {
+  paidAmount: number;
+  upcomingAmount: number | null;
+  upcomingDueAt: string | null;
+  hasSchedule: boolean;
+}): Pick<StatCardProps, "value" | "sub"> {
+  const hasUpcoming = upcomingAmount != null && upcomingAmount > 0;
+  const upcomingLabel = hasUpcoming
+    ? `Next ${formatRupees(upcomingAmount)}${
+        upcomingDueAt ? ` due ${shortDate(upcomingDueAt)}` : ""
+      }`
+    : undefined;
+
+  if (paidAmount > 0) {
+    return {
+      value: formatRupees(paidAmount),
+      sub: hasUpcoming ? upcomingLabel : undefined,
+    };
+  }
+
+  if (hasUpcoming) {
+    return {
+      value: formatRupees(upcomingAmount!),
+      sub: upcomingDueAt ? `Due ${shortDate(upcomingDueAt)}` : undefined,
+    };
+  }
+
+  if (!hasSchedule) {
+    return { value: "-", sub: "No franchise fee schedule" };
+  }
+
+  return { value: formatRupees(paidAmount), sub: undefined };
 }
 
 function PayrollItem({ p, index }: { p: any; index: number }) {
@@ -395,31 +505,33 @@ export default function FranchiseeDashboard() {
     () => resolveEmiAgreement(agreementsQuery.data ?? []),
     [agreementsQuery.data],
   );
-  const emiSummary = emiAgreement?.receivables?.installmentSummary ?? null;
-  // Prefer payable totals — that's what the franchisee actually owes
-  // (principal + GST). Fall back to legacy principal-only on older responses.
-  const emiOutstanding = isFullInstallmentSummary(emiSummary)
-    ? (emiSummary.totals.payableOutstandingAmount ??
-        emiSummary.totals.outstandingAmount)
-    : (emiSummary?.payableOutstandingAmount ??
-        emiSummary?.outstandingAmount ??
-        0);
-  const emiNextAmount = isFullInstallmentSummary(emiSummary)
-    ? (emiSummary.nextDueItem?.payableAmount ?? emiSummary.nextDueItem?.amount)
-    : emiSummary?.nextDueAmount;
-  const emiNextDate = isFullInstallmentSummary(emiSummary)
-    ? emiSummary.nextDueItem?.dueAt
-    : emiSummary?.nextDueAt;
+  const emiAgreementQuery = useAgreementMine(emiAgreement?.id);
+  const emiSummary =
+    emiAgreementQuery.data?.receivables?.installmentSummary ??
+    emiAgreement?.receivables?.installmentSummary ??
+    null;
+  const franchiseFeePaid = useMemo(() => {
+    const payments = emiAgreementQuery.data?.payments;
+    if (payments != null) {
+      return sumFranchiseFeePaid(payments);
+    }
+    return resolveFranchiseFeePaidFromSummary(emiSummary);
+  }, [emiAgreementQuery.data?.payments, emiSummary]);
+  const upcomingDue = useMemo(() => resolveUpcomingDue(emiSummary), [emiSummary]);
+  const franchiseFeeCard = useMemo(
+    () =>
+      buildFranchiseFeeCardDisplay({
+        paidAmount: franchiseFeePaid,
+        upcomingAmount: upcomingDue.amount,
+        upcomingDueAt: upcomingDue.dueAt,
+        hasSchedule: Boolean(emiAgreement),
+      }),
+    [franchiseFeePaid, upcomingDue, emiAgreement],
+  );
   const emiOverdue = isFullInstallmentSummary(emiSummary)
     ? (emiSummary.totals.payableOverdueAmount ??
         emiSummary.totals.overdueAmount)
     : (emiSummary?.overdueAmount ?? 0);
-  const emiPaidCount = isFullInstallmentSummary(emiSummary)
-    ? emiSummary.totals.paidItemCount
-    : (emiSummary?.paidItemCount ?? null);
-  const emiTotalCount = isFullInstallmentSummary(emiSummary)
-    ? emiSummary.totals.installmentCount
-    : (emiSummary?.installmentCount ?? null);
 
   const loading = canFetch && (statsQuery.isLoading || ordersQuery.isLoading);
 
@@ -446,17 +558,9 @@ export default function FranchiseeDashboard() {
 
   const statCards: StatCardProps[] = [
     {
-      label: "EMI Pending",
-      value: emiSummary ? formatRupees(emiOutstanding) : "-",
-      sub: emiSummary
-        ? `Next ${emiNextAmount != null ? formatRupees(emiNextAmount) : "-"}${
-            emiNextDate ? ` due ${shortDate(emiNextDate)}` : ""
-          }${
-            emiPaidCount != null && emiTotalCount != null
-              ? ` · ${emiPaidCount} of ${emiTotalCount} EMIs paid`
-              : ""
-          }`
-        : "No active EMI",
+      label: "Franchise Fee Paid",
+      value: franchiseFeeCard.value,
+      sub: franchiseFeeCard.sub,
       icon: IndianRupee,
       href: emiAgreement ? "/franchisee/franchise?tab=agreements" : undefined,
       trend:

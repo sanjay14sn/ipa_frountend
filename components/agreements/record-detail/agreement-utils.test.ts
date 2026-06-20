@@ -48,7 +48,7 @@ describe("normalizeStatus", () => {
 });
 
 describe("getAgreementActionVisibility", () => {
-  it("franchisees only ever see download", () => {
+  it("franchisees can download Schedule B only when no franchise-fee receivable is pending", () => {
     const v = getAgreementActionVisibility(makeAgreement(), "franchisee");
     expect(v.download).toBe(true);
     expect(v.suspend).toBe(false);
@@ -56,6 +56,21 @@ describe("getAgreementActionVisibility", () => {
     expect(v.dispatchKit).toBe(false);
     expect(v.manageKitItems).toBe(false);
     expect(v.renew).toBe(false);
+
+    expect(
+      getAgreementActionVisibility(
+        {
+          ...makeAgreement(),
+          receivables: {
+            installmentSummary: {
+              outstandingAmount: 100,
+              payableOutstandingAmount: 118,
+            },
+          },
+        } as AgreementRecord,
+        "franchisee",
+      ).download,
+    ).toBe(false);
   });
 
   it("Valid → suspend + void; no reactivate/renew", () => {

@@ -17,6 +17,7 @@ import {
 import {
   agreementSignatureSrc,
   downloadScheduleBPdfAdmin,
+  downloadScheduleBPdfMine,
   getAdminAgreementContent,
   getFranchiseeAgreementContent,
   getReceivablePlanMine,
@@ -49,6 +50,7 @@ import {
 import {
   fmtShortDate,
   agreementStatusBadge,
+  getAgreementActionVisibility,
 } from "@/components/agreements/record-detail/agreement-utils";
 import { AgreementEmiScheduleCard } from "@/components/agreements/record-detail/AgreementEmiScheduleCard";
 import { ScheduleBCard } from "@/components/agreements/record-detail/ScheduleBCard";
@@ -142,6 +144,8 @@ function ReadOnlyAgreementContent({
   onExpandAll,
   onCollapseAll,
   onDownloadPDF,
+  downloadDisabled = false,
+  downloadDisabledTitle,
   loading,
 }: {
   title: string;
@@ -156,8 +160,10 @@ function ReadOnlyAgreementContent({
   onToggleSection: (sectionId: string) => void;
   onExpandAll: () => void;
   onCollapseAll: () => void;
-  /** When omitted, the PDF download action is hidden (e.g. franchisee view). */
+  /** When omitted and `downloadDisabled` is false, the PDF download action is hidden. */
   onDownloadPDF?: () => void;
+  downloadDisabled?: boolean;
+  downloadDisabledTitle?: string;
   loading: boolean;
 }) {
   return (
@@ -169,13 +175,14 @@ function ReadOnlyAgreementContent({
             <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {onDownloadPDF ? (
+            {onDownloadPDF || downloadDisabled ? (
               <Button
                 onClick={onDownloadPDF}
                 variant="outline"
                 size="sm"
                 className="rounded-lg border-border text-xs"
-                disabled={loading}
+                disabled={loading || downloadDisabled}
+                title={downloadDisabled ? downloadDisabledTitle : undefined}
               >
                 {loading ? (
                   <Loader2 className="mr-1 h-3 w-3 animate-spin" />
@@ -716,13 +723,22 @@ export function AgreementRecordDetail({
       : null;
   const outstandingAmount =
     feePayable != null ? Math.max(0, feePayable.payable - totalReceived) : null;
+  const actionVisibility = getAgreementActionVisibility(
+    data,
+    isAdminContext ? "admin" : "franchisee",
+  );
+  const canDownloadScheduleB = actionVisibility.download;
+  const scheduleBDownloadDisabledTitle =
+    "Complete pending franchise fee payments to download Schedule B";
 
-  // Schedule B download is admin-only; the franchisee surfaces hide the action
-  // entirely (no franchisee download endpoint exists).
   async function handleDownloadScheduleB() {
     setSchedulePdfLoading(true);
     try {
-      await downloadScheduleBPdfAdmin(data.id);
+      if (isAdminContext) {
+        await downloadScheduleBPdfAdmin(data.id);
+      } else {
+        await downloadScheduleBPdfMine(data.id);
+      }
       toast.success("Schedule B PDF download started");
     } catch (e) {
       toast.error(getErrorMessage(e, "Failed to download Schedule B PDF"));
@@ -816,8 +832,12 @@ export function AgreementRecordDetail({
             onExpandAll={expandAllSections}
             onCollapseAll={collapseAllSections}
             onDownloadPDF={
-              isAdminContext ? () => void handleDownloadScheduleB() : undefined
+              canDownloadScheduleB
+                ? () => void handleDownloadScheduleB()
+                : undefined
             }
+            downloadDisabled={!isAdminContext && !canDownloadScheduleB}
+            downloadDisabledTitle={scheduleBDownloadDisabledTitle}
             sections={agreementContent.sections}
             loading={schedulePdfLoading}
           />
@@ -830,8 +850,12 @@ export function AgreementRecordDetail({
             executedAt={data.franchiseeSignedAt ?? data.dateOfSigning}
             loading={schedulePdfLoading}
             onDownload={
-              isAdminContext ? () => void handleDownloadScheduleB() : undefined
+              canDownloadScheduleB
+                ? () => void handleDownloadScheduleB()
+                : undefined
             }
+            downloadDisabled={!isAdminContext && !canDownloadScheduleB}
+            downloadDisabledTitle={scheduleBDownloadDisabledTitle}
           />
         </TabsContent>
 

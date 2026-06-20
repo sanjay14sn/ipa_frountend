@@ -183,13 +183,18 @@ export interface AgreementActionVisibility {
 export function getAgreementActionVisibility(
   agreement: Pick<
     AgreementRecord,
-    "type" | "status" | "programId" | "franchiseId" | "materialsDispatched"
+    | "type"
+    | "status"
+    | "programId"
+    | "franchiseId"
+    | "materialsDispatched"
+    | "receivables"
   >,
   role: "admin" | "franchisee",
 ): AgreementActionVisibility {
   if (role !== "admin") {
     return {
-      download: true,
+      download: agreementOutstandingEmi(agreement as AgreementRecord) <= 0,
       manageKitItems: false,
       franchiseKitEditor: false,
       dispatchKit: false,
