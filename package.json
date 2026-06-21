@@ -69,7 +69,7 @@
     "@vitest/coverage-v8": "^4.1.9",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.4",
-    "jsdom": "^26.1.0",
+    "jsdom": "^29.1.1",
     "msw": "^2.10.0",
     "postcss": "^8.5.14",
     "tailwindcss": "^3.4.19",
@@ -78,5 +78,13 @@
   },
   "overrides": {
     "postcss": "^8.5.14"
+  },
+  "allowScripts": {
+    "core-js-pure@3.49.0": true,
+    "fsevents@2.3.2": true,
+    "fsevents@2.3.3": true,
+    "msw@2.14.6": true,
+    "sharp": true,
+    "unrs-resolver": true
   }
 }
