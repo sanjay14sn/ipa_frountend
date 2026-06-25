@@ -9,6 +9,7 @@ import {
   Calendar,
   ClipboardList,
   FileText,
+  Globe,
   GraduationCap,
   LayoutDashboard,
   ScrollText,
@@ -283,6 +284,11 @@ export function DynamicSidebar({
                   title: "Admins",
                   url: "/admin/admins",
                   icon: ShieldCheck,
+                },
+                {
+                  title: "Regions",
+                  url: "/admin/regions",
+                  icon: Globe,
                 },
               ],
             }

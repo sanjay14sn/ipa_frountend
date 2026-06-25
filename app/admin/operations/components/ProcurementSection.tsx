@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useUser } from "@/context/user-context";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -54,6 +55,10 @@ export function ProcurementSection() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { user } = useUser();
+  // Regional admins restock from a single HQ supplier; they cannot manage suppliers.
+  const isRegionalAdmin =
+    user?.role === "admin" && user.adminRole === "staff";
   const inventoryFilterParam = searchParams.get("inventoryItemId");
   const parsedInventoryFilterId = inventoryFilterParam
     ? Number(inventoryFilterParam)
@@ -69,8 +74,8 @@ export function ProcurementSection() {
     queryFn: getAllInventory,
   });
 
-  const [activeTab, setActiveTab] = useState<ProcurementSubTab>(
-    "suppliers-sourcing",
+  const [activeTab, setActiveTab] = useState<ProcurementSubTab>(() =>
+    isRegionalAdmin ? "purchase-orders" : "suppliers-sourcing",
   );
 
   const [supplierForm, setSupplierForm] = useState<SupplierFormState>(
@@ -317,7 +322,11 @@ export function ProcurementSection() {
   }, [inventoryFilterId]);
 
   useEffect(() => {
-    if (procurementAction !== "add-sourcing" || sourcingShortcutHandled.current) {
+    if (
+      procurementAction !== "add-sourcing" ||
+      sourcingShortcutHandled.current ||
+      isRegionalAdmin
+    ) {
       return;
     }
 
@@ -333,6 +342,7 @@ export function ProcurementSection() {
     router.replace(queryString ? `${pathname}?${queryString}` : pathname);
   }, [
     inventoryFilterId,
+    isRegionalAdmin,
     pathname,
     procurementAction,
     router,
@@ -371,7 +381,13 @@ export function ProcurementSection() {
   }
 
   function openPurchaseOrderModal(prefilledInventoryItemId?: number) {
-    setPoForm(createPurchaseOrderForm());
+    const baseForm = createPurchaseOrderForm();
+    // Regional admins have exactly one supplier (HQ); preselect it so the line
+    // picker opens and submission isn't blocked by the "choose a supplier" guard.
+    if (isRegionalAdmin && allSuppliers[0]) {
+      baseForm.supplierId = allSuppliers[0].id;
+    }
+    setPoForm(baseForm);
     if (prefilledInventoryItemId == null) {
       setPoLineSeed(undefined);
       setActiveTab("purchase-orders");
@@ -665,12 +681,14 @@ export function ProcurementSection() {
         className="space-y-6"
       >
         <TabsList className="h-auto w-full justify-start rounded-none border-b bg-transparent p-0">
-          <TabsTrigger
-            value="suppliers-sourcing"
-            className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-          >
-            Suppliers &amp; sourcing
-          </TabsTrigger>
+          {!isRegionalAdmin && (
+            <TabsTrigger
+              value="suppliers-sourcing"
+              className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
+              Suppliers &amp; sourcing
+            </TabsTrigger>
+          )}
           <TabsTrigger
             value="purchase-orders"
             className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"

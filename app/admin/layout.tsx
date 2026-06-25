@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 import { useUser } from "@/context/user-context";
 import { DynamicSidebar } from "@/components/dynamic-sidebar";
@@ -27,6 +27,13 @@ export default function AdminLayout({
 }) {
   const { user, loading } = useUser();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Regional (staff) admins are confined to a single Operations page.
+  // Gate on === "staff" (never !== "super") so an unhydrated adminRole never
+  // misclassifies a super admin.
+  const isRegionalAdmin =
+    user?.role === "admin" && user.adminRole === "staff";
 
   useEffect(() => {
     if (loading) return;
@@ -34,6 +41,13 @@ export default function AdminLayout({
       router.replace("/admin-login");
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (isRegionalAdmin && !pathname.startsWith("/admin/operations")) {
+      router.replace("/admin/operations");
+    }
+  }, [loading, isRegionalAdmin, pathname, router]);
 
   if (loading) {
     return (
@@ -44,6 +58,21 @@ export default function AdminLayout({
   }
 
   if (!user || user.role !== "admin") return null;
+
+  // Regional admins: no sidebar, just the Operations page. Render nothing while
+  // a non-operations path is being redirected away to avoid a flash.
+  if (isRegionalAdmin) {
+    if (!pathname.startsWith("/admin/operations")) return null;
+    return (
+      <div className="flex min-h-screen flex-col bg-background">
+        <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border bg-brand-white-200/50 px-4">
+          <span className="font-semibold text-primary">Abacus Operations</span>
+          <PortalHeaderActions />
+        </header>
+        <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>

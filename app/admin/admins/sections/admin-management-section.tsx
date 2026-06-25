@@ -56,6 +56,9 @@ interface AdminFormState {
   phone: string;
   password: string;
   state: string;
+  warehouseName: string;
+  warehouseAddress: string;
+  warehouseCity: string;
   isActive: boolean;
 }
 
@@ -67,6 +70,9 @@ const emptyForm: AdminFormState = {
   phone: "",
   password: "",
   state: "",
+  warehouseName: "",
+  warehouseAddress: "",
+  warehouseCity: "",
   isActive: true,
 };
 
@@ -129,6 +135,9 @@ export function AdminManagementSection() {
       phone: admin.phone,
       password: "",
       state: admin.state ?? "",
+      warehouseName: "",
+      warehouseAddress: "",
+      warehouseCity: "",
       isActive: admin.isActive,
     });
     setDialogOpen(true);
@@ -146,14 +155,15 @@ export function AdminManagementSection() {
     const phone = form.phone.trim();
     const state = form.state.trim();
     const password = form.password.trim();
+    const warehouseName = form.warehouseName.trim();
 
     if (!name || !emailId || !phone) {
       toast.error("Name, email, and phone are required");
       return;
     }
 
-    if (formMode === "create" && (!state || !password)) {
-      toast.error("State and password are required");
+    if (formMode === "create" && (!state || !password || !warehouseName)) {
+      toast.error("State, password, and warehouse name are required");
       return;
     }
 
@@ -165,6 +175,9 @@ export function AdminManagementSection() {
           phone,
           password,
           state,
+          warehouseName,
+          warehouseAddress: form.warehouseAddress.trim() || undefined,
+          warehouseCity: form.warehouseCity.trim() || undefined,
         });
         toast.success("Admin created");
       } else if (editingAdmin) {
@@ -335,7 +348,7 @@ export function AdminManagementSection() {
             </DialogTitle>
             <DialogDescription>
               {formMode === "create"
-                ? "Create a state-locked admin who will own franchise applications for that region."
+                ? "Create a state-locked admin who runs operations from their own regional warehouse."
                 : "Adjust contact details, region, password, or access status."}
             </DialogDescription>
           </DialogHeader>
@@ -396,6 +409,55 @@ export function AdminManagementSection() {
                 </SelectContent>
               </Select>
             </div>
+
+            {formMode === "create" ? (
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="admin-warehouse-name">Warehouse name</Label>
+                  <Input
+                    id="admin-warehouse-name"
+                    value={form.warehouseName}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        warehouseName: event.target.value,
+                      }))
+                    }
+                    placeholder="e.g. Tamil Nadu Regional Warehouse"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="admin-warehouse-address">
+                    Warehouse address
+                  </Label>
+                  <Input
+                    id="admin-warehouse-address"
+                    value={form.warehouseAddress}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        warehouseAddress: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="admin-warehouse-city">Warehouse city</Label>
+                  <Input
+                    id="admin-warehouse-city"
+                    value={form.warehouseCity}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        warehouseCity: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </>
+            ) : null}
 
             <div className="grid gap-2">
               <Label htmlFor="admin-password">

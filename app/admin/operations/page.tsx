@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/tabs";
 import { TablePageShell } from "@/components/shared";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
+import { useUser } from "@/context/user-context";
 import AdminOrdersTable from "../orders/components/AdminOrdersTable";
 import AdminShippingTable from "../shipping/components/AdminShippingTable";
 import PaymentsTable from "../payments/components/PaymentsTable";
@@ -27,6 +28,9 @@ const TABS = [
 
 function AdminOperationsHubInner() {
   const [tab, setTab] = useTabFromUrl("monitoring", TABS);
+  const { user } = useUser();
+  const isRegionalAdmin =
+    user?.role === "admin" && user.adminRole === "staff";
 
   return (
     <TablePageShell
@@ -81,7 +85,9 @@ function AdminOperationsHubInner() {
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Procurement</h2>
             <p className="text-muted-foreground">
-              Manage suppliers, item sourcing, purchase orders, receipts, and replenishment drafts.
+              {isRegionalAdmin
+                ? "Request stock from HQ into your warehouse and track receipts."
+                : "Manage suppliers, item sourcing, purchase orders, receipts, and replenishment drafts."}
             </p>
           </div>
           {tab === "procurement" && <ProcurementSection />}

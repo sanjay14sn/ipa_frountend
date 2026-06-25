@@ -44,6 +44,9 @@ export interface CreateAdminRequest {
   phone: string;
   password: string;
   state: string;
+  warehouseName: string;
+  warehouseAddress?: string;
+  warehouseCity?: string;
 }
 
 export interface UpdateAdminRequest {

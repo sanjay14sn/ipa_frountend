@@ -260,4 +260,9 @@ export const queryKeys = {
     forLevel: (levelId: number) =>
       ["certificate-templates", "level", levelId] as const,
   },
+  regionTracking: {
+    regions: ["region-tracking", "regions"] as const,
+    detail: (adminId: number) =>
+      ["region-tracking", "regions", adminId] as const,
+  },
 } as const;
