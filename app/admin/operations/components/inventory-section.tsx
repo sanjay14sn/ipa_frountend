@@ -51,7 +51,16 @@ import { InventoryTableToolbar } from "@/app/admin/operations/components/invento
 
 const ITEMS_PER_PAGE = 10;
 
-export function InventorySection() {
+interface InventorySectionProps {
+  regionLocationId?: number;
+  /** Read-only oversight view (super-admin regional operations): hide all mutation affordances. */
+  readOnly?: boolean;
+}
+
+export function InventorySection({
+  regionLocationId,
+  readOnly,
+}: InventorySectionProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -106,6 +115,7 @@ export function InventorySection() {
     lowStock: lowStockOnly || undefined,
     sortBy,
     sortOrder,
+    regionLocationId,
   });
 
   const { rows: inventory, total, totalPages, isPending: loading } = inventoryQuery;
@@ -269,6 +279,7 @@ export function InventorySection() {
       setDeletingItem(item);
       setIsDeleteOpen(true);
     },
+    readOnly,
   });
 
   const toolbarActions = (
@@ -287,6 +298,7 @@ export function InventorySection() {
         setFormData(EMPTY_FORM);
         setIsAddOpen(true);
       }}
+      readOnly={readOnly}
     />
   );
 
@@ -307,7 +319,7 @@ export function InventorySection() {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          {levelIdNum ? (
+          {!readOnly && levelIdNum ? (
             <InventoryLevelAssignmentCard
               levelIdNum={levelIdNum}
               assignedItems={assignedItems}

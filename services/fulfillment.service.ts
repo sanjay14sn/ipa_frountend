@@ -38,6 +38,8 @@ export type ShipmentListParams = {
   search?: string;
   status?: string;
   franchiseId?: string;
+  /** Super-admin region view: scope to this admin's franchises. */
+  regionAdminId?: number;
 };
 
 export type ShipmentListResponse = {
@@ -59,6 +61,7 @@ export async function getAdminShipments(
       // Omit "all" sentinel — backend expects absent key for no filter.
       status: params?.status !== "all" ? params?.status : undefined,
       franchiseId: params?.franchiseId,
+      regionAdminId: params?.regionAdminId,
     }),
   });
   return unwrapData(response) as ShipmentListResponse;

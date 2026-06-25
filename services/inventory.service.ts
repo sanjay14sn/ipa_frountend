@@ -199,6 +199,8 @@ export async function getPaginatedInventory(params: {
   lowStock?: boolean;
   sortBy?: string;
   sortOrder?: string;
+  /** Super-admin region view: scope to this warehouse location. */
+  regionLocationId?: number;
 }): Promise<PaginatedInventoryResult> {
   const response = await api.get("/inventory/paginated", {
     params: compactRequestParams(
@@ -454,8 +456,12 @@ export async function adjustInventoryStock(
   };
 }
 
-export async function getInventoryMonitoring(): Promise<InventoryMonitoringSummary> {
-  const response = await api.get("/inventory/monitoring");
+export async function getInventoryMonitoring(
+  regionLocationId?: number,
+): Promise<InventoryMonitoringSummary> {
+  const response = await api.get("/inventory/monitoring", {
+    params: compactRequestParams({ regionLocationId }),
+  });
   const data = unwrapData<any>(response);
   return {
     lowStock: Array.isArray(data?.lowStock)

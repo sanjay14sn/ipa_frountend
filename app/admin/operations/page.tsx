@@ -32,6 +32,11 @@ function AdminOperationsHubInner() {
   const isRegionalAdmin =
     user?.role === "admin" && user.adminRole === "staff";
 
+  // Operations is each admin's own actionable workspace: a regional admin sees
+  // their region (their warehouse), the super admin sees its fallback franchises
+  // (central warehouse). Backend scoping does this from the JWT — no region prop.
+  // Super-admin region oversight lives on the read-only Regional Operations page.
+
   return (
     <TablePageShell
       title="Operations"

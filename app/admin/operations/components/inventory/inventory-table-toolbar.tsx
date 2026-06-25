@@ -31,6 +31,8 @@ type Props = {
   onProgramChange: (value: number | "") => void;
   onLevelChange: (value: number | "") => void;
   onAddClick: () => void;
+  /** Read-only oversight view: hide the "Add item" action. */
+  readOnly?: boolean;
 };
 
 export function InventoryTableToolbar({
@@ -42,6 +44,7 @@ export function InventoryTableToolbar({
   onProgramChange,
   onLevelChange,
   onAddClick,
+  readOnly,
 }: Props) {
   return (
     <div className="flex flex-wrap items-end gap-2">
@@ -92,13 +95,15 @@ export function InventoryTableToolbar({
           </SelectContent>
         </Select>
       </div>
-      <Button
-        className="h-9"
-        onClick={onAddClick}
-      >
-        <Plus className="mr-2 h-4 w-4" />
-        Add item
-      </Button>
+      {!readOnly && (
+        <Button
+          className="h-9"
+          onClick={onAddClick}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add item
+        </Button>
+      )}
     </div>
   );
 }

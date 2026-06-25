@@ -37,6 +37,8 @@ export type InventoryPaginatedFilters = {
   lowStock?: boolean;
   sortBy?: string;
   sortOrder?: string;
+  /** Super-admin region view: scope to this warehouse location. */
+  regionLocationId?: number;
 };
 
 function listParamsFromFilters(
@@ -62,6 +64,9 @@ function listParamsFromFilters(
   if (filters.lowStock) {
     params.lowStock = true;
   }
+  if (filters.regionLocationId !== undefined) {
+    params.regionLocationId = filters.regionLocationId;
+  }
   return params;
 }
 
@@ -82,6 +87,7 @@ export function useInventoryPaginatedQuery(filters: InventoryPaginatedFilters) {
         lowStock: filters.lowStock ? true : undefined,
         sortBy: filters.sortBy ?? "name",
         sortOrder: filters.sortOrder ?? "ASC",
+        regionLocationId: filters.regionLocationId,
       }),
     ...STATIC_REFERENCE_OPTIONS,
     placeholderData: (prev) => prev,
@@ -98,7 +104,7 @@ export function useInventoryPaginatedQuery(filters: InventoryPaginatedFilters) {
 function useInventoryMonitoring() {
   return useQuery({
     queryKey: queryKeys.inventory.monitoring,
-    queryFn: getInventoryMonitoring,
+    queryFn: () => getInventoryMonitoring(),
   });
 }
 

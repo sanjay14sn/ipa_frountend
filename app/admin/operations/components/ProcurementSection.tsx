@@ -51,7 +51,13 @@ import { PurchaseOrdersTab } from "@/app/admin/operations/components/procurement
 import { ReceiptsTab } from "@/app/admin/operations/components/procurement/ReceiptsTab";
 import { ReplenishmentTab } from "@/app/admin/operations/components/procurement/ReplenishmentTab";
 
-export function ProcurementSection() {
+interface ProcurementSectionProps {
+  regionLocationId?: number;
+}
+
+export function ProcurementSection({
+  regionLocationId,
+}: ProcurementSectionProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -177,6 +183,7 @@ export function ProcurementSection() {
       supplierId: toOptionalNumberFilter(purchaseOrderSupplierFilter),
       fromDate: purchaseOrderDateFrom || undefined,
       toDate: purchaseOrderDateTo || undefined,
+      regionLocationId,
     }),
     [
       purchaseOrderDateFrom,
@@ -185,6 +192,7 @@ export function ProcurementSection() {
       purchaseOrderSearch,
       purchaseOrderStatusFilter,
       purchaseOrderSupplierFilter,
+      regionLocationId,
     ],
   );
   const receiptParams = useMemo(
@@ -193,8 +201,9 @@ export function ProcurementSection() {
       limit: ITEMS_PER_PAGE,
       search: toOptionalSearch(receiptSearch),
       supplierId: toOptionalNumberFilter(receiptSupplierFilter),
+      regionLocationId,
     }),
-    [receiptPage, receiptSearch, receiptSupplierFilter],
+    [receiptPage, receiptSearch, receiptSupplierFilter, regionLocationId],
   );
   const replenishmentParams = useMemo(
     () => ({
@@ -206,12 +215,14 @@ export function ProcurementSection() {
           ? undefined
           : replenishmentStatusFilter,
       supplierId: toOptionalNumberFilter(replenishmentSupplierFilter),
+      regionLocationId,
     }),
     [
       replenishmentPage,
       replenishmentSearch,
       replenishmentStatusFilter,
       replenishmentSupplierFilter,
+      regionLocationId,
     ],
   );
 

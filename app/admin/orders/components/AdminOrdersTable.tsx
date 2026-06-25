@@ -109,10 +109,15 @@ function clubOrderItems(lines: OrderItemData[]) {
 
 interface AdminOrdersTableProps {
   franchiseId?: string;
+  regionAdminId?: number;
+  /** Read-only oversight view (super-admin regional operations): hide the actions column. */
+  readOnly?: boolean;
 }
 
 export default function AdminOrdersTable({
   franchiseId,
+  regionAdminId,
+  readOnly,
 }: AdminOrdersTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -130,6 +135,7 @@ export default function AdminOrdersTable({
     status: statusFilter === "all" ? undefined : statusFilter,
     phase: "orders",
     franchiseId,
+    regionAdminId,
   });
 
   const rows = ordersQuery.data?.rows ?? [];
@@ -337,7 +343,7 @@ export default function AdminOrdersTable({
               >
                 <Eye className="h-4 w-4" />
               </Button>
-              {isBackordered && !isFinal ? (
+              {!readOnly && isBackordered && !isFinal ? (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -354,7 +360,7 @@ export default function AdminOrdersTable({
                   )}
                 </Button>
               ) : null}
-              {order.paymentStatus === "PENDING" ? (
+              {!readOnly && order.paymentStatus === "PENDING" ? (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -367,7 +373,7 @@ export default function AdminOrdersTable({
                   <CreditCard className="h-4 w-4" />
                 </Button>
               ) : null}
-              {isReadyToShip ? (
+              {!readOnly && isReadyToShip ? (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -380,7 +386,7 @@ export default function AdminOrdersTable({
                   <ShieldCheck className="h-4 w-4" />
                 </Button>
               ) : null}
-              {order.shipment?.dcPdfPath && order.adminStatus !== "Cancelled" ? (
+              {!readOnly && order.shipment?.dcPdfPath && order.adminStatus !== "Cancelled" ? (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -392,7 +398,7 @@ export default function AdminOrdersTable({
                   <Download className="h-4 w-4" />
                 </Button>
               ) : null}
-              {order.shipment?.dcPdfPath && order.adminStatus !== "Cancelled" ? (
+              {!readOnly && order.shipment?.dcPdfPath && order.adminStatus !== "Cancelled" ? (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -409,7 +415,7 @@ export default function AdminOrdersTable({
                   )}
                 </Button>
               ) : null}
-              {!isFinal ? (
+              {!readOnly && !isFinal ? (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -427,7 +433,7 @@ export default function AdminOrdersTable({
         },
       },
     ],
-    [busyOrderId, handleMarkPaid, handleOpenCancelDialog, handleRegenerateDc, handleRefreshAllocation, setVerifyDialogOrderId],
+    [busyOrderId, handleMarkPaid, handleOpenCancelDialog, handleRegenerateDc, handleRefreshAllocation, setVerifyDialogOrderId, readOnly],
   );
 
   return (

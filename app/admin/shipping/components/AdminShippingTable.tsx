@@ -50,7 +50,16 @@ function shipmentTone(status: string | null | undefined): StatusTone {
   }
 }
 
-export default function AdminShippingTable() {
+interface AdminShippingTableProps {
+  regionAdminId?: number;
+  /** Read-only oversight view (super-admin regional operations): hide the actions column. */
+  readOnly?: boolean;
+}
+
+export default function AdminShippingTable({
+  regionAdminId,
+  readOnly,
+}: AdminShippingTableProps = {}) {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -62,6 +71,7 @@ export default function AdminShippingTable() {
     limit: 10,
     search: search || undefined,
     status: statusFilter === "all" ? undefined : statusFilter,
+    regionAdminId,
   });
 
   const rows = shipmentsQuery.data?.rows ?? [];
@@ -119,8 +129,8 @@ export default function AdminShippingTable() {
     },
   ];
 
-  const columns: DataTableColumn<ShipmentData>[] = useMemo(
-    () => [
+  const columns: DataTableColumn<ShipmentData>[] = useMemo(() => {
+    const cols: DataTableColumn<ShipmentData>[] = [
       { key: "order", header: "Order" },
       {
         key: "franchise",
@@ -221,9 +231,9 @@ export default function AdminShippingTable() {
           );
         },
       },
-    ],
-    [busyOrderId, runAction, setShipDialogOrderId],
-  );
+    ];
+    return cols.filter((column) => !readOnly || column.key !== "actions");
+  }, [busyOrderId, runAction, setShipDialogOrderId, readOnly]);
 
   return (
     <>

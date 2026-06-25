@@ -27,12 +27,14 @@ export type InventoryColumnCallbacks = {
   onProcurement: (itemId: number) => void;
   onEdit: (item: InventoryItemSummary) => void;
   onDelete: (item: InventoryItemSummary) => void;
+  /** Read-only oversight view (e.g. super-admin regional operations): drop the actions column. */
+  readOnly?: boolean;
 };
 
 export function buildInventoryColumns(
   callbacks: InventoryColumnCallbacks,
 ): DataTableColumn<InventoryItemSummary>[] {
-  return [
+  const columns: DataTableColumn<InventoryItemSummary>[] = [
     {
       key: "item",
       header: "Item",
@@ -111,6 +113,9 @@ export function buildInventoryColumns(
       ),
     },
   ];
+  return columns.filter(
+    (column) => !callbacks.readOnly || column.key !== "actions",
+  );
 }
 
 export function InventoryExpandedRow({ item }: { item: InventoryItemSummary }) {

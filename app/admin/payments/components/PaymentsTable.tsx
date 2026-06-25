@@ -23,7 +23,9 @@ interface PaymentsTableProps {
   franchiseId?: string;
 }
 
-export default function PaymentsTable({ franchiseId }: PaymentsTableProps = {}) {
+export default function PaymentsTable({
+  franchiseId,
+}: PaymentsTableProps = {}) {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [limit, setLimit] = useState<number>(10);

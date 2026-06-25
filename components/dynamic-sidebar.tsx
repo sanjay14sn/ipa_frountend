@@ -269,31 +269,51 @@ export function DynamicSidebar({
   } else if (user?.role === "admin" && user.adminRole === "super") {
     navigation = {
       ...adminNavigation,
-      navMain: adminNavigation.navMain.map((group) =>
-        group.title === "Overview"
-          ? {
-              ...group,
-              items: [
-                ...group.items,
-                {
-                  title: "Programs",
-                  url: "/admin/programs",
-                  icon: BookOpen,
-                },
-                {
-                  title: "Admins",
-                  url: "/admin/admins",
-                  icon: ShieldCheck,
-                },
-                {
-                  title: "Regions",
-                  url: "/admin/regions",
-                  icon: Globe,
-                },
-              ],
-            }
-          : group,
-      ),
+      navMain: [
+        ...adminNavigation.navMain.map((group) =>
+          group.title === "Overview"
+            ? {
+                ...group,
+                items: [
+                  ...group.items,
+                  {
+                    title: "Programs",
+                    url: "/admin/programs",
+                    icon: BookOpen,
+                  },
+                  {
+                    title: "Admins",
+                    url: "/admin/admins",
+                    icon: ShieldCheck,
+                  },
+                ],
+              }
+            : group.title === "Management"
+              ? {
+                  ...group,
+                  // HQ operations now lives in its own Operations group below.
+                  items: group.items.filter(
+                    (item) => item.url !== "/admin/operations",
+                  ),
+                }
+              : group,
+        ),
+        {
+          title: "Operations",
+          items: [
+            {
+              title: "HQ",
+              url: "/admin/operations",
+              icon: ShoppingCart,
+            },
+            {
+              title: "Regional",
+              url: "/admin/regional-operations",
+              icon: Globe,
+            },
+          ],
+        },
+      ],
     };
   } else if (user?.role === "franchisee") {
     if (isActiveFranchisee) {

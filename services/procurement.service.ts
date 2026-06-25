@@ -157,10 +157,14 @@ export interface PurchaseOrderListParams extends ProcurementPaginationParams {
   supplierId?: number;
   fromDate?: string;
   toDate?: string;
+  /** Super-admin region view: scope to this warehouse location. */
+  regionLocationId?: number;
 }
 
 export interface PurchaseReceiptListParams extends ProcurementPaginationParams {
   supplierId?: number;
+  /** Super-admin region view: scope to this warehouse location. */
+  regionLocationId?: number;
 }
 
 export interface PaginatedProcurementResult<T> {

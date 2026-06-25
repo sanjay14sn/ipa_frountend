@@ -381,6 +381,8 @@ export interface AdminOrderListParams {
   status?: string;
   phase?: "orders" | "shipping";
   franchiseId?: string;
+  /** Super-admin region view: scope to this admin's franchises. */
+  regionAdminId?: number;
 }
 
 export interface RefreshOrderAllocationResult {

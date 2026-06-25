@@ -151,7 +151,9 @@ async function settle<T>(work: () => Promise<T>, fallback: T): Promise<T> {
   }
 }
 
-export async function getAdminOperationsMonitoring(): Promise<OperationsMonitoringSnapshot> {
+export async function getAdminOperationsMonitoring(
+  opts: { regionAdminId?: number; regionLocationId?: number } = {},
+): Promise<OperationsMonitoringSnapshot> {
   const [
     ordersPhase,
     shippingPhase,
@@ -165,6 +167,7 @@ export async function getAdminOperationsMonitoring(): Promise<OperationsMonitori
           page: 1,
           limit: MAX_MONITORING_ROWS,
           phase: "orders",
+          regionAdminId: opts.regionAdminId,
         }),
       { rows: [], total: 0, page: 1, limit: MAX_MONITORING_ROWS, totalPages: 1 },
     ),
@@ -174,22 +177,33 @@ export async function getAdminOperationsMonitoring(): Promise<OperationsMonitori
           page: 1,
           limit: MAX_MONITORING_ROWS,
           phase: "shipping",
+          regionAdminId: opts.regionAdminId,
         }),
       { rows: [], total: 0, page: 1, limit: MAX_MONITORING_ROWS, totalPages: 1 },
     ),
     settle(
-      () => getInventoryMonitoring(),
+      () => getInventoryMonitoring(opts.regionLocationId),
       { lowStock: [], staleStock: [] } as {
         lowStock: InventoryItemSummary[];
         staleStock: InventoryItemSummary[];
       },
     ),
     settle(
-      () => getPaginatedPurchaseOrders({ page: 1, limit: MAX_MONITORING_ROWS }),
+      () =>
+        getPaginatedPurchaseOrders({
+          page: 1,
+          limit: MAX_MONITORING_ROWS,
+          regionLocationId: opts.regionLocationId,
+        }),
       { rows: [], total: 0, page: 1, limit: MAX_MONITORING_ROWS, totalPages: 1 },
     ),
     settle(
-      () => getPaginatedReplenishmentDrafts({ page: 1, limit: MAX_MONITORING_ROWS }),
+      () =>
+        getPaginatedReplenishmentDrafts({
+          page: 1,
+          limit: MAX_MONITORING_ROWS,
+          regionLocationId: opts.regionLocationId,
+        }),
       { rows: [], total: 0, page: 1, limit: MAX_MONITORING_ROWS, totalPages: 1 },
     ),
   ]);

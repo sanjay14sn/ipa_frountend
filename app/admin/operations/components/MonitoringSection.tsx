@@ -175,8 +175,19 @@ function EmptyPanel({ message }: { message: string }) {
   );
 }
 
-export function MonitoringSection() {
-  const monitoringQuery = useAdminOperationsMonitoring();
+interface MonitoringSectionProps {
+  regionAdminId?: number;
+  regionLocationId?: number;
+}
+
+export function MonitoringSection({
+  regionAdminId,
+  regionLocationId,
+}: MonitoringSectionProps = {}) {
+  const monitoringQuery = useAdminOperationsMonitoring({
+    regionAdminId,
+    regionLocationId,
+  });
 
   if (monitoringQuery.isLoading && !monitoringQuery.data) {
     return (
