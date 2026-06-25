@@ -133,3 +133,14 @@ export async function voidCIAgreement(
 ): Promise<void> {
   await api.post(`/admin/ci-agreement/${agreementId}/void`, { reason });
 }
+
+/**
+ * Renews (extends) an Expired CI agreement in place — no re-signing.
+ * Sets a new tenure; new expiry = effectiveDate + tenure months.
+ */
+export async function renewCIAgreement(
+  agreementId: number,
+  input: { tenure: number; effectiveDate: string },
+): Promise<void> {
+  await api.post(`/admin/ci-agreement/${agreementId}/renew`, input);
+}

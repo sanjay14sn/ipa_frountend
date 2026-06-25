@@ -6,9 +6,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { format } from "date-fns";
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  Ban,
   Check,
   CheckCircle,
   Clock,
@@ -448,6 +451,14 @@ function CIAgreementContent() {
     );
   }
 
+  if (agreement.phase === "EXPIRED") {
+    return agreement.status === "Void" ? (
+      <CIAgreementVoidView />
+    ) : (
+      <CIAgreementExpiredView agreement={agreement} />
+    );
+  }
+
   // ── Shell ───────────────────────────────────────────────────────────────────
 
   return (
@@ -563,6 +574,84 @@ function CIAgreementContent() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Shown after login when the CI's agreement has expired (phase EXPIRED).
+ * Mirrors the franchisee AgreementExpiredView, but CI renewals are admin-driven
+ * (no signing or payment by the CI), so this is purely informational.
+ */
+function CIAgreementExpiredView({ agreement }: { agreement: CIAgreementRecord }) {
+  const expiredOn = agreement.expiresAt
+    ? format(new Date(agreement.expiresAt), "d MMM yyyy")
+    : null;
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-lg overflow-hidden rounded-2xl border-border bg-card shadow-sm">
+        <CardHeader className="border-b bg-accent/30 px-5 py-5 text-left">
+          <div className="mb-3">
+            <span className="rounded-full border border-destructive/20 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-destructive">
+              Expired
+            </span>
+          </div>
+          <CardTitle className="flex items-center gap-2 text-2xl font-normal text-card-foreground">
+            <AlertTriangle className="h-6 w-6 text-destructive" />
+            Agreement expired
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-5 py-5">
+          <p className="text-sm text-muted-foreground">
+            Your Course Instructor Agreement
+            {expiredOn ? (
+              <> expired on <span className="font-medium text-card-foreground">{expiredOn}</span>.</>
+            ) : (
+              <> has expired.</>
+            )}
+          </p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Your renewal is being prepared by Abacus. Once it&apos;s renewed you&apos;ll regain
+            access automatically — no signing or payment is required on your part. Please check
+            back soon.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/**
+ * Shown after login when the CI's agreement has been voided (status Void).
+ * Void is a deliberate, permanent termination by Abacus — unlike an expiry,
+ * it is not renewed automatically, so the CI is directed to contact Abacus.
+ */
+function CIAgreementVoidView() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-lg overflow-hidden rounded-2xl border-border bg-card shadow-sm">
+        <CardHeader className="border-b bg-accent/30 px-5 py-5 text-left">
+          <div className="mb-3">
+            <span className="rounded-full border border-destructive/20 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-destructive">
+              Terminated
+            </span>
+          </div>
+          <CardTitle className="flex items-center gap-2 text-2xl font-normal text-card-foreground">
+            <Ban className="h-6 w-6 text-destructive" />
+            Agreement terminated
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-5 py-5">
+          <p className="text-sm text-muted-foreground">
+            Your Course Instructor Agreement has been terminated and is no longer active.
+          </p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            If you believe this is a mistake, please contact Abacus to resolve it. Access cannot
+            be restored from here.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

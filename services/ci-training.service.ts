@@ -179,6 +179,8 @@ export interface CIAgreementRecord {
   id: number;
   title: string;
   phase: CIAgreementPhase;
+  /** Raw lifecycle status: "Valid" | "Suspended" | "Expired" | "Void" | "Approved". */
+  status?: string;
   tenure: number | null;
   expiresAt: string | null;
   dateOfSigning: string | null;
