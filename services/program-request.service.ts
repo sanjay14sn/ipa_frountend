@@ -44,6 +44,12 @@ export interface ProgramRequestItem {
   franchiseeId: number;
   status: ProgramRequestStatus;
   agreementId: number | null;
+  /**
+   * Live status of the linked agreement on franchisee-facing rows (null when
+   * no agreement is linked). "Void"/"Expired" mean the program can be
+   * re-requested even though the request row still reads "Approved".
+   */
+  agreementStatus?: string | null;
   requestedAt: string;
   approvedAt: string | null;
   activatedAt: string | null;

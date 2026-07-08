@@ -56,7 +56,8 @@ const ESignaturePad = dynamic(
   () => import("@/components/esignature/ESignaturePad").then((m) => ({ default: m.ESignaturePad })),
   { ssr: false, loading: () => <Loader2 className="h-5 w-5 animate-spin" /> },
 );
-import { getFranchiseeProfile } from "@/services/auth.service";
+import { franchiseeLogout, getFranchiseeProfile } from "@/services/auth.service";
+import { markLogoutEnd, markLogoutStart } from "@/lib/axios";
 import { getErrorMessage } from "@/lib/error-utils";
 import {
   buildFranchiseDataForAgreementPage,
@@ -132,6 +133,39 @@ function AgreementNoUserView({ onLogin }: { onLogin: () => void }) {
           Back to Login
         </Button>
       </div>
+    </div>
+  );
+}
+
+function AgreementLoadErrorView({
+  onRetry,
+  retrying,
+}: {
+  onRetry: () => void;
+  retrying: boolean;
+}) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-lg overflow-hidden rounded-2xl border-border bg-card shadow-sm">
+        <CardHeader className="border-b bg-accent/30 px-5 py-5 text-left">
+          <CardTitle className="text-2xl font-normal text-card-foreground">
+            Couldn&apos;t load your agreement
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-5 py-5">
+          <p className="text-sm text-muted-foreground">
+            Something went wrong while loading your agreement details. Check
+            your connection and try again.
+          </p>
+          <Button
+            onClick={onRetry}
+            disabled={retrying}
+            className="mt-4 rounded-lg"
+          >
+            {retrying ? "Retrying..." : "Retry"}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -404,7 +438,7 @@ function FranchiseAgreementContent() {
     : undefined;
   const hasExplicitAgreementId =
     explicitAgreementId != null && Number.isFinite(explicitAgreementId);
-  const { user, setUser, switchFranchise } = useUser();
+  const { user, setUser, switchFranchise, clearUser } = useUser();
   const [currentStep, setCurrentStep] = useState<AgreementStepIndex>(1);
   const [pageLoading, setPageLoading] = useState(true);
   const [agreementAccepted, setAgreementAccepted] = useState(false);
@@ -637,6 +671,25 @@ function FranchiseAgreementContent() {
     }
     return false;
   }, [refreshFranchiseeState]);
+
+  // "Back to Login" from the no-user dead-end must actually terminate the
+  // session (server cookies + local state), mirroring PortalHeaderActions'
+  // logout flow — a bare router.push("/login") just bounces back off the
+  // proxy while the HttpOnly cookies are still set.
+  const handleBackToLogin = useCallback(async () => {
+    queryClient.cancelQueries();
+    markLogoutStart();
+    try {
+      await franchiseeLogout();
+    } catch (e) {
+      sendClientLog({ level: "error", event: "logout-error", message: "Error during logout", context: { error: e } });
+    } finally {
+      markLogoutEnd();
+      clearUser();
+      queryClient.clear();
+    }
+    router.push("/login");
+  }, [clearUser, queryClient, router]);
 
   const abandonActiveAgreementPayment = useCallback(async (note: string) => {
     const orderId = activePaymentOrderIdRef.current;
@@ -1107,7 +1160,7 @@ function FranchiseAgreementContent() {
   }
 
   if (!user || !user.profile) {
-    return <AgreementNoUserView onLogin={() => router.push("/login")} />;
+    return <AgreementNoUserView onLogin={() => void handleBackToLogin()} />;
   }
 
   // The agreement detail loads after the page chrome is ready (pageLoading is
@@ -1124,6 +1177,20 @@ function FranchiseAgreementContent() {
       <AgreementExpiredView
         agreement={feeAgreement}
         renewalAgreementId={renewalAgreementId}
+      />
+    );
+  }
+
+  // Query failures must not masquerade as "still being prepared" — surface
+  // them with a Retry before the waiting fallback below can swallow them.
+  if (agreementsQuery.isError || agreementDetailQuery.isError) {
+    return (
+      <AgreementLoadErrorView
+        onRetry={() => {
+          void agreementsQuery.refetch();
+          void agreementDetailQuery.refetch();
+        }}
+        retrying={agreementsQuery.isFetching || agreementDetailQuery.isFetching}
       />
     );
   }

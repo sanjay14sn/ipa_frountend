@@ -20,7 +20,7 @@ import {
   type DataTableSortOption,
 } from "@/components/shared";
 import type { FranchiseData } from "@/services/franchisee.service";
-import { Edit, Eye, Trash2, Check, X } from "lucide-react";
+import { Edit, Eye, KeyRound, Trash2, Check, X } from "lucide-react";
 import { FranchiseTableExpanded } from "./FranchiseTableExpanded";
 import { ReceivableCompactLine } from "@/components/receivables/InstallmentSummaryCard";
 import { formatDate } from "@/lib/date-utils";
@@ -48,6 +48,7 @@ interface FranchiseHubTableProps {
   resultsText?: (count: number, total: number) => string;
   onApprove?: (application: FranchiseData) => void;
   onReject?: (application: FranchiseData) => void;
+  onResendCredentials?: (franchise: FranchiseData) => void;
   disableApproveActions?: boolean;
 }
 
@@ -179,6 +180,7 @@ export function FranchiseHubTable({
   resultsText,
   onApprove,
   onReject,
+  onResendCredentials,
   disableApproveActions,
 }: FranchiseHubTableProps) {
   const columns: DataTableColumn<FranchiseData>[] =
@@ -254,6 +256,17 @@ export function FranchiseHubTable({
                     <Eye className="h-4 w-4" />
                   </Link>
                 </Button>
+                {onResendCredentials ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onResendCredentials(item)}
+                    title="Resend franchisee credentials"
+                    aria-label="Resend franchisee credentials"
+                  >
+                    <KeyRound className="h-4 w-4" />
+                  </Button>
+                ) : null}
                 <Button variant="ghost" size="sm" aria-label="Edit franchise">
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -303,16 +316,18 @@ export function FranchiseHubTable({
                       >
                         <Check className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onReject?.(item)}
-                        className="h-8 w-8 p-0"
-                        title="Reject application"
-                        aria-label="Reject application"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                      {onReject ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onReject(item)}
+                          className="h-8 w-8 p-0"
+                          title="Reject application"
+                          aria-label="Reject application"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      ) : null}
                     </>
                   ) : (
                     <span className="text-xs text-muted-foreground">No actions</span>

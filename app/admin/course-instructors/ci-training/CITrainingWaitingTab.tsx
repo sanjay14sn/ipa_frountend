@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 import { WaitingInstructor, listWaiting } from "@/services/ci-training-admin.service";
 import { getAllPrograms, Program } from "@/services/program.service";
 import {
@@ -16,7 +17,7 @@ import {
   TrainingLevel,
 } from "@/services/training-level.service";
 import { DataTable, type DataTableColumn } from "@/components/shared";
-import { formatStateLabel, stateNames } from "./ci-training-utils";
+import { formatStateLabel, getApiErrorMessage, stateNames } from "./ci-training-utils";
 
 export function WaitingTab() {
   const queryClient = useQueryClient();
@@ -40,6 +41,8 @@ export function WaitingTab() {
         staleTime: Infinity,
         gcTime: Infinity,
       });
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, "Failed to load programs."));
     } finally {
       setLoadingPrograms(false);
     }
@@ -56,6 +59,8 @@ export function WaitingTab() {
         gcTime: Infinity,
       });
       setTrainingLevels(rows.filter((level) => level.isActive));
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, "Failed to load training levels."));
     } finally {
       setLoadingLevels(false);
     }

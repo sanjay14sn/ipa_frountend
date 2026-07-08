@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
@@ -32,7 +32,9 @@ import {
 import { useProgramsOnDemand } from "@/hooks/api/program.hooks";
 import { StateCitySelect } from "@/components/StateCitySelect";
 import { cn } from "@/lib/utils";
+import { useDirtyCloseGuard } from "@/hooks/use-dirty-close-guard";
 import {
+  ConfirmDialog,
   MultiStepDialog,
   SuccessDialog,
   type StepDef,
@@ -45,17 +47,16 @@ const FORM_STEPS: StepDef[] = [
   { id: 4, title: "Franchise Details" },
 ];
 
-interface FranchiseApplicationModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+/**
+ * sessionStorage key for the public application draft. Contract:
+ * `{ formData: FranchiseeApplication, currentStep: number }` — saved while the
+ * form is dirty, restored when the modal opens, cleared on successful submit
+ * and on confirmed discard.
+ */
+const DRAFT_STORAGE_KEY = "franchise-application-draft";
 
-export function FranchiseApplicationModal({
-  open,
-  onOpenChange,
-}: FranchiseApplicationModalProps) {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<FranchiseeApplication>({
+function createInitialFormData(): FranchiseeApplication {
+  return {
     franchisee: {
       name: "",
       dob: new Date(),
@@ -81,7 +82,77 @@ export function FranchiseApplicationModal({
       programIds: [],
       franchiseeId: 0,
     } as Franchise,
-  });
+  };
+}
+
+function clearStoredDraft() {
+  try {
+    sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch {
+    // Storage unavailable (private mode etc.) — nothing to clear.
+  }
+}
+
+/** SSR-safe read of a saved draft; returns null when absent or unparsable. */
+function readStoredDraft(): {
+  formData: FranchiseeApplication;
+  currentStep: number;
+} | null {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as {
+      formData?: FranchiseeApplication;
+      currentStep?: number;
+    };
+    if (!saved?.formData) return null;
+    const fresh = createInitialFormData();
+    return {
+      formData: {
+        franchisee: {
+          ...fresh.franchisee,
+          ...saved.formData.franchisee,
+          dob: saved.formData.franchisee?.dob
+            ? new Date(saved.formData.franchisee.dob)
+            : fresh.franchisee.dob,
+        } as Franchisee,
+        franchise: {
+          ...fresh.franchise,
+          ...saved.formData.franchise,
+        } as Franchise,
+      },
+      currentStep:
+        typeof saved.currentStep === "number"
+          ? Math.min(Math.max(1, saved.currentStep), FORM_STEPS.length)
+          : 1,
+    };
+  } catch {
+    return null;
+  }
+}
+
+interface FranchiseApplicationModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function FranchiseApplicationModal({
+  open,
+  onOpenChange,
+}: FranchiseApplicationModalProps) {
+  // Restore an in-progress draft once at mount (survives refresh / accidental
+  // navigation away from the public login page). The dialog is closed during
+  // hydration, so restoring state here cannot cause a DOM mismatch.
+  const [restoredDraft] = useState(readStoredDraft);
+  const [currentStep, setCurrentStep] = useState(restoredDraft?.currentStep ?? 1);
+  const [formData, setFormData] = useState<FranchiseeApplication>(
+    () => restoredDraft?.formData ?? createInitialFormData(),
+  );
+  // Serialized pristine snapshot — the dirty check compares against this so a
+  // restored draft (or any edit) counts as dirty; updated on every reset.
+  const [pristineJson, setPristineJson] = useState<string>(() =>
+    JSON.stringify(restoredDraft ? createInitialFormData() : formData),
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -92,6 +163,22 @@ export function FranchiseApplicationModal({
     ensureProgramsRequested,
     hasRequested: programsFetchRequested,
   } = useProgramsOnDemand();
+
+  const isDirty =
+    !submitted && JSON.stringify(formData) !== pristineJson;
+
+  // Persist the draft while the form is dirty.
+  useEffect(() => {
+    if (!open || submitted || !isDirty) return;
+    try {
+      sessionStorage.setItem(
+        DRAFT_STORAGE_KEY,
+        JSON.stringify({ formData, currentStep }),
+      );
+    } catch {
+      // Storage unavailable — draft persistence is best-effort.
+    }
+  }, [formData, currentStep, open, submitted, isDirty]);
 
   const validateCurrentStep = () => {
     const newErrors: Record<string, string> = {};
@@ -180,6 +267,7 @@ export function FranchiseApplicationModal({
       const response = await applyFranchisee(formData as FranchiseeApplication);
 
       if (response.status === 201) {
+        clearStoredDraft();
         setSubmitted(true);
       }
     } catch (error) {
@@ -256,40 +344,27 @@ export function FranchiseApplicationModal({
 
   const handleClose = () => {
     setCurrentStep(1);
-    setFormData({
-      franchisee: {
-        name: "",
-        dob: new Date(),
-        bloodGroup: "",
-        communicationAddress: "",
-        phone: "",
-        mail: "",
-        education: "",
-        occupation: "",
-        reference: "",
-        refreshToken: "",
-      } as Franchisee,
-      franchise: {
-        name: "",
-        type: "",
-        status: "",
-        address: "",
-        city: "",
-        state: "",
-        pincode: "",
-        programIds: [],
-        franchiseeId: 0,
-      } as Franchise,
-    });
+    const fresh = createInitialFormData();
+    setFormData(fresh);
+    setPristineJson(JSON.stringify(fresh));
     setErrors({});
     setSubmitted(false);
     setIsLoading(false);
     onOpenChange(false);
   };
 
+  const { requestClose, confirmOpen, setConfirmOpen, confirmAndDiscard } =
+    useDirtyCloseGuard({
+      isDirty,
+      onDiscard: () => {
+        clearStoredDraft();
+        handleClose();
+      },
+    });
+
   const handleModalOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
-      handleClose();
+      requestClose(false);
     } else {
       onOpenChange(nextOpen);
     }
@@ -724,22 +799,33 @@ export function FranchiseApplicationModal({
   }
 
   return (
-    <MultiStepDialog
-      open={open}
-      onOpenChange={handleModalOpenChange}
-      size="xl"
-      title="Franchise Application Form"
-      description="Complete your franchise application step by step"
-      headerIcon={Calculator}
-      steps={FORM_STEPS}
-      currentStep={currentStep}
-      onBack={handlePrevious}
-      onNext={handleNext}
-      onSubmit={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
-      isSubmitting={isLoading}
-      submitLabel="Submit Application"
-    >
-      <div className="space-y-4">{renderStepContent()}</div>
-    </MultiStepDialog>
+    <>
+      <MultiStepDialog
+        open={open}
+        onOpenChange={handleModalOpenChange}
+        size="xl"
+        title="Franchise Application Form"
+        description="Complete your franchise application step by step"
+        headerIcon={Calculator}
+        steps={FORM_STEPS}
+        currentStep={currentStep}
+        onBack={handlePrevious}
+        onNext={handleNext}
+        onSubmit={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
+        isSubmitting={isLoading}
+        submitLabel="Submit Application"
+      >
+        <div className="space-y-4">{renderStepContent()}</div>
+      </MultiStepDialog>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        variant="destructive"
+        title="Discard changes?"
+        description="Your in-progress input will be lost."
+        confirmLabel="Discard"
+        onConfirm={confirmAndDiscard}
+      />
+    </>
   );
 }

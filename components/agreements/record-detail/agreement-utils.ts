@@ -64,6 +64,8 @@ function paymentStatusTone(status: string | null | undefined) {
       return "default";
     case "failed":
       return "destructive";
+    case "refunded":
+      return "secondary";
     default:
       return "secondary";
   }

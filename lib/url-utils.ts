@@ -38,3 +38,26 @@ export function getOrigin(url: string | null | undefined): string {
     return "";
   }
 }
+
+/**
+ * Validates a `?next=` redirect target from the URL so login pages can only
+ * bounce to same-origin paths inside their own portal.
+ *
+ * Returns `next` when it is a relative path under `prefix` (e.g. "/franchisee"),
+ * otherwise `null`. Rejects protocol-relative URLs ("//evil.com") and absolute
+ * URLs by construction.
+ *
+ * @example
+ * safeInternalPath("/franchisee/orders", "/franchisee")  // "/franchisee/orders"
+ * safeInternalPath("//evil.com", "/franchisee")           // null
+ * safeInternalPath("/admin/dashboard", "/franchisee")     // null
+ */
+export function safeInternalPath(
+  next: string | null | undefined,
+  prefix: string,
+): string | null {
+  if (!next) return null;
+  if (next.startsWith("//")) return null;
+  if (!next.startsWith(prefix)) return null;
+  return next;
+}

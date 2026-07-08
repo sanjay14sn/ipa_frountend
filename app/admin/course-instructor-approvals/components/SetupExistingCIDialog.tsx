@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  ConfirmDialog,
   DialogFormField,
   DialogFormGrid,
   MultiStepDialog,
@@ -23,6 +24,7 @@ import {
 } from "@/components/shared/dialog";
 import { StateCitySelect } from "@/components/StateCitySelect";
 import { cn } from "@/lib/utils";
+import { useDirtyCloseGuard } from "@/hooks/use-dirty-close-guard";
 import { getAllFranchise } from "@/services/franchisee.service";
 import {
   getTrainingLevelsByProgram,
@@ -243,6 +245,23 @@ export default function SetupExistingCIDialog({
   };
   const handleBack = () => setCurrentStep((s) => Math.max(s - 1, 1));
 
+  // Dirty when any user input deviates from the pristine defaults (programId /
+  // receivables are derived from the franchise/levels selection, so franchiseId
+  // covers them).
+  const isDirty =
+    !submitted &&
+    (franchiseId !== "" ||
+      JSON.stringify(ciData) !== JSON.stringify(emptyCI) ||
+      tenure !== 12 ||
+      agreementSignedAt !== today ||
+      completedThrough != null);
+
+  const { requestClose, confirmOpen, setConfirmOpen, confirmAndDiscard } =
+    useDirtyCloseGuard({
+      isDirty,
+      onDiscard: () => onOpenChange(false),
+    });
+
   const handleSubmit = async () => {
     if (!validateStep(3) || !programId) return;
     setLoading(true);
@@ -299,9 +318,10 @@ export default function SetupExistingCIDialog({
   }
 
   return (
+    <>
     <MultiStepDialog
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={(o) => (o ? onOpenChange(o) : requestClose(false))}
       size="xl"
       title="Setup Existing Course Instructor"
       description="Back-fill a CI who already exists, with training history and pending receivables."
@@ -553,5 +573,15 @@ export default function SetupExistingCIDialog({
         </div>
       )}
     </MultiStepDialog>
+    <ConfirmDialog
+      open={confirmOpen}
+      onOpenChange={setConfirmOpen}
+      variant="destructive"
+      title="Discard changes?"
+      description="Your in-progress input will be lost."
+      confirmLabel="Discard"
+      onConfirm={confirmAndDiscard}
+    />
+    </>
   );
 }

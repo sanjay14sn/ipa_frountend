@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Download, Upload, FileText } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { downloadBulkImportTemplate } from "@/services/bulk-import.service";
 
@@ -33,6 +34,8 @@ export function CsvUploadZone({
     setDownloadingTemplate(true);
     try {
       await downloadBulkImportTemplate(templateUrl, templateFilename);
+    } catch {
+      toast.error("Could not download the template.");
     } finally {
       setDownloadingTemplate(false);
     }

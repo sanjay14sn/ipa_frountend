@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { Loader2, Minus, Package, Plus, Search, X } from "lucide-react";
+import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import {
   AppDialog,
@@ -16,6 +17,7 @@ import {
 } from "@/services/order.service";
 import { getMyFranchiseKit } from "@/services/inventory.service";
 import { queryKeys } from "@/hooks/api/query-keys";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUnifiedInvoicePreview } from "@/hooks/use-unified-invoice-preview";
@@ -414,6 +416,11 @@ export default function UnifiedMaterialRequestDialog({
       });
       onPaymentInitiated(result);
       onClose();
+    } catch (err) {
+      // Keep the dialog open so the selection isn't lost on a failed initiate.
+      toast.error(
+        getUserFriendlyMessage(err, "Could not start the payment. Please try again."),
+      );
     } finally {
       setIsSubmitting(false);
     }

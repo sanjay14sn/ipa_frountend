@@ -351,7 +351,10 @@ export async function rejectCertificateRequest(
 
 export async function bulkApproveCertificates(dto: {
   ids: number[];
-}): Promise<{ succeeded: number[]; failed: number[] }> {
+}): Promise<{
+  succeeded: number[];
+  failed: Array<{ certificateId: number; error: string }>;
+}> {
   const response = await api.post(
     "/admin/certification/certificates/bulk-approve",
     dto,

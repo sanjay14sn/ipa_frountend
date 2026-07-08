@@ -1,10 +1,17 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   type DataTableFilter,
   type DataTableSortOption,
 } from "@/components/shared";
+import { ConfirmDialog } from "@/components/shared/dialog";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
+import {
+  resendFranchiseeCredentials,
+  type FranchiseData,
+} from "@/services/franchisee.service";
 import { usePaginatedFranchisesAdmin } from "@/hooks/api/franchisee.hooks";
 import { FranchiseHubTable } from "./FranchiseHubTable";
 
@@ -49,6 +56,25 @@ export default function FranchiseTable({
     isLoading: loading,
     refetch: refetchRows,
   } = usePaginatedFranchisesAdmin(listParams);
+
+  const [resendTarget, setResendTarget] = useState<FranchiseData | null>(null);
+  const [isResending, setIsResending] = useState(false);
+
+  const handleConfirmResend = async () => {
+    if (!resendTarget) return;
+    setIsResending(true);
+    try {
+      await resendFranchiseeCredentials(String(resendTarget.id));
+      toast.success("Credentials regenerated and emailed to the franchisee.");
+      setResendTarget(null);
+    } catch (error) {
+      toast.error(
+        getUserFriendlyMessage(error, "Failed to resend credentials."),
+      );
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const totalPages = pageData?.meta.totalPages ?? 0;
   const total = pageData?.meta.total ?? 0;
@@ -101,37 +127,53 @@ export default function FranchiseTable({
   ];
 
   return (
-    <FranchiseHubTable
-      variant="franchises"
-      data={pageData?.data ?? []}
-      loading={loading}
-      pagination={{ total, totalPages }}
-      currentPage={currentPage}
-      onPageChange={setCurrentPage}
-      itemsPerPage={itemsPerPage}
-      searchPlaceholder="Search franchises by name, city, or state..."
-      onSearchChange={(value) => {
-        setSearchTerm(value);
-        setCurrentPage(1);
-      }}
-      filters={filters}
-      onFilterChange={handleFilterChange}
-      sortOptions={sortOptions}
-      defaultSortBy="createdAt"
-      defaultSortOrder="DESC"
-      onSortChange={(newSortBy, newSortOrder) => {
-        setSortBy(newSortBy);
-        setSortOrder(newSortOrder);
-        setCurrentPage(1);
-      }}
-      emptyMessage="No franchises found matching your criteria"
-      resultsText={(count, totalCount) => {
-        const filtered =
-          searchTerm || statusFilter !== "all" || typeFilter !== "all"
-            ? " (filtered)"
-            : "";
-        return `Showing ${count} of ${totalCount} franchises${filtered}`;
-      }}
-    />
+    <>
+      <ConfirmDialog
+        open={resendTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !isResending) setResendTarget(null);
+        }}
+        title="Resend franchisee credentials?"
+        description={`This generates a new temporary password for ${
+          resendTarget?.name ?? "this franchise"
+        }'s owner and emails it to them. Their current password stops working.`}
+        confirmLabel="Resend credentials"
+        onConfirm={handleConfirmResend}
+        isConfirming={isResending}
+      />
+      <FranchiseHubTable
+        variant="franchises"
+        data={pageData?.data ?? []}
+        loading={loading}
+        pagination={{ total, totalPages }}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        searchPlaceholder="Search franchises by name, city, or state..."
+        onSearchChange={(value) => {
+          setSearchTerm(value);
+          setCurrentPage(1);
+        }}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        sortOptions={sortOptions}
+        defaultSortBy="createdAt"
+        defaultSortOrder="DESC"
+        onSortChange={(newSortBy, newSortOrder) => {
+          setSortBy(newSortBy);
+          setSortOrder(newSortOrder);
+          setCurrentPage(1);
+        }}
+        emptyMessage="No franchises found matching your criteria"
+        resultsText={(count, totalCount) => {
+          const filtered =
+            searchTerm || statusFilter !== "all" || typeFilter !== "all"
+              ? " (filtered)"
+              : "";
+          return `Showing ${count} of ${totalCount} franchises${filtered}`;
+        }}
+        onResendCredentials={setResendTarget}
+      />
+    </>
   );
 }

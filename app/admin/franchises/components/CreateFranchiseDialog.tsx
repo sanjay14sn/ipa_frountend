@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import {
+  ConfirmDialog,
   MultiStepDialog,
   SuccessDialog,
   type StepDef,
 } from "@/components/shared/dialog";
+import { useDirtyCloseGuard } from "@/hooks/use-dirty-close-guard";
 import { FranchiseType, BloodGroup } from "@/services/franchise.enums";
 import { UserPlus } from "lucide-react";
 import { handleFormApiError } from "@/lib/form-errors";
@@ -433,9 +435,19 @@ export function CreateFranchiseDialog({
     onOpenChange(false);
   };
 
+  const isDirty =
+    !submitted &&
+    (JSON.stringify(formData) !== JSON.stringify(INITIAL_FORM_DATA) ||
+      Object.keys(programPayrolls).length > 0 ||
+      franchiseeMode !== "new" ||
+      existingFranchiseeId !== "");
+
+  const { requestClose, confirmOpen, setConfirmOpen, confirmAndDiscard } =
+    useDirtyCloseGuard({ isDirty, onDiscard: handleClose });
+
   const handleModalOpenChange = (open: boolean) => {
     if (!open) {
-      handleClose();
+      requestClose(false);
     } else {
       onOpenChange(open);
     }
@@ -514,22 +526,33 @@ export function CreateFranchiseDialog({
   }
 
   return (
-    <MultiStepDialog
-      open={open}
-      onOpenChange={handleModalOpenChange}
-      size="xl"
-      title="Setup Existing Franchise"
-      description="Complete all sections to setup the franchise with payroll"
-      headerIcon={UserPlus}
-      steps={FORM_STEPS}
-      currentStep={currentStep}
-      onBack={handlePrevious}
-      onNext={handleNext}
-      onSubmit={handleSubmit}
-      isSubmitting={loading}
-      submitLabel="Setup Franchise"
-    >
-      <div className="space-y-4">{renderStepContent()}</div>
-    </MultiStepDialog>
+    <>
+      <MultiStepDialog
+        open={open}
+        onOpenChange={handleModalOpenChange}
+        size="xl"
+        title="Setup Existing Franchise"
+        description="Complete all sections to setup the franchise with payroll"
+        headerIcon={UserPlus}
+        steps={FORM_STEPS}
+        currentStep={currentStep}
+        onBack={handlePrevious}
+        onNext={handleNext}
+        onSubmit={handleSubmit}
+        isSubmitting={loading}
+        submitLabel="Setup Franchise"
+      >
+        <div className="space-y-4">{renderStepContent()}</div>
+      </MultiStepDialog>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        variant="destructive"
+        title="Discard changes?"
+        description="Your in-progress input will be lost."
+        confirmLabel="Discard"
+        onConfirm={confirmAndDiscard}
+      />
+    </>
   );
 }

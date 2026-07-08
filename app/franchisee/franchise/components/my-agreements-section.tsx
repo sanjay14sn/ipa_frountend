@@ -30,7 +30,7 @@ import type { ESignatureResult } from "@/components/esignature/ESignaturePad";
 import {
   ReceivableCompactProgress,
 } from "@/components/receivables/InstallmentSummaryCard";
-import { getErrorMessage } from "@/lib/error-utils";
+import { getErrorMessage, getUserFriendlyMessage } from "@/lib/error-utils";
 import { useAgreementMine, useAgreementsMine } from "@/hooks/api/agreement.hooks";
 import { useUser } from "@/context/user-context";
 import dynamic from "next/dynamic";
@@ -89,13 +89,17 @@ function FranchiseeAgreementViewDialog({
   async function handleSign(result: ESignatureResult) {
     if (!resolvedAgreementId) return;
     const payload: ESignaturePayload = result;
-    if (agreement?.signed) {
-      await updateFranchiseeSignatureOnly(resolvedAgreementId, payload);
-    } else {
-      await submitFranchiseeSignature(resolvedAgreementId, payload);
+    try {
+      if (agreement?.signed) {
+        await updateFranchiseeSignatureOnly(resolvedAgreementId, payload);
+      } else {
+        await submitFranchiseeSignature(resolvedAgreementId, payload);
+      }
+      toast.success("Signature saved");
+      await agreementQuery.refetch();
+    } catch (err) {
+      toast.error(getUserFriendlyMessage(err, "Could not save signature."));
     }
-    toast.success("Signature saved");
-    await agreementQuery.refetch();
   }
 
   return (

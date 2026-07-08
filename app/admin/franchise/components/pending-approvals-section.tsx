@@ -4,6 +4,17 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useUser } from "@/context/user-context";
+import {
   approveFranchiseAdmin,
   createPayrollDetails,
   getFranchiseApplicationDetail,
@@ -44,6 +55,7 @@ const emptyProgramPayroll = (): ProgramPayroll => ({
 
 export function PendingApprovalsSection() {
   const queryClient = useQueryClient();
+  const { user } = useUser();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedApplication, setSelectedApplication] =
     useState<FranchiseData | null>(null);
@@ -54,6 +66,12 @@ export function PendingApprovalsSection() {
   });
   const [kitRows, setKitRows] = useState<KitRow[]>([]);
   const [preparePayrollLoading, setPreparePayrollLoading] = useState(false);
+  const [rejectDialog, setRejectDialog] = useState<{
+    open: boolean;
+    application: FranchiseData | null;
+    reason: string;
+  }>({ open: false, application: null, reason: "" });
+  const [rejecting, setRejecting] = useState(false);
 
   const triggerRefresh = () => {
     setRefreshTrigger((prev) => prev + 1);
@@ -123,15 +141,22 @@ export function PendingApprovalsSection() {
     }
   };
 
-  const handleReject = async (application: FranchiseData) => {
+  const handleReject = (application: FranchiseData) => {
     if (!application?.id) return;
-    const confirmed = window.confirm(
-      `Reject franchise application for "${application.name}"? This will notify the franchisee.`,
-    );
-    if (!confirmed) return;
+    setRejectDialog({ open: true, application, reason: "" });
+  };
 
+  const confirmReject = async () => {
+    const { application, reason } = rejectDialog;
+    if (!application) return;
+    if (!reason.trim()) {
+      toast.error("Please enter a rejection reason");
+      return;
+    }
+    setRejecting(true);
     try {
-      await rejectFranchise(application.id);
+      await rejectFranchise(application.id, reason.trim());
+      setRejectDialog({ open: false, application: null, reason: "" });
       await invalidateApprovalQueries();
       triggerRefresh();
       toast.success("Application rejected");
@@ -143,6 +168,8 @@ export function PendingApprovalsSection() {
           "Failed to reject application. Please try again.",
         ),
       );
+    } finally {
+      setRejecting(false);
     }
   };
 
@@ -248,11 +275,61 @@ export function PendingApprovalsSection() {
       <TableSectionSurface className="w-full">
         <PendingApprovalsTable
           onApprove={handleApprove}
-          onReject={handleReject}
+          // Reject is SuperAdmin-guarded on the backend — hide it for staff.
+          onReject={user?.adminRole === "super" ? handleReject : undefined}
           refreshTrigger={refreshTrigger}
           disableApproveActions={preparePayrollLoading}
         />
       </TableSectionSurface>
+
+      <Dialog
+        open={rejectDialog.open}
+        onOpenChange={(open) => setRejectDialog((prev) => ({ ...prev, open }))}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Franchise Application</DialogTitle>
+            <DialogDescription>
+              Rejecting the application for &ldquo;
+              {rejectDialog.application?.name}&rdquo;. This will notify the
+              franchisee. Please provide a reason.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="franchise-reject-reason">Reason</Label>
+            <Textarea
+              id="franchise-reject-reason"
+              placeholder="Enter rejection reason..."
+              value={rejectDialog.reason}
+              onChange={(e) =>
+                setRejectDialog((prev) => ({
+                  ...prev,
+                  reason: e.target.value,
+                }))
+              }
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={rejecting}
+              onClick={() =>
+                setRejectDialog((prev) => ({ ...prev, open: false }))
+              }
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmReject}
+              disabled={rejecting || !rejectDialog.reason.trim()}
+            >
+              Reject
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <PayrollTermsDialog
         open={showPayrollDialog}

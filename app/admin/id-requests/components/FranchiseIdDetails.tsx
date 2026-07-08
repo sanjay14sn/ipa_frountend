@@ -10,6 +10,7 @@ import {
   Phone,
   User,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import {
@@ -413,10 +414,21 @@ export default function FranchiseIdDetails({
         eligibleOrders={eligibleQuery.data ?? []}
         isLoadingOrders={eligibleQuery.isLoading}
         onConfirm={async (selectedIds, orderId) => {
-          await bulkDispatchIds.mutateAsync({
+          const result = await bulkDispatchIds.mutateAsync({
             studentIds: selectedIds,
             orderId: orderId ?? undefined,
           });
+          const failed = result?.failed ?? [];
+          const succeeded = result?.succeeded ?? [];
+          if (failed.length > 0 && succeeded.length === 0) {
+            toast.error(
+              `None of the ID cards could be dispatched: ${failed[0].error}`,
+            );
+          } else if (failed.length > 0) {
+            toast.warning(
+              `${failed.length} ID card${failed.length === 1 ? "" : "s"} failed (${failed[0].error}); dispatched the rest.`,
+            );
+          }
           await detailsQuery.refetch();
           onIssueSuccess?.();
         }}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { LoginCard } from "./components/LoginCard";
 import { FranchiseApplicationModal } from "@/components/franchise-application-modal";
 
@@ -15,7 +15,10 @@ export default function Page() {
         </span>
       </div>
 
-      <LoginCard onStartApplication={() => setFranchiseModalOpen(true)} />
+      {/* Suspense boundary: LoginCard reads useSearchParams() for ?next=. */}
+      <Suspense fallback={null}>
+        <LoginCard onStartApplication={() => setFranchiseModalOpen(true)} />
+      </Suspense>
 
       <FranchiseApplicationModal
         open={franchiseModalOpen}

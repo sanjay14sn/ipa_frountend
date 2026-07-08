@@ -265,7 +265,10 @@ export async function getAdminIdCardDetails(
 export async function bulkDispatchIdCards(dto: {
   studentIds: number[];
   orderId?: number;
-}): Promise<{ succeeded: number[]; failed: number[] }> {
+}): Promise<{
+  succeeded: number[];
+  failed: Array<{ studentId: number; error: string }>;
+}> {
   const response = await api.post("/admin/id-card/bulk-dispatch", dto);
   return unwrapData(response);
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { Eye, EyeOff } from "lucide-react";
@@ -23,6 +23,7 @@ import { getFranchiseList } from "@/services/franchise.service";
 import { useUser } from "@/context/user-context";
 import { getErrorMessage, getUserFriendlyMessage } from "@/lib/error-utils";
 import { isFranchiseOperational, type User } from "@/lib/auth";
+import { safeInternalPath } from "@/lib/url-utils";
 import { sendClientLog } from "@/lib/client-telemetry";
 
 export function LoginCard({
@@ -31,6 +32,7 @@ export function LoginCard({
   onStartApplication: () => void;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setUser } = useUser();
 
   const [username, setUsername] = useState("");
@@ -140,9 +142,13 @@ export function LoginCard({
       } as User;
 
       setUser(nextUser);
+      // `?next=` (set by the proxy when bouncing a protected path) only
+      // overrides the operational destination — pre-active franchisees still
+      // funnel to the agreement page.
+      const nextPath = safeInternalPath(searchParams.get("next"), "/franchisee");
       router.push(
         isFranchiseOperational(nextUser, loginResult.franchiseId)
-          ? "/franchisee/dashboard"
+          ? nextPath ?? "/franchisee/dashboard"
           : `/franchisee/agreement?franchiseId=${loginResult.franchiseId}`,
       );
     } catch (err: any) {

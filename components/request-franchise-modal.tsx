@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -56,13 +58,14 @@ export function RequestFranchiseModal({
   const [submitted, setSubmitted] = useState(false);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [isLoadingPrograms, setIsLoadingPrograms] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [pendingCheck, setPendingCheck] = useState<
     "loading" | "pending" | "ok"
   >("loading");
 
-  useEffect(() => {
-    if (!open) return;
+  const loadModalData = () => {
     setIsLoadingPrograms(true);
+    setLoadError(false);
     setPendingCheck("loading");
     Promise.all([getAllPrograms(), hasPendingRequest()])
       .then(([programData, pending]) => {
@@ -71,9 +74,15 @@ export function RequestFranchiseModal({
       })
       .catch(() => {
         setPrograms([]);
+        setLoadError(true);
         setPendingCheck("ok");
       })
       .finally(() => setIsLoadingPrograms(false));
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    loadModalData();
   }, [open]);
 
   const handleProgramToggle = (programId: number) => {
@@ -104,7 +113,11 @@ export function RequestFranchiseModal({
     }
     const programIds = formData.programIds ?? [];
     if (programIds.length === 0) {
-      toast.error("Select at least one program");
+      toast.error(
+        loadError
+          ? "Couldn't load programs — retry above"
+          : "Select at least one program",
+      );
       return;
     }
     setIsLoading(true);
@@ -282,6 +295,21 @@ export function RequestFranchiseModal({
       </DialogFormGrid>
 
       <DialogFormField label="Programs (Select at least one)" required>
+        {loadError && !isLoadingPrograms ? (
+          <Alert variant="destructive">
+            <AlertDescription className="flex items-center justify-between gap-3">
+              <span>Couldn&apos;t load programs.</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={loadModalData}
+              >
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : (
         <div className="max-h-32 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
           {isLoadingPrograms ? (
             <p className="text-sm text-muted-foreground">Loading...</p>
@@ -305,6 +333,7 @@ export function RequestFranchiseModal({
             ))
           )}
         </div>
+        )}
       </DialogFormField>
 
       <DialogFormField id="address" label="Centre Address" required>

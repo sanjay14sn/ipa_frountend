@@ -6,12 +6,14 @@ import { toast } from "sonner";
 import { CheckCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
+  ConfirmDialog,
   DialogFormField,
   DialogFormGrid,
   MultiStepDialog,
   type StepDef,
 } from "@/components/shared/dialog";
 import { cn } from "@/lib/utils";
+import { useDirtyCloseGuard } from "@/hooks/use-dirty-close-guard";
 import {
   approveCourseInstructor,
   type AdminCourseInstructorData,
@@ -126,6 +128,23 @@ export default function ApproveCIModal({
   };
   const handleBack = () => setCurrentStep((s) => Math.max(s - 1, 1));
 
+  // The receivable plan is auto-seeded once levels load — compare against that
+  // seed (not the pre-load initial row) so an untouched plan is not "dirty".
+  const seedReceivables = useMemo<ReceivablePlanRow[]>(
+    () =>
+      sortedLevels.length > 0
+        ? [defaultReceivable(sortedLevels)]
+        : [{ label: "Receivable 1", levelFrom: 1, levelTo: 1, fee: "", paid: false }],
+    [sortedLevels],
+  );
+
+  const isDirty =
+    tenure !== 12 ||
+    JSON.stringify(receivables) !== JSON.stringify(seedReceivables);
+
+  const { requestClose, confirmOpen, setConfirmOpen, confirmAndDiscard } =
+    useDirtyCloseGuard({ isDirty, onDiscard: onClose });
+
   const handleSubmit = async () => {
     if (!instructor) return;
     if (!validateStep(2)) return;
@@ -160,10 +179,11 @@ export default function ApproveCIModal({
   };
 
   return (
+    <>
     <MultiStepDialog
       open={open}
       onOpenChange={(o) => {
-        if (!o && !loading) onClose();
+        if (!o && !loading) requestClose(false);
       }}
       size="xl"
       title="Approve Course Instructor"
@@ -244,5 +264,15 @@ export default function ApproveCIModal({
         </div>
       )}
     </MultiStepDialog>
+    <ConfirmDialog
+      open={confirmOpen}
+      onOpenChange={setConfirmOpen}
+      variant="destructive"
+      title="Discard changes?"
+      description="Your in-progress input will be lost."
+      confirmLabel="Discard"
+      onConfirm={confirmAndDiscard}
+    />
+    </>
   );
 }

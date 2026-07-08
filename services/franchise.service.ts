@@ -1,7 +1,7 @@
 import { api } from "@/lib/axios";
 import { unwrapData, normalizePaginatedResult } from "@/lib/unwrap-api";
 import type { PaymentOrderResponse } from "./franchisee.service";
-import { requestPrograms, approveProgramRequestAdmin, rejectProgramRequestAdmin } from "./program-request.service";
+import { requestPrograms, approveProgramRequestAdmin } from "./program-request.service";
 import type { ApproveProgramRequestPayload } from "./program-request.service";
 
 /** Apply for a new franchise (franchisee JWT). */
@@ -92,10 +92,6 @@ async function approveProgramRequest(
   payload: ApproveProgramRequestPayload,
 ) {
   return approveProgramRequestAdmin(id, payload);
-}
-
-async function rejectProgramRequest(id: number) {
-  return rejectProgramRequestAdmin(id, '');
 }
 
 /** Per-program fee agreement row (legacy UI) */

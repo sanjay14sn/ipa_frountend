@@ -19,6 +19,7 @@ import { ToggleField } from "@/components/shared/toggle-field";
 import { User, Save as _Save, AlertCircle, CheckCircle } from "lucide-react";
 import React from "react";
 import {
+  ConfirmDialog,
   MultiStepDialog,
   SuccessDialog,
   type StepDef,
@@ -34,6 +35,7 @@ import { sendClientLog } from "@/lib/client-telemetry";
 import { makeFieldChangeHandler } from "@/lib/form-utils";
 import { handleFormApiError } from "@/lib/form-errors";
 import { useFormSteps } from "@/hooks/use-form-steps";
+import { useDirtyCloseGuard } from "@/hooks/use-dirty-close-guard";
 import {
   PersonalInfoFields,
   ParentInfoFields,
@@ -70,7 +72,6 @@ interface StudentFormData {
   levelId: number;
   stream: string;
   status: string;
-  photoImage: File | null;
   programId: number;
 
   // Parent Information
@@ -112,7 +113,6 @@ const INITIAL_FORM_DATA: StudentFormData = {
   levelId: 0,
   stream: "regular",
   status: "active",
-  photoImage: null,
   programId: 0,
   fatherName: "",
   fatherQualification: "",
@@ -145,6 +145,11 @@ export default function AddStudentModal({
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState<StudentFormData>(INITIAL_FORM_DATA);
+  // Serialized pristine snapshot for the dirty-close guard; updated on reset
+  // (the reset refreshes dateOfJoining, so the module constant can't anchor it).
+  const [pristineJson, setPristineJson] = useState<string>(() =>
+    JSON.stringify(INITIAL_FORM_DATA),
+  );
 
   const { user } = useUser();
   const createStudentMutation = useCreateStudentWithRevalidation();
@@ -299,28 +304,6 @@ export default function AddStudentModal({
     "previousInstructorId",
   ]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setErrors((prev) => ({
-          ...prev,
-          photoImage: "File size should be less than 5MB",
-        }));
-        return;
-      }
-      if (!file.type.startsWith("image/")) {
-        setErrors((prev) => ({
-          ...prev,
-          photoImage: "Please select a valid image file",
-        }));
-        return;
-      }
-      setFormData((prev) => ({ ...prev, photoImage: file }));
-      setErrors((prev) => ({ ...prev, photoImage: "" }));
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -409,16 +392,24 @@ export default function AddStudentModal({
 
   const handleClose = () => {
     setCurrentStep(1);
-    setFormData({ ...INITIAL_FORM_DATA, dateOfJoining: new Date().toISOString().split("T")[0] });
+    const fresh = { ...INITIAL_FORM_DATA, dateOfJoining: new Date().toISOString().split("T")[0] };
+    setFormData(fresh);
+    setPristineJson(JSON.stringify(fresh));
     setErrors({});
     setSubmitted(false);
     setIsLoading(false);
     onOpenChange(false);
   };
 
+  const isDirty =
+    !submitted && JSON.stringify(formData) !== pristineJson;
+
+  const { requestClose, confirmOpen, setConfirmOpen, confirmAndDiscard } =
+    useDirtyCloseGuard({ isDirty, onDiscard: handleClose });
+
   const handleModalOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
-      handleClose();
+      requestClose(false);
     } else {
       onOpenChange(isOpen);
     }
@@ -523,26 +514,6 @@ export default function AddStudentModal({
                     <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="photoImage">Student Photo</Label>
-                <Input
-                  id="photoImage"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className={errors.photoImage ? "border-red-500" : ""}
-                />
-                {errors.photoImage && (
-                  <p className="text-red-500 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.photoImage}
-                  </p>
-                )}
-                <p className="text-sm text-muted-foreground">
-                  Upload student&apos;s photo (max 5MB)
-                </p>
               </div>
             </div>
 
@@ -868,24 +839,35 @@ export default function AddStudentModal({
   }
 
   return (
-    <MultiStepDialog
-      open={open}
-      onOpenChange={handleModalOpenChange}
-      size="xl"
-      title="Register New Student"
-      description="Complete student registration step by step"
-      headerIcon={User}
-      steps={FORM_STEPS}
-      currentStep={currentStep}
-      onBack={handlePrevious}
-      onNext={handleNext}
-      onSubmit={() =>
-        handleSubmit({ preventDefault: () => {} } as React.FormEvent)
-      }
-      isSubmitting={isLoading}
-      submitLabel="Register Student"
-    >
-      <div className="space-y-4">{renderStepContent()}</div>
-    </MultiStepDialog>
+    <>
+      <MultiStepDialog
+        open={open}
+        onOpenChange={handleModalOpenChange}
+        size="xl"
+        title="Register New Student"
+        description="Complete student registration step by step"
+        headerIcon={User}
+        steps={FORM_STEPS}
+        currentStep={currentStep}
+        onBack={handlePrevious}
+        onNext={handleNext}
+        onSubmit={() =>
+          handleSubmit({ preventDefault: () => {} } as React.FormEvent)
+        }
+        isSubmitting={isLoading}
+        submitLabel="Register Student"
+      >
+        <div className="space-y-4">{renderStepContent()}</div>
+      </MultiStepDialog>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        variant="destructive"
+        title="Discard changes?"
+        description="Your in-progress input will be lost."
+        confirmLabel="Discard"
+        onConfirm={confirmAndDiscard}
+      />
+    </>
   );
 }

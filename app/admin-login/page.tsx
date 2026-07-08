@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useHydrated } from "@/hooks/use-hydrated";
 import Link from "next/link";
 import { login, getAdminProfile } from "@/services/auth.service";
+import { safeInternalPath } from "@/lib/url-utils";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,8 +21,9 @@ import { useUser } from "@/context/user-context";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { sendClientLog } from "@/lib/client-telemetry";
 
-export default function AdminLoginPage() {
+function AdminLoginPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setUser } = useUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,7 +54,10 @@ export default function AdminLoginPage() {
         adminRole: me.role,
         state: me.state ?? null,
       });
-      router.push("/admin/dashboard");
+      router.push(
+        safeInternalPath(searchParams.get("next"), "/admin") ??
+          "/admin/dashboard",
+      );
     } catch (err: unknown) {
       sendClientLog({ level: "error", event: "admin-login-error", message: "Admin login error", context: { error: err } });
       setError(getUserFriendlyMessage(
@@ -140,5 +145,14 @@ export default function AdminLoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  // Suspense boundary: the inner page reads useSearchParams() for ?next=.
+  return (
+    <Suspense fallback={null}>
+      <AdminLoginPageInner />
+    </Suspense>
   );
 }

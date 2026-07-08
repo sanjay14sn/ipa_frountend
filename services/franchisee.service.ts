@@ -751,8 +751,17 @@ export async function approveFranchiseAdmin(
   return unwrapData(response);
 }
 
-export async function rejectFranchise(franchiseId: string) {
-  const response = await api.post(`/admin/franchise/${franchiseId}/reject`);
+export async function rejectFranchise(franchiseId: string, reason: string) {
+  const response = await api.post(`/admin/franchise/${franchiseId}/reject`, {
+    reason,
+  });
+  return unwrapData(response);
+}
+
+export async function resendFranchiseeCredentials(franchiseId: string) {
+  const response = await api.post(
+    `/admin/franchise/${franchiseId}/resend-credentials`,
+  );
   return unwrapData(response);
 }
 

@@ -456,6 +456,24 @@ export async function getPurchaseOrderById(
   return normalizePurchaseOrder(unwrapData(response));
 }
 
+export async function confirmPurchaseOrder(
+  id: number,
+): Promise<PurchaseOrderSummary> {
+  const response = await api.post(
+    `/admin/procurement/purchase-orders/${id}/confirm`,
+  );
+  return normalizePurchaseOrder(unwrapData(response));
+}
+
+export async function cancelPurchaseOrder(
+  id: number,
+): Promise<PurchaseOrderSummary> {
+  const response = await api.post(
+    `/admin/procurement/purchase-orders/${id}/cancel`,
+  );
+  return normalizePurchaseOrder(unwrapData(response));
+}
+
 export async function getPaginatedPurchaseReceipts(
   params?: PurchaseReceiptListParams,
 ): Promise<PaginatedProcurementResult<PurchaseReceiptSummary>> {

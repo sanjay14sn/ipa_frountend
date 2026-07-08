@@ -6,6 +6,7 @@ import {
   AppDialogHeader,
   AppDialogBody,
   AppDialogFooter,
+  ConfirmDialog,
 } from "@/components/shared/dialog";
 import {
   Select,
@@ -34,6 +35,7 @@ import { getLevelsByProgram } from "@/services/level.service";
 import { sendClientLog } from "@/lib/client-telemetry";
 import { makeFieldChangeHandler } from "@/lib/form-utils";
 import { handleFormApiError } from "@/lib/form-errors";
+import { useDirtyCloseGuard } from "@/hooks/use-dirty-close-guard";
 import {
   PersonalInfoFields,
   ParentInfoFields,
@@ -120,6 +122,9 @@ export default function EditStudentModal({
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState<StudentFormData>(EMPTY_FORM_DATA);
+  // Snapshot of the form as seeded from the student prop — the submit payload
+  // is the DIFF of formData against this, and it anchors the dirty-close guard.
+  const [seedData, setSeedData] = useState<StudentFormData>(EMPTY_FORM_DATA);
 
   const { programs, streams, levels, loadingPrograms, loadingStreams, loadingLevels } =
     useCascadingSelects({
@@ -159,7 +164,7 @@ export default function EditStudentModal({
             }
           }
 
-          setFormData({
+          const loaded: StudentFormData = {
             studentName: student.name || "",
             dob: student.dateOfBirth
               ? new Date(student.dateOfBirth).toISOString().split("T")[0]
@@ -183,7 +188,9 @@ export default function EditStudentModal({
             motherContactNo: student.motherContactNo || "",
             residentialAddress: student.residentialAddress || "",
             mailId: student.mail || "",
-          });
+          };
+          setFormData(loaded);
+          setSeedData(loaded);
         } catch (error) {
           sendClientLog({
             level: "error",
@@ -191,7 +198,7 @@ export default function EditStudentModal({
             message: "Error loading student data",
             context: { error },
           });
-          setFormData({
+          const loaded: StudentFormData = {
             studentName: student.name || "",
             dob: student.dateOfBirth
               ? new Date(student.dateOfBirth).toISOString().split("T")[0]
@@ -215,7 +222,9 @@ export default function EditStudentModal({
             motherContactNo: student.motherContactNo || "",
             residentialAddress: student.residentialAddress || "",
             mailId: student.mail || "",
-          });
+          };
+          setFormData(loaded);
+          setSeedData(loaded);
         }
         setActiveTab(1);
         setSubmitted(false);
@@ -231,10 +240,10 @@ export default function EditStudentModal({
     "levelId",
   ]);
 
-  const validateCurrentTab = () => {
+  const collectTabErrors = (tab: number): Record<string, string> => {
     const newErrors: Record<string, string> = {};
 
-    switch (activeTab) {
+    switch (tab) {
       case 1:
         if (!formData.studentName.trim()) {
           newErrors.studentName = "Student name is required";
@@ -295,57 +304,101 @@ export default function EditStudentModal({
         break;
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return newErrors;
+  };
+
+  // The submit saves ALL tabs (diff-based), so validation covers every tab —
+  // on failure jump to the first offending tab and show its errors.
+  const validateAllTabs = (): boolean => {
+    const allErrors: Record<string, string> = {};
+    let firstBadTab: number | null = null;
+    for (const tab of TABS) {
+      const tabErrors = collectTabErrors(tab.id);
+      if (Object.keys(tabErrors).length > 0 && firstBadTab === null) {
+        firstBadTab = tab.id;
+      }
+      Object.assign(allErrors, tabErrors);
+    }
+    setErrors(allErrors);
+    if (firstBadTab !== null) {
+      setActiveTab(firstBadTab);
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateCurrentTab()) return;
+    if (!validateAllTabs()) return;
 
     if (!student) {
       toast.error("Student not found. Please try again.");
       return;
     }
 
+    // Diff every tab against the seeded student data — the backend update DTO
+    // accepts partials, so only changed fields are sent.
+    const updateData: Partial<StudentData> = {};
+    if (formData.studentName !== seedData.studentName) {
+      updateData.name = formData.studentName;
+    }
+    if (formData.dob !== seedData.dob) {
+      updateData.dateOfBirth = new Date(formData.dob);
+    }
+    if (formData.dateOfJoining !== seedData.dateOfJoining) {
+      updateData.dateOfJoining = new Date(formData.dateOfJoining);
+    }
+    if (formData.sex !== seedData.sex) updateData.sex = formData.sex;
+    if (formData.standard !== seedData.standard) {
+      updateData.standard = formData.standard;
+    }
+    if (formData.fatherName !== seedData.fatherName) {
+      updateData.fatherName = formData.fatherName;
+    }
+    if (formData.fatherQualification !== seedData.fatherQualification) {
+      updateData.fatherQualification = formData.fatherQualification;
+    }
+    if (formData.fatherOccupation !== seedData.fatherOccupation) {
+      updateData.fatherOccupation = formData.fatherOccupation;
+    }
+    if (formData.fatherContactNo !== seedData.fatherContactNo) {
+      updateData.fatherContactNo = formData.fatherContactNo;
+    }
+    if (formData.motherName !== seedData.motherName) {
+      updateData.motherName = formData.motherName;
+    }
+    if (formData.motherQualification !== seedData.motherQualification) {
+      updateData.motherQualification = formData.motherQualification;
+    }
+    if (formData.motherOccupation !== seedData.motherOccupation) {
+      updateData.motherOccupation = formData.motherOccupation;
+    }
+    if (formData.motherContactNo !== seedData.motherContactNo) {
+      updateData.motherContactNo = formData.motherContactNo;
+    }
+    if (formData.residentialAddress !== seedData.residentialAddress) {
+      updateData.residentialAddress = formData.residentialAddress;
+    }
+    if (formData.mailId !== seedData.mailId) updateData.mail = formData.mailId;
+    if (formData.programId !== seedData.programId) {
+      updateData.programId = formData.programId;
+    }
+    if (formData.levelId !== seedData.levelId) {
+      updateData.levelId = formData.levelId;
+    }
+    if (formData.status !== seedData.status && formData.status !== "completed") {
+      updateData.status = formData.status as "active" | "inactive";
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      toast.info("No changes to save.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const updateData: Partial<StudentData> = {};
-
-      switch (activeTab) {
-        case 1:
-          updateData.name = formData.studentName;
-          updateData.dateOfBirth = new Date(formData.dob);
-          updateData.dateOfJoining = new Date(formData.dateOfJoining);
-          updateData.sex = formData.sex;
-          updateData.standard = formData.standard;
-          break;
-
-        case 2:
-          updateData.fatherName = formData.fatherName;
-          updateData.fatherQualification = formData.fatherQualification;
-          updateData.fatherOccupation = formData.fatherOccupation;
-          updateData.fatherContactNo = formData.fatherContactNo;
-          updateData.motherName = formData.motherName;
-          updateData.motherQualification = formData.motherQualification;
-          updateData.motherOccupation = formData.motherOccupation;
-          updateData.motherContactNo = formData.motherContactNo;
-          break;
-
-        case 3:
-          updateData.residentialAddress = formData.residentialAddress;
-          updateData.mail = formData.mailId;
-          break;
-
-        case 4:
-          updateData.programId = formData.programId;
-          updateData.levelId = formData.levelId;
-          if (formData.status !== "completed") updateData.status = formData.status as "active" | "inactive";
-          break;
-      }
-
       if (mode === "admin") {
         await updateStudentAdminWithRevalidation(student.id, updateData);
       } else {
@@ -382,6 +435,12 @@ export default function EditStudentModal({
     setIsLoading(false);
     onOpenChange(false);
   };
+
+  const isDirty =
+    !submitted && JSON.stringify(formData) !== JSON.stringify(seedData);
+
+  const { requestClose, confirmOpen, setConfirmOpen, confirmAndDiscard } =
+    useDirtyCloseGuard({ isDirty, onDiscard: handleClose });
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -493,7 +552,8 @@ export default function EditStudentModal({
   }
 
   return (
-    <AppDialog open={open} onOpenChange={handleClose} size="xl" scrollBody>
+    <>
+    <AppDialog open={open} onOpenChange={requestClose} size="xl" scrollBody>
       <AppDialogHeader
         icon={Edit2}
         title="Edit Student"
@@ -572,9 +632,7 @@ export default function EditStudentModal({
             : undefined
         }
         primary={{
-          label: isLoading
-            ? "Updating..."
-            : `Update ${TABS.find((t) => t.id === activeTab)?.title ?? ""}`,
+          label: isLoading ? "Saving..." : "Save changes",
           type: "submit",
           form: "edit-student-form",
           loading: isLoading,
@@ -582,5 +640,15 @@ export default function EditStudentModal({
         }}
       />
     </AppDialog>
+    <ConfirmDialog
+      open={confirmOpen}
+      onOpenChange={setConfirmOpen}
+      variant="destructive"
+      title="Discard changes?"
+      description="Your in-progress input will be lost."
+      confirmLabel="Discard"
+      onConfirm={confirmAndDiscard}
+    />
+    </>
   );
 }

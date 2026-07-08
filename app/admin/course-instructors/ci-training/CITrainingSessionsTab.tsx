@@ -82,6 +82,8 @@ function CreateSessionModal({
         staleTime: Infinity,
         gcTime: Infinity,
       });
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, "Failed to load programs."));
     } finally {
       setLoadingPrograms(false);
     }
@@ -98,6 +100,8 @@ function CreateSessionModal({
         gcTime: Infinity,
       });
       setTrainingLevels(rows.filter((level) => level.isActive));
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, "Failed to load training levels."));
     } finally {
       setLoadingLevels(false);
     }

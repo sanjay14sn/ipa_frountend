@@ -20,13 +20,11 @@ import type { NextRequest } from "next/server";
  *
  * Cookie names (ipa-new): admin + franchisee + course-instructor use JWT pair
  * cookies (`*AccessToken` / `*RefreshToken`). Legacy `session` / `auth_token`
- * kept for older stacks. The proxy must match the real names or every login
- * looks "logged out" for Next.js navigations (redirect loops, cancelled RSC).
+ * names are deliberately IGNORED here — the backend never validates them, so
+ * their presence can never represent a session. Honoring them caused stale
+ * legacy cookies to bounce visitors off /login in a loop (backend clears the
+ * legacy names on login/logout as a separate workstream).
  */
-
-function hasLegacySessionCookie(req: NextRequest): boolean {
-  return req.cookies.has("session") || req.cookies.has("auth_token");
-}
 
 function hasAdminAuthCookie(req: NextRequest): boolean {
   return (
@@ -51,7 +49,6 @@ function hasCiAuthCookie(req: NextRequest): boolean {
 /** Coarse "may have a session" check for protected route prefixes. */
 function hasAnyAuthCookie(req: NextRequest): boolean {
   return (
-    hasLegacySessionCookie(req) ||
     hasAdminAuthCookie(req) ||
     hasFranchiseeAuthCookie(req) ||
     hasCiAuthCookie(req)
@@ -100,7 +97,7 @@ export function proxy(req: NextRequest) {
   // Redirect only when the portal that owns the cookie matches this login page —
   // so franchisee JWT does not bounce `/admin-login`, and admins can reach it.
   if (pathname === "/login") {
-    if (hasFranchiseeAuthCookie(req) || hasLegacySessionCookie(req)) {
+    if (hasFranchiseeAuthCookie(req)) {
       return NextResponse.redirect(new URL("/franchisee/dashboard", req.url));
     }
     if (hasAdminAuthCookie(req)) {

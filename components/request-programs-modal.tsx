@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -33,23 +35,21 @@ interface RequestProgramsModalProps {
 }
 
 /**
- * Statuses that block re-requesting the same program on the same franchise.
- * Mixes ProgramRequest historical states with Agreement lifecycle states
- * (since both shapes flow through the same switcher feed):
+ * Request statuses that block re-requesting the same program on the same
+ * franchise. The feed (`listProgramRequests`) only ever carries request
+ * statuses — "Pending" | "Approved" | "Rejected" — never agreement lifecycle
+ * values, so "Rejected" is the only terminal value here.
  *
- *   - "Pending"   ProgramRequest awaiting admin
- *   - "Approved"  Agreement created but not yet Valid (signed + paid)
- *   - "Valid"     Agreement in force (post-refactor "active" state)
- *   - "Suspended" Agreement paused but still binding
- *
- * Terminal statuses ("Rejected", "Void", "Draft") allow a fresh request.
+ *   - "Pending"   awaiting admin decision
+ *   - "Approved"  an agreement was spawned for the request — BUT if that
+ *     agreement has since been Voided or Expired (`row.agreementStatus`),
+ *     the program is re-requestable again and is excluded from the blocked
+ *     set below (backend defers to the live agreement the same way).
  */
-const BLOCKED_STATUSES = new Set([
-  "Pending",
-  "Approved",
-  "Valid",
-  "Suspended",
-]);
+const BLOCKED_STATUSES = new Set(["Pending", "Approved"]);
+
+/** Agreement lifecycle states that un-block an Approved request's program. */
+const REREQUESTABLE_AGREEMENT_STATUSES = new Set(["Void", "Expired"]);
 
 function isActiveFranchiseStatus(status: string | undefined): boolean {
   // Operational franchises now carry the "Approved" review status; operational
@@ -92,6 +92,7 @@ export function RequestProgramsModal({
   const [programId, setProgramId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -102,13 +103,9 @@ export function RequestProgramsModal({
     Array<{ id: string; name: string; status: string }>
   >([]);
 
-  useEffect(() => {
-    if (!open) {
-      setFranchiseOptions([]);
-      return;
-    }
-
+  const loadModalData = () => {
     setLoadingData(true);
+    setLoadError(false);
     Promise.all([getAllPrograms(), listProgramRequests(), getFranchiseList()])
       .then(([programData, requestData, franchiseList]) => {
         setPrograms(Array.isArray(programData) ? programData : []);
@@ -127,9 +124,19 @@ export function RequestProgramsModal({
       .catch(() => {
         setPrograms([]);
         setExistingRequests([]);
+        setLoadError(true);
         setFranchiseOptions(activeFranchiseChoices(user));
       })
       .finally(() => setLoadingData(false));
+  };
+
+  useEffect(() => {
+    if (!open) {
+      setFranchiseOptions([]);
+      return;
+    }
+    loadModalData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user]);
 
   const blockedProgramIds = useMemo(() => {
@@ -138,7 +145,12 @@ export function RequestProgramsModal({
       existingRequests
         .filter(
           (r) =>
-            r.franchiseId === franchiseId && BLOCKED_STATUSES.has(r.status),
+            r.franchiseId === franchiseId &&
+            BLOCKED_STATUSES.has(r.status) &&
+            !(
+              r.agreementStatus &&
+              REREQUESTABLE_AGREEMENT_STATUSES.has(r.agreementStatus)
+            ),
         )
         .map((r) => r.programId),
     );
@@ -155,6 +167,10 @@ export function RequestProgramsModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loadError) {
+      toast.error("Couldn't load programs — retry above");
+      return;
+    }
     if (!franchiseId) {
       toast.error("Select a franchise");
       return;
@@ -231,6 +247,21 @@ export function RequestProgramsModal({
       canSubmit={canSubmit}
       submitLabel="Submit Request"
     >
+      {loadError ? (
+        <Alert variant="destructive">
+          <AlertDescription className="flex items-center justify-between gap-3">
+            <span>Couldn&apos;t load programs.</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={loadModalData}
+            >
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
       <DialogFormField
         id="franchise"
         label="Franchise"
@@ -274,6 +305,10 @@ export function RequestProgramsModal({
         {!franchiseId ? (
           <p className="text-sm text-muted-foreground">
             Select a franchise first.
+          </p>
+        ) : loadError ? (
+          <p className="text-sm text-destructive">
+            Programs could not be loaded — use Retry above.
           </p>
         ) : availablePrograms.length === 0 ? (
           <p className="text-sm text-muted-foreground">

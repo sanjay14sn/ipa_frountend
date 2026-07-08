@@ -15,7 +15,6 @@ import {
   ShoppingCart,
   TrendingDown,
   TrendingUp,
-  Trophy,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -667,12 +666,6 @@ export default function FranchiseeDashboard() {
       icon: Award,
       label: "Certificates",
       description: "Certificate requests",
-    },
-    {
-      href: "/franchisee/students?tab=contests",
-      icon: Trophy,
-      label: "Contests",
-      description: "View available contests",
     },
   ];
 

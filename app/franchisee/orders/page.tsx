@@ -38,6 +38,47 @@ import {
 import UnifiedMaterialRequestDialog from "./components/UnifiedMaterialRequestDialog";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { ComponentErrorBoundary } from "@/components/error/ComponentErrorBoundary";
+import { ConfirmDialog } from "@/components/shared/dialog";
+
+interface PendingOrderRetry {
+  studentIds?: number[];
+  instructorIds?: number[];
+  startingKitItems?: StartingKitItem[];
+  customItems?: CustomMaterialLine[];
+  franchiseKitItems?: FranchiseKitOrderItem[];
+  franchiseKitProgramId?: number;
+  notes?: string;
+  paymentRecordId: number;
+}
+
+/**
+ * sessionStorage key for a captured-payment-but-no-order recovery payload —
+ * persisted so a refresh/navigation can't lose the retry affordance.
+ */
+const PENDING_ORDER_RETRY_KEY = "pending-order-retry";
+
+function writeStoredPendingOrderRetry(value: PendingOrderRetry | null) {
+  try {
+    if (value == null) {
+      sessionStorage.removeItem(PENDING_ORDER_RETRY_KEY);
+    } else {
+      sessionStorage.setItem(PENDING_ORDER_RETRY_KEY, JSON.stringify(value));
+    }
+  } catch {
+    // Storage unavailable — persistence is best-effort.
+  }
+}
+
+function readStoredPendingOrderRetry(): PendingOrderRetry | null {
+  try {
+    const raw = sessionStorage.getItem(PENDING_ORDER_RETRY_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PendingOrderRetry;
+    return typeof parsed?.paymentRecordId === "number" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function FranchiseeOrdersPage() {
   const { user } = useUser();
@@ -55,16 +96,11 @@ export default function FranchiseeOrdersPage() {
 
   // --- Retry state (preserved when payment is captured but createOrder fails) ---
   const [submitting, setSubmitting] = useState(false);
-  const [pendingOrderRetry, setPendingOrderRetry] = useState<{
-    studentIds?: number[];
-    instructorIds?: number[];
-    startingKitItems?: StartingKitItem[];
-    customItems?: CustomMaterialLine[];
-    franchiseKitItems?: FranchiseKitOrderItem[];
-    franchiseKitProgramId?: number;
-    notes?: string;
-    paymentRecordId: number;
-  } | null>(null);
+  // Lazily restored from sessionStorage so refresh/navigation can't lose the
+  // recovery affordance (SSR-safe: the reader returns null on the server).
+  const [pendingOrderRetry, setPendingOrderRetry] =
+    useState<PendingOrderRetry | null>(readStoredPendingOrderRetry);
+  const [dismissRetryConfirmOpen, setDismissRetryConfirmOpen] = useState(false);
 
   const eligibleStudents = useMemo(
     () =>
@@ -138,12 +174,13 @@ export default function FranchiseeOrdersPage() {
       toast.success("Payment verified and order placed.");
       setUnifiedPaymentData(null);
       setPendingOrderRetry(null);
+      writeStoredPendingOrderRetry(null);
       await refetchOrders();
       void invalidateAdminOrders();
     } catch (error: any) {
       setUnifiedPaymentData(null);
       if (pd.paymentRecordId != null) {
-        setPendingOrderRetry({
+        const retry: PendingOrderRetry = {
           studentIds: pd.studentIds,
           instructorIds: pd.instructorIds,
           startingKitItems: pd.startingKitItems,
@@ -152,7 +189,9 @@ export default function FranchiseeOrdersPage() {
           franchiseKitProgramId: pd.franchiseKitProgramId,
           notes: pd.notes,
           paymentRecordId: pd.paymentRecordId,
-        });
+        };
+        setPendingOrderRetry(retry);
+        writeStoredPendingOrderRetry(retry);
         toast.error(
           getUserFriendlyMessage(
             error,
@@ -188,6 +227,7 @@ export default function FranchiseeOrdersPage() {
       });
       toast.success("Order placed successfully.");
       setPendingOrderRetry(null);
+      writeStoredPendingOrderRetry(null);
       await refetchOrders();
       void invalidateAdminOrders();
     } catch (error: any) {
@@ -212,10 +252,13 @@ export default function FranchiseeOrdersPage() {
     try {
       setCancellingOrderId(order.id);
       await cancelOrderFranchisee(order.id);
+      const paymentStatus = String(order.paymentStatus ?? "").toUpperCase();
       toast.success(
-        order.paymentStatus === "PAID"
+        paymentStatus === "PAID"
           ? "Order cancelled. Refund has been initiated."
-          : "Order cancelled.",
+          : // REFUNDED (payment already returned) and unpaid orders alike:
+            // nothing more is owed, so no refund messaging.
+            "Order cancelled.",
       );
       await refetchOrders();
       void invalidateFranchiseeOrders();
@@ -278,7 +321,11 @@ export default function FranchiseeOrdersPage() {
             <span>Your payment was captured but the order was not created. Click <strong>Retry order</strong> to complete it without paying again.</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => setPendingOrderRetry(null)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setDismissRetryConfirmOpen(true)}
+            >
               Dismiss
             </Button>
             <Button size="sm" disabled={submitting} onClick={handleRetryOrder}>
@@ -288,6 +335,20 @@ export default function FranchiseeOrdersPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={dismissRetryConfirmOpen}
+        onOpenChange={setDismissRetryConfirmOpen}
+        variant="destructive"
+        title="Dismiss payment recovery?"
+        description="You paid for this order but it wasn't created yet. If you dismiss, contact support with your payment reference."
+        confirmLabel="Dismiss"
+        onConfirm={() => {
+          setPendingOrderRetry(null);
+          writeStoredPendingOrderRetry(null);
+          setDismissRetryConfirmOpen(false);
+        }}
+      />
 
       <OrdersTable
         orders={orders}

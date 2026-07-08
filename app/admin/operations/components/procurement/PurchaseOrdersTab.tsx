@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Plus } from "lucide-react";
 import {
   DataTable,
@@ -12,6 +13,7 @@ import {
   AppDialogBody,
   AppDialogFooter,
   AppDialogHeader,
+  ConfirmDialog,
   DialogFormField,
   DialogFormGrid,
 } from "@/components/shared/dialog";
@@ -71,6 +73,10 @@ export type PurchaseOrdersTabProps = {
   onDateFromChange: (value: string) => void;
   onDateToChange: (value: string) => void;
   onOpenReceiptDialog: (orderId: number) => void;
+  onConfirmPurchaseOrder: (orderId: number) => void;
+  onCancelPurchaseOrder: (orderId: number) => void;
+  /** PO id with a confirm/cancel in flight (disables that row's actions). */
+  poActionOrderId: number | null;
   onOpenPurchaseOrderModal: () => void;
   // PO create dialog
   isPurchaseOrderOpen: boolean;
@@ -108,6 +114,9 @@ export function PurchaseOrdersTab({
   onDateFromChange,
   onDateToChange,
   onOpenReceiptDialog,
+  onConfirmPurchaseOrder,
+  onCancelPurchaseOrder,
+  poActionOrderId,
   onOpenPurchaseOrderModal,
   isPurchaseOrderOpen,
   onPurchaseOrderOpenChange,
@@ -119,6 +128,9 @@ export function PurchaseOrdersTab({
   onPurchaseOrderPickerSubmit,
   submitting,
 }: PurchaseOrdersTabProps) {
+  const [cancelPoTarget, setCancelPoTarget] =
+    useState<PurchaseOrderSummary | null>(null);
+
   const purchaseOrderColumns: DataTableColumn<PurchaseOrderSummary>[] = [
     { key: "order", header: "Purchase order" },
     {
@@ -153,18 +165,61 @@ export function PurchaseOrdersTab({
     {
       key: "actions",
       header: "Action",
-      render: (order) =>
-        order.status !== "RECEIVED" && order.status !== "CANCELLED" ? (
+      render: (order) => {
+        const busy = poActionOrderId === order.id;
+        const cancelButton = (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            disabled={busy}
+            onClick={() => setCancelPoTarget(order)}
+          >
+            Cancel
+          </Button>
+        );
+        const postReceiptButton = (
           <Button
             variant="outline"
             size="sm"
+            disabled={busy}
             onClick={() => void onOpenReceiptDialog(order.id)}
           >
             Post receipt
           </Button>
-        ) : (
-          <span className="text-sm text-muted-foreground">Closed</span>
-        ),
+        );
+        switch (order.status) {
+          case "DRAFT":
+            return (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => onConfirmPurchaseOrder(order.id)}
+                >
+                  Confirm
+                </Button>
+                {cancelButton}
+              </div>
+            );
+          case "CONFIRMED":
+            return (
+              <div className="flex items-center gap-1">
+                {postReceiptButton}
+                {cancelButton}
+              </div>
+            );
+          case "PARTIALLY_RECEIVED":
+            return postReceiptButton;
+          case "RECEIVED":
+          case "CANCELLED":
+            return <span className="text-sm text-muted-foreground">Closed</span>;
+          default:
+            // Unknown/legacy status — keep the pre-lifecycle behavior.
+            return postReceiptButton;
+        }
+      },
     },
   ];
 
@@ -326,6 +381,28 @@ export function PurchaseOrdersTab({
           }}
         />
       </AppDialog>
+
+      <ConfirmDialog
+        open={cancelPoTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setCancelPoTarget(null);
+        }}
+        variant="destructive"
+        title="Cancel purchase order?"
+        description={
+          cancelPoTarget
+            ? `PO #${cancelPoTarget.id} will be cancelled. This cannot be undone.`
+            : undefined
+        }
+        confirmLabel="Cancel purchase order"
+        cancelLabel="Keep"
+        onConfirm={() => {
+          if (!cancelPoTarget) return;
+          const id = cancelPoTarget.id;
+          setCancelPoTarget(null);
+          onCancelPurchaseOrder(id);
+        }}
+      />
     </>
   );
 }

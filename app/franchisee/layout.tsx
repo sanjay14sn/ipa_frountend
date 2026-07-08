@@ -20,6 +20,7 @@ import {
 import { PortalHeaderActions } from "@/components/layout/portal-header-actions";
 import { FranchiseSwitcher } from "@/components/franchisee/franchise-switcher";
 import { AgreementSwitcher } from "@/components/franchisee/agreement-switcher";
+import { ChangePasswordGate } from "@/components/franchisee/change-password-gate";
 import { useUser } from "@/context/user-context";
 import { isFranchiseOperational } from "@/lib/auth";
 
@@ -63,6 +64,11 @@ export default function FranchiseeLayout({
     return <div className="min-h-screen bg-surface" />;
   }
 
+  // Temporary-password gate (after the pre-active funnel): the portal chrome
+  // stays (so logout remains reachable) but content is replaced until the
+  // franchisee sets their own password.
+  const mustChangePassword = user.profile?.mustChangePassword === true;
+
   // Header-only shell for ANY /franchisee/agreement* visit. The agreement page
   // itself decides whether the user should actually see the sign form
   // (redirects away if the specific agreement is already Valid/Suspended/Void).
@@ -81,7 +87,7 @@ export default function FranchiseeLayout({
           </div>
           <PortalHeaderActions />
         </header>
-        {children}
+        {mustChangePassword ? <ChangePasswordGate /> : children}
       </div>
     );
   }
@@ -112,7 +118,7 @@ export default function FranchiseeLayout({
           <PortalHeaderActions />
         </header>
         <div className="flex flex-1 flex-col gap-4 bg-background p-4">
-          {children}
+          {mustChangePassword ? <ChangePasswordGate /> : children}
         </div>
       </SidebarInset>
     </SidebarProvider>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useHydrated } from "@/hooks/use-hydrated";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
@@ -12,9 +12,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { loginCI } from "@/services/ci-auth.service";
 import { useCIAuth } from "@/context/ci-auth-context";
+import { safeInternalPath } from "@/lib/url-utils";
 
-export default function CILoginPage() {
+function CILoginPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { refresh } = useCIAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,7 +30,9 @@ export default function CILoginPage() {
     try {
       await loginCI(email.trim(), password);
       await refresh();
-      router.replace("/ci/agreement");
+      router.replace(
+        safeInternalPath(searchParams.get("next"), "/ci") ?? "/ci/agreement",
+      );
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? "Invalid credentials.");
     } finally {
@@ -107,5 +111,14 @@ export default function CILoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function CILoginPage() {
+  // Suspense boundary: the inner page reads useSearchParams() for ?next=.
+  return (
+    <Suspense fallback={null}>
+      <CILoginPageInner />
+    </Suspense>
   );
 }

@@ -18,6 +18,8 @@ import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { getAllInventory } from "@/services/inventory.service";
 import {
   bulkUpsertSupplierItemTerms,
+  cancelPurchaseOrder,
+  confirmPurchaseOrder,
   createPurchaseOrder,
   createSupplier,
   getPurchaseOrderById,
@@ -136,6 +138,8 @@ export function ProcurementSection({
   const [purchaseOrderPage, setPurchaseOrderPage] = useState(1);
   const [receiptPage, setReceiptPage] = useState(1);
   const [replenishmentPage, setReplenishmentPage] = useState(1);
+  // Purchase order currently being confirmed/cancelled (row-action busy state).
+  const [poActionOrderId, setPoActionOrderId] = useState<number | null>(null);
 
   const allSuppliersParams = useMemo(
     () => ({ page: 1, limit: ALL_SUPPLIERS_LIMIT }),
@@ -530,6 +534,32 @@ export function ProcurementSection({
     }
   }
 
+  async function handleConfirmPurchaseOrder(orderId: number) {
+    try {
+      setPoActionOrderId(orderId);
+      await confirmPurchaseOrder(orderId);
+      toast.success("Purchase order confirmed");
+      await invalidateProcurementQueries();
+    } catch (error) {
+      toast.error(getUserFriendlyMessage(error));
+    } finally {
+      setPoActionOrderId(null);
+    }
+  }
+
+  async function handleCancelPurchaseOrder(orderId: number) {
+    try {
+      setPoActionOrderId(orderId);
+      await cancelPurchaseOrder(orderId);
+      toast.success("Purchase order cancelled");
+      await invalidateProcurementQueries();
+    } catch (error) {
+      toast.error(getUserFriendlyMessage(error));
+    } finally {
+      setPoActionOrderId(null);
+    }
+  }
+
   async function openReceiptDialog(orderId: number) {
     try {
       const order = await getPurchaseOrderById(orderId);
@@ -816,6 +846,13 @@ export function ProcurementSection({
           onDateFromChange={setPurchaseOrderDateFrom}
           onDateToChange={setPurchaseOrderDateTo}
           onOpenReceiptDialog={(orderId) => void openReceiptDialog(orderId)}
+          onConfirmPurchaseOrder={(orderId) =>
+            void handleConfirmPurchaseOrder(orderId)
+          }
+          onCancelPurchaseOrder={(orderId) =>
+            void handleCancelPurchaseOrder(orderId)
+          }
+          poActionOrderId={poActionOrderId}
           onOpenPurchaseOrderModal={() => openPurchaseOrderModal()}
           isPurchaseOrderOpen={isPurchaseOrderOpen}
           onPurchaseOrderOpenChange={setIsPurchaseOrderOpen}

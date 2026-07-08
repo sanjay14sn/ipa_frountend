@@ -20,7 +20,7 @@ function FranchiseeStudentsHubInner() {
   return (
     <TablePageShell
       title="Students"
-      description="Enrolment, certificates, and student contests."
+      description="Enrolment and certificates."
     >
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
         <TabsList className="flex h-auto flex-wrap justify-start gap-1">

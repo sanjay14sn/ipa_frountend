@@ -115,8 +115,14 @@ export async function deliverShipment(orderId: number) {
   return unwrapData(response);
 }
 
-export async function cancelShipment(orderId: number) {
-  const response = await api.post(`/admin/fulfillment/order/${orderId}/cancel`);
+export async function cancelShipment(
+  orderId: number,
+  body?: { refund?: boolean },
+) {
+  const response = await api.post(
+    `/admin/fulfillment/order/${orderId}/cancel`,
+    body ?? {},
+  );
   return unwrapData(response);
 }
 

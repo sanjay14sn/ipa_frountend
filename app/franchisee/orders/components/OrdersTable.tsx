@@ -134,7 +134,12 @@ export default function OrdersTable({
       header: "Status",
       className: "text-center",
       render: (order) => (
-        <StatusBadge tone={getStatusTone(order.status)} label={order.status} />
+        <div className="flex items-center justify-center gap-1">
+          <StatusBadge tone={getStatusTone(order.status)} label={order.status} />
+          {String(order.paymentStatus ?? "").toUpperCase() === "REFUNDED" ? (
+            <StatusBadge tone="neutral" label="Refunded" />
+          ) : null}
+        </div>
       ),
     },
     {

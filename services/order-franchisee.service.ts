@@ -391,6 +391,9 @@ export async function initiateOrderPayment(
       customItems: paymentData.customItems,
       franchiseKitItems: paymentData.franchiseKitItems,
       franchiseKitProgramId: paymentData.franchiseKitProgramId,
+      // Carried so server-side order recovery (orphan-payment completion)
+      // can rebuild the full CreateOrderDto from the payment row alone.
+      notes: paymentData.notes,
     },
   });
   const billing = unwrapData<{

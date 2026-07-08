@@ -19,6 +19,7 @@ import { useCreateCourseInstructor } from "@/hooks/api/course-instructor.hooks";
 import { useUser } from "@/context/user-context";
 import { getAllPrograms, Program } from "@/services/program.service";
 import {
+  ConfirmDialog,
   DialogFormField,
   DialogFormGrid,
   DialogStateMessage,
@@ -27,8 +28,10 @@ import {
   type StepDef,
 } from "@/components/shared/dialog";
 import { cn } from "@/lib/utils";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { makeFieldChangeHandler } from "@/lib/form-utils";
 import { useFormSteps } from "@/hooks/use-form-steps";
+import { useDirtyCloseGuard } from "@/hooks/use-dirty-close-guard";
 import { sendClientLog } from "@/lib/client-telemetry";
 import { calculateAge } from "@/lib/date-utils";
 import { handleFormApiError } from "@/lib/form-errors";
@@ -70,8 +73,22 @@ interface CourseInstructorFormData {
   education: string;
   occupation: string;
   reference: string;
-  additionalDetails: string;
 }
+
+const INITIAL_FORM_DATA: CourseInstructorFormData = {
+  name: "",
+  instructorId: "",
+  dob: "",
+  bloodGroup: "",
+  city: "",
+  programId: 0,
+  address: "",
+  phone: "",
+  mail: "",
+  education: "",
+  occupation: "",
+  reference: "",
+};
 
 const errorClass = "border-destructive focus-visible:ring-destructive";
 
@@ -87,6 +104,7 @@ export default function AddCourseInstructorModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
+  const [programsError, setProgramsError] = useState(false);
 
   const { user } = useUser();
   const createCourseInstructorMutation = useCreateCourseInstructor();
@@ -94,30 +112,21 @@ export default function AddCourseInstructorModal({
   const fetchPrograms = async () => {
     try {
       setLoadingPrograms(true);
+      setProgramsError(false);
       const data = await getAllPrograms();
       setPrograms(data);
     } catch (error) {
       sendClientLog({ level: "error", event: "programs-load-error", message: "Error fetching programs", context: { error } });
+      setProgramsError(true);
+      toast.error(getUserFriendlyMessage(error, "Could not load programs."));
     } finally {
       setLoadingPrograms(false);
     }
   };
 
-  const [formData, setFormData] = useState<CourseInstructorFormData>({
-    name: "",
-    instructorId: "",
-    dob: "",
-    bloodGroup: "",
-    city: "",
-    programId: 0,
-    address: "",
-    phone: "",
-    mail: "",
-    education: "",
-    occupation: "",
-    reference: "",
-    additionalDetails: "",
-  });
+  const [formData, setFormData] = useState<CourseInstructorFormData>(
+    INITIAL_FORM_DATA,
+  );
 
   const validateCurrentStep = () => {
     const newErrors: Record<string, string> = {};
@@ -219,26 +228,19 @@ export default function AddCourseInstructorModal({
 
   const handleClose = () => {
     setCurrentStep(1);
-    setFormData({
-      name: "",
-      instructorId: "",
-      dob: "",
-      bloodGroup: "",
-      city: "",
-      programId: 0,
-      address: "",
-      phone: "",
-      mail: "",
-      education: "",
-      occupation: "",
-      reference: "",
-      additionalDetails: "",
-    });
+    setFormData(INITIAL_FORM_DATA);
     setErrors({});
     setSubmitted(false);
     setIsLoading(false);
     onOpenChange(false);
   };
+
+  const isDirty =
+    !submitted &&
+    JSON.stringify(formData) !== JSON.stringify(INITIAL_FORM_DATA);
+
+  const { requestClose, confirmOpen, setConfirmOpen, confirmAndDiscard } =
+    useDirtyCloseGuard({ isDirty, onDiscard: handleClose });
 
   if (submitted) {
     return (
@@ -254,9 +256,10 @@ export default function AddCourseInstructorModal({
   }
 
   return (
+    <>
     <MultiStepDialog
       open={open}
-      onOpenChange={(o) => (o ? onOpenChange(o) : handleClose())}
+      onOpenChange={(o) => (o ? onOpenChange(o) : requestClose(false))}
       size="xl"
       title="Register New Course Instructor"
       description="Complete course instructor registration step by step"
@@ -399,6 +402,17 @@ export default function AddCourseInstructorModal({
                 )}
               </SelectContent>
             </Select>
+            {/* Failed-to-load is distinct from "no programs" — offer a retry
+                (reopening the select also retries while the list is empty). */}
+            {programsError && !loadingPrograms && programs.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => void fetchPrograms()}
+                className="mt-1 text-xs font-medium text-destructive underline underline-offset-2"
+              >
+                Failed to load programs — Retry
+              </button>
+            ) : null}
           </DialogFormField>
         </DialogFormGrid>
       )}
@@ -523,23 +537,18 @@ export default function AddCourseInstructorModal({
             title="Training is mandatory for every new course instructor."
             description="After admin approval, the CI will receive validity dates through the agreement workflow and will then continue to agreement signing and training purchase."
           />
-
-          <DialogFormField
-            id="additionalDetails"
-            label="Additional Details"
-          >
-            <Textarea
-              id="additionalDetails"
-              value={formData.additionalDetails}
-              onChange={(e) =>
-                handleInputChange("additionalDetails", e.target.value)
-              }
-              placeholder="Optional notes for admin review"
-              rows={4}
-            />
-          </DialogFormField>
         </div>
       )}
     </MultiStepDialog>
+    <ConfirmDialog
+      open={confirmOpen}
+      onOpenChange={setConfirmOpen}
+      variant="destructive"
+      title="Discard changes?"
+      description="Your in-progress input will be lost."
+      confirmLabel="Discard"
+      onConfirm={confirmAndDiscard}
+    />
+    </>
   );
 }

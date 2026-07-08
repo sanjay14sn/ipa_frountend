@@ -25,6 +25,7 @@ import {
   type StatusTone,
 } from "@/components/shared";
 import { Separator } from "@/components/ui/separator";
+import { ConfirmDialog } from "@/components/shared/dialog";
 import { ShipShipmentDialog } from "./ShipShipmentDialog";
 import { DispatchItemsSummaryTable } from "@/app/admin/orders/components/DispatchItemsSummaryTable";
 import type { ShipShipmentDto } from "@/services/fulfillment.service";
@@ -65,6 +66,7 @@ export default function AdminShippingTable({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
   const [shipDialogOrderId, setShipDialogOrderId] = useState<number | null>(null);
+  const [cancelDialogOrderId, setCancelDialogOrderId] = useState<number | null>(null);
 
   const shipmentsQuery = useAdminShipments({
     page: currentPage,
@@ -216,13 +218,7 @@ export default function AdminShippingTable({
                   title="Cancel shipment"
                   aria-label="Cancel shipment"
                   disabled={busyOrderId === row.orderId}
-                  onClick={() =>
-                    void runAction(
-                      row.orderId,
-                      () => cancelShipment(row.orderId),
-                      "Shipment cancelled",
-                    )
-                  }
+                  onClick={() => setCancelDialogOrderId(row.orderId)}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -387,6 +383,31 @@ export default function AdminShippingTable({
         onConfirm={handleShipConfirm}
         busy={busyOrderId !== null}
         shipmentTrackingSeed={shipDialogTrackingSeed}
+      />
+
+      <ConfirmDialog
+        open={cancelDialogOrderId !== null}
+        onOpenChange={(open) => {
+          if (!open) setCancelDialogOrderId(null);
+        }}
+        variant="destructive"
+        title="Cancel shipment?"
+        description="This cancels the order. If it was paid, the payment will be refunded."
+        confirmLabel="Cancel shipment"
+        cancelLabel="Keep shipment"
+        isConfirming={
+          cancelDialogOrderId !== null && busyOrderId === cancelDialogOrderId
+        }
+        onConfirm={async () => {
+          if (cancelDialogOrderId === null) return;
+          const id = cancelDialogOrderId;
+          await runAction(
+            id,
+            () => cancelShipment(id, { refund: true }),
+            "Shipment cancelled",
+          );
+          setCancelDialogOrderId(null);
+        }}
       />
     </>
   );
