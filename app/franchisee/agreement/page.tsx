@@ -14,8 +14,8 @@ import {
 import FranchiseeInformation from "./components/FranchiseeInformation";
 import LocationDetails from "./components/LocationDetails";
 import FranchiseDetails from "./components/FranchiseDetails";
-import PaymentBreakdown from "./components/PaymentBreakdown";
-import AgreementTerms from "./components/AgreementTerms";
+import PaymentBreakdown from "@/components/agreements/PaymentBreakdown";
+import AgreementTerms from "@/components/agreements/AgreementTerms";
 import PaymentAction from "./components/PaymentAction";
 import { AgreementExpiredView } from "./components/AgreementExpiredView";
 import { EmiTimeline } from "@/components/receivables/EmiTimeline";

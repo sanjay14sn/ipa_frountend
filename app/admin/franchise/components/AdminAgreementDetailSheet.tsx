@@ -21,7 +21,7 @@ import {
   useWaiveReceivableItemMutation,
 } from "@/hooks/api/agreement.hooks";
 import { AgreementActionBar } from "./AgreementActionBar";
-import { WaiveReceivableDialog } from "./WaiveReceivableDialog";
+import { WaiveReceivableDialog } from "@/components/receivables/WaiveReceivableDialog";
 import { RecordReceivablePaymentDialog } from "./RecordReceivablePaymentDialog";
 
 /** Strip a trailing UUID and/or `#id` suffix from the stored agreement title. */

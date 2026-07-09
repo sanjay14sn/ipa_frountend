@@ -22,7 +22,7 @@ import {
   waiveCIReceivable,
 } from "@/services/ci-training-admin.service";
 import type { CITrainingReceivable } from "@/services/ci-training.service";
-import { WaiveReceivableDialog } from "@/app/admin/franchise/components/WaiveReceivableDialog";
+import { WaiveReceivableDialog } from "@/components/receivables/WaiveReceivableDialog";
 import type { ReceivableSummaryItem } from "@/services/agreement.service";
 
 interface CourseInstructorDetailsProps {

@@ -39,7 +39,7 @@ const ESignaturePad = dynamic<ESignaturePadProps>(
   { ssr: false, loading: () => null },
 );
 import { ciAgreementContent } from "@/lib/ciAgreementContent";
-import AgreementTerms from "@/app/franchisee/agreement/components/AgreementTerms";
+import AgreementTerms from "@/components/agreements/AgreementTerms";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { CIAgreementDetail } from "@/components/agreements/CIAgreementDetail";
 import { fmtDate } from "@/lib/date-utils";

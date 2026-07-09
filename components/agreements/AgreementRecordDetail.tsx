@@ -34,7 +34,7 @@ import { fmtDate } from "@/lib/date-utils";
 import { getFranchiseFeePayable } from "@/lib/gst";
 import { formatRupees } from "@/lib/currency-utils";
 import { methodLabel } from "@/lib/payment-details-display";
-import PaymentBreakdown from "@/app/franchisee/agreement/components/PaymentBreakdown";
+import PaymentBreakdown from "@/components/agreements/PaymentBreakdown";
 import {
   Check,
   Download,
