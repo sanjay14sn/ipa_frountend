@@ -98,20 +98,13 @@ function toneValueClass(tone: MonitoringItemTone) {
   }
 }
 
-function itemBadgeTone(tone: MonitoringItemTone): StatusTone {
-  switch (tone) {
-    case "danger":
-      return "destructive";
-    case "warning":
-      return "warning";
-    case "info":
-      return "info";
-    case "neutral":
-      return "neutral";
-    default:
-      return "success";
-  }
-}
+const ITEM_TONE: Record<MonitoringItemTone, StatusTone> = {
+  danger: "destructive",
+  warning: "warning",
+  info: "info",
+  neutral: "neutral",
+  primary: "success",
+};
 
 function formatLastUpdated(value?: string) {
   if (!value) return "just now";
@@ -159,7 +152,7 @@ function MonitoringItemCard({ item }: { item: OperationsMonitoringListItem }) {
         </div>
         <StatusBadge
           className="shrink-0"
-          tone={itemBadgeTone(item.tone)}
+          tone={ITEM_TONE[item.tone]}
           label={item.status}
         />
       </div>

@@ -22,7 +22,7 @@ import {
   DetailFieldsGrid,
   DetailField,
   StatusBadge,
-  type StatusTone,
+  resolveStatusTone,
 } from "@/components/shared";
 import { Separator } from "@/components/ui/separator";
 import { ConfirmDialog } from "@/components/shared/dialog";
@@ -36,20 +36,6 @@ const STATUS_LABEL: Record<string, string> = {
   DELIVERED: "Delivered",
   CANCELLED: "Cancelled",
 };
-
-function shipmentTone(status: string | null | undefined): StatusTone {
-  switch ((status ?? "").toUpperCase()) {
-    case "DELIVERED":
-      return "success";
-    case "VERIFIED":
-    case "SHIPPED":
-      return "info";
-    case "CANCELLED":
-      return "destructive";
-    default:
-      return "neutral";
-  }
-}
 
 interface AdminShippingTableProps {
   regionAdminId?: number;
@@ -144,7 +130,9 @@ export default function AdminShippingTable({
         header: "Status",
         render: (row) => (
           <StatusBadge
-            tone={shipmentTone(row.status)}
+            tone={resolveStatusTone(STATUS_LABEL[row.status] ?? row.status, {
+              verified: "info",
+            })}
             label={STATUS_LABEL[row.status] ?? row.status}
           />
         ),

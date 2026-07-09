@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Eye, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable, StatusBadge, type StatusTone } from "@/components/shared";
+import { DataTable, StatusBadge, formatStatusLabel } from "@/components/shared";
 import type { DataTableColumn, DataTableFilter } from "@/components/shared";
 import { toast } from "sonner";
 import {
@@ -38,49 +38,13 @@ const statusLabels: Record<StudentLifecycleStatus, string> = {
   REACTIVATED: "Reactivated",
 };
 
-function getLifecycleTone(status: StudentLifecycleStatus): StatusTone {
-  switch (status) {
-    case "INVALIDATED":
-      return "destructive";
-    case "AT_RISK":
-      return "warning";
-    case "EXTENDED":
-    case "REACTIVATED":
-      return "info";
-    case "ACTIVE":
-    default:
-      return "success";
-  }
-}
-
 function statusBadge(row: StudentLifecycleRow) {
   const status = row.lifecycleStatus;
-  return (
-    <StatusBadge
-      tone={getLifecycleTone(status)}
-      label={statusLabels[status] ?? status}
-    />
-  );
-}
-
-function getCertificateTone(normalized: string): StatusTone {
-  switch (normalized) {
-    case "PENDING":
-      return "neutral";
-    case "ISSUED":
-      return "success";
-    case "REJECTED":
-      return "destructive";
-    default:
-      return "neutral";
-  }
+  return <StatusBadge label={statusLabels[status] ?? status} />;
 }
 
 function certificateBadge(status: string) {
-  const normalized = status.toUpperCase();
-  return (
-    <StatusBadge tone={getCertificateTone(normalized)} label={normalized} />
-  );
+  return <StatusBadge label={formatStatusLabel(status)} />;
 }
 
 export function StudentLifecycleSection() {

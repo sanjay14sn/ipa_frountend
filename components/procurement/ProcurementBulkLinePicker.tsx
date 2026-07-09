@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ToggleField } from "@/components/shared/toggle-field";
@@ -534,9 +535,7 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
             Above
           </span>
         ) : term.isPreferred ? (
-          <Badge className="shrink-0 text-[10px] bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-            Preferred
-          </Badge>
+          <StatusBadge label="Preferred" tone="success" className="shrink-0 text-[10px]" />
         ) : (
           <Badge variant="outline" className="shrink-0 text-[10px]">
             {item?.inventoryType ?? "—"}

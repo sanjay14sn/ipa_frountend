@@ -14,7 +14,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, X } from "lucide-react";
-import { DataTable, StatusBadge, type StatusTone } from "@/components/shared";
+import { DataTable, StatusBadge, formatStatusLabel } from "@/components/shared";
 import type {
   DataTableColumn,
   DataTableFilter,
@@ -46,28 +46,6 @@ function toRow(item: ProgramRequestItem): ProgramRequestRow {
     requestedBy: String(item.franchiseeId),
     createdAt: item.requestedAt,
   };
-}
-
-function getStatusTone(status: string): StatusTone {
-  switch (status?.toLowerCase()) {
-    case "active":
-    case "approved":
-      return "success";
-    case "requested":
-      return "info";
-    case "termset":
-    case "termsset":
-    case "pendingsignature":
-    case "pending":
-      return "warning";
-    case "rejected":
-      return "destructive";
-    case "cancelled":
-    case "canceled":
-      return "neutral";
-    default:
-      return "neutral";
-  }
 }
 
 export default function ProgramRequestsTable({
@@ -168,7 +146,7 @@ export default function ProgramRequestsTable({
       header: "Status",
       className: "text-center",
       render: (r) => (
-        <StatusBadge tone={getStatusTone(r.status)} label={r.status} />
+        <StatusBadge label={formatStatusLabel(r.status)} />
       ),
     },
     {

@@ -22,34 +22,12 @@ import {
   ProfileCard,
   ProfileCardSection,
   StatusBadge,
-  type StatusTone,
+  formatStatusLabel,
 } from "@/components/shared";
 import type { ProgramRequestRow } from "@/services/franchise.service";
 
 interface ProgramRequestDetailsProps {
   request: ProgramRequestRow;
-}
-
-function getStatusTone(status: string): StatusTone {
-  switch (status?.toLowerCase()) {
-    case "active":
-    case "approved":
-      return "success";
-    case "requested":
-      return "info";
-    case "termset":
-    case "termsset":
-    case "pendingsignature":
-    case "pending":
-      return "warning";
-    case "rejected":
-      return "destructive";
-    case "cancelled":
-    case "canceled":
-      return "neutral";
-    default:
-      return "neutral";
-  }
 }
 
 function fmt(date: string | null | undefined): string {
@@ -75,10 +53,7 @@ export default function ProgramRequestDetails({
               name={fe?.name ?? "—"}
               subtitle="Franchisee contact"
               badge={
-                <StatusBadge
-                  tone={getStatusTone(request.status)}
-                  label={request.status}
-                />
+                <StatusBadge label={formatStatusLabel(request.status)} />
               }
             />
             <ProfileCardSection icon={Mail} label="Contact" divider>
@@ -137,8 +112,7 @@ export default function ProgramRequestDetails({
             label="Current state"
             value={
               <StatusBadge
-                tone={getStatusTone(request.status)}
-                label={request.status ?? "Pending"}
+                label={formatStatusLabel(request.status ?? "Pending")}
               />
             }
           />

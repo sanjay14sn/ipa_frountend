@@ -1,5 +1,9 @@
 ﻿import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
+import {
+  StatusBadge,
+  formatStatusLabel as formatSharedStatusLabel,
+} from "@/components/shared";
 import type { DataTableFilter } from "@/components/shared";
 import type { Supplier, SupplierItemTerm } from "@/services/procurement.service";
 
@@ -108,7 +112,7 @@ function formatStatusLabel(value: string) {
 }
 
 export function statusBadge(status: string): ReactNode {
-  return <Badge variant="secondary">{formatStatusLabel(status)}</Badge>;
+  return <StatusBadge label={formatSharedStatusLabel(status)} />;
 }
 
 export function booleanBadge(
@@ -117,11 +121,9 @@ export function booleanBadge(
   falseLabel: string,
 ): ReactNode {
   return active ? (
-    <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-      {trueLabel}
-    </Badge>
+    <StatusBadge label={trueLabel} tone="success" />
   ) : (
-    <Badge variant="outline">{falseLabel}</Badge>
+    <StatusBadge label={falseLabel} tone="neutral" />
   );
 }
 

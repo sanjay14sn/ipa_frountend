@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { TableLoadingState, TablePageShell } from "@/components/shared";
+import { TableLoadingState, TablePageShell, StatusBadge } from "@/components/shared";
 import {
   abandonCIReceivablePayment,
   getCIAgreement,
@@ -20,7 +20,7 @@ import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { formatRupees } from "@/lib/currency-utils";
 
 function statusBadge(status: CITrainingReceivable["status"]) {
-  if (status === "paid") return <Badge className="bg-green-100 text-green-800"><CheckCircle className="mr-1 h-3.5 w-3.5" />Paid</Badge>;
+  if (status === "paid") return <StatusBadge label="Paid" />;
   if (status === "waived") return <Badge variant="secondary">Waived</Badge>;
   return <Badge variant="outline">Pending</Badge>;
 }

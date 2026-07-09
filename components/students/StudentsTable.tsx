@@ -53,22 +53,6 @@ interface StudentsTableProps {
   mode?: "franchise" | "admin";
 }
 
-function getLevelColor(_level: string) {
-  return "bg-gray-100 text-gray-800 border-gray-200";
-}
-
-function getIdStatusTone(idStatus: StudentIdStatus): StatusTone {
-  switch (idStatus) {
-    case StudentIdStatus.ISSUED:
-      return "success";
-    case StudentIdStatus.REQUESTED:
-      return "warning";
-    case StudentIdStatus.NOT_ISSUED:
-    default:
-      return "neutral";
-  }
-}
-
 function hasOnlyWeekLeft(deactivateDate?: Date | string): boolean {
   if (!deactivateDate) return false;
   const today = new Date();
@@ -150,9 +134,7 @@ export default function StudentsTable({
       header: "Level",
       className: "text-center",
       render: (student) => (
-        <Badge
-          className={`${getLevelColor(getStudentLevelName(student))} border px-1.5 text-[11px]`}
-        >
+        <Badge variant="outline" className="px-1.5 text-[11px]">
           {getStudentLevelName(student)}
         </Badge>
       ),
@@ -174,11 +156,7 @@ export default function StudentsTable({
       header: "ID",
       className: "text-center",
       render: (student) => (
-        <StatusBadge
-          tone={getIdStatusTone(student.idIssued)}
-          label={student.idIssued}
-          className="px-1.5 text-[11px]"
-        />
+        <StatusBadge label={student.idIssued} className="px-1.5 text-[11px]" />
       ),
     },
     {

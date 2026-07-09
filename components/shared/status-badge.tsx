@@ -115,12 +115,18 @@ export function resolveStatusTone(
 }
 
 /**
- * Normalize enum-style values for display: underscores → spaces
- * ("READY_TO_SHIP" → "ready to ship"). StatusBadge's own capitalization
- * normalizes casing at render.
+ * Normalize enum-style values for display: underscores and camelCase
+ * boundaries → spaces ("READY_TO_SHIP" → "ready to ship",
+ * "PendingSignature" → "pending signature"). StatusBadge's own
+ * capitalization normalizes casing at render.
  */
 export function formatStatusLabel(value: string): string {
-  return value.replace(/_/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+  return value
+    .replace(/_/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
 interface StatusBadgeProps {

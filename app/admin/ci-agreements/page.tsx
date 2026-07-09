@@ -4,7 +4,6 @@ import { Suspense, useState } from "react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
@@ -14,6 +13,7 @@ import { AdminCIAgreementDialog } from "@/components/agreements/AdminCIAgreement
 import {
   DataTable,
   type DataTableColumn,
+  StatusBadge,
   TableLoadingState,
   TablePageShell,
 } from "@/components/shared";
@@ -41,24 +41,10 @@ interface ActionDialogState {
   title: string;
 }
 
-type BadgeTone = "default" | "secondary" | "outline" | "destructive";
-
-/** Maps a CI agreement status to a display label + badge tone. */
-function statusBadge(status: string): { label: string; tone: BadgeTone } {
-  switch (status) {
-    case "Valid":
-      return { label: "Valid", tone: "default" };
-    case "Suspended":
-      return { label: "Suspended", tone: "secondary" };
-    case "Expired":
-      return { label: "Expired", tone: "destructive" };
-    case "Void":
-      return { label: "Void", tone: "outline" };
-    case "Approved":
-      return { label: "Pending signature", tone: "secondary" };
-    default:
-      return { label: status, tone: "outline" };
-  }
+/** CI agreement statuses render through StatusBadge; "Approved" reads as
+ * "Pending signature" (the CI-facing meaning). */
+function statusLabel(status: string): string {
+  return status === "Approved" ? "Pending signature" : status;
 }
 
 /** One entry of metadata.renewals, recorded by the backend on each renewal. */
@@ -346,11 +332,10 @@ function CIAgreementsTable() {
       key: "status",
       header: "Status",
       render: (row) => {
-        const badge = statusBadge(row.status);
         const renewals = getRenewals(row.metadata);
         return (
           <div className="flex flex-col items-start gap-1">
-            <Badge variant={badge.tone}>{badge.label}</Badge>
+            <StatusBadge label={statusLabel(row.status)} />
             {renewals.length > 0 && (
               <span className="text-[10px] text-muted-foreground">
                 Renewed ×{renewals.length}

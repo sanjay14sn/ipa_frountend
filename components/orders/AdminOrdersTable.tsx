@@ -42,42 +42,7 @@ import {
   DetailFieldsGrid,
   DetailField,
   StatusBadge,
-  type StatusTone,
 } from "@/components/shared";
-
-function paymentTone(status: string | null | undefined): StatusTone {
-  switch ((status ?? "").toUpperCase()) {
-    case "PAID":
-      return "success";
-    case "PENDING":
-    case "PARTIAL":
-      return "warning";
-    case "FAILED":
-      return "destructive";
-    case "REFUNDED":
-      return "neutral";
-    default:
-      return "neutral";
-  }
-}
-
-function fulfillmentTone(status: string | null | undefined): StatusTone {
-  switch ((status ?? "").toLowerCase()) {
-    case "verified":
-    case "delivered":
-      return "success";
-    case "shipped":
-    case "ready to ship":
-      return "info";
-    case "pending":
-      return "warning";
-    case "cancelled":
-    case "canceled":
-      return "destructive";
-    default:
-      return "neutral";
-  }
-}
 
 function clubOrderItems(lines: OrderItemData[]) {
   const map = new Map<
@@ -272,10 +237,7 @@ export default function AdminOrdersTable({
         key: "payment",
         header: "Payment",
         render: (order) => (
-          <StatusBadge
-            tone={paymentTone(order.paymentStatus)}
-            label={order.paymentStatus || "Unknown"}
-          />
+          <StatusBadge label={order.paymentStatus || "Unknown"} />
         ),
       },
       {
@@ -283,7 +245,7 @@ export default function AdminOrdersTable({
         header: "Fulfillment",
         render: (order) => {
           const label = order.adminStatus || order.fulfillmentStatus || "Unknown";
-          return <StatusBadge tone={fulfillmentTone(label)} label={label} />;
+          return <StatusBadge label={label} />;
         },
       },
       {

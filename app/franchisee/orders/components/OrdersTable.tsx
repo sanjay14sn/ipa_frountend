@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { FileText, Loader2, X } from "lucide-react";
-import { DataTable, StatusBadge, type StatusTone } from "@/components/shared";
+import { DataTable, StatusBadge } from "@/components/shared";
 import { orderTypeBadgeClass, orderTypeLabel } from "@/lib/payment-details-display";
 import type {
   DataTableColumn,
@@ -96,22 +96,6 @@ export default function OrdersTable({
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
-  const getStatusTone = (status: OrderStatus | string): StatusTone => {
-    switch (status as OrderStatus) {
-      case OrderStatus.DELIVERED:
-        return "success";
-      case OrderStatus.SHIPPED:
-        return "info";
-      case OrderStatus.PROCESSING:
-      case OrderStatus.PENDING:
-        return "warning";
-      case OrderStatus.CANCELLED:
-        return "destructive";
-      default:
-        return "neutral";
-    }
-  };
-
   // Table configuration
   const columns: DataTableColumn<OrderData>[] = [
     {
@@ -135,7 +119,7 @@ export default function OrdersTable({
       className: "text-center",
       render: (order) => (
         <div className="flex items-center justify-center gap-1">
-          <StatusBadge tone={getStatusTone(order.status)} label={order.status} />
+          <StatusBadge label={order.status} />
           {String(order.paymentStatus ?? "").toUpperCase() === "REFUNDED" ? (
             <StatusBadge tone="neutral" label="Refunded" />
           ) : null}

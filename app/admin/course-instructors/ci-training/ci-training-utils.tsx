@@ -1,3 +1,7 @@
+import {
+  StatusBadge as SharedStatusBadge,
+  formatStatusLabel,
+} from "@/components/shared";
 import statesCities from "@/data/indian-states-cities.json";
 
 export const stateNames = Object.keys(statesCities).sort();
@@ -23,18 +27,12 @@ export function getApiErrorMessage(err: unknown, fallback: string): string {
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    WAITING: "bg-yellow-100 text-yellow-800",
-    ASSIGNED: "bg-blue-100 text-blue-800",
-    COMPLETED: "bg-green-100 text-green-800",
-    FAILED: "bg-red-100 text-red-800",
-    CANCELLED: "bg-gray-100 text-gray-800",
-  };
+  // Thin delegate to the shared pill (SW-P1); "assigned" keeps its info
+  // reading (it was the blue pill here).
   return (
-    <span
-      className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${colors[status] ?? "bg-gray-100 text-gray-700"}`}
-    >
-      {status}
-    </span>
+    <SharedStatusBadge
+      label={formatStatusLabel(status)}
+      tone={status === "ASSIGNED" ? "info" : undefined}
+    />
   );
 }

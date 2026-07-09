@@ -12,6 +12,7 @@ import {
   DetailFieldsGrid,
   ExpandedDetailSection,
   ExpandedDetailSurface,
+  StatusBadge,
 } from "@/components/shared";
 import { AdminCourseInstructorData } from "@/services/course-instructor.service";
 import { formatDate as fmtDate } from "@/lib/date-utils";
@@ -37,7 +38,7 @@ interface CourseInstructorDetailsProps {
 
 function statusBadge(status: CITrainingReceivable["status"]) {
   if (status === "paid") {
-    return <Badge className="bg-green-100 text-green-800">Paid</Badge>;
+    return <StatusBadge label="Paid" />;
   }
   if (status === "waived") {
     return <Badge variant="secondary">Waived</Badge>;
