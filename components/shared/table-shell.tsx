@@ -1,8 +1,9 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { Loader2, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/shared/empty-state";
+import { TableSkeleton } from "@/components/shared/skeletons";
 
 interface TablePageShellProps {
   children: ReactNode;
@@ -132,23 +133,27 @@ interface TableFeedbackProps {
   message: string;
 }
 
+/**
+ * @deprecated Render `TableSkeleton` (components/shared/skeletons) directly.
+ * Kept so existing call sites upgrade for free; `message` is announced to
+ * screen readers only.
+ */
 export function TableLoadingState({
   className,
   message,
 }: TableFeedbackProps) {
   return (
-    <div
-      className={cn(
-        "flex items-center justify-center gap-2 rounded-xl border border-border bg-card p-10 text-sm text-muted-foreground shadow-sm",
-        className,
-      )}
-    >
-      <Loader2 className="h-5 w-5 animate-spin" />
-      {message}
+    <div className={className}>
+      <span className="sr-only">{message}</span>
+      <TableSkeleton />
     </div>
   );
 }
 
+/**
+ * @deprecated Render `EmptyState` (components/shared/empty-state) directly —
+ * it supports icon/hint/action. Kept so existing call sites upgrade for free.
+ */
 export function TableEmptyState({
   className,
   message,
@@ -156,12 +161,11 @@ export function TableEmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-10 text-center text-sm text-muted-foreground shadow-sm",
+        "rounded-xl border border-border bg-card shadow-sm",
         className,
       )}
     >
-      <Inbox className="h-10 w-10 opacity-60" />
-      <p>{message}</p>
+      <EmptyState title={message} />
     </div>
   );
 }
