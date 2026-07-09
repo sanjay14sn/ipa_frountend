@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import RequestedIdTable from "@/app/admin/id-requests/components/RequestedIdTable";
+import RequestedIdTable from "@/app/admin/students/_components/ids/RequestedIdTable";
 
 interface IdRequestsSectionProps {
   franchiseId?: string;

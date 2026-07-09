@@ -1,6 +1,6 @@
 "use client";
 
-import AdminCertificateRequestsTable from "@/app/admin/certificate-requests/components/AdminCertificateRequestsTable";
+import AdminCertificateRequestsTable from "@/app/admin/students/_components/certificates/AdminCertificateRequestsTable";
 
 interface CertificateRequestsSectionProps {
   franchiseId?: string;
