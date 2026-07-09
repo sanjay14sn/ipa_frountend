@@ -14,6 +14,7 @@ import {
 } from "@/services/franchisee.service";
 import { usePaginatedFranchisesAdmin } from "@/hooks/api/franchisee.hooks";
 import { FranchiseHubTable } from "./FranchiseHubTable";
+import { useListParams } from "@/hooks/use-list-params";
 
 interface FranchiseTableProps {
   refreshTrigger?: number;
@@ -22,12 +23,22 @@ interface FranchiseTableProps {
 export default function FranchiseTable({
   refreshTrigger,
 }: FranchiseTableProps) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("createdAt");
-  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
+  // List state lives in the URL (SW-P10); "fr" prefix keeps the keys clear
+  // of the applications tab's list on the same hub URL.
+  const urlParams = useListParams({
+    filterDefaults: { status: "all", type: "all" },
+    defaultSortBy: "createdAt",
+    defaultSortOrder: "desc",
+    prefix: "fr",
+  });
+  const currentPage = urlParams.page;
+  const searchTerm = urlParams.search;
+  const sortBy = urlParams.sortBy ?? "createdAt";
+  const sortOrder = (urlParams.sortOrder === "asc" ? "ASC" : "DESC") as
+    | "ASC"
+    | "DESC";
+  const statusFilter = urlParams.filters.status;
+  const typeFilter = urlParams.filters.type;
   const itemsPerPage = 10;
 
   const listParams = useMemo(
@@ -116,9 +127,8 @@ export default function FranchiseTable({
 
   const handleFilterChange = (key: string, value: string | string[]) => {
     const nextValue = Array.isArray(value) ? (value[0] ?? "all") : value;
-    if (key === "status") setStatusFilter(nextValue || "all");
-    if (key === "type") setTypeFilter(nextValue || "all");
-    setCurrentPage(1);
+    if (key === "status") urlParams.setFilter("status", nextValue || "all");
+    if (key === "type") urlParams.setFilter("type", nextValue || "all");
   };
 
   const sortOptions: DataTableSortOption[] = [
@@ -147,22 +157,17 @@ export default function FranchiseTable({
         loading={loading}
         pagination={{ total, totalPages }}
         currentPage={currentPage}
-        onPageChange={setCurrentPage}
+        onPageChange={urlParams.setPage}
         itemsPerPage={itemsPerPage}
         searchPlaceholder="Search franchises by name, city, or state..."
-        onSearchChange={(value) => {
-          setSearchTerm(value);
-          setCurrentPage(1);
-        }}
+        onSearchChange={urlParams.setSearch}
         filters={filters}
         onFilterChange={handleFilterChange}
         sortOptions={sortOptions}
         defaultSortBy="createdAt"
         defaultSortOrder="DESC"
         onSortChange={(newSortBy, newSortOrder) => {
-          setSortBy(newSortBy);
-          setSortOrder(newSortOrder);
-          setCurrentPage(1);
+          urlParams.setSort(newSortBy, newSortOrder === "ASC" ? "asc" : "desc");
         }}
         emptyMessage="No franchises found matching your criteria"
         resultsText={(count, totalCount) => {

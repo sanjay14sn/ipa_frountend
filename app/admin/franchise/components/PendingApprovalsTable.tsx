@@ -10,6 +10,7 @@ import { FranchiseType } from "@/services/franchise.enums";
 import { usePaginatedFranchiseApplicationsAdmin } from "@/hooks/api/franchisee.hooks";
 import { type FranchiseData } from "@/services/franchisee.service";
 import { FranchiseHubTable } from "@/app/admin/franchise/_components/FranchiseHubTable";
+import { useListParams } from "@/hooks/use-list-params";
 
 interface PendingApprovalsTableProps {
   onApprove?: (application: FranchiseData) => void;
@@ -24,13 +25,22 @@ export default function PendingApprovalsTable({
   refreshTrigger,
   disableApproveActions,
 }: PendingApprovalsTableProps) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-
-  const [sortBy, setSortBy] = useState("createdAt");
-  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC");
+  // List state lives in the URL (SW-P10); "apps" prefix keeps the keys clear
+  // of the franchises tab's list on the same hub URL.
+  const urlParams = useListParams({
+    filterDefaults: { status: "all", type: "all" },
+    defaultSortBy: "createdAt",
+    defaultSortOrder: "desc",
+    prefix: "apps",
+  });
+  const currentPage = urlParams.page;
+  const searchTerm = urlParams.search;
+  const statusFilter = urlParams.filters.status;
+  const typeFilter = urlParams.filters.type;
+  const sortBy = urlParams.sortBy ?? "createdAt";
+  const sortOrder = (urlParams.sortOrder === "asc" ? "ASC" : "DESC") as
+    | "ASC"
+    | "DESC";
   const itemsPerPage = 10;
 
 
@@ -109,28 +119,22 @@ export default function PendingApprovalsTable({
       loading={loading}
       pagination={{ total, totalPages }}
       currentPage={currentPage}
-      onPageChange={setCurrentPage}
+      onPageChange={urlParams.setPage}
       itemsPerPage={itemsPerPage}
       searchPlaceholder="Search applications, franchisees, or cities..."
-      onSearchChange={(value) => {
-        setSearchTerm(value);
-        setCurrentPage(1);
-      }}
+      onSearchChange={urlParams.setSearch}
       filters={filters}
       multiSelectFilters={multiSelectFilters}
       onFilterChange={(key, value) => {
-        if (key === "status") setStatusFilter(value as string);
-        if (key === "type") setTypeFilter(value as string);
-
-        setCurrentPage(1);
+        if (key === "status" || key === "type") {
+          urlParams.setFilter(key, value as string);
+        }
       }}
       sortOptions={sortOptions}
       defaultSortBy="createdAt"
       defaultSortOrder="DESC"
       onSortChange={(newSortBy, newSortOrder) => {
-        setSortBy(newSortBy);
-        setSortOrder(newSortOrder);
-        setCurrentPage(1);
+        urlParams.setSort(newSortBy, newSortOrder === "ASC" ? "asc" : "desc");
       }}
       emptyMessage="No applications found matching your criteria"
       resultsText={(count, totalCount) => {

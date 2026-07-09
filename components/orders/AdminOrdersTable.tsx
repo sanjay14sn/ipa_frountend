@@ -26,6 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { OrderPaymentDetailsPanel } from "@/components/orders/OrderPaymentDetailsPanel";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { useListParams } from "@/hooks/use-list-params";
 import {
   DataTable,
   DataTableColumn,
@@ -78,9 +79,11 @@ export default function AdminOrdersTable({
   regionAdminId,
   readOnly,
 }: AdminOrdersTableProps) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  // List state lives in the URL (SW-P10) — filters survive refresh/back.
+  const listParams = useListParams({ filterDefaults: { status: "all" } });
+  const currentPage = listParams.page;
+  const search = listParams.search;
+  const statusFilter = listParams.filters.status;
   const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
   const [verifyDialogOrderId, setVerifyDialogOrderId] = useState<number | null>(null);
   const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
@@ -547,19 +550,17 @@ export default function AdminOrdersTable({
       }}
       searchPlaceholder="Search by order, franchise, or status"
       onSearchChange={(s) => {
-        setSearch(s);
-        setCurrentPage(1);
+        listParams.setSearch(s);
       }}
       filters={filters}
       onFilterChange={(key, value) => {
         if (key === "status") {
-          setStatusFilter(value as string);
-          setCurrentPage(1);
+          listParams.setFilter("status", value as string);
         }
       }}
       pagination={{ total, totalPages }}
       currentPage={currentPage}
-      onPageChange={setCurrentPage}
+      onPageChange={listParams.setPage}
       itemsPerPage={10}
       emptyMessage="No orders match the current filters."
       resultsText={(count, tot) =>

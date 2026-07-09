@@ -88,7 +88,6 @@ export default function StudentsTable({
   toolbarActions,
   mode = "franchise",
 }: StudentsTableProps) {
-  const [streamFilter, setStreamFilter] = useState<string>("all");
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(
     null,
   );
@@ -110,19 +109,6 @@ export default function StudentsTable({
     }
     return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
   }, [students]);
-
-  const uniqueStreams = useMemo(
-    () =>
-      Array.from(
-        new Set((students ?? []).map((s) => s.stream).filter(Boolean)),
-      ),
-    [students],
-  );
-
-  const streamFilteredStudents = useMemo(() => {
-    if (streamFilter === "all") return students ?? [];
-    return (students ?? []).filter((s) => s.stream === streamFilter);
-  }, [students, streamFilter]);
 
   const columns: DataTableColumn<StudentData>[] = [
     {
@@ -237,15 +223,6 @@ export default function StudentsTable({
         defaultValue: levelId ? String(levelId) : "all",
       },
       {
-        key: "stream",
-        label: "Stream",
-        options: [
-          { value: "all", label: "All streams" },
-          ...uniqueStreams.map((s) => ({ value: s ?? "", label: s ?? "" })).filter((o) => o.value),
-        ],
-        defaultValue: streamFilter,
-      },
-      {
         key: "idStatus",
         label: "ID Status",
         options: [
@@ -257,7 +234,7 @@ export default function StudentsTable({
         defaultValue: idStatus ?? "all",
       },
     ],
-    [statusFilter, uniqueLevelOptions, uniqueStreams, streamFilter, levelId, idStatus],
+    [statusFilter, uniqueLevelOptions, levelId, idStatus],
   );
 
   const sortOptions: DataTableSortOption[] = [
@@ -268,17 +245,13 @@ export default function StudentsTable({
 
   const handleFilterChange = (key: string, value: string | string[]) => {
     const val = Array.isArray(value) ? (value[0] ?? "all") : value;
-    if (key === "stream") {
-      setStreamFilter(val);
-    } else {
-      onFilterChange?.(key, val);
-    }
+    onFilterChange?.(key, val);
   };
 
   return (
     <>
       <DataTable
-        data={streamFilteredStudents}
+        data={students ?? []}
         loading={isLoading ?? false}
         columns={columns}
         tableClassName="table-fixed"

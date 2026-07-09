@@ -121,20 +121,30 @@ export default function FranchiseeOrdersPage() {
     [students],
   );
 
-  const pendingOrders = orders.filter((order) =>
-    [OrderStatus.PENDING, OrderStatus.PROCESSING].includes(
-      order.status as OrderStatus,
-    ),
-  ).length;
-  const shippedOrders = orders.filter(
-    (order) => order.status === OrderStatus.SHIPPED,
-  ).length;
-  const deliveredOrders = orders.filter(
-    (order) => order.status === OrderStatus.DELIVERED,
-  ).length;
-  const cancelledOrders = orders.filter(
-    (order) => order.status === OrderStatus.CANCELLED,
-  ).length;
+  // One pass over the client-side order list (SW-P10); the KPI row renders
+  // these in doc 07's orders work.
+  const orderCounts = useMemo(() => {
+    const counts = { pending: 0, shipped: 0, delivered: 0, cancelled: 0 };
+    for (const order of orders) {
+      switch (order.status as OrderStatus) {
+        case OrderStatus.PENDING:
+        case OrderStatus.PROCESSING:
+          counts.pending += 1;
+          break;
+        case OrderStatus.SHIPPED:
+          counts.shipped += 1;
+          break;
+        case OrderStatus.DELIVERED:
+          counts.delivered += 1;
+          break;
+        case OrderStatus.CANCELLED:
+          counts.cancelled += 1;
+          break;
+      }
+    }
+    return counts;
+  }, [orders]);
+  const cancelledOrders = orderCounts.cancelled;
 
   async function handlePaymentSuccess(response: RazorpaySuccessResponse) {
     const pd = unifiedPaymentData;

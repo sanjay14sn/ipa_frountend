@@ -31,6 +31,7 @@ import { ConfirmDialog } from "@/components/shared/dialog";
 import { ShipShipmentDialog } from "./ShipShipmentDialog";
 import { DispatchItemsSummaryTable } from "@/components/orders/DispatchItemsSummaryTable";
 import type { ShipShipmentDto } from "@/services/fulfillment.service";
+import { useListParams } from "@/hooks/use-list-params";
 
 const STATUS_LABEL: Record<string, string> = {
   VERIFIED: "Verified",
@@ -49,9 +50,11 @@ export default function AdminShippingTable({
   regionAdminId,
   readOnly,
 }: AdminShippingTableProps = {}) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  // List state lives in the URL (SW-P10) — filters survive refresh/back.
+  const listParams = useListParams({ filterDefaults: { status: "all" } });
+  const currentPage = listParams.page;
+  const search = listParams.search;
+  const statusFilter = listParams.filters.status;
   const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
   const [shipDialogOrderId, setShipDialogOrderId] = useState<number | null>(null);
   const [cancelDialogOrderId, setCancelDialogOrderId] = useState<number | null>(null);
@@ -347,19 +350,17 @@ export default function AdminShippingTable({
         }}
         searchPlaceholder="Search by order, franchise, or tracking"
         onSearchChange={(s) => {
-          setSearch(s);
-          setCurrentPage(1);
+          listParams.setSearch(s);
         }}
         filters={filters}
         onFilterChange={(key, value) => {
           if (key === "status") {
-            setStatusFilter(value as string);
-            setCurrentPage(1);
+            listParams.setFilter("status", value as string);
           }
         }}
         pagination={{ total, totalPages }}
         currentPage={currentPage}
-        onPageChange={setCurrentPage}
+        onPageChange={listParams.setPage}
         itemsPerPage={10}
         emptyMessage="No shipments found."
         resultsText={(count, tot) =>
