@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 export interface UseListParamsOptions<F extends Record<string, string>> {
@@ -52,7 +52,7 @@ export function useListParams<F extends Record<string, string>>(
   const { defaultSortBy, defaultSortOrder = "asc", prefix } = options;
   // Stabilize filterDefaults so an inline object literal at the call site
   // cannot re-trigger the URL-sync effect every render.
-  const filterDefaults = useRef(options.filterDefaults).current;
+  const [filterDefaults] = useState(options.filterDefaults);
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
