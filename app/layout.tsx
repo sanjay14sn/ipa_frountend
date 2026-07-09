@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import { Caveat } from "next/font/google";
-// Primary + monospace fonts live in ./fonts.css (single source of truth).
-// Imported before globals.css so its CSS variables are defined first.
-import "./fonts.css";
+import { Caveat, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { UserProvider } from "@/context/user-context";
@@ -11,6 +8,21 @@ import QueryProvider from "@/components/providers/query-provider";
 import { ClientTelemetryProvider } from "@/components/providers/client-telemetry-provider";
 import { PointerEventsGuard } from "@/components/providers/pointer-events-guard";
 import { WebVitalsReporter } from "@/components/providers/web-vitals-reporter";
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 const caveat = Caveat({
   subsets: ["latin"],
@@ -36,7 +48,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={caveat.variable}>
+    <html
+      lang="en"
+      className={`${dmSans.variable} ${jetbrainsMono.variable} ${caveat.variable}`}
+    >
       <body>
         <PointerEventsGuard />
         <WebVitalsReporter />

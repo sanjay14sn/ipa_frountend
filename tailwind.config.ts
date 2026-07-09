@@ -14,10 +14,30 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        // Font stacks are defined once in app/fonts.css — see that file to swap fonts.
-        sans: ["var(--font-sans)"],
-        mono: ["var(--font-mono)"],
-        signature: ["cursive"],
+        // Fonts are self-hosted via next/font in app/layout.tsx (DM Sans,
+        // JetBrains Mono, Caveat); these stacks provide the fallbacks.
+        sans: [
+          "var(--font-sans)",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Roboto",
+          "sans-serif",
+          "Apple Color Emoji",
+          "Segoe UI Emoji",
+          "Segoe UI Symbol",
+          "Noto Color Emoji",
+        ],
+        mono: [
+          "var(--font-mono)",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Courier New",
+          "monospace",
+        ],
+        signature: ["var(--font-caveat)", "cursive"],
       },
       colors: {
         brand: {
