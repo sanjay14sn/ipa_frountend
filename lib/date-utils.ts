@@ -95,3 +95,25 @@ export function calculateAge(dateOfBirth: string | Date | null | undefined): num
   }
   return age;
 }
+
+/**
+ * Relative "Updated Xm ago" formatter for dashboard headers (R5). Returns
+ * "just now" under a minute, then Xm/Xh/Xd ago. Accepts a timestamp, ISO
+ * string, or Date; falsy/unparseable input reads as "just now".
+ */
+export function formatLastUpdated(value?: string | number | Date): string {
+  if (!value) return "just now";
+  const time =
+    value instanceof Date
+      ? value.getTime()
+      : typeof value === "number"
+        ? value
+        : new Date(value).getTime();
+  const diffMs = Date.now() - time;
+  if (!Number.isFinite(diffMs) || diffMs < 60_000) return "just now";
+  const diffMinutes = Math.floor(diffMs / 60_000);
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${Math.floor(diffHours / 24)}d ago`;
+}
