@@ -42,7 +42,7 @@ import {
   ContactInfoFields,
   ProgramSelectionFields,
   useCascadingSelects,
-} from "./student-form";
+} from "@/components/students/student-form";
 
 const FORM_STEPS: StepDef[] = [
   { id: 1, title: "Basic Information" },

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Award, ChevronDown, ChevronUp } from "lucide-react";
 import { StatusBadge } from "@/components/shared";
 import { FranchiseeCertificate } from "@/services/student.service";
-import StudentCertificatesModal from "./StudentCertificatesModal";
+import StudentCertificatesModal from "@/components/students/StudentCertificatesModal";
 
 interface FranchiseeCertificatesGroupCardProps {
   stream: string;

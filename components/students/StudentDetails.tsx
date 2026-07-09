@@ -8,7 +8,7 @@ import {
   ExpandedDetailSurface,
 } from "@/components/shared";
 import type { StudentData } from "@/services/student.service";
-import { getStudentLevelName } from "../utils/student-helpers";
+import { getStudentLevelName } from "./student-helpers";
 import { formatDate, calculateAge } from "@/lib/date-utils";
 
 interface StudentDetailsProps {

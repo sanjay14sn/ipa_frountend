@@ -13,9 +13,9 @@ import {
   useStudents,
 } from "@/hooks/api/student.hooks";
 import AddStudentModal from "./components/AddStudentModal";
-import EditStudentModal from "./components/EditStudentModal";
+import EditStudentModal from "@/components/students/EditStudentModal";
 import RequestIdModal from "./components/RequestIdModal";
-import StudentsTable from "./components/StudentsTable";
+import StudentsTable from "@/components/students/StudentsTable";
 import { sendClientLog } from "@/lib/client-telemetry";
 
 export function StudentsManageSection() {

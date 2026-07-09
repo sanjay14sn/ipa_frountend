@@ -11,10 +11,10 @@ import type {
   DataTableSortOption,
 } from "@/components/shared";
 import { StudentData, StudentIdStatus } from "@/services/student.service";
-import StudentCertificatesModal from "../../certificate-requests/components/StudentCertificatesModal";
+import StudentCertificatesModal from "./StudentCertificatesModal";
 import StudentDetails from "./StudentDetails";
 import { StudentLifecycleDetailsDialog } from "@/components/students/student-lifecycle-details-dialog";
-import { getStudentLevelName } from "../utils/student-helpers";
+import { getStudentLevelName } from "./student-helpers";
 import { useFranchiseeStudentLifecycle, useAdminStudentLifecycleById } from "@/hooks/api/student.hooks";
 import { formatEntityCodeForDisplay } from "@/lib/format-entity-code";
 

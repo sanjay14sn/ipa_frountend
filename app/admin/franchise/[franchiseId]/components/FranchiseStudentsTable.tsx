@@ -8,8 +8,8 @@ import {
   deleteStudentWithRevalidation,
   useAdminStudentsByFranchise,
 } from "@/hooks/api/student.hooks";
-import EditStudentModal from "@/app/franchisee/students/components/EditStudentModal";
-import StudentsTable from "@/app/franchisee/students/components/StudentsTable";
+import EditStudentModal from "@/components/students/EditStudentModal";
+import StudentsTable from "@/components/students/StudentsTable";
 import { sendClientLog } from "@/lib/client-telemetry";
 
 interface FranchiseStudentsTableProps {
