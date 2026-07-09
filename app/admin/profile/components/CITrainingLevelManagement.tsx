@@ -28,7 +28,7 @@ import {
   type TrainingLevel,
   type UpdateTrainingLevelDto,
 } from "@/services/training-level.service";
-import { TrainingLevelMaterialsPicker } from "@/app/admin/training-levels/TrainingLevelMaterialsPicker";
+import { TrainingLevelMaterialsPicker } from "./TrainingLevelMaterialsPicker";
 import { useLevelsByProgram } from "@/hooks/api/level.hooks";
 import { useStreamsByProgram } from "@/hooks/api/stream.hooks";
 import { toast } from "sonner";

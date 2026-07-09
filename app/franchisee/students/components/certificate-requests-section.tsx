@@ -10,9 +10,9 @@ import { useEligibleStudents, useFranchiseeCertificates } from "@/hooks/api/stud
 import { EligibleStudent } from "@/services/student.service";
 import BulkRequestCertificateModal, {
   GroupForModal,
-} from "@/app/franchisee/certificate-requests/components/BulkRequestCertificateModal";
-import EligibleStudentsGroupedView from "@/app/franchisee/certificate-requests/components/EligibleStudentsGroupedView";
-import FranchiseeCertificatesGroupedView from "@/app/franchisee/certificate-requests/components/FranchiseeCertificatesGroupedView";
+} from "@/app/franchisee/students/_components/certificates/BulkRequestCertificateModal";
+import EligibleStudentsGroupedView from "@/app/franchisee/students/_components/certificates/EligibleStudentsGroupedView";
+import FranchiseeCertificatesGroupedView from "@/app/franchisee/students/_components/certificates/FranchiseeCertificatesGroupedView";
 
 export function FranchiseeCertificateRequestsSection() {
   const [groupsForModal, setGroupsForModal] = useState<GroupForModal[]>([]);
