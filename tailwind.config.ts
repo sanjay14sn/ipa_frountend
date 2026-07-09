@@ -40,97 +40,96 @@ const config: Config = {
         signature: ["var(--font-caveat)", "cursive"],
       },
       colors: {
-        brand: {
-          green: {
-            50: "#ecfdf5",
-            100: "#d1fae5",
-            200: "#a7f3d0",
-            300: "#6ee7b7",
-            400: "#34d399",
-            500: "#10b981",
-            600: "#059669",
-            700: "#047857",
-            800: "#065f46",
-            900: "#064e3b",
-          },
-          yellow: {
-            50: "#fafafa",
-            100: "#fafafa",
-            200: "#fafafa",
-            300: "#fafafa",
-            400: "#fafafa",
-            500: "#fafafa",
-            600: "#fafafa",
-            700: "#fafafa",
-            800: "#fafafa",
-            900: "#fafafa",
-          },
-          white: {
-            50: "#fafafa",
-            100: "#fafafa",
-            200: "#fafafa",
-            300: "#fafafa",
-            400: "#fafafa",
-            500: "#fafafa",
-            600: "#fafafa",
-            700: "#fafafa",
-            800: "#fafafa",
-            900: "#fafafa",
-          },
+        // Single source of truth: HSL channel vars in app/globals.css :root.
+        border: "hsl(var(--border) / <alpha-value>)",
+        input: "hsl(var(--input) / <alpha-value>)",
+        ring: "hsl(var(--ring) / <alpha-value>)",
+        background: "hsl(var(--background) / <alpha-value>)",
+        foreground: "hsl(var(--foreground) / <alpha-value>)",
+        primary: {
+          DEFAULT: "hsl(var(--primary) / <alpha-value>)",
+          foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
+          hover: "hsl(var(--primary-hover) / <alpha-value>)",
+          active: "hsl(var(--primary-active) / <alpha-value>)",
         },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary) / <alpha-value>)",
+          foreground: "hsl(var(--secondary-foreground) / <alpha-value>)",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted) / <alpha-value>)",
+          foreground: "hsl(var(--muted-foreground) / <alpha-value>)",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent) / <alpha-value>)",
+          foreground: "hsl(var(--accent-foreground) / <alpha-value>)",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card) / <alpha-value>)",
+          foreground: "hsl(var(--card-foreground) / <alpha-value>)",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover) / <alpha-value>)",
+          foreground: "hsl(var(--popover-foreground) / <alpha-value>)",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive) / <alpha-value>)",
+          foreground: "hsl(var(--destructive-foreground) / <alpha-value>)",
+          hover: "hsl(var(--destructive-hover) / <alpha-value>)",
+          soft: "hsl(var(--destructive-soft) / <alpha-value>)",
+          "soft-foreground":
+            "hsl(var(--destructive-soft-foreground) / <alpha-value>)",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success) / <alpha-value>)",
+          foreground: "hsl(var(--success-foreground) / <alpha-value>)",
+          soft: "hsl(var(--success-soft) / <alpha-value>)",
+          "soft-foreground":
+            "hsl(var(--success-soft-foreground) / <alpha-value>)",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning) / <alpha-value>)",
+          foreground: "hsl(var(--warning-foreground) / <alpha-value>)",
+          soft: "hsl(var(--warning-soft) / <alpha-value>)",
+          "soft-foreground":
+            "hsl(var(--warning-soft-foreground) / <alpha-value>)",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info) / <alpha-value>)",
+          foreground: "hsl(var(--info-foreground) / <alpha-value>)",
+          soft: "hsl(var(--info-soft) / <alpha-value>)",
+          "soft-foreground": "hsl(var(--info-soft-foreground) / <alpha-value>)",
+        },
+        chart: {
+          "1": "hsl(var(--chart-1) / <alpha-value>)",
+          "2": "hsl(var(--chart-2) / <alpha-value>)",
+          "3": "hsl(var(--chart-3) / <alpha-value>)",
+          "4": "hsl(var(--chart-4) / <alpha-value>)",
+          "5": "hsl(var(--chart-5) / <alpha-value>)",
+        },
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar-background) / <alpha-value>)",
+          foreground: "hsl(var(--sidebar-foreground) / <alpha-value>)",
+          primary: "hsl(var(--sidebar-primary) / <alpha-value>)",
+          "primary-foreground":
+            "hsl(var(--sidebar-primary-foreground) / <alpha-value>)",
+          accent: "hsl(var(--sidebar-accent) / <alpha-value>)",
+          "accent-foreground":
+            "hsl(var(--sidebar-accent-foreground) / <alpha-value>)",
+          border: "hsl(var(--sidebar-border) / <alpha-value>)",
+          ring: "hsl(var(--sidebar-ring) / <alpha-value>)",
+        },
+        brand: {
+          navy: "hsl(var(--brand-navy) / <alpha-value>)",
+          red: "hsl(var(--brand-red) / <alpha-value>)",
+          yellow: "hsl(var(--brand-yellow) / <alpha-value>)",
+          green: "hsl(var(--brand-green) / <alpha-value>)",
+        },
+        // Orphan surface color — only consumer is the old franchisee layout;
+        // removed with the Phase-2 shell (F-07).
         surface: {
           DEFAULT: "var(--surface)",
           green: "var(--surface-green)",
-        },
-        background: "#fafafa",
-        foreground: "#064e3b",
-        card: {
-          DEFAULT: "#ffffff",
-          foreground: "#111827",
-        },
-        popover: {
-          DEFAULT: "#ffffff",
-          foreground: "#111827",
-        },
-        primary: {
-          DEFAULT: "#064e3b",
-          foreground: "#fafafa",
-        },
-        secondary: {
-          DEFAULT: "#f3f4f6",
-          foreground: "#064e3b",
-        },
-        muted: {
-          DEFAULT: "#f3f4f6",
-          foreground: "#6b7280",
-        },
-        accent: {
-          DEFAULT: "#ecfdf5",
-          foreground: "#064e3b",
-        },
-        destructive: {
-          DEFAULT: "#dc2626",
-          foreground: "#fafafa",
-        },
-        border: "#e5e7eb",
-        input: "#e5e7eb",
-        ring: "#064e3b",
-        chart: {
-          "1": "#064e3b",
-          "2": "#6b7280",
-          "3": "#047857",
-          "4": "#9ca3af",
-          "5": "#065f46",
-        },
-        sidebar: {
-          DEFAULT: "#fafafa",
-          foreground: "#064e3b",
-          primary: "#ecfdf5",
-          "primary-foreground": "#064e3b",
-          accent: "#f0fdf4",
-          "accent-foreground": "#064e3b",
-          border: "#e5e7eb",
-          ring: "#064e3b",
         },
       },
       borderRadius: {

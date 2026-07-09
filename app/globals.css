@@ -10,51 +10,92 @@
 
 @layer base {
   :root {
-    /* Light mode only — primary green #064e3b, modern neutrals */
-    --background: #fafafa;
-    --foreground: #064e3b;
-    --card: #ffffff;
-    --card-foreground: #111827;
-    --popover: #ffffff;
-    --popover-foreground: #111827;
-    --primary: #064e3b;
-    --primary-foreground: #fafafa;
-    --secondary: #f3f4f6;
-    --secondary-foreground: #064e3b;
-    --muted: #f3f4f6;
-    --muted-foreground: #6b7280;
-    --accent: #ecfdf5;
-    --accent-foreground: #064e3b;
-    --destructive: #dc2626;
-    --destructive-foreground: #fafafa;
-    --border: #e5e7eb;
-    --input: #e5e7eb;
-    --ring: #064e3b;
-    --chart-1: #064e3b;
-    --chart-2: #6b7280;
-    --chart-3: #047857;
-    --chart-4: #9ca3af;
-    --chart-5: #065f46;
-    --radius: 0.75rem;
+    /* IPA design system — light-only, dark-ready.
+       Every token is an HSL channel triplet consumed as hsl(var(--x) / <alpha>)
+       via tailwind.config.ts. A future dark mode is a single .dark {} block
+       re-declaring channel values — no component changes. */
+
+    /* Brand constants — never used directly on UI surfaces; exposed as flat
+       brand.* utilities for the rare literal-brand need. */
+    --brand-navy: 213 93% 22%; /* #04346e */
+    --brand-red: 356 91% 42%; /* #cd0a17 */
+    --brand-yellow: 45 100% 49%; /* #fbbe00 */
+    --brand-green: 146 100% 21%; /* #006d2f */
+
+    /* Neutrals (slate) */
+    --background: 210 40% 98%; /* #f8fafc */
+    --foreground: 222 47% 11%; /* #0f172a */
+    --card: 0 0% 100%; /* #ffffff */
+    --card-foreground: 222 47% 11%; /* #0f172a */
+    --popover: 0 0% 100%; /* #ffffff */
+    --popover-foreground: 222 47% 11%; /* #0f172a */
+    --secondary: 210 40% 96%; /* #f1f5f9 */
+    --secondary-foreground: 222 47% 11%; /* #0f172a */
+    --muted: 210 40% 96%; /* #f1f5f9 */
+    --muted-foreground: 215 16% 47%; /* #64748b */
+    --border: 214 32% 91%; /* #e2e8f0 */
+    --input: 213 27% 84%; /* #cbd5e1 — one step darker than --border */
+    --ring: 213 81% 36%; /* #1155a6 — mid navy; full navy too dark as a ring */
+
+    /* Primary / interactive (navy) */
+    --primary: 213 93% 22%; /* #04346e */
+    --primary-foreground: 0 0% 100%; /* #ffffff */
+    --primary-hover: 212 86% 28%; /* #0a4487 */
+    --primary-active: 213 93% 18%; /* #032a59 */
+    --accent: 212 68% 96%; /* #eff5fc — navy-50 hover tint */
+    --accent-foreground: 213 93% 22%; /* #04346e */
+
+    /* Semantic status — the "beads": small, countable, meaningful */
+    --success: 146 100% 21%; /* #006d2f */
+    --success-foreground: 0 0% 100%; /* #ffffff */
+    --success-soft: 143 39% 94%; /* #e8f5ed */
+    --success-soft-foreground: 146 100% 21%; /* #006d2f */
+    --warning: 45 100% 49%; /* #fbbe00 */
+    --warning-foreground: 213 93% 22%; /* navy on yellow — never white */
+    --warning-soft: 46 94% 93%; /* #fef6dc */
+    --warning-soft-foreground: 45 100% 24%; /* #7a5b00 */
+    --destructive: 356 91% 42%; /* #cd0a17 */
+    --destructive-foreground: 0 0% 100%; /* #ffffff */
+    --destructive-hover: 356 90% 36%; /* #b00914 */
+    --destructive-soft: 357 69% 95%; /* #fbe9ea */
+    --destructive-soft-foreground: 356 91% 34%; /* #a30812 */
+    --info: 213 81% 36%; /* #1155a6 */
+    --info-foreground: 0 0% 100%; /* #ffffff */
+    --info-soft: 212 68% 96%; /* #eff5fc */
+    --info-soft-foreground: 212 86% 28%; /* #0a4487 */
+
+    /* Charts (tokens kept; no chart lib yet) */
+    --chart-1: 213 93% 22%; /* navy */
+    --chart-2: 146 100% 21%; /* green */
+    --chart-3: 45 100% 49%; /* yellow */
+    --chart-4: 356 91% 42%; /* red */
+    --chart-5: 215 16% 47%; /* slate */
+
+    --radius: 0.5rem;
+
+    /* Orphan surface vars — deleted with the Phase-2 shell (F-07); their only
+       consumer is the old franchisee layout. */
     --surface: #f9fafb;
     --surface-green: #f0fdf4;
     --text-muted: #6b7280;
     --text-secondary: #374151;
-    /* Sidebar */
-    --sidebar-background: #fafafa;
-    --sidebar-foreground: #064e3b;
-    --sidebar-primary: #ecfdf5;
-    --sidebar-primary-foreground: #064e3b;
-    --sidebar-accent: #f0fdf4;
-    --sidebar-accent-foreground: #064e3b;
-    --sidebar-border: #e5e7eb;
-    --sidebar-ring: #064e3b;
+
+    /* Sidebar — TEMPORARY light values so the outgoing dynamic-sidebar stays
+       legible; the navy rail values land with portal-sidebar in Phase 2. */
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 213 93% 22%;
+    --sidebar-primary: 212 68% 96%;
+    --sidebar-primary-foreground: 213 93% 22%;
+    --sidebar-accent: 212 68% 96%;
+    --sidebar-accent-foreground: 213 93% 22%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 213 81% 36%;
   }
 }
 
 @layer base {
   * {
-    border-color: var(--border);
+    border-color: hsl(var(--border));
   }
 
   html {
@@ -65,8 +106,8 @@
   }
 
   body {
-    background-color: var(--background);
-    color: var(--foreground);
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
     font-family: var(--font-sans);
     line-height: 1.6;
     text-size-adjust: 100%;

@@ -14,24 +14,24 @@ export type StatusTone =
 
 const toneClasses: Record<StatusTone, { pill: string; dot: string }> = {
   success: {
-    pill: "bg-primary text-primary-foreground hover:bg-primary",
-    dot: "bg-primary-foreground",
+    pill: "bg-success-soft text-success-soft-foreground hover:bg-success-soft",
+    dot: "bg-success",
   },
   warning: {
-    pill: "bg-amber-100 text-amber-900 hover:bg-amber-100",
-    dot: "bg-amber-500",
+    pill: "bg-warning-soft text-warning-soft-foreground hover:bg-warning-soft",
+    dot: "bg-warning",
   },
   destructive: {
-    pill: "bg-red-100 text-red-900 hover:bg-red-100",
-    dot: "bg-red-500",
+    pill: "bg-destructive-soft text-destructive-soft-foreground hover:bg-destructive-soft",
+    dot: "bg-destructive",
   },
   neutral: {
     pill: "bg-muted text-muted-foreground hover:bg-muted",
     dot: "bg-muted-foreground",
   },
   info: {
-    pill: "bg-sky-100 text-sky-900 hover:bg-sky-100",
-    dot: "bg-sky-500",
+    pill: "bg-info-soft text-info-soft-foreground hover:bg-info-soft",
+    dot: "bg-info",
   },
 };
 
@@ -111,7 +111,7 @@ interface OnFileBadgeProps {
 }
 
 /**
- * Soft emerald outline pill used for "attached / captured / uploaded" cues
+ * Soft success outline pill used for "attached / captured / uploaded" cues
  * (signatures on file, document captured, etc.). Distinct from full status —
  * this is for binary "present vs absent" indicators inside detail cards.
  */
@@ -120,11 +120,11 @@ function OnFileBadge({ label = "On file", className }: OnFileBadgeProps) {
     <Badge
       variant="outline"
       className={cn(
-        "gap-1 border-emerald-200 bg-emerald-50 py-0 text-[10px] text-emerald-700",
+        "gap-1 border-success/20 bg-success-soft py-0 text-[10px] text-success-soft-foreground",
         className,
       )}
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+      <span className="h-1.5 w-1.5 rounded-full bg-success" />
       {label}
     </Badge>
   );
