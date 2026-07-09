@@ -38,7 +38,7 @@ import { useAvailableItems } from "@/hooks/api/order.hooks";
 import type { StudentAvailableItems } from "@/services/order.service";
 import UnifiedInvoiceGroupedSummary, {
   studentLineItems,
-} from "./UnifiedInvoiceGroupedSummary";
+} from "@/components/orders/UnifiedInvoiceGroupedSummary";
 import { formatRupees } from "@/lib/currency-utils";
 
 interface UnifiedMaterialRequestDialogProps {

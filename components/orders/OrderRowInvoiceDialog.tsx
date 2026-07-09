@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { InvoicePreview, OrderData } from "@/services/order.service";
-import UnifiedInvoiceGroupedSummary from "@/app/franchisee/orders/components/UnifiedInvoiceGroupedSummary";
-import CustomMaterialsList from "@/app/franchisee/orders/components/CustomMaterialsList";
+import UnifiedInvoiceGroupedSummary from "@/components/orders/UnifiedInvoiceGroupedSummary";
+import CustomMaterialsList from "@/components/orders/CustomMaterialsList";
 import { DispatchRecipientTable } from "@/components/orders/DispatchRecipientTable";
 import { isStandaloneDispatchOrderType } from "@/lib/dispatch-order-helpers";
 import { OrderPaymentDetailsPanel } from "@/components/orders/OrderPaymentDetailsPanel";
