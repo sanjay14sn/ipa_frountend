@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import Image from "next/image";
+import { AuthPageFrame } from "@/components/auth/auth-page-frame";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useHydrated } from "@/hooks/use-hydrated";
 import Link from "next/link";
@@ -42,14 +42,7 @@ function CILoginPageInner() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 gap-6">
-      <Image
-        src="/brand/ipa-lockup.png"
-        alt="Ideal Play Abacus"
-        width={433}
-        height={66}
-        priority
-      />
+    <AuthPageFrame>
 
       <Card className="w-full max-w-sm rounded-2xl border-border bg-card shadow-sm">
         <CardHeader className="space-y-1">
@@ -113,7 +106,7 @@ function CILoginPageInner() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </AuthPageFrame>
   );
 }
 
