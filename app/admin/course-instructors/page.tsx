@@ -6,10 +6,10 @@ import { UserPlus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
-import { CiApprovalsSection } from "../course-instructor-approvals/ci-approvals-section";
+import { CiApprovalsSection } from "./_components/approvals/ci-approvals-section";
 import { CiTrainingSection } from "./ci-training-section";
-import ActiveCourseInstructorsTable from "../course-instructor-approvals/components/ActiveCourseInstructorsTable";
-import SetupExistingCIDialog from "../course-instructor-approvals/components/SetupExistingCIDialog";
+import ActiveCourseInstructorsTable from "./_components/approvals/ActiveCourseInstructorsTable";
+import SetupExistingCIDialog from "./_components/approvals/SetupExistingCIDialog";
 import { TablePageShell } from "@/components/shared";
 
 const TABS = ["applications", "active", "training"] as const;

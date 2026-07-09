@@ -8,8 +8,8 @@ import {
   rejectCourseInstructor,
 } from "@/services/course-instructor.service";
 import { toast } from "sonner";
-import ApproveCIModal from "./components/ApproveCIModal";
-import CiApprovalsSummaryTable from "./components/CiApprovalsSummaryTable";
+import ApproveCIModal from "./ApproveCIModal";
+import CiApprovalsSummaryTable from "./CiApprovalsSummaryTable";
 
 export function CiApprovalsSection() {
   const queryClient = useQueryClient();
