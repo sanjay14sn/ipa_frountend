@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -28,15 +27,8 @@ import {
   type CIAgreementRecord,
   type CIESignaturePayload,
 } from "@/services/ci-training.service";
-import type { ESignaturePadProps, ESignatureResult } from "@/components/esignature/ESignaturePad";
+import type { ESignatureResult } from "@/components/esignature/ESignaturePad";
 
-const ESignaturePad = dynamic<ESignaturePadProps>(
-  () =>
-    import("@/components/esignature/ESignaturePad").then((m) => ({
-      default: m.ESignaturePad,
-    })),
-  { ssr: false, loading: () => null },
-);
 import { ciAgreementContent } from "@/lib/ciAgreementContent";
 import AgreementTerms from "@/components/agreements/AgreementTerms";
 import { useCIAuth } from "@/context/ci-auth-context";
@@ -44,6 +36,7 @@ import { CIAgreementDetail } from "@/components/agreements/CIAgreementDetail";
 import { formatDate } from "@/lib/date-utils";
 import { Stepper } from "@/components/shared/stepper";
 import { CI_AGREEMENT_STEPS } from "@/lib/constants/education";
+import { SignatureCapturePanel } from "@/components/esignature/SignatureCapturePanel";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -77,7 +70,6 @@ function SignatureStep({
   onCISign?: (result: ESignatureResult) => Promise<void>;
 }) {
   const [signing, setSigning] = useState(false);
-  const [padOpen, setPadOpen] = useState(false);
 
   const existingSigSrc = ciSignatureSrc(agreement.ciSignatureUrl);
 
@@ -85,7 +77,6 @@ function SignatureStep({
     setSigning(true);
     try {
       await signCIAgreementWithESignature(agreement.id, payload);
-      setPadOpen(false);
       toast.success("Agreement signed successfully.");
       onSigned();
     } catch {
@@ -150,39 +141,22 @@ function SignatureStep({
         </div>
         {!ciSignatureSrc(agreement.ciSignatureUrl) && onCISign && (
           <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary">
-                <PenLine className="h-4 w-4" />
-              </span>
-              <h3 className="text-base font-medium text-card-foreground">Your signature</h3>
-            </div>
-            <p className="mb-4 text-sm text-muted-foreground">
+            <p className="mb-3 text-sm text-muted-foreground">
               Your signature was not captured. Add it now using draw or type.
             </p>
-            <Button
-              type="button"
-              disabled={signing}
-              onClick={() => setPadOpen(true)}
-              variant="outline"
-              className="rounded-lg"
-            >
-              {signing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PenLine className="mr-2 h-4 w-4" />}
-              {signing ? "Saving…" : "Add Signature"}
-            </Button>
-            <ESignaturePad
-              open={padOpen}
-              onOpenChange={setPadOpen}
+            <SignatureCapturePanel
+              signerLabel="Your signature"
+              ctaLabel="Add Signature"
+              busy={signing}
               defaultName={defaultSignerName}
               onAdopt={async (r) => {
                 setSigning(true);
                 try {
                   await onCISign(r);
-                  setPadOpen(false);
                 } finally {
                   setSigning(false);
                 }
               }}
-              submitting={signing}
             />
           </div>
         )}
@@ -192,74 +166,14 @@ function SignatureStep({
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <div className="mb-3 flex items-center gap-2">
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary">
-          <PenLine className="h-4 w-4" />
-        </span>
-        <h3 className="text-base font-medium text-card-foreground">Your signature</h3>
-      </div>
-      {existingSigSrc ? (
-        <>
-          <p className="mb-3 text-sm text-muted-foreground">
-            Apply your on-file signature to this agreement, or use a different one.
-          </p>
-          <div className="mb-4 flex items-center justify-center rounded-lg border bg-muted/30 py-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={existingSigSrc} alt="Your on-file signature" className="max-h-14 w-auto max-w-full object-contain" loading="lazy" />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              disabled={signing}
-              onClick={() => void handleSignWithStored()}
-              className="rounded-lg"
-            >
-              {signing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <PenLine className="mr-2 h-4 w-4" />
-              )}
-              {signing ? "Saving…" : "Use existing signature"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={signing}
-              onClick={() => setPadOpen(true)}
-              className="rounded-lg"
-            >
-              Use different signature
-            </Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Draw your signature with your mouse, finger, or stylus — or type your
-            legal name and we&apos;ll render it in a signature script. You&apos;ll
-            confirm before it&apos;s applied to the agreement.
-          </p>
-          <Button
-            type="button"
-            disabled={signing}
-            onClick={() => setPadOpen(true)}
-            className="w-full rounded-lg sm:w-auto"
-          >
-            {signing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <PenLine className="mr-2 h-4 w-4" />
-            )}
-            {signing ? "Saving…" : "Sign agreement"}
-          </Button>
-        </>
-      )}
-      <ESignaturePad
-        open={padOpen}
-        onOpenChange={setPadOpen}
+      <SignatureCapturePanel
+        storedSignature={existingSigSrc ?? undefined}
+        signerLabel="Your signature"
+        ctaLabel="Sign agreement"
+        busy={signing}
         defaultName={defaultSignerName}
         onAdopt={handleAdoptESignature}
-        submitting={signing}
+        onUseStored={() => void handleSignWithStored()}
       />
     </div>
   );

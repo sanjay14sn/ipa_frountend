@@ -7,6 +7,7 @@ import {
 } from "@/services/agreement.service";
 import { CheckCircle, ExternalLink, Loader2, PenLine } from "lucide-react";
 import { useUser } from "@/context/user-context";
+import { SignatureDisplay } from "@/components/esignature/SignatureDisplay";
 
 interface FranchiseAgreementSignaturePanelProps {
   agreement: AgreementRecord | null;
@@ -74,19 +75,17 @@ export function FranchiseAgreementSignaturePanel({
 
       {alreadySigned ? (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+          <div className="flex items-center gap-2 rounded-lg border border-success/20 bg-success-soft px-3 py-2 text-sm text-success-soft-foreground">
             <CheckCircle className="h-4 w-4" />
             Agreement signed — continue to payment to activate this program.
           </div>
           {previewSrc ? (
-            <div className="overflow-hidden rounded-lg border border-border bg-muted/30 p-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewSrc}
-                alt="Your signature on this agreement"
-                className="mx-auto max-h-40 w-auto max-w-full object-contain"
-              />
-            </div>
+            <SignatureDisplay
+              src={previewSrc}
+              signerLabel="Your signature on this agreement"
+              maxH="lg"
+              onFile
+            />
           ) : null}
         </div>
       ) : canSign && profileSignatureSrc ? (
@@ -99,14 +98,12 @@ export function FranchiseAgreementSignaturePanel({
             program agreement, or <strong>Upload a different signature</strong>{" "}
             to replace it.
           </p>
-          <div className="overflow-hidden rounded-lg border border-border bg-muted/30 p-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={profileSignatureSrc}
-              alt="Your signature on file"
-              className="mx-auto max-h-40 w-auto max-w-full object-contain"
-            />
-          </div>
+          <SignatureDisplay
+            src={profileSignatureSrc}
+            signerLabel="Your signature on file"
+            maxH="lg"
+            onFile
+          />
           <a
             href={profileSignatureSrc}
             target="_blank"
