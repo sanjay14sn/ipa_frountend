@@ -28,7 +28,7 @@ import {
   useApproveSubsetForDispatch,
   useApproveAndDispatchEligibleCertificates,
 } from "@/hooks/api/certificate-dispatch.hooks";
-import type { DispatchEligibleOrder } from "@/components/shared/BulkDispatchPickerModal";
+import type { DispatchEligibleOrder } from "@/components/orders/BulkDispatchPickerModal";
 
 type CertStatus = "Pending" | "Issued";
 

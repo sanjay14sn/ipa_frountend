@@ -8,8 +8,9 @@ import {
   AppDialogBody,
   AppDialogFooter,
   AppDialogHeader,
+  PickerSearch,
 } from "@/components/shared/dialog";
-import { Input } from "@/components/ui/input";
+import { DIALOG_TOKENS } from "@/components/shared/dialog/tokens";
 import { cn } from "@/lib/utils";
 
 export interface DispatchPickerItem {
@@ -164,12 +165,12 @@ export function BulkDispatchPickerModal({
             {orderMode === "existing" ? (
               <div className="mt-3 max-h-40 overflow-y-auto rounded-lg border bg-white">
                 {isLoadingOrders ? (
-                  <div className="flex items-center gap-2 px-3 py-6 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 px-3 py-6 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Loading orders…
                   </div>
                 ) : eligibleOrders.length === 0 ? (
-                  <div className="px-3 py-6 text-sm text-gray-500">
+                  <div className="px-3 py-6 text-sm text-muted-foreground">
                     No eligible orders found for this franchise.
                   </div>
                 ) : (
@@ -247,16 +248,17 @@ export function BulkDispatchPickerModal({
             ) : null}
 
             {/* Section 3: Searchable list */}
-            <Input
-              className="mt-3"
-              placeholder="Search by name, roll number, marks, or instructor..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <div className="mt-3">
+              <PickerSearch
+                value={search}
+                onChange={setSearch}
+                placeholder="Search by name, roll number, marks, or instructor..."
+              />
+            </div>
 
-            <div className="mt-3 max-h-64 overflow-y-auto rounded-lg border bg-white">
+            <div className={cn("mt-3 max-h-64", DIALOG_TOKENS.pickerListWrap)}>
               {filtered.length === 0 ? (
-                <div className="px-3 py-6 text-sm text-gray-500">
+                <div className="px-3 py-6 text-sm text-muted-foreground">
                   {items.length === 0
                     ? "No items available for this list."
                     : "No items match your search."}
@@ -270,7 +272,7 @@ export function BulkDispatchPickerModal({
                       key={item.id}
                       className={cn(
                         "flex items-center gap-3 border-b px-3 py-2.5 transition-colors last:border-b-0",
-                        checked ? "bg-primary/10" : "hover:bg-gray-50",
+                        checked ? "bg-primary/10" : "hover:bg-accent/40",
                       )}
                     >
                       <button

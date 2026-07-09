@@ -28,7 +28,7 @@ import {
   useDispatchEligibleOrders,
 } from "@/hooks/api/student.hooks";
 import { useApproveAndDispatchEligibleCertificates } from "@/hooks/api/certificate-dispatch.hooks";
-import { BulkDispatchFlowModal } from "@/components/shared/BulkDispatchFlowModal";
+import { BulkDispatchFlowModal } from "@/components/orders/BulkDispatchFlowModal";
 
 interface FranchiseCertificateDetailsProps {
   franchiseId: string;

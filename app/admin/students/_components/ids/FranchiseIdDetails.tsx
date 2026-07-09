@@ -40,7 +40,7 @@ import {
 import {
   BulkDispatchPickerModal,
   type DispatchPickerItem,
-} from "@/components/shared/BulkDispatchPickerModal";
+} from "@/components/orders/BulkDispatchPickerModal";
 
 interface FranchiseIdDetailsProps {
   franchiseId: string;
