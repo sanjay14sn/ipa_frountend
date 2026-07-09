@@ -11,6 +11,14 @@ import {
   Star,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { Level, UpdateLevelDto } from "@/services/level.service";
 import type { Stream } from "@/services/stream.service";
 import type { StreamTransition } from "@/services/stream-transition.service";
@@ -159,7 +167,7 @@ export function LevelList({
               </p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full table-fixed text-sm">
+                <Table className="table-fixed">
                   <colgroup>
                     <col className="w-[24%]" />
                     <col className="w-[18%]" />
@@ -168,29 +176,17 @@ export function LevelList({
                     <col className="w-[14%]" />
                     <col className="w-[12%]" />
                   </colgroup>
-                  <thead>
-                    <tr className="border-b border-border bg-muted/20">
-                      <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                        Level
-                      </th>
-                      <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                        Details
-                      </th>
-                      <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                        Materials
-                      </th>
-                      <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                        Certificates
-                      </th>
-                      <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                        Status
-                      </th>
-                      <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                  <TableHeader>
+                    <TableRow className="border-0 hover:bg-transparent">
+                      <TableHead>Level</TableHead>
+                      <TableHead>Details</TableHead>
+                      <TableHead>Materials</TableHead>
+                      <TableHead>Certificates</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {levelsForStream.map((level) => {
                       const showStar =
                         hasOutgoingTransition &&
@@ -198,11 +194,8 @@ export function LevelList({
                         level.displayOrder === maxInStream;
 
                       return (
-                        <tr
-                          key={level.id}
-                          className="border-b border-border last:border-b-0 align-middle hover:bg-muted/10"
-                        >
-                          <td className="px-3 py-2 align-middle">
+                        <TableRow key={level.id} className="align-middle">
+                          <TableCell className="px-3 py-2 align-middle">
                             <div className="flex items-center gap-2">
                               <span className="inline-flex h-6 min-w-[2rem] items-center justify-center rounded-md bg-muted/60 px-1.5 text-[11px] font-medium text-muted-foreground">
                                 #{level.displayOrder}
@@ -235,8 +228,8 @@ export function LevelList({
                                 </div>
                               </div>
                             </div>
-                          </td>
-                          <td className="px-3 py-2 align-middle">
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-middle">
                             <div className="flex flex-wrap items-center gap-1.5">
                               <Badge
                                 variant="outline"
@@ -253,26 +246,26 @@ export function LevelList({
                                 Pass {level.passMark} / {level.totalMarks}
                               </Badge>
                             </div>
-                          </td>
-                          <td className="px-3 py-2 align-middle">
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-middle">
                             <LevelMaterialsPicker
                               levelId={level.id}
                               disabled={isLoading}
                             />
-                          </td>
-                          <td className="px-3 py-2 align-middle">
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-middle">
                             <LevelCertificatesPicker
                               levelId={level.id}
                               programId={programId}
                               disabled={isLoading}
                             />
-                          </td>
-                          <td className="px-3 py-2 align-middle">
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-middle">
                             <StatusBadge
                               label={level.isActive ? "Active" : "Inactive"}
                             />
-                          </td>
-                          <td className="px-3 py-2 align-middle">
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-middle">
                             <div className="flex justify-end gap-1">
                               <Button
                                 variant="ghost"
@@ -303,12 +296,12 @@ export function LevelList({
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </div>

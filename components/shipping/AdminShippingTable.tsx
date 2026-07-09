@@ -18,12 +18,13 @@ import {
   DataTable,
   DataTableColumn,
   DataTableFilter,
-  RawTableSurface,
   ExpandedDetailSection,
   DetailFieldsGrid,
   DetailField,
   StatusBadge,
   resolveStatusTone,
+  ItemsTable,
+  DetailSubheading,
 } from "@/components/shared";
 import { Separator } from "@/components/ui/separator";
 import { ConfirmDialog } from "@/components/shared/dialog";
@@ -297,9 +298,7 @@ export default function AdminShippingTable({
                 <>
                   <Separator />
                   <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-foreground">
-                      Certificate &amp; ID dispatch
-                    </h3>
+                    <DetailSubheading>Certificate &amp; ID dispatch</DetailSubheading>
                     <DispatchItemsSummaryTable items={row.dispatchItems ?? []} />
                   </div>
                 </>
@@ -309,34 +308,36 @@ export default function AdminShippingTable({
                 <>
                   {(row.dispatchItems?.length ?? 0) > 0 ? <Separator /> : null}
                   <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-foreground">Inventory</h3>
-                    <RawTableSurface>
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-muted/50">
-                        <tr>
-                          <th className="px-3 py-2 text-left">Item</th>
-                          <th className="px-3 py-2 text-left">Reserved</th>
-                          <th className="px-3 py-2 text-left">Fulfilled</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(row.orderItems ?? []).map((line) => (
-                          <tr key={line.id} className="border-t">
-                            <td className="px-3 py-2">
+                    <DetailSubheading>Inventory</DetailSubheading>
+                    <ItemsTable
+                      columns={[
+                        {
+                          key: "item",
+                          header: "Item",
+                          render: (line) => (
+                            <>
                               <div className="font-medium">
                                 {line.inventory?.name ?? `Item #${line.id}`}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 {line.inventory?.sku || "No SKU"}
                               </div>
-                            </td>
-                            <td className="px-3 py-2">{line.reservedQty ?? 0}</td>
-                            <td className="px-3 py-2">{line.fulfilledQty ?? 0}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </RawTableSurface>
+                            </>
+                          ),
+                        },
+                        {
+                          key: "reserved",
+                          header: "Reserved",
+                          render: (line) => line.reservedQty ?? 0,
+                        },
+                        {
+                          key: "fulfilled",
+                          header: "Fulfilled",
+                          render: (line) => line.fulfilledQty ?? 0,
+                        },
+                      ]}
+                      rows={row.orderItems ?? []}
+                    />
                   </div>
                 </>
               ) : null}

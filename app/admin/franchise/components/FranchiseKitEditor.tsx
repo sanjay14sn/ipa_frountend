@@ -14,6 +14,14 @@ import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 import { queryKeys } from "@/hooks/api/query-keys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import {
@@ -198,28 +206,21 @@ export function FranchiseKitPanel({
                 </p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/20 text-left text-xs text-muted-foreground">
-                        <th className="px-3 py-2 font-medium">Item</th>
-                        <th className="px-3 py-2 text-center font-medium">
-                          Quantity
-                        </th>
-                        <th className="px-3 py-2 text-center font-medium">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-0 hover:bg-transparent">
+                        <TableHead>Item</TableHead>
+                        <TableHead className="text-center">Quantity</TableHead>
+                        <TableHead className="text-center">
                           Unit price (₹)
-                        </th>
-                        <th className="px-3 py-2 text-right font-medium">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                        </TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {selectedRows.map((row) => (
-                        <tr
-                          key={row.franchiseKitItemId}
-                          className="border-b last:border-0"
-                        >
-                          <td className="px-3 py-2">
+                        <TableRow key={row.franchiseKitItemId}>
+                          <TableCell className="px-3 py-2">
                             <div className="flex items-center gap-2">
                               <span className="font-medium">{row.name}</span>
                               {row.sku ? (
@@ -231,8 +232,8 @@ export function FranchiseKitPanel({
                             <div className="text-xs text-muted-foreground">
                               {row.categoryName ?? "-"}
                             </div>
-                          </td>
-                          <td className="px-3 py-2 text-center">
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-center">
                             <Input
                               type="number"
                               min={1}
@@ -249,8 +250,8 @@ export function FranchiseKitPanel({
                               onFocus={selectInputValueOnFocus}
                               disabled={saving}
                             />
-                          </td>
-                          <td className="px-3 py-2 text-center">
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-center">
                             <Input
                               type="number"
                               min={0}
@@ -267,8 +268,8 @@ export function FranchiseKitPanel({
                               disabled={saving}
                               title="Leave blank to use the catalog price"
                             />
-                          </td>
-                          <td className="px-3 py-2 text-right">
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-right">
                             <Button
                               type="button"
                               variant="ghost"
@@ -288,11 +289,11 @@ export function FranchiseKitPanel({
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </div>

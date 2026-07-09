@@ -20,6 +20,14 @@ import {
 } from "@/components/shared/dialog";
 import { formatRupees } from "@/lib/currency-utils";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import {
   createTrainingLevel,
@@ -526,46 +534,27 @@ export function CITrainingLevelManagement({
           </div>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/20">
-                  <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Level
-                  </th>
-                  <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Theory
-                  </th>
-                  <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Practical
-                  </th>
-                  <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Fee
-                  </th>
-                  <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Student Levels
-                  </th>
-                  <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Materials
-                  </th>
-                  <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow className="border-0 hover:bg-transparent">
+                  <TableHead>Level</TableHead>
+                  <TableHead>Theory</TableHead>
+                  <TableHead>Practical</TableHead>
+                  <TableHead>Fee</TableHead>
+                  <TableHead>Student Levels</TableHead>
+                  <TableHead>Materials</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {trainingLevels.map((level) => {
                   const hasPractical =
                     level.practicalTotalMarks != null &&
                     level.practicalPassMark != null;
                   return (
-                    <tr
-                      key={level.id}
-                      className="border-b border-border last:border-b-0 align-middle hover:bg-muted/10"
-                    >
-                      <td className="px-3 py-2 align-middle">
+                    <TableRow key={level.id} className="align-middle">
+                      <TableCell className="px-3 py-2 align-middle">
                         <div className="flex items-center gap-2">
                           <span className="inline-flex h-6 min-w-[2.25rem] items-center justify-center rounded-md bg-muted/60 px-1.5 text-[11px] font-medium text-muted-foreground">
                             #{level.displayOrder}
@@ -579,8 +568,8 @@ export function CITrainingLevelManagement({
                             </div>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-3 py-2 align-middle">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 align-middle">
                         <Badge
                           variant="outline"
                           className="gap-1 rounded-md border-primary/20 bg-accent/40 font-normal text-card-foreground"
@@ -588,8 +577,8 @@ export function CITrainingLevelManagement({
                           <Check className="h-3 w-3 text-primary" />
                           {level.theoryPassMark}/{level.theoryTotalMarks}
                         </Badge>
-                      </td>
-                      <td className="px-3 py-2 align-middle">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 align-middle">
                         {hasPractical ? (
                           <Badge
                             variant="outline"
@@ -606,29 +595,29 @@ export function CITrainingLevelManagement({
                             None
                           </Badge>
                         )}
-                      </td>
-                      <td className="px-3 py-2 align-middle text-sm text-card-foreground">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 align-middle text-sm text-card-foreground">
                         {formatFee(level.fee)}
-                      </td>
-                      <td className="px-3 py-2 align-middle">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 align-middle">
                         <CIStudentLevelsPicker
                           trainingLevelId={level.id}
                           programId={programId}
                           disabled={trainingLevelsQuery.isLoading}
                         />
-                      </td>
-                      <td className="px-3 py-2 align-middle">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 align-middle">
                         <TrainingLevelMaterialsPicker
                           trainingLevelId={level.id}
                           disabled={trainingLevelsQuery.isLoading}
                         />
-                      </td>
-                      <td className="px-3 py-2 align-middle">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 align-middle">
                         <StatusBadge
                           label={level.isActive ? "Active" : "Inactive"}
                         />
-                      </td>
-                      <td className="px-3 py-2 align-middle">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 align-middle">
                         <div className="flex justify-end gap-1">
                           <Button
                             variant="ghost"
@@ -650,12 +639,12 @@ export function CITrainingLevelManagement({
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>

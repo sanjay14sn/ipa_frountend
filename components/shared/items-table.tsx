@@ -37,7 +37,7 @@ const ALIGN_CLASS = {
  * ui/table primitives inside RawTableSurface so the canonical 11px-uppercase
  * header comes for free.
  */
-export function ItemsTable<T extends Record<string, unknown>>({
+export function ItemsTable<T>({
   columns,
   rows,
   dense = false,
@@ -86,7 +86,9 @@ export function ItemsTable<T extends Record<string, unknown>>({
                     >
                       {col.render
                         ? col.render(row)
-                        : ((row[col.key] as React.ReactNode) ?? "—")}
+                        : (((row as Record<string, unknown>)[
+                            col.key
+                          ] as React.ReactNode) ?? "—")}
                     </TableCell>
                   ))}
                 </TableRow>

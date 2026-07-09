@@ -2,16 +2,11 @@
 
 import { OrderData, OrderItemData } from "@/services/order.service";
 import { useOrderById } from "@/hooks/api/order.hooks";
-import {
-  CreditCard,
-  Loader2,
-  Package,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import {
   ExpandedDetailSurface,
-  ProfileCard,
-  ProfileCardSection,
-  RawTableSurface,
+  ExpandedDetailSection,
+  ItemsTable,
 } from "@/components/shared";
 import { OrderPaymentDetailsPanel } from "@/components/orders/OrderPaymentDetailsPanel";
 
@@ -76,82 +71,54 @@ export default function OrderDetails({ order, lastRow }: OrderDetailsProps) {
     );
   }
 
-  const orderItems = detailedOrder.orderItems ?? {};
-  const studentKeys = Object.keys(orderItems);
   const clubbed = clubLineItems(detailedOrder.lineItems ?? []);
 
   return (
     <ExpandedDetailSurface className={wrapperClass}>
       <div className="space-y-3 p-3 md:p-4">
         {detailedOrder.referenceId ? (
-          <ProfileCard>
-            <ProfileCardSection icon={CreditCard} label="Payment reference">
-              <p className="break-all rounded bg-muted px-2 py-1 font-mono text-xs">
-                {detailedOrder.referenceId}
-              </p>
-            </ProfileCardSection>
-          </ProfileCard>
+          <ExpandedDetailSection title="Payment reference">
+            <p className="w-fit break-all rounded bg-muted px-2 py-1 font-mono text-xs">
+              {detailedOrder.referenceId}
+            </p>
+          </ExpandedDetailSection>
         ) : null}
 
-        <ProfileCard>
-          <ProfileCardSection icon={Package} label="Items to receive">
-            <RawTableSurface>
-              <table className="min-w-full text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">
-                      Item
-                    </th>
-                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">
-                      Qty
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {clubbed.map((line) => (
-                    <tr key={line.inventoryId} className="border-t">
-                      <td className="px-3 py-2">
-                        <div className="font-medium text-card-foreground">
-                          {line.name}
-                        </div>
-                        {line.sku ? (
-                          <div className="text-xs text-muted-foreground">
-                            {line.sku}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="px-3 py-2 text-card-foreground">
-                        {line.quantity}
-                      </td>
-                    </tr>
-                  ))}
-                  {clubbed.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={2}
-                        className="px-3 py-4 text-center text-sm text-muted-foreground"
-                      >
-                        No items
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </RawTableSurface>
-          </ProfileCardSection>
-        </ProfileCard>
+        <ExpandedDetailSection title="Items to receive">
+          <ItemsTable
+            columns={[
+              {
+                key: "item",
+                header: "Item",
+                render: (line) => (
+                  <>
+                    <div className="font-medium text-card-foreground">
+                      {line.name}
+                    </div>
+                    {line.sku ? (
+                      <div className="text-xs text-muted-foreground">
+                        {line.sku}
+                      </div>
+                    ) : null}
+                  </>
+                ),
+              },
+              { key: "quantity", header: "Qty" },
+            ]}
+            rows={clubbed}
+            emptyLabel="No items"
+          />
+        </ExpandedDetailSection>
 
         {detailedOrder.payment != null ? (
-          <ProfileCard>
-            <ProfileCardSection icon={CreditCard} label="Payment">
-              <OrderPaymentDetailsPanel
-                payment={detailedOrder.payment}
-                hideTitle
-                className="border-0 bg-transparent p-0"
-                fallbackGoodsGstAmount={detailedOrder.gstAmount ?? null}
-              />
-            </ProfileCardSection>
-          </ProfileCard>
+          <ExpandedDetailSection title="Payment">
+            <OrderPaymentDetailsPanel
+              payment={detailedOrder.payment}
+              hideTitle
+              className="border-0 bg-transparent p-0"
+              fallbackGoodsGstAmount={detailedOrder.gstAmount ?? null}
+            />
+          </ExpandedDetailSection>
         ) : null}
       </div>
     </ExpandedDetailSurface>

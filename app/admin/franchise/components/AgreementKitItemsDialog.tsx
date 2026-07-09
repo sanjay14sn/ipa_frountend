@@ -14,6 +14,14 @@ import { getErrorMessage } from "@/lib/error-utils";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LinkPicker } from "@/components/shared/dialog/picker/LinkPicker";
@@ -199,23 +207,19 @@ export function AgreementKitItemsPanel({
                 </p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/20 text-left text-xs text-muted-foreground">
-                        <th className="px-3 py-2 font-medium">Item</th>
-                        <th className="px-3 py-2 font-medium">Category</th>
-                        <th className="px-3 py-2 text-center font-medium">
-                          Quantity
-                        </th>
-                        <th className="px-3 py-2 text-right font-medium">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-0 hover:bg-transparent">
+                        <TableHead>Item</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="text-center">Quantity</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {selectedRows.map((row) => (
-                        <tr key={row.programKitId} className="border-b last:border-0">
-                          <td className="px-3 py-2">
+                        <TableRow key={row.programKitId}>
+                          <TableCell className="px-3 py-2">
                             <div className="flex items-center gap-2">
                               <span className="font-medium">{row.name}</span>
                               {row.sku ? (
@@ -224,11 +228,11 @@ export function AgreementKitItemsPanel({
                                 </Badge>
                               ) : null}
                             </div>
-                          </td>
-                          <td className="px-3 py-2 text-muted-foreground">
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-muted-foreground">
                             {row.categoryName ?? "-"}
-                          </td>
-                          <td className="px-3 py-2 text-center">
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-center">
                             <Input
                               type="number"
                               min={1}
@@ -243,8 +247,8 @@ export function AgreementKitItemsPanel({
                               onFocus={selectInputValueOnFocus}
                               disabled={saving}
                             />
-                          </td>
-                          <td className="px-3 py-2 text-right">
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-right">
                             <Button
                               type="button"
                               variant="ghost"
@@ -256,11 +260,11 @@ export function AgreementKitItemsPanel({
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </div>
