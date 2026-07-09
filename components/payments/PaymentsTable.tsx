@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DataTable, StatusBadge, MoneyCell } from "@/components/shared";
+import { DataTable, StatusBadge, MoneyCell, TableMainCell } from "@/components/shared";
 import type { DataTableColumn } from "@/components/shared";
 import type { FranchisePaymentSummary } from "@/services/payment.service";
 import { useAdminFranchisePaymentSummaries } from "@/hooks/api/payment.hooks";
@@ -163,9 +163,7 @@ export default function PaymentsTable({
         loading={loading}
         columns={columns}
         getRowId={(s) => s.franchiseId ?? s.franchiseName}
-        renderMainCell={(s) => (
-          <span className="font-medium text-gray-900">{s.franchiseName}</span>
-        )}
+        renderMainCell={(s) => <TableMainCell title={s.franchiseName} />}
         renderExpandedContent={(s) => (
           <FranchisePaymentsDetails
             franchiseId={s.franchiseId ?? ""}

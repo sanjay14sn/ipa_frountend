@@ -16,7 +16,7 @@ import {
   getTrainingLevelsByProgram,
   TrainingLevel,
 } from "@/services/training-level.service";
-import { DataTable, type DataTableColumn } from "@/components/shared";
+import { DataTable, type DataTableColumn, TableMainCell } from "@/components/shared";
 import { formatStateLabel, getApiErrorMessage, stateNames } from "./ci-training-utils";
 
 export function WaitingTab() {
@@ -195,14 +195,10 @@ export function WaitingTab() {
         columns={columns}
         getRowId={(w) => `${w.instructorId}-${w.trainingLevelId}-${w.region}`}
         renderMainCell={(w) => (
-          <div className="flex flex-col">
-            <div className="font-medium text-gray-900">
-              {w.instructorName ?? `CI-${w.instructorId}`}
-            </div>
-            <div className="text-sm text-gray-500">
-              {w.instructorCode ?? "—"} - {formatStateLabel(w.region)}
-            </div>
-          </div>
+          <TableMainCell
+            title={w.instructorName ?? `CI-${w.instructorId}`}
+            subtitle={`${w.instructorCode ?? "—"} - ${formatStateLabel(w.region)}`}
+          />
         )}
         searchPlaceholder="Search instructor, code, franchise or state..."
         onSearchChange={setSearch}

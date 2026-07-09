@@ -135,7 +135,7 @@ export function BulkDispatchPickerModal({
       <AppDialogBody>
         <div className="space-y-4">
           <div className="space-y-2 rounded-lg border p-3">
-            <p className="text-sm font-medium text-gray-900">Dispatch as</p>
+            <p className="text-sm font-medium text-card-foreground">Dispatch as</p>
             <div className="space-y-1 text-sm">
               <label className="flex cursor-pointer items-center gap-2">
                 <input
@@ -191,7 +191,7 @@ export function BulkDispatchPickerModal({
                           onChange={() => setSelectedOrderId(order.id)}
                           className="h-4 w-4 accent-primary"
                         />
-                        <span className="font-medium text-gray-900">{order.referenceId}</span>
+                        <span className="font-medium text-card-foreground">{order.referenceId}</span>
                         <span className="text-muted-foreground">{order.orderType}</span>
                         <span className="text-muted-foreground">
                           {order.shipment?.status ?? "Awaiting shipment"}
@@ -210,13 +210,13 @@ export function BulkDispatchPickerModal({
           <div className="rounded-lg border border-dashed bg-slate-50/60 p-4">
             {/* Header row — matches InventoryCheckboxLinkPanel */}
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h4 className="text-sm font-medium text-gray-900">Add to dispatch</h4>
+              <h4 className="text-sm font-medium text-card-foreground">Add to dispatch</h4>
             </div>
 
             {/* Section 2: Temp selection — same shell as inventory pending block */}
             {isDirty ? (
               <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
-                <p className="mb-2 text-xs font-medium text-gray-900">
+                <p className="mb-2 text-xs font-medium text-card-foreground">
                   {pendingCount} selected — not yet dispatched
                 </p>
                 {selectedIds.map((id) => {
@@ -226,11 +226,11 @@ export function BulkDispatchPickerModal({
                   return (
                     <div key={id} className="flex items-center gap-2 py-1">
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium text-gray-900">
+                        <div className="truncate text-sm font-medium text-card-foreground">
                           {item.label}
                         </div>
                         {meta ? (
-                          <div className="truncate text-xs text-gray-500">{meta}</div>
+                          <div className="truncate text-xs text-muted-foreground">{meta}</div>
                         ) : null}
                       </div>
                       <button
@@ -290,11 +290,11 @@ export function BulkDispatchPickerModal({
                       </button>
 
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium text-gray-900">
+                        <div className="truncate text-sm font-medium text-card-foreground">
                           {item.label}
                         </div>
                         {meta ? (
-                          <div className="mt-0.5 truncate text-xs text-gray-500">{meta}</div>
+                          <div className="mt-0.5 truncate text-xs text-muted-foreground">{meta}</div>
                         ) : null}
                       </div>
                     </div>

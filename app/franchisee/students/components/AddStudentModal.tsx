@@ -804,7 +804,7 @@ export default function AddStudentModal({
                         {errors.discontinueReason}
                       </p>
                     )}
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       ⚠️ Discontinued students cannot request certificates and
                       will need admin approval for reactivation.
                     </p>

@@ -30,7 +30,7 @@ import {
   getTrainingLevelsByProgram,
   TrainingLevel,
 } from "@/services/training-level.service";
-import { DataTable, type DataTableColumn } from "@/components/shared";
+import { DataTable, type DataTableColumn, TableMainCell } from "@/components/shared";
 import { Plus, CheckCircle2, CalendarDays } from "lucide-react";
 import {
   formatStateLabel,
@@ -731,14 +731,10 @@ function SessionAssignmentsPanel({
         columns={columns}
         getRowId={(a) => String(a.id)}
         renderMainCell={(a) => (
-          <div className="flex flex-col">
-            <div className="font-medium text-gray-900">
-              {a.instructorName ?? `CI-${a.instructorId}`}
-            </div>
-            <div className="text-sm text-gray-500">
-              {a.instructorCode ?? "—"}
-            </div>
-          </div>
+          <TableMainCell
+            title={a.instructorName ?? `CI-${a.instructorId}`}
+            subtitle={a.instructorCode ?? "—"}
+          />
         )}
         emptyMessage="No assignments for this session"
       />
@@ -940,14 +936,10 @@ export function SessionsTab() {
         columns={columns}
         getRowId={(s) => String(s.id)}
         renderMainCell={(s) => (
-          <div className="flex flex-col">
-            <div className="font-medium text-gray-900">
-              {formatStateLabel(s.region)}
-            </div>
-            <div className="text-sm text-gray-500">
-              #{s.id} - {s.trainingLevelName ?? `Level ${s.trainingLevelId}`}
-            </div>
-          </div>
+          <TableMainCell
+            title={formatStateLabel(s.region)}
+            subtitle={`#${s.id} - ${s.trainingLevelName ?? `Level ${s.trainingLevelId}`}`}
+          />
         )}
         renderExpandedContent={(session) => (
           <SessionAssignmentsPanel

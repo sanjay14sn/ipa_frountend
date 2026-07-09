@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { FormDialog } from "@/components/shared/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, X } from "lucide-react";
-import { DataTable, StatusBadge, formatStatusLabel } from "@/components/shared";
+import { DataTable, StatusBadge, formatStatusLabel, TableMainCell } from "@/components/shared";
 import type {
   DataTableColumn,
   DataTableFilter,
@@ -200,9 +200,7 @@ export default function ProgramRequestsTable({
         columns={columns}
         getRowId={(r) => r.id.toString()}
         renderMainCell={(r) => (
-          <span className="font-medium text-gray-900">
-            {r.franchise?.name ?? r.franchiseId}
-          </span>
+          <TableMainCell title={r.franchise?.name ?? r.franchiseId} />
         )}
         renderExpandedContent={(r) => <ProgramRequestDetails request={r} />}
         searchPlaceholder="Search franchise, program, or franchisee..."

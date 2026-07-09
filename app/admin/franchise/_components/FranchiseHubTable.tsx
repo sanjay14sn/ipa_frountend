@@ -18,6 +18,7 @@ import {
   type DataTableMultiSelectFilter,
   type DataTablePaginationMeta,
   type DataTableSortOption,
+  TableMainCell,
 } from "@/components/shared";
 import type { FranchiseData } from "@/services/franchisee.service";
 import { Edit, Eye, KeyRound, Trash2, Check, X } from "lucide-react";
@@ -345,12 +346,12 @@ export function FranchiseHubTable({
       columns={columns}
       getRowId={(item) => String(item.id)}
       renderMainCell={(item) => (
-        <div className="flex flex-col gap-0.5">
-          <span className="font-medium text-gray-900">{item.name}</span>
-          {item.code && (
-            <span className="text-xs text-muted-foreground font-mono">{item.code}</span>
-          )}
-        </div>
+        <TableMainCell
+          title={item.name}
+          subtitle={
+            item.code ? <span className="font-mono">{item.code}</span> : undefined
+          }
+        />
       )}
       renderExpandedContent={(item) =>
         variant === "franchises" ? (

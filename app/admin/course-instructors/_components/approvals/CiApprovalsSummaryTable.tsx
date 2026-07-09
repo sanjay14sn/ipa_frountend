@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { DataTable, StatusBadge } from "@/components/shared";
+import { DataTable, StatusBadge, TableMainCell } from "@/components/shared";
 import type { DataTableColumn } from "@/components/shared";
 import type { CIFranchiseSummary } from "@/hooks/api/course-instructor.hooks";
 import { useAdminCISummaries } from "@/hooks/api/course-instructor.hooks";
@@ -76,11 +76,7 @@ export default function CiApprovalsSummaryTable({
       loading={loading}
       columns={columns}
       getRowId={(g) => g.franchiseId}
-      renderMainCell={(g) => (
-        <div className="flex flex-col">
-          <div className="font-medium text-gray-900">{g.franchiseName}</div>
-        </div>
-      )}
+      renderMainCell={(g) => <TableMainCell title={g.franchiseName} />}
       renderExpandedContent={(g) => (
         <FranchiseCiDetails
           franchiseId={g.franchiseId}

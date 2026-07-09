@@ -332,7 +332,7 @@ export function CertificateTemplateEditor({
                           screenScale > 0 ? (
                             isSignature ? (
                               <span
-                                className="flex h-full w-full items-center justify-center whitespace-nowrap text-gray-500"
+                                className="flex h-full w-full items-center justify-center whitespace-nowrap text-muted-foreground"
                                 style={{
                                   fontFamily: "'Segoe Script', cursive",
                                   fontSize: `${14 * screenScale}px`,
@@ -343,7 +343,7 @@ export function CertificateTemplateEditor({
                               </span>
                             ) : (
                               <span
-                                className="flex h-full w-full items-center justify-center whitespace-nowrap text-gray-900"
+                                className="flex h-full w-full items-center justify-center whitespace-nowrap text-card-foreground"
                                 style={previewTextStyle(coord)}
                               >
                                 {sample}

@@ -40,7 +40,7 @@ function BasicProgramCatalogPanel({
   return (
     <div className="space-y-4">
       {isLoading ? (
-        <div className="rounded-lg border bg-white p-4 text-sm text-gray-500 shadow-sm">
+        <div className="rounded-lg border bg-white p-4 text-sm text-muted-foreground shadow-sm">
           Loading streams...
         </div>
       ) : null}

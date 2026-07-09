@@ -85,7 +85,7 @@ export default function IdCardPreviewModal({
             <div className="flex justify-center mb-4">
               <CheckCircle className="h-12 w-12 text-primary" />
             </div>
-            <DialogTitle className="text-2xl font-semibold text-gray-900">
+            <DialogTitle className="text-2xl font-semibold text-card-foreground">
               ID Card Issued!
             </DialogTitle>
             <DialogDescription className="text-center">
@@ -106,7 +106,7 @@ export default function IdCardPreviewModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl w-full mx-4">
         <DialogHeader className="text-center">
-          <DialogTitle className="text-xl font-semibold text-gray-900">
+          <DialogTitle className="text-xl font-semibold text-card-foreground">
             ID Card Preview
           </DialogTitle>
           <DialogDescription>
@@ -174,17 +174,17 @@ export default function IdCardPreviewModal({
                   <div className="flex-1 space-y-3 text-sm">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-gray-600" />
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <p className="font-medium text-gray-800">Address:</p>
-                          <p className="text-gray-600 text-xs leading-relaxed">
+                          <p className="text-muted-foreground text-xs leading-relaxed">
                             {student.residentialAddress}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-gray-600" />
+                        <Phone className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <p className="font-medium text-gray-800">
                             Father: {student.fatherContactNo}
@@ -196,12 +196,12 @@ export default function IdCardPreviewModal({
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-gray-600" />
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <p className="font-medium text-gray-800">
                             Franchise:
                           </p>
-                          <p className="text-gray-600 text-xs">
+                          <p className="text-muted-foreground text-xs">
                             {student.franchiseeAddress}
                           </p>
                         </div>
@@ -211,7 +211,7 @@ export default function IdCardPreviewModal({
 
                   {/* Footer */}
                   <div className="text-center border-t border-gray-300 pt-2">
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       Valid for academic year 2024-25
                     </p>
                   </div>

@@ -390,7 +390,7 @@ export function BulkDispatchFlowModal({
           <div className="space-y-4">
             <div className="rounded-lg border border-dashed bg-slate-50/60 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h4 className="text-sm font-medium text-gray-900">
+                <h4 className="text-sm font-medium text-card-foreground">
                   Dispatch-eligible certificates
                 </h4>
                 <span className="text-xs text-muted-foreground">
@@ -402,7 +402,7 @@ export function BulkDispatchFlowModal({
 
               {isDirty ? (
                 <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
-                  <p className="mb-2 text-xs font-medium text-gray-900">
+                  <p className="mb-2 text-xs font-medium text-card-foreground">
                     {selectedCount} selected — not yet dispatched
                   </p>
                   {selectedIds.map((id) => {
@@ -412,11 +412,11 @@ export function BulkDispatchFlowModal({
                     return (
                       <div key={id} className="flex items-center gap-2 py-1">
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium text-gray-900">
+                          <div className="truncate text-sm font-medium text-card-foreground">
                             {item.label}
                           </div>
                           {meta ? (
-                            <div className="truncate text-xs text-gray-500">
+                            <div className="truncate text-xs text-muted-foreground">
                               {meta}
                             </div>
                           ) : null}
@@ -444,12 +444,12 @@ export function BulkDispatchFlowModal({
 
               <div className="mt-3 max-h-72 overflow-y-auto rounded-lg border bg-white">
                 {eligibleQuery.isLoading ? (
-                  <div className="flex items-center gap-2 px-3 py-6 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 px-3 py-6 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Loading eligible certificates…
                   </div>
                 ) : filtered.length === 0 ? (
-                  <div className="px-3 py-6 text-sm text-gray-500">
+                  <div className="px-3 py-6 text-sm text-muted-foreground">
                     {items.length === 0
                       ? "No dispatch-eligible certificates available."
                       : "No certificates match your search."}
@@ -485,11 +485,11 @@ export function BulkDispatchFlowModal({
                         </button>
 
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium text-gray-900">
+                          <div className="truncate text-sm font-medium text-card-foreground">
                             {item.label}
                           </div>
                           {meta ? (
-                            <div className="mt-0.5 truncate text-xs text-gray-500">
+                            <div className="mt-0.5 truncate text-xs text-muted-foreground">
                               {meta}
                             </div>
                           ) : null}
@@ -631,12 +631,12 @@ export function BulkDispatchFlowModal({
                   </div>
                   <div className="min-h-0 flex-1 overflow-y-auto">
                     {isLoadingOrders ? (
-                      <div className="flex items-center gap-2 px-3 py-6 text-sm text-gray-500">
+                      <div className="flex items-center gap-2 px-3 py-6 text-sm text-muted-foreground">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Loading orders…
                       </div>
                     ) : eligibleOrders.length === 0 ? (
-                      <div className="px-3 py-6 text-sm text-gray-500">
+                      <div className="px-3 py-6 text-sm text-muted-foreground">
                         No eligible orders found for this franchise.
                       </div>
                     ) : (
@@ -658,7 +658,7 @@ export function BulkDispatchFlowModal({
                               className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
                             />
                             <div className="min-w-0 flex-1">
-                              <div className="truncate font-medium text-gray-900">
+                              <div className="truncate font-medium text-card-foreground">
                                 {order.referenceId}
                               </div>
                               <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
