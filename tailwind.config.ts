@@ -125,12 +125,6 @@ const config: Config = {
           yellow: "hsl(var(--brand-yellow) / <alpha-value>)",
           green: "hsl(var(--brand-green) / <alpha-value>)",
         },
-        // Orphan surface color — only consumer is the old franchisee layout;
-        // removed with the Phase-2 shell (F-07).
-        surface: {
-          DEFAULT: "var(--surface)",
-          green: "var(--surface-green)",
-        },
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -31,7 +31,7 @@ export const DIALOG_TOKENS = {
   iconBubble:
     "grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary shrink-0",
   iconBubbleSuccess:
-    "inline-flex h-14 w-14 items-center justify-center rounded-full bg-surface-green text-primary",
+    "inline-flex h-14 w-14 items-center justify-center rounded-full bg-success-soft text-primary",
 
   // Footer
   footerWrap: "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end font-sans",
@@ -79,7 +79,7 @@ export const DIALOG_TOKENS = {
     "flex items-start gap-3 rounded-lg border p-4",
   stateTone: {
     info: "border-border bg-muted/40 text-card-foreground",
-    success: "border-primary/20 bg-surface-green text-primary",
+    success: "border-primary/20 bg-success-soft text-primary",
     warning: "border-amber-500/30 bg-amber-50 text-amber-900",
     destructive: "border-destructive/20 bg-red-50 text-destructive",
   },
@@ -109,7 +109,7 @@ export const DIALOG_TOKENS = {
   pickerListItem:
     "flex items-center gap-3 px-3 py-2.5 hover:bg-accent/40 transition-colors",
   pickerPendingWrap:
-    "rounded-lg border border-primary/20 bg-surface-green/50 p-3 space-y-2",
+    "rounded-lg border border-primary/20 bg-success-soft/50 p-3 space-y-2",
   pickerPendingTitle: "text-xs font-semibold uppercase tracking-wide text-primary",
 
   // Scroll utility
