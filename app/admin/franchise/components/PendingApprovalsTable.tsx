@@ -9,7 +9,7 @@ import {
 import { FranchiseType } from "@/services/franchise.enums";
 import { usePaginatedFranchiseApplicationsAdmin } from "@/hooks/api/franchisee.hooks";
 import { type FranchiseData } from "@/services/franchisee.service";
-import { FranchiseHubTable } from "@/app/admin/franchises/components/FranchiseHubTable";
+import { FranchiseHubTable } from "@/app/admin/franchise/_components/FranchiseHubTable";
 
 interface PendingApprovalsTableProps {
   onApprove?: (application: FranchiseData) => void;

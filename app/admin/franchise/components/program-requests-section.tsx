@@ -6,7 +6,7 @@ import type { ProgramRequestRow } from "@/services/franchise.service";
 import { approveProgramRequestAdmin } from "@/services/program-request.service";
 import { getErrorMessage } from "@/lib/error-utils";
 import { TablePageShell, TableSectionSurface } from "@/components/shared";
-import ProgramRequestsTable from "@/app/admin/program-requests/components/ProgramRequestsTable";
+import ProgramRequestsTable from "@/app/admin/franchise/_components/ProgramRequestsTable";
 import { PayrollTermsDialog } from "./PayrollTermsDialog";
 import type { ProgramPayroll } from "./types";
 import { toast } from "sonner";

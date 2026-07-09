@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import FranchiseTable from "@/app/admin/franchises/components/FranchiseTable";
-import { CreateFranchiseDialog } from "@/app/admin/franchises/components/CreateFranchiseDialog";
+import FranchiseTable from "@/app/admin/franchise/_components/FranchiseTable";
+import { CreateFranchiseDialog } from "@/app/admin/franchise/_components/CreateFranchiseDialog";
 import { getAllPrograms, Program } from "@/services/program.service";
 import { toast } from "sonner";
 import { TablePageShell, TableSectionSurface } from "@/components/shared";
