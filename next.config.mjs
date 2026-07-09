@@ -126,6 +126,102 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    // Legacy-URL preservation (FE revamp doc 03, RT-02). All temporary (307)
+    // while the IA settles. NOTE: these run BEFORE proxy.ts, so an
+    // unauthenticated hit 307s here first and the proxy's ?next= carries the
+    // destination — same end state after login.
+    return [
+      { source: "/", destination: "/login", permanent: false },
+      { source: "/admin", destination: "/admin/dashboard", permanent: false },
+      {
+        source: "/admin/orders",
+        destination: "/admin/operations?tab=orders",
+        permanent: false,
+      },
+      {
+        source: "/admin/inventory",
+        destination: "/admin/operations?tab=inventory",
+        permanent: false,
+      },
+      {
+        source: "/admin/payments",
+        destination: "/admin/operations?tab=payments",
+        permanent: false,
+      },
+      {
+        source: "/admin/shipping",
+        destination: "/admin/operations?tab=shipping",
+        permanent: false,
+      },
+      {
+        source: "/admin/franchises",
+        destination: "/admin/franchise?tab=franchises",
+        permanent: false,
+      },
+      {
+        source: "/admin/pending-approvals",
+        destination: "/admin/franchise?tab=applications",
+        permanent: false,
+      },
+      {
+        source: "/admin/agreements",
+        destination: "/admin/franchise?tab=agreements",
+        permanent: false,
+      },
+      {
+        source: "/admin/program-requests",
+        destination: "/admin/franchise?tab=programs",
+        permanent: false,
+      },
+      {
+        source: "/admin/certificate-requests",
+        destination: "/admin/students?tab=certificates",
+        permanent: false,
+      },
+      {
+        source: "/admin/id-requests",
+        destination: "/admin/students?tab=ids",
+        permanent: false,
+      },
+      {
+        source: "/admin/ci-training",
+        destination: "/admin/course-instructors?tab=training",
+        permanent: false,
+      },
+      {
+        source: "/admin/course-instructor-approvals",
+        destination: "/admin/course-instructors?tab=applications",
+        permanent: false,
+      },
+      {
+        source: "/admin/training-levels",
+        destination: "/admin/programs",
+        permanent: false,
+      },
+      {
+        source: "/franchisee",
+        destination: "/franchisee/dashboard",
+        permanent: false,
+      },
+      {
+        source: "/franchisee/agreements",
+        destination: "/franchisee/franchise?tab=agreements",
+        permanent: false,
+      },
+      {
+        source: "/franchisee/program-agreements",
+        destination: "/franchisee/franchise?tab=programs",
+        permanent: false,
+      },
+      {
+        source: "/franchisee/certificate-requests",
+        destination: "/franchisee/students?tab=certificates",
+        permanent: false,
+      },
+      { source: "/ci", destination: "/ci/dashboard", permanent: false },
+    ];
+  },
 };
 
 // Run `ANALYZE=true pnpm build` to open bundle analysis in the browser.
