@@ -3,15 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { FormDialog } from "@/components/shared/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, X } from "lucide-react";
 import { DataTable, StatusBadge, formatStatusLabel } from "@/components/shared";
@@ -240,53 +233,43 @@ export default function ProgramRequestsTable({
         }
       />
 
-      <Dialog
+      <FormDialog
         open={rejectDialog.open}
         onOpenChange={(open) => setRejectDialog((prev) => ({ ...prev, open }))}
+        size="md"
+        title="Reject Program Request"
+        description={
+          <>
+            Rejecting request for &ldquo;
+            {rejectDialog.request?.program?.name}&rdquo;. Please provide a
+            reason.
+          </>
+        }
+        formId="program-reject-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          confirmReject();
+        }}
+        submitLabel="Reject"
+        cancelLabel="Cancel"
+        canSubmit={Boolean(rejectDialog.reason.trim())}
       >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Reject Program Request</DialogTitle>
-            <DialogDescription>
-              Rejecting request for &ldquo;
-              {rejectDialog.request?.program?.name}&rdquo;. Please provide a
-              reason.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 py-2">
-            <Label htmlFor="reject-reason">Reason</Label>
-            <Textarea
-              id="reject-reason"
-              placeholder="Enter rejection reason..."
-              value={rejectDialog.reason}
-              onChange={(e) =>
-                setRejectDialog((prev) => ({
-                  ...prev,
-                  reason: e.target.value,
-                }))
-              }
-              rows={3}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() =>
-                setRejectDialog((prev) => ({ ...prev, open: false }))
-              }
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmReject}
-              disabled={!rejectDialog.reason.trim()}
-            >
-              Reject
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <div className="space-y-2 py-2">
+          <Label htmlFor="reject-reason">Reason</Label>
+          <Textarea
+            id="reject-reason"
+            placeholder="Enter rejection reason..."
+            value={rejectDialog.reason}
+            onChange={(e) =>
+              setRejectDialog((prev) => ({
+                ...prev,
+                reason: e.target.value,
+              }))
+            }
+            rows={3}
+          />
+        </div>
+      </FormDialog>
     </>
   );
 }

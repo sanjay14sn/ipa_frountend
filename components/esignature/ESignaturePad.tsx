@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { Eraser, Loader2, PenLine, Type, Undo2 } from "lucide-react";
-/* eslint-disable no-restricted-imports -- SW-P11 sanctioned raw-dialog exemption: the signature pad needs raw Dialog (canvas focus/pointer handling; no standard header/footer). */
+/* SW-P11 sanctioned raw-dialog exemption (the signature pad needs raw Dialog: canvas focus/pointer handling; no standard header/footer). Phase 9 turns this into an inline eslint-disable when the no-restricted-imports rule lands. */
 import {
   Dialog,
   DialogContent,

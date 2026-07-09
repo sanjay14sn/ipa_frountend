@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { formatRupees } from "@/lib/currency-utils";
+import { FormDialog } from "@/components/shared/dialog";
 
 import {
   DataTable,
@@ -8,14 +9,6 @@ import {
   type DataTableFilter,
 } from "@/components/shared";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TabsContent } from "@/components/ui/tabs";
@@ -157,19 +150,27 @@ export function ReceiptsTab({
         </ProcurementRecordsCard>
       </TabsContent>
 
-      <Dialog open={isReceiptOpen} onOpenChange={onReceiptOpenChange}>
-        <DialogContent className="flex w-[calc(100%-1rem)] max-h-[min(80vh,580px)] max-w-5xl flex-col gap-2 overflow-hidden p-3 sm:w-[calc(100%-1.25rem)] sm:gap-2 sm:p-4">
-          <DialogHeader className="shrink-0 space-y-1 pr-7">
-            <DialogTitle className="text-lg leading-tight">
-              Post purchase receipt
-            </DialogTitle>
-            {receiptOrderId !== null ? (
-              <DialogDescription className="text-xs leading-snug sm:text-sm">
-                PO #{receiptOrderId} - ordered quantities are from the purchase
-                order. Unit cost is taken from the PO line (not editable).
-              </DialogDescription>
-            ) : null}
-          </DialogHeader>
+      <FormDialog
+        open={isReceiptOpen}
+        onOpenChange={onReceiptOpenChange}
+        size="xl"
+        scrollBody
+        maxHeight="max-h-[min(80vh,580px)]"
+        title="Post purchase receipt"
+        description={
+          receiptOrderId !== null
+            ? `PO #${receiptOrderId} - ordered quantities are from the purchase order. Unit cost is taken from the PO line (not editable).`
+            : undefined
+        }
+        formId="post-receipt-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void onPostReceipt();
+        }}
+        isSubmitting={submitting}
+        submitLabel="Save receipt"
+        cancelLabel="Cancel"
+      >
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-0.5">
             {receiptBody.lines.map((line, index) => {
               const item = inventoryItems.find(
@@ -313,16 +314,7 @@ export function ReceiptsTab({
               );
             })}
           </div>
-          <DialogFooter className="shrink-0 gap-1.5 pt-1">
-            <Button variant="outline" onClick={() => onReceiptOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => void onPostReceipt()} disabled={submitting}>
-              Save receipt
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormDialog>
     </>
   );
 }
