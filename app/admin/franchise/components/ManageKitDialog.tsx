@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Loader2, Truck } from "lucide-react";
 import type { AgreementRecord } from "@/services/agreement.service";
 import type { AgreementActionVisibility } from "@/components/agreements/record-detail/agreement-utils";
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AgreementKitItemsPanel } from "./AgreementKitItemsDialog";
+import { ConfirmDialog } from "@/components/shared/dialog";
 import { FranchiseKitPanel } from "./FranchiseKitEditor";
 
 interface ManageKitDialogProps {
@@ -36,6 +38,7 @@ export function ManageKitDialog({
   onOpenChange,
 }: ManageKitDialogProps) {
   const dispatchKit = useDispatchFranchiseKitMutation(agreement.id);
+  const [dispatchConfirmOpen, setDispatchConfirmOpen] = useState(false);
 
   const showItems = vis.manageKitItems;
   const showFranchise = vis.franchiseKitEditor;
@@ -113,15 +116,7 @@ export function ManageKitDialog({
                       type="button"
                       size="sm"
                       disabled={dispatchKit.isPending}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            "Create the one-time free franchise kit order for this agreement?",
-                          )
-                        ) {
-                          dispatchKit.mutate();
-                        }
-                      }}
+                      onClick={() => setDispatchConfirmOpen(true)}
                     >
                       {dispatchKit.isPending ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -136,6 +131,18 @@ export function ManageKitDialog({
             </TabsContent>
           ) : null}
         </Tabs>
+        <ConfirmDialog
+          open={dispatchConfirmOpen}
+          onOpenChange={setDispatchConfirmOpen}
+          title="Dispatch franchise kit?"
+          description="Create the one-time free franchise kit order for this agreement."
+          confirmLabel="Create order"
+          onConfirm={() => {
+            dispatchKit.mutate();
+            setDispatchConfirmOpen(false);
+          }}
+          isConfirming={dispatchKit.isPending}
+        />
       </DialogContent>
     </Dialog>
   );

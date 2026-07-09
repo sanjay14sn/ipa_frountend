@@ -45,6 +45,7 @@ import { sendClientLog } from "@/lib/client-telemetry";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/shared/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -118,6 +119,7 @@ export function CertificateTemplateSection({
   const [selectedFieldKey, setSelectedFieldKey] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [pdfScale, setPdfScale] = useState({
     width: 612,
     height: 792,
@@ -269,7 +271,7 @@ export function CertificateTemplateSection({
     }
   };
 
-  const handleDeleteTemplate = async () => {
+  const handleDeleteTemplate = () => {
     if (templateId == null) {
       // Unsaved draft — just discard it.
       if (templates.length > 0) {
@@ -279,13 +281,11 @@ export function CertificateTemplateSection({
       }
       return;
     }
-    if (
-      !window.confirm(
-        `Delete certificate template "${templateName || `#${templateId}`}"? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+    setDeleteConfirmOpen(true);
+  };
+
+  const performDeleteTemplate = async () => {
+    if (templateId == null) return;
     try {
       await deleteCertificateTemplate(templateId);
       toast.success("Certificate template deleted");
@@ -691,6 +691,18 @@ export function CertificateTemplateSection({
           Select a template above or create a new one.
         </div>
       )}
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        variant="destructive"
+        title="Delete certificate template?"
+        description={`Delete certificate template "${templateName || `#${templateId}`}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          setDeleteConfirmOpen(false);
+          await performDeleteTemplate();
+        }}
+      />
     </div>
   );
 }

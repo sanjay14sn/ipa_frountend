@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { ConfirmDialog } from "@/components/shared/dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,16 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import type { InventoryItemSummary } from "@/services/inventory.service";
 import { InventoryForm } from "@/app/admin/operations/components/inventory/inventory-form";
 import type { InventoryFormState } from "@/app/admin/operations/components/inventory/types";
@@ -103,25 +94,19 @@ export function DeleteInventoryDialog({
   onConfirm: () => void;
 }) {
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete inventory item?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This removes &quot;{item?.name}&quot; from the catalog and drops its
-            level-template assignments.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive hover:bg-destructive/90"
-            onClick={onConfirm}
-          >
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      variant="destructive"
+      title="Delete inventory item?"
+      description={
+        <>
+          This removes &quot;{item?.name}&quot; from the catalog and drops its
+          level-template assignments.
+        </>
+      }
+      confirmLabel="Delete"
+      onConfirm={onConfirm}
+    />
   );
 }

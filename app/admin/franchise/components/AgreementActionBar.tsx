@@ -16,6 +16,7 @@ import {
   getAgreementActionVisibility,
 } from "@/components/agreements/record-detail/agreement-utils";
 import { IssueRenewalButton } from "@/components/agreements/IssueRenewalButton";
+import { ConfirmDialog } from "@/components/shared/dialog";
 
 /**
  * Context-aware admin action toolbar for one agreement's detail surface. Holds
@@ -29,6 +30,7 @@ export function AgreementActionBar({ agreement }: { agreement: AgreementRecord }
   const status = agreementStatusBadge(agreement.status, agreement.signed);
 
   const [downloading, setDownloading] = useState(false);
+  const [reactivateOpen, setReactivateOpen] = useState(false);
 
   const reactivate = useReactivateAgreementMutation(agreement.id);
 
@@ -74,11 +76,7 @@ export function AgreementActionBar({ agreement }: { agreement: AgreementRecord }
           variant="outline"
           size="sm"
           className="rounded-lg"
-          onClick={() => {
-            if (window.confirm("Reactivate this agreement?")) {
-              reactivate.mutate();
-            }
-          }}
+          onClick={() => setReactivateOpen(true)}
           disabled={reactivate.isPending}
         >
           {reactivate.isPending ? (
@@ -91,6 +89,18 @@ export function AgreementActionBar({ agreement }: { agreement: AgreementRecord }
       ) : null}
 
       {vis.renew ? <IssueRenewalButton agreement={agreement} /> : null}
+      <ConfirmDialog
+        open={reactivateOpen}
+        onOpenChange={setReactivateOpen}
+        title="Reactivate this agreement?"
+        description="The agreement returns to its active lifecycle state."
+        confirmLabel="Reactivate"
+        onConfirm={() => {
+          reactivate.mutate();
+          setReactivateOpen(false);
+        }}
+        isConfirming={reactivate.isPending}
+      />
     </div>
   );
 }

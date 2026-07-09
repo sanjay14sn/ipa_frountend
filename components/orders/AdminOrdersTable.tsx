@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CreditCard, Eye, ShieldCheck, X, Download, Loader2, RefreshCw, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
+import { FormDialog } from "@/components/shared/dialog";
 import { formatRupees } from "@/lib/currency-utils";
 import { orderTypeLabel } from "@/lib/payment-details-display";
 import {
@@ -23,16 +24,6 @@ import { DispatchItemsSummaryTable } from "./DispatchItemsSummaryTable";
 import { isStandaloneDispatchOrderType } from "./dispatch-order-helpers";
 import { Separator } from "@/components/ui/separator";
 import { OrderPaymentDetailsPanel } from "@/components/orders/OrderPaymentDetailsPanel";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
@@ -594,71 +585,56 @@ export default function AdminOrdersTable({
       busy={busyOrderId !== null}
     />
 
-    <AlertDialog
+    <FormDialog
       open={cancelDialogOrder !== null}
       onOpenChange={(open) => {
         if (!open) setCancelDialogOrder(null);
       }}
+      title="Cancel order"
+      description={
+        <>
+          Order{" "}
+          <span className="font-medium text-foreground">
+            #{cancelDialogOrder?.id}
+          </span>
+          {cancelDialogOrder?.referenceId ? (
+            <> · {cancelDialogOrder.referenceId}</>
+          ) : null}{" "}
+          will be cancelled and cannot be restored.
+        </>
+      }
+      formId="admin-cancel-order-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void handleConfirmAdminCancel();
+      }}
+      isSubmitting={
+        cancelDialogOrder != null && busyOrderId === cancelDialogOrder.id
+      }
+      submitLabel="Cancel order"
+      cancelLabel="Keep order"
+      size="md"
     >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Cancel order</AlertDialogTitle>
-          <AlertDialogDescription>
-            Order{" "}
-            <span className="font-medium text-foreground">
-              #{cancelDialogOrder?.id}
-            </span>
-            {cancelDialogOrder?.referenceId ? (
-              <> · {cancelDialogOrder.referenceId}</>
-            ) : null}{" "}
-            will be cancelled and cannot be restored.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="flex items-start gap-3 rounded-md border p-3">
-          <Checkbox
-            id="admin-cancel-refund"
-            checked={refundOnCancel}
-            disabled={
-              cancelDialogOrder != null && busyOrderId === cancelDialogOrder.id
-            }
-            onCheckedChange={(v) => setRefundOnCancel(v === true)}
-          />
-          <div className="grid gap-1.5 leading-none">
-            <Label htmlFor="admin-cancel-refund" className="cursor-pointer font-medium">
-              Refund payment to customer
-            </Label>
-            <p className="text-sm text-muted-foreground">
-              For paid orders, submits a full refund. Clear this option to cancel the order
-              without a refund.
-            </p>
-          </div>
+      <div className="flex items-start gap-3 rounded-md border p-3">
+        <Checkbox
+          id="admin-cancel-refund"
+          checked={refundOnCancel}
+          disabled={
+            cancelDialogOrder != null && busyOrderId === cancelDialogOrder.id
+          }
+          onCheckedChange={(v) => setRefundOnCancel(v === true)}
+        />
+        <div className="grid gap-1.5 leading-none">
+          <Label htmlFor="admin-cancel-refund" className="cursor-pointer font-medium">
+            Refund payment to customer
+          </Label>
+          <p className="text-sm text-muted-foreground">
+            For paid orders, submits a full refund. Clear this option to cancel the order
+            without a refund.
+          </p>
         </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel
-            disabled={
-              cancelDialogOrder != null && busyOrderId === cancelDialogOrder.id
-            }
-          >
-            Keep order
-          </AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            disabled={
-              cancelDialogOrder != null && busyOrderId === cancelDialogOrder.id
-            }
-            onClick={(e) => {
-              e.preventDefault();
-              void handleConfirmAdminCancel();
-            }}
-          >
-            {cancelDialogOrder != null && busyOrderId === cancelDialogOrder.id ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
-            Cancel order
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      </div>
+    </FormDialog>
     </>
   );
 }

@@ -4,18 +4,9 @@ import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/date-utils";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { FileText, Loader2, X } from "lucide-react";
 import { DataTable, MoneyCell, StatusBadge } from "@/components/shared";
+import { ConfirmDialog } from "@/components/shared/dialog";
 import { orderTypeBadgeClass, orderTypeLabel } from "@/lib/payment-details-display";
 import type {
   DataTableColumn,
@@ -268,41 +259,29 @@ export default function OrdersTable({
       orderId={invoiceOrderId}
       onClose={() => setInvoiceOrderId(null)}
     />
-    <AlertDialog
+    <ConfirmDialog
       open={cancelOrder !== null}
       onOpenChange={(open) => {
         if (!open) setCancelOrder(null);
       }}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Cancel order?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will cancel Order #{cancelOrder?.id}. If payment was captured,
-            a full refund will be initiated.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Keep order</AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            disabled={cancelOrder != null && cancellingOrderId === cancelOrder.id}
-            onClick={(event) => {
-              event.preventDefault();
-              if (!cancelOrder || !onCancelOrder) return;
-              void Promise.resolve(onCancelOrder(cancelOrder)).finally(() => {
-                setCancelOrder(null);
-              });
-            }}
-          >
-            {cancelOrder != null && cancellingOrderId === cancelOrder.id ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
-            Cancel order
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      variant="destructive"
+      title="Cancel order?"
+      description={
+        <>
+          This will cancel Order #{cancelOrder?.id}. If payment was captured, a
+          full refund will be initiated.
+        </>
+      }
+      confirmLabel="Cancel order"
+      cancelLabel="Keep order"
+      isConfirming={cancelOrder != null && cancellingOrderId === cancelOrder.id}
+      onConfirm={() => {
+        if (!cancelOrder || !onCancelOrder) return;
+        void Promise.resolve(onCancelOrder(cancelOrder)).finally(() => {
+          setCancelOrder(null);
+        });
+      }}
+    />
     </>
   );
 }
