@@ -7,8 +7,6 @@
  * Migration guide for inline copies:
  *   - `new Intl.NumberFormat("en-IN", { style:"currency", currency:"INR", ... }).format(v)`
  *     → `formatRupees(v)`
- *   - `formatInr`, `fmtMoney`, `formatRsAmount` are deprecated aliases kept for
- *     a one-cycle migration window — migrate callers to `formatRupees`.
  */
 
 /** Shared formatter instance — created once and reused for performance. */
@@ -37,17 +35,27 @@ export function formatRupees(value?: number | null): string {
 }
 
 /**
- * @deprecated Use {@link formatRupees} instead.
- * Alias kept for compatibility with `lib/gst.ts` and legacy callers.
+ * Formats an amount in an arbitrary ISO currency (en-IN locale). Prefer
+ * {@link formatRupees} — this exists only for surfaces that carry a dynamic
+ * currency code (e.g. gateway payments).
  */
-export const formatInr = formatRupees;
-
-/**
- * @deprecated Use {@link formatRupees} instead.
- */
-export const fmtMoney = formatRupees;
-
-/**
- * @deprecated Use {@link formatRupees} instead.
- */
-export const formatRsAmount = formatRupees;
+export function formatCurrencyAmount(
+  value?: number | null,
+  currency = "INR",
+): string {
+  if (value == null || Number.isNaN(Number(value))) return "N/A";
+  if (currency === "INR") return formatRupees(value);
+  try {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(value));
+  } catch {
+    return `${currency} ${Number(value).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }
+}

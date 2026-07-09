@@ -1,5 +1,7 @@
 ﻿"use client";
 
+import { formatRupees } from "@/lib/currency-utils";
+
 import {
   DataTable,
   type DataTableColumn,
@@ -9,7 +11,6 @@ import { TabsContent } from "@/components/ui/tabs";
 import type { PurchaseOrderSummary } from "@/services/procurement.service";
 import { ProcurementRecordsCard } from "@/app/admin/operations/components/procurement/ProcurementRecordsCard";
 import {
-  formatCurrency,
   ITEMS_PER_PAGE,
   statusBadge,
 } from "@/app/admin/operations/components/procurement/procurement-utils";
@@ -78,7 +79,7 @@ export function ReplenishmentTab({
     {
       key: "total",
       header: "Total",
-      render: (draft) => formatCurrency(draft.totalCost),
+      render: (draft) => formatRupees(draft.totalCost),
     },
   ];
 

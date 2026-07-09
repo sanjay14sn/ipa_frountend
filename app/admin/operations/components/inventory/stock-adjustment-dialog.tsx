@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { InventoryItemSummary } from "@/services/inventory.service";
+import { formatRupees } from "@/lib/currency-utils";
 import type {
   AdjustmentDirection,
   AdjustmentFormState,
@@ -161,7 +162,7 @@ export function StockAdjustmentDialog({
                   type="number"
                   min={0}
                   step="0.01"
-                  placeholder={`Leaves WAC at ₹${adjustingItem.weightedAverageCost.toFixed(2)} when blank`}
+                  placeholder={`Leaves WAC at ${formatRupees(adjustingItem.weightedAverageCost)} when blank`}
                   value={adjustForm.unitCost}
                   onChange={(event) =>
                     setAdjustForm((prev) => ({

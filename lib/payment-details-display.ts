@@ -1,3 +1,5 @@
+import { formatCurrencyAmount } from "@/lib/currency-utils";
+
 export type MethodSpecificField = {
   label: string;
   value: string;
@@ -149,22 +151,8 @@ export function formatPaymentDateTime(value?: string | null) {
   return date.toLocaleString("en-IN");
 }
 
-export function formatRsAmount(value?: number | null, currency = "INR") {
-  if (value == null || Number.isNaN(Number(value))) return "N/A";
-  try {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(Number(value));
-  } catch {
-    return `Rs. ${Number(value).toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  }
-}
+/** @deprecated Use formatRupees / formatCurrencyAmount from lib/currency-utils. */
+export const formatRsAmount = formatCurrencyAmount;
 
 function boolToYesNo(value?: boolean) {
   if (value == null) return "N/A";

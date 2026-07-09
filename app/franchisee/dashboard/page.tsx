@@ -333,8 +333,7 @@ function PayrollItem({ p, index }: { p: any; index: number }) {
               {label}
             </p>
             <p className="font-medium text-card-foreground">
-              {"₹"}
-              {Number(val ?? 0).toLocaleString()}
+              {formatRupees(Number(val ?? 0))}
             </p>
           </div>
         ))}
@@ -410,8 +409,7 @@ function OrderRow({ order }: { order: import("@/services/order.service").OrderDa
       </div>
       <div className="text-right">
         <p className="text-sm font-medium text-card-foreground">
-          {"₹"}
-          {Number(order.totalAmount).toLocaleString()}
+          {formatRupees(Number(order.totalAmount))}
         </p>
         <p
           className={cn(

@@ -10,6 +10,7 @@ import {
   AppDialogHeader,
   AppDialogFooter,
 } from "@/components/shared/dialog";
+import { formatRupees } from "@/lib/currency-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -191,7 +192,7 @@ export default function FranchiseKitOrderDialog({
                           </div>
                         </td>
                         <td className="px-3 py-2 text-right">
-                          ₹{row.effectiveUnitPrice.toFixed(2)}
+                          {formatRupees(row.effectiveUnitPrice)}
                         </td>
                         <td className="px-3 py-2">
                           <div className="mx-auto flex w-fit items-center gap-1">
@@ -236,7 +237,7 @@ export default function FranchiseKitOrderDialog({
                         </td>
                         <td className="px-3 py-2 text-right font-medium">
                           {qty > 0
-                            ? `₹${(row.effectiveUnitPrice * qty).toFixed(2)}`
+                            ? formatRupees(row.effectiveUnitPrice * qty)
                             : "-"}
                         </td>
                       </tr>
@@ -272,7 +273,7 @@ export default function FranchiseKitOrderDialog({
           <span className="text-sm text-muted-foreground">
             Total:{" "}
             <span className="font-semibold text-foreground">
-              ₹{estimatedTotal.toFixed(2)}
+              {formatRupees(estimatedTotal)}
             </span>
           </span>
         }

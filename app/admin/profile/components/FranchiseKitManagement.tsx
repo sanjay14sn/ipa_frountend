@@ -19,6 +19,7 @@ import {
 import { InventoryCheckboxLinkPanel } from "@/components/inventory/InventoryCheckboxLinkPanel";
 import { useKitCatalog } from "@/hooks/api/inventory.hooks";
 import { queryKeys } from "@/hooks/api/query-keys";
+import { formatRupees } from "@/lib/currency-utils";
 
 function isPositiveInteger(value: number) {
   return Number.isInteger(value) && value > 0;
@@ -222,7 +223,7 @@ export function FranchiseKitManagement({
                           </div>
                         </td>
                         <td className="px-3 py-3 align-top text-xs text-gray-600">
-                          ₹{item.unitPrice.toFixed(2)}
+                          {formatRupees(item.unitPrice)}
                         </td>
                         <td className="px-3 py-3 align-top">
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

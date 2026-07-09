@@ -10,6 +10,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
+import { formatRupees } from "@/lib/currency-utils";
+import { GstAmount } from "@/components/shared/gst-amount";
 import type {
   ReceivableCompactSummary,
   ReceivableFranchiseeSummary,
@@ -88,10 +90,6 @@ function monthsLabel(n: number) {
   return `${n} ${n === 1 ? "month" : "months"}`;
 }
 
-function fmtMoney(x: number) {
-  return x.toLocaleString(undefined, { maximumFractionDigits: 2 });
-}
-
 function FeeCell({
   label,
   value,
@@ -128,15 +126,15 @@ function renderGstAwareFeeValue({
   inclusive: boolean;
   fmt: (n: number | string | undefined | null) => string;
 }): React.ReactNode {
-  if (principal <= 0) return `₹${fmt(0)}`;
-  if (inclusive) return `₹${fmt(principal)}`;
+  if (principal <= 0) return fmt(0);
+  if (inclusive) return fmt(principal);
   const gst = Math.round(principal * 0.18 * 100) / 100;
   const payable = Math.round((principal + gst) * 100) / 100;
   return (
     <span className="block">
-      <span className="block">₹{fmt(payable)}</span>
-      <span className="mt-0.5 block text-[10px] font-normal text-muted-foreground">
-        ₹{fmt(principal)} + 18% GST ₹{fmt(gst)}
+      <span className="block">{fmt(payable)}</span>
+      <span className="mt-0.5 block text-[10px] font-normal">
+        <GstAmount principal={principal} gst={gst} mode="additive" size="xs" />
       </span>
     </span>
   );
@@ -217,21 +215,21 @@ function LevelRecurringFeesBreakdown({ payroll }: { payroll: any }) {
                   </TableCell>
                   <TableCell className="text-right align-top tabular-nums">
                     <span className="block font-semibold text-card-foreground">
-                      ₹{fmtMoney(r.hasGst ? l1Payable : l1Net)}
+                      {formatRupees(r.hasGst ? l1Payable : l1Net)}
                     </span>
                     {r.hasGst ? (
-                      <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
-                        ₹{fmtMoney(l1Net)} + 18% GST ₹{fmtMoney(l1Gst)}
+                      <span className="mt-0.5 block font-normal">
+                        <GstAmount principal={l1Net} gst={l1Gst} mode="additive" size="xs" />
                       </span>
                     ) : null}
                   </TableCell>
                   <TableCell className="text-right align-top tabular-nums">
                     <span className="block font-semibold text-card-foreground">
-                      ₹{fmtMoney(r.hasGst ? l2Payable : l2Net)}
+                      {formatRupees(r.hasGst ? l2Payable : l2Net)}
                     </span>
                     {r.hasGst ? (
-                      <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
-                        ₹{fmtMoney(l2Net)} + 18% GST ₹{fmtMoney(l2Gst)}
+                      <span className="mt-0.5 block font-normal">
+                        <GstAmount principal={l2Net} gst={l2Gst} mode="additive" size="xs" />
                       </span>
                     ) : null}
                   </TableCell>
@@ -273,7 +271,7 @@ function ProgramSection({
           })}
         />
         {/* Kit cost is GST-exempt per business rule; render principal as-is. */}
-        <FeeCell label="Kit Cost" value={`₹${fmt(program.kitCost)}`} />
+        <FeeCell label="Kit Cost" value={fmt(program.kitCost)} />
         <FeeCell
           label="Material Cost"
           value={renderGstAwareFeeValue({
@@ -289,7 +287,7 @@ function ProgramSection({
               ? program.installment
                 ? "Yes"
                 : "No"
-              : `₹${fmt(program.installment)}`
+              : fmt(program.installment)
           }
         />
       </div>
@@ -311,9 +309,7 @@ export default function PaymentBreakdown({
   if (!paymentDetails) return null;
 
   const fmt = (n: number | string | undefined | null) =>
-    typeof n === "number"
-      ? n.toLocaleString()
-      : Number(n || 0).toLocaleString();
+    formatRupees(typeof n === "number" ? n : Number(n || 0));
 
   const isPerProgram = Array.isArray(paymentDetails);
 
@@ -440,14 +436,20 @@ export default function PaymentBreakdown({
                 {initialPayableItem!.label}
                 {!initialPayableIsInclusive && initialPayableGst > 0 ? (
                   <span className="ml-2 text-xs font-normal text-muted-foreground">
-                    (₹{fmt(initialPayablePrincipal)} + {GST_RATE_LABEL} ₹
-                    {fmt(initialPayableGst)})
+                    (
+                    <GstAmount
+                      principal={initialPayablePrincipal ?? 0}
+                      gst={initialPayableGst}
+                      mode="additive"
+                      size="xs"
+                    />
+                    )
                   </span>
                 ) : null}
               </p>
               {planPrincipal != null && initialPayablePrincipal != null ? (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Balance ₹
+                  Balance{" "}
                   {fmt(
                     (planPayableTotal ?? planPrincipal) -
                       (initialPayableAmount ?? 0),
@@ -458,7 +460,7 @@ export default function PaymentBreakdown({
               ) : null}
             </div>
             <span className="text-2xl font-semibold tabular-nums text-primary">
-              ₹{fmt(initialPayableAmount)}
+              {fmt(initialPayableAmount)}
             </span>
           </div>
         </div>
@@ -488,11 +490,11 @@ export default function PaymentBreakdown({
                   : "text-xl font-semibold text-primary",
               )}
             >
-              ₹{fmt(feePayable.base)}
+              {fmt(feePayable.base)}
             </span>
             {!feePayable.inclusive && feePayable.base > 0 ? (
               <span className="mt-1 block text-sm text-muted-foreground">
-                +{GST_RATE_LABEL} (₹{fmt(feePayable.gst)})
+                +{GST_RATE_LABEL} ({fmt(feePayable.gst)})
               </span>
             ) : null}
           </div>

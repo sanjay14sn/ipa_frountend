@@ -21,6 +21,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import type { InventoryItemSummary } from "@/services/inventory.service";
 import { INVENTORY_CATEGORIES } from "@/lib/inventory-categories";
+import { formatRupees } from "@/lib/currency-utils";
 
 export type InventoryColumnCallbacks = {
   onAdjust: (item: InventoryItemSummary) => void;
@@ -48,7 +49,7 @@ export function buildInventoryColumns(
       key: "unitPrice",
       header: "Unit price",
       className: "text-right",
-      render: (item) => `₹${item.unitPrice.toFixed(2)}`,
+      render: (item) => formatRupees(item.unitPrice),
     },
     {
       key: "onHand",
@@ -178,7 +179,7 @@ export function InventoryExpandedRow({ item }: { item: InventoryItemSummary }) {
           />
           <DetailField
             label="Avg cost"
-            value={`₹${item.weightedAverageCost.toFixed(2)}`}
+            value={formatRupees(item.weightedAverageCost)}
           />
         </DetailFieldsGrid>
       </ExpandedDetailSection>

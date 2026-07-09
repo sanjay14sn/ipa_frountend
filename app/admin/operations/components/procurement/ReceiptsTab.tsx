@@ -1,5 +1,7 @@
 ﻿"use client";
 
+import { formatRupees } from "@/lib/currency-utils";
+
 import {
   DataTable,
   type DataTableColumn,
@@ -20,7 +22,6 @@ import { TabsContent } from "@/components/ui/tabs";
 import type { PostPurchaseReceiptDto } from "@/services/procurement.service";
 import { ProcurementRecordsCard } from "@/app/admin/operations/components/procurement/ProcurementRecordsCard";
 import {
-  formatCurrency,
   ITEMS_PER_PAGE,
   type ReceiptPoLineSnapshot,
   type ReceiptRow,
@@ -248,8 +249,8 @@ export function ReceiptsTab({
                             </span>
                             <span className="flex h-8 items-center text-sm font-medium tabular-nums leading-none">
                               {meta != null
-                                ? formatCurrency(meta.unitCost)
-                                : formatCurrency(line.unitCost)}
+                                ? formatRupees(meta.unitCost)
+                                : formatRupees(line.unitCost)}
                             </span>
                           </div>
                         </div>

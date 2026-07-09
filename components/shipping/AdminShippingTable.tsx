@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Truck, PackageCheck, X, Download } from "lucide-react";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
+import { formatRupees } from "@/lib/currency-utils";
 import { useAdminShipments } from "@/hooks/api/fulfillment.hooks";
 import type { ShipmentData } from "@/services/fulfillment.service";
 import {
@@ -274,7 +275,7 @@ export default function AdminShippingTable({
                   value={
                     dispatchOnly
                       ? "Dispatch only"
-                      : `₹${Number(row.totalAmount).toFixed(2)}`
+                      : formatRupees(Number(row.totalAmount))
                   }
                 />
                 <DetailField

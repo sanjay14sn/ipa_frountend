@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CreditCard, Eye, ShieldCheck, X, Download, Loader2, RefreshCw, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
+import { formatRupees } from "@/lib/currency-utils";
 import { orderTypeLabel } from "@/lib/payment-details-display";
 import {
   cancelOrderAdmin,
@@ -41,6 +42,7 @@ import {
   ExpandedDetailSection,
   DetailFieldsGrid,
   DetailField,
+  MoneyCell,
   StatusBadge,
 } from "@/components/shared";
 
@@ -263,16 +265,11 @@ export default function AdminOrdersTable({
           const showBreakdown =
             subtotal != null && gst != null && gst > 0;
           return (
-            <span
+            <MoneyCell
+              amount={total}
+              breakdown={showBreakdown ? { subtotal, gst } : undefined}
               className="font-medium"
-              title={
-                showBreakdown
-                  ? `Subtotal ₹${subtotal.toFixed(2)} + GST ₹${gst.toFixed(2)} = Total ₹${total.toFixed(2)}`
-                  : undefined
-              }
-            >
-              ₹{total.toFixed(2)}
-            </span>
+            />
           );
         },
       },
@@ -444,7 +441,7 @@ export default function AdminOrdersTable({
               {standalone ? null : (
                 <DetailField
                   label="Total amount"
-                  value={`₹${Number(order.totalAmount).toFixed(2)}`}
+                  value={formatRupees(Number(order.totalAmount))}
                 />
               )}
               <DetailField

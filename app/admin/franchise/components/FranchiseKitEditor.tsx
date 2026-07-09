@@ -29,6 +29,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { formatRupees } from "@/lib/currency-utils";
 
 type SelectedRow = {
   franchiseKitItemId: number;
@@ -350,8 +351,8 @@ export function FranchiseKitPanel({
                               <div className="min-w-0">
                                 <div className="truncate">{row.name}</div>
                                 <div className="text-xs text-muted-foreground">
-                                  {row.sku ?? "-"} | ₹
-                                  {Number(row.unitPrice ?? 0).toFixed(2)}
+                                  {row.sku ?? "-"} |{" "}
+                                  {formatRupees(Number(row.unitPrice ?? 0))}
                                 </div>
                               </div>
                             </CommandItem>

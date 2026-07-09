@@ -98,15 +98,6 @@ export const PURCHASE_ORDER_STATUS_OPTIONS: DataTableFilter["options"] = [
 // Pure utility functions
 // ---------------------------------------------------------------------------
 
-export function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
 function formatStatusLabel(value: string) {
   return value.replaceAll("_", " ");
 }

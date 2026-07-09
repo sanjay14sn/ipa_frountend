@@ -5,7 +5,7 @@ import {
   useAdminFranchisePaymentSummaries,
   useAdminFranchisePayments,
 } from "@/hooks/api/payment.hooks";
-import { formatRsAmount } from "@/lib/payment-details-display";
+import { formatRupees } from "@/lib/currency-utils";
 
 interface FranchisePaymentsSummaryProps {
   franchiseId: string;
@@ -28,7 +28,7 @@ export function FranchisePaymentsSummary({
   const summary = summaryQuery.data?.data?.[0];
   const completedAmount =
     summary?.totalAmount != null
-      ? formatRsAmount(summary.totalAmount, "INR")
+      ? formatRupees(summary.totalAmount)
       : "—";
   const completed = summary?.totalCompleted ?? 0;
   const pending = summary?.totalPending ?? 0;

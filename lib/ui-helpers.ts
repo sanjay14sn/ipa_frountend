@@ -1,4 +1,5 @@
 import { format, parseISO } from "date-fns";
+import { formatRupees } from "@/lib/currency-utils";
 
 export function getInitials(
   name: string | null | undefined,
@@ -73,11 +74,7 @@ function fmtDateTime(iso: string | null | undefined): string {
 }
 
 function money(value: number | string | null | undefined): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(value ?? 0));
+  return formatRupees(Number(value ?? 0));
 }
 
 function stripIdSuffix(value: string | null | undefined): string {

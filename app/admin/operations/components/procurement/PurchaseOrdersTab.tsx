@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatRupees } from "@/lib/currency-utils";
 import { Plus } from "lucide-react";
 import {
   DataTable,
@@ -38,7 +39,6 @@ import type {
 import { ProcurementRecordsCard } from "@/app/admin/operations/components/procurement/ProcurementRecordsCard";
 import {
   DateToolbarField,
-  formatCurrency,
   ITEMS_PER_PAGE,
   statusBadge,
   type PurchaseOrderFormState,
@@ -160,7 +160,7 @@ export function PurchaseOrdersTab({
     {
       key: "total",
       header: "Total",
-      render: (order) => formatCurrency(order.totalCost),
+      render: (order) => formatRupees(order.totalCost),
     },
     {
       key: "actions",

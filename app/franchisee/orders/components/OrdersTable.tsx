@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { FileText, Loader2, X } from "lucide-react";
-import { DataTable, StatusBadge } from "@/components/shared";
+import { DataTable, MoneyCell, StatusBadge } from "@/components/shared";
 import { orderTypeBadgeClass, orderTypeLabel } from "@/lib/payment-details-display";
 import type {
   DataTableColumn,
@@ -138,16 +138,11 @@ export default function OrdersTable({
         const showBreakdown =
           subtotal != null && gst != null && gst > 0;
         return (
-          <span
+          <MoneyCell
+            amount={total}
+            breakdown={showBreakdown ? { subtotal, gst } : undefined}
             className="font-medium"
-            title={
-              showBreakdown
-                ? `Subtotal ₹${subtotal.toFixed(2)} + GST ₹${gst.toFixed(2)} = Total ₹${total.toFixed(2)}`
-                : undefined
-            }
-          >
-            ₹{total.toFixed(2)}
-          </span>
+          />
         );
       },
     },

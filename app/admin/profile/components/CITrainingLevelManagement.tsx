@@ -18,6 +18,7 @@ import {
   FormDialog,
   LinkPicker,
 } from "@/components/shared/dialog";
+import { formatRupees } from "@/lib/currency-utils";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared/status-badge";
 import {
@@ -479,10 +480,7 @@ export function CITrainingLevelManagement({
   };
 
   const formatFee = (fee: number) =>
-    `₹ ${fee.toLocaleString("en-IN", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    })}`;
+    formatRupees(fee);
 
   return (
     <div className="rounded-2xl border bg-card shadow-sm">

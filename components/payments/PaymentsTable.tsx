@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DataTable, StatusBadge } from "@/components/shared";
+import { DataTable, StatusBadge, MoneyCell } from "@/components/shared";
 import type { DataTableColumn } from "@/components/shared";
 import type { FranchisePaymentSummary } from "@/services/payment.service";
 import { useAdminFranchisePaymentSummaries } from "@/hooks/api/payment.hooks";
@@ -81,9 +81,7 @@ export default function PaymentsTable({
       header: "Collected",
       className: "text-center",
       render: (s) => (
-        <span className="font-medium">
-          ₹{s.totalAmount.toLocaleString("en-IN")}
-        </span>
+        <MoneyCell amount={s.totalAmount} className="font-medium" />
       ),
     },
   ];

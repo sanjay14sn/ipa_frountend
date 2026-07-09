@@ -1,5 +1,7 @@
 ﻿"use client";
 
+import { formatRupees } from "@/lib/currency-utils";
+
 import { Plus } from "lucide-react";
 import {
   DataTable,
@@ -37,7 +39,6 @@ import type {
 import { ProcurementRecordsCard } from "@/app/admin/operations/components/procurement/ProcurementRecordsCard";
 import {
   booleanBadge,
-  formatCurrency,
   ITEMS_PER_PAGE,
   type SupplierFormState,
 } from "@/app/admin/operations/components/procurement/procurement-utils";
@@ -187,7 +188,7 @@ export function SuppliersSourcingTab({
     {
       key: "cost",
       header: "Unit cost",
-      render: (term) => formatCurrency(term.currentUnitCost),
+      render: (term) => formatRupees(term.currentUnitCost),
     },
     {
       key: "lead",
