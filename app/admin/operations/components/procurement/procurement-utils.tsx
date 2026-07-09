@@ -1,7 +1,5 @@
 ﻿import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
-import { DateInput } from "@/components/ui/date-input";
-import { Label } from "@/components/ui/label";
 import type { DataTableFilter } from "@/components/shared";
 import type { Supplier, SupplierItemTerm } from "@/services/procurement.service";
 
@@ -180,27 +178,6 @@ export function filterOptionsFromSuppliers(suppliers: Supplier[]) {
   ];
 }
 
-// ---------------------------------------------------------------------------
-// DateToolbarField helper component
-// ---------------------------------------------------------------------------
-
-export function DateToolbarField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="space-y-1">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <DateInput
-        value={value}
-        onChange={(v) => onChange(v)}
-        className="w-full min-w-[170px] sm:w-[170px]"
-      />
-    </div>
-  );
-}
+// DateToolbarField was promoted to the kit (components/shared, CMP-13);
+// re-exported here so existing procurement imports keep working.
+export { DateToolbarField } from "@/components/shared/date-toolbar-field";
