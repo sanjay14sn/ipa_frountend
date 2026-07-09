@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useHydrated } from "@/hooks/use-hydrated";
 import Link from "next/link";
@@ -71,11 +72,13 @@ function AdminLoginPageInner() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 gap-6">
-      <div className="text-center">
-        <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-          Abacus Academy
-        </span>
-      </div>
+      <Image
+        src="/brand/ipa-lockup.png"
+        alt="Ideal Play Abacus"
+        width={433}
+        height={66}
+        priority
+      />
 
       <Card className="w-full max-w-sm rounded-2xl border-border bg-card shadow-sm">
         <CardHeader className="space-y-1">

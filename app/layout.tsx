@@ -33,8 +33,8 @@ const caveat = Caveat({
 
 export const metadata: Metadata = {
   title: {
-    default: "Abacus Portal",
-    template: "%s | Abacus Portal",
+    default: "IPA Portal — Ideal Play Abacus",
+    template: "%s | IPA Portal",
   },
   description: "Franchise management portal for Abacus education centers",
   generator: "Next.js",
