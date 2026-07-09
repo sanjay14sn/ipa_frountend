@@ -14,13 +14,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DetailDialog } from "@/components/shared/dialog";
 import {
   ContactPill,
   ContactPillGrid,
@@ -82,12 +76,6 @@ function StudentIdRequestDetailContent({
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle className="text-left">Student details</DialogTitle>
-        <DialogDescription className="text-left">
-          Full information for this ID request
-        </DialogDescription>
-      </DialogHeader>
       <div className="space-y-3 py-2">
         <ProfileCard>
           <IdentityHeader
@@ -389,23 +377,24 @@ export default function FranchiseIdDetails({
         />
       )}
 
-      <Dialog
+      <DetailDialog
         open={detailStudent != null}
         onOpenChange={(open) => {
           if (!open) setDetailStudent(null);
         }}
+        size="md"
+        title="Student details"
+        description="Full information for this ID request"
       >
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto sm:max-w-xl">
-          {detailStudent ? (
-            <StudentIdRequestDetailContent
-              student={detailStudent}
-              statusFilter={statusFilter}
-              onIssueId={handleIssueId}
-              onClose={() => setDetailStudent(null)}
-            />
-          ) : null}
-        </DialogContent>
-      </Dialog>
+        {detailStudent ? (
+          <StudentIdRequestDetailContent
+            student={detailStudent}
+            statusFilter={statusFilter}
+            onIssueId={handleIssueId}
+            onClose={() => setDetailStudent(null)}
+          />
+        ) : null}
+      </DetailDialog>
 
       <BulkDispatchPickerModal
         open={dispatchOpen}

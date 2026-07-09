@@ -5,14 +5,7 @@ import { formatDate } from "@/lib/date-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DetailDialog } from "@/components/shared/dialog";
 import { Check, X, FileText, ExternalLink } from "lucide-react";
 import {
   DataTable,
@@ -309,65 +302,53 @@ export default function FranchiseCertificateDetails({
         </ExpandedDetailSection>
       </ExpandedDetailSurface>
 
-      <Dialog
+      <DetailDialog
         open={Boolean(selectedCertificate)}
         onOpenChange={(open) => {
           if (!open) setSelectedCertificate(null);
         }}
+        size="2xl"
+        headerIcon={FileText}
+        title="View Certificate"
+        description={
+          selectedCertificate
+            ? `${selectedCertificate.studentName} - ${selectedCertificate.studentLevel}${
+                selectedCertificate.templateName
+                  ? ` · ${selectedCertificate.templateName}`
+                  : ""
+              }`
+            : "Certificate preview"
+        }
+        footer={{
+          primary: {
+            label: "Open in New Tab",
+            onClick: () => window.open(certificatePreviewUrl, "_blank"),
+            disabled: !certificatePreviewUrl,
+          },
+          secondary: {
+            label: "Close",
+            onClick: () => setSelectedCertificate(null),
+          },
+        }}
       >
-        <DialogContent className="mx-4 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden">
-          <DialogHeader className="flex-shrink-0 border-b border-gray-200 pb-4">
-            <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900">
-              <FileText className="h-5 w-5 text-primary" />
-              View Certificate
-            </DialogTitle>
-            <DialogDescription>
-              {selectedCertificate
-                ? `${selectedCertificate.studentName} - ${selectedCertificate.studentLevel}${
-                    selectedCertificate.templateName
-                      ? ` · ${selectedCertificate.templateName}`
-                      : ""
-                  }`
-                : "Certificate preview"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="min-h-[65vh] flex-1 overflow-hidden rounded-lg border bg-muted">
-            {certificatePreviewUrl ? (
-              <iframe
-                src={certificatePreviewUrl}
-                title={
-                  selectedCertificate
-                    ? `${selectedCertificate.studentName} certificate`
-                    : "Certificate preview"
-                }
-                className="h-full min-h-[65vh] w-full bg-white"
-              />
-            ) : (
-              <div className="flex h-full min-h-[65vh] items-center justify-center p-6 text-sm text-muted-foreground">
-                Certificate PDF is not available.
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="flex-shrink-0 border-t border-gray-200 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setSelectedCertificate(null)}
-            >
-              Close
-            </Button>
-            <Button
-              onClick={() => window.open(certificatePreviewUrl, "_blank")}
-              disabled={!certificatePreviewUrl}
-              className="gap-2"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Open in New Tab
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <div className="min-h-[65vh] flex-1 overflow-hidden rounded-lg border bg-muted">
+          {certificatePreviewUrl ? (
+            <iframe
+              src={certificatePreviewUrl}
+              title={
+                selectedCertificate
+                  ? `${selectedCertificate.studentName} certificate`
+                  : "Certificate preview"
+              }
+              className="h-full min-h-[65vh] w-full bg-white"
+            />
+          ) : (
+            <div className="flex h-full min-h-[65vh] items-center justify-center p-6 text-sm text-muted-foreground">
+              Certificate PDF is not available.
+            </div>
+          )}
+        </div>
+      </DetailDialog>
 
       <BulkDispatchFlowModal
         open={dispatchOpen}

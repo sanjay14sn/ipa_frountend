@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DetailDialog } from "@/components/shared/dialog";
 import type { PaymentData } from "@/services/payment.service";
 import {
   PaymentDetailsBody,
@@ -29,36 +23,33 @@ export function PaymentDetailDialog({
     : null;
 
   return (
-    <Dialog
+    <DetailDialog
       open={payment != null}
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
+      size="2xl"
+      title={
+        payment
+          ? `Payment details: ${
+              payment.razorpayPaymentId ||
+              payment.razorpayOrderId ||
+              `#${payment.id}`
+            }`
+          : "Payment details"
+      }
+      description="Detailed captured payment information for audit and support."
     >
       {body && payment ? (
-        <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              Payment details:{" "}
-              {payment.razorpayPaymentId ||
-                payment.razorpayOrderId ||
-                `#${payment.id}`}
-            </DialogTitle>
-            <DialogDescription>
-              Detailed captured payment information for audit and support.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="rounded-xl border bg-card p-5">
-            <PaymentDetailsBody
-              payment={body}
-              franchiseName={franchiseName}
-              franchiseeName={payment.franchisee?.name}
-              paymentType={payment.type}
-            />
-          </div>
-        </DialogContent>
+        <div className="rounded-xl border bg-card p-5">
+          <PaymentDetailsBody
+            payment={body}
+            franchiseName={franchiseName}
+            franchiseeName={payment.franchisee?.name}
+            paymentType={payment.type}
+          />
+        </div>
       ) : null}
-    </Dialog>
+    </DetailDialog>
   );
 }
