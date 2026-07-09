@@ -6,8 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageTabs, TabsContent as PageTabsContent } from "@/components/shared/page-tabs";
 import { LevelManagement } from "@/app/admin/profile/components/LevelManagement";
 import { CITrainingLevelManagement } from "@/app/admin/profile/components/CITrainingLevelManagement";
-import { ProgramKitManagement } from "@/app/admin/profile/components/ProgramKitManagement";
-import { FranchiseKitManagement } from "@/app/admin/profile/components/FranchiseKitManagement";
+import { KitManagement } from "@/app/admin/profile/components/kit-management";
 import { StreamManagement } from "@/app/admin/profile/components/StreamManagement";
 import { CertificateTemplateSection } from "@/app/admin/profile/components/CertificateTemplateSection";
 import { ProgramAgreementTemplateEditor } from "@/app/admin/profile/components/ProgramAgreementTemplateEditor";
@@ -213,7 +212,8 @@ export function ProgramList({
                 />
               </TabsContent>
               <TabsContent value="kit-items">
-                <ProgramKitManagement
+                <KitManagement
+                  scope="program"
                   programId={program.id}
                   programName={program.name}
                   onCountChange={(count) =>
@@ -222,7 +222,8 @@ export function ProgramList({
                 />
               </TabsContent>
               <TabsContent value="franchise-kit">
-                <FranchiseKitManagement
+                <KitManagement
+                  scope="franchise"
                   programId={program.id}
                   programName={program.name}
                 />
