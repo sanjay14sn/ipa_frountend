@@ -1,4 +1,5 @@
 import { User } from "lucide-react";
+import { formatDate } from "@/lib/date-utils";
 
 interface FranchiseeInformationProps {
   franchiseData: any;
@@ -40,7 +41,7 @@ export default function FranchiseeInformation({
         <Cell label="Phone">{franchiseData.phone}</Cell>
         {franchiseData.dob && (
           <Cell label="Date of Birth">
-            {new Date(franchiseData.dob).toLocaleDateString()}
+            {formatDate(franchiseData.dob)}
           </Cell>
         )}
         {franchiseData.bloodGroup && (

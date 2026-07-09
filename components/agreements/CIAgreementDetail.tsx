@@ -2,7 +2,8 @@
 
 import { type ReactNode, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
+import { formatDate } from "@/lib/date-utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,35 +37,15 @@ const ESignaturePad = dynamic<ESignaturePadProps>(
   { ssr: false, loading: () => null },
 );
 
-function fmtDate(value?: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function fmtShortDate(value?: string | null): string {
-  if (!value) return "—";
-  try {
-    const d = typeof value === "string" ? parseISO(value) : new Date(value);
-    if (Number.isNaN(d.getTime())) return String(value);
-    return format(d, "PP");
-  } catch {
-    return String(value);
-  }
-}
-
 function fmtTime(value?: string | null): string {
   if (!value) return "";
-  try {
-    return format(parseISO(value), "p");
-  } catch {
-    return "";
-  }
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 
@@ -294,13 +275,13 @@ export function CIAgreementDetail({
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     CI signed at
                   </p>
-                  <p className="text-xs mt-0.5">{fmtDate(ciSignedAt)}</p>
+                  <p className="text-xs mt-0.5">{formatDate(ciSignedAt)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     Franchisee signed at
                   </p>
-                  <p className="text-xs mt-0.5">{fmtDate(agreement.franchiseeSignedAt)}</p>
+                  <p className="text-xs mt-0.5">{formatDate(agreement.franchiseeSignedAt)}</p>
                 </div>
               </div>
             </div>
@@ -558,7 +539,7 @@ function TimelineNode({
       <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
         {label}
       </p>
-      <p className="text-xs font-medium text-center">{fmtShortDate(date)}</p>
+      <p className="text-xs font-medium text-center">{formatDate(date)}</p>
       <p className="text-[11px] text-muted-foreground text-center">{fmtTime(date)}</p>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/lib/date-utils";
 import {
   AppDialog,
   AppDialogHeader,
@@ -35,7 +36,7 @@ export default function BulkAssignCIModal({ session, onClose }: BulkAssignCIModa
         title="Assign CIs to Session"
         description={
           session
-            ? `${new Date(session.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })} — ${session.trainingLevelName ?? `Level ${session.trainingLevelId}`} — ${session.region}`
+            ? `${formatDate(session.sessionDate)} — ${session.trainingLevelName ?? `Level ${session.trainingLevelId}`} — ${session.region}`
             : ""
         }
       />

@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { formatDate } from "@/lib/date-utils";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -63,13 +64,6 @@ function getRenewals(metadata?: Record<string, unknown> | null): RenewalEntry[] 
   return Array.isArray(raw) ? (raw as RenewalEntry[]) : [];
 }
 
-function fmtDate(value?: string | null): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-}
-
 function RenewalHistoryDialog({
   agreement,
   onClose,
@@ -96,12 +90,12 @@ function RenewalHistoryDialog({
                   <span className="font-medium">
                     Renewal #{renewals.length - i}
                   </span>
-                  <span className="text-xs text-muted-foreground">{fmtDate(r.at)}</span>
+                  <span className="text-xs text-muted-foreground">{formatDate(r.at)}</span>
                 </div>
                 <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                   <div>
                     <dt className="text-muted-foreground">Effective from</dt>
-                    <dd className="font-medium">{fmtDate(r.effectiveDate)}</dd>
+                    <dd className="font-medium">{formatDate(r.effectiveDate)}</dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">Tenure</dt>
@@ -112,11 +106,11 @@ function RenewalHistoryDialog({
                   </div>
                   <div>
                     <dt className="text-muted-foreground">Previous expiry</dt>
-                    <dd className="font-medium">{fmtDate(r.oldExpiresAt)}</dd>
+                    <dd className="font-medium">{formatDate(r.oldExpiresAt)}</dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">New expiry</dt>
-                    <dd className="font-medium">{fmtDate(r.newExpiresAt)}</dd>
+                    <dd className="font-medium">{formatDate(r.newExpiresAt)}</dd>
                   </div>
                 </dl>
               </li>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatDate } from "@/lib/date-utils";
 import { Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -138,7 +139,7 @@ export default function FranchisePaymentsDetails({
       header: "Date",
       render: (payment) =>
         payment.createdAt
-          ? new Date(payment.createdAt).toLocaleDateString("en-IN")
+          ? formatDate(payment.createdAt)
           : "N/A",
     },
     {

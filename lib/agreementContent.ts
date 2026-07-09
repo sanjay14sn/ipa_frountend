@@ -1,4 +1,5 @@
 import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
+import { formatDate } from "@/lib/date-utils";
 
 export interface AgreementPoint {
   id: string;
@@ -1779,7 +1780,7 @@ const replacePlaceholders = (text: string, data: any): string => {
 
     // Format dates
     if (key.toLowerCase().includes("date") && value instanceof Date) {
-      return value.toLocaleDateString();
+      return formatDate(value);
     }
 
     // Format currency

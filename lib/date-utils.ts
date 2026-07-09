@@ -10,7 +10,6 @@
  *     → `formatDate(value)`
  *   - Any `toLocaleString("en-IN")` for full date+time → `formatDateTime(value)`
  *   - Any inline age-from-DOB calculation → `calculateAge(dateOfBirth)`
- *   - `fmtDate` is an alias for `formatDate` kept for legacy callers.
  */
 
 /**
@@ -30,8 +29,6 @@ export function formatDate(value?: string | Date | null): string {
   });
 }
 
-/** Alias for {@link formatDate} — kept for legacy callers. */
-export const fmtDate = formatDate;
 
 /**
  * Formats a date string to a human-readable date + time in locale format
@@ -43,7 +40,14 @@ export function formatDateTime(value?: string | Date | null): string {
   if (!value) return "N/A";
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString("en-IN");
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }); // → "15 Jan 2025, 10:30 am"
 }
 
 /**

@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { Phone, MapPin } from "lucide-react";
+import { formatDate } from "@/lib/date-utils";
 import { DataTable, StatusBadge } from "@/components/shared";
 import type { DataTableColumn, DataTableSortOption } from "@/components/shared";
 import { CourseInstructorData } from "@/services/course-instructor.service";
@@ -79,11 +80,7 @@ export default function ApprovalPendingCourseInstructorsTable({
       className: "w-[150px]",
       render: (ci) => (
         <span className="text-sm text-muted-foreground">
-          {new Date(ci.createdAt).toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          })}
+          {formatDate(ci.createdAt)}
         </span>
       ),
     },

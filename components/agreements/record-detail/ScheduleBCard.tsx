@@ -1,6 +1,7 @@
 "use client";
 
-import { format, parseISO } from "date-fns";
+import {parseISO } from "date-fns";
+import { formatDateTime } from "@/lib/date-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -156,7 +157,7 @@ export function ScheduleBCard({
     ? (() => {
         try {
           const d = parseISO(executedAt);
-          return format(d, "d MMMM yyyy, h:mm a");
+          return formatDateTime(d);
         } catch {
           return executedAt;
         }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { formatDate } from "@/lib/date-utils";
 import { Button } from "@/components/ui/button";
 import { CreditCard, Eye, ShieldCheck, X, Download, Loader2, RefreshCw, RotateCw } from "lucide-react";
 import { toast } from "sonner";
@@ -433,7 +434,7 @@ export default function AdminOrdersTable({
                   <>
                     {order.allocationStatus || "Unknown"}
                     {order.backorderedAt
-                      ? ` · backordered ${new Date(order.backorderedAt).toLocaleDateString()}`
+                      ? ` · backordered ${formatDate(order.backorderedAt)}`
                       : ""}
                   </>
                 }

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { formatDate } from "@/lib/date-utils";
 import { AgreementEmiScheduleCard } from "@/components/agreements/record-detail/AgreementEmiScheduleCard";
 import type {
   ReceivableInstallmentSummary,
@@ -71,7 +72,7 @@ describe("AgreementEmiScheduleCard date editing", () => {
     expect(
       screen.queryByRole("button", { name: /edit due date/i }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("Jul 15, 2026")).toBeInTheDocument();
+    expect(screen.getByText(formatDate("2026-07-15"))).toBeInTheDocument();
   });
 
   it("renders the due date as plain text for a waived item", () => {
@@ -84,6 +85,6 @@ describe("AgreementEmiScheduleCard date editing", () => {
     expect(
       screen.queryByRole("button", { name: /edit due date/i }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("Jul 15, 2026")).toBeInTheDocument();
+    expect(screen.getByText(formatDate("2026-07-15"))).toBeInTheDocument();
   });
 });

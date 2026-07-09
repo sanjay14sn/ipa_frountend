@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
+import { formatDate } from "@/lib/date-utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -173,17 +174,6 @@ function DashboardPanel({
   );
 }
 
-function shortDate(value: string | null | undefined): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 function isFullInstallmentSummary(
   summary:
     | ReceivableInstallmentSummary
@@ -289,7 +279,7 @@ function buildFranchiseFeeCardDisplay({
   const hasUpcoming = upcomingAmount != null && upcomingAmount > 0;
   const upcomingLabel = hasUpcoming
     ? `Next ${formatRupees(upcomingAmount)}${
-        upcomingDueAt ? ` due ${shortDate(upcomingDueAt)}` : ""
+        upcomingDueAt ? ` due ${formatDate(upcomingDueAt)}` : ""
       }`
     : undefined;
 
@@ -303,7 +293,7 @@ function buildFranchiseFeeCardDisplay({
   if (hasUpcoming) {
     return {
       value: formatRupees(upcomingAmount!),
-      sub: upcomingDueAt ? `Due ${shortDate(upcomingDueAt)}` : undefined,
+      sub: upcomingDueAt ? `Due ${formatDate(upcomingDueAt)}` : undefined,
     };
   }
 
@@ -353,7 +343,7 @@ function ProfileCard({ profile }: { profile: NonNullable<ReturnType<typeof impor
     ["Type", profile.franchise?.type],
     ["Status", profile.franchise?.status],
     profile.franchise?.approvedAt
-      ? ["Approved", new Date(profile.franchise.approvedAt).toLocaleDateString()]
+      ? ["Approved", formatDate(profile.franchise.approvedAt)]
       : null,
   ];
   const filteredRows = rows.filter((row): row is [string, string | undefined] => row != null);
@@ -404,7 +394,7 @@ function OrderRow({ order }: { order: import("@/services/order.service").OrderDa
       <div>
         <p className="text-sm font-medium text-card-foreground">{order.orderType}</p>
         <p className="text-xs text-muted-foreground">
-          {new Date(order.createdAt).toLocaleDateString()}
+          {formatDate(order.createdAt)}
         </p>
       </div>
       <div className="text-right">

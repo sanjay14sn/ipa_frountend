@@ -15,7 +15,7 @@ import {
   StatusBadge,
 } from "@/components/shared";
 import { AdminCourseInstructorData } from "@/services/course-instructor.service";
-import { formatDate as fmtDate } from "@/lib/date-utils";
+import { formatDate } from "@/lib/date-utils";
 import { formatRupees } from "@/lib/currency-utils";
 import { getErrorMessage } from "@/lib/error-utils";
 import {
@@ -164,7 +164,7 @@ export default function CourseInstructorDetails({
             <DetailFieldsGrid columns={3}>
               <DetailField label="Email" value={instructor.mail || "—"} />
               <DetailField label="Phone" value={instructor.phone || "—"} />
-              <DetailField label="Born" value={fmtDate(instructor.dob)} />
+              <DetailField label="Born" value={formatDate(instructor.dob)} />
               <DetailField
                 label="Blood group"
                 value={instructor.bloodGroup || "—"}
@@ -210,10 +210,10 @@ export default function CourseInstructorDetails({
                 value={instructor.franchise?.name || "—"}
               />
               <DetailField label="Record ID" value={String(instructor.id)} mono />
-              <DetailField label="Applied" value={fmtDate(instructor.createdAt)} />
+              <DetailField label="Applied" value={formatDate(instructor.createdAt)} />
               <DetailField
                 label="Last updated"
-                value={fmtDate(instructor.updatedAt)}
+                value={formatDate(instructor.updatedAt)}
               />
             </DetailFieldsGrid>
           </ExpandedDetailSection>

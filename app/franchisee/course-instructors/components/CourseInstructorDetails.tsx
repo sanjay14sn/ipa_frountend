@@ -8,7 +8,7 @@ import {
   ExpandedDetailSurface,
 } from "@/components/shared";
 import { CourseInstructorData } from "@/services/course-instructor.service";
-import { calculateAge, formatDate as fmtDate } from "@/lib/date-utils";
+import { calculateAge, formatDate } from "@/lib/date-utils";
 
 interface CourseInstructorDetailsProps {
   courseInstructor: CourseInstructorData;
@@ -26,7 +26,7 @@ export default function CourseInstructorDetails({
             value={courseInstructor.instructorId || "—"}
             mono
           />
-          <DetailField label="Born" value={fmtDate(courseInstructor.dob)} />
+          <DetailField label="Born" value={formatDate(courseInstructor.dob)} />
           <DetailField label="Age" value={calculateAge(courseInstructor.dob)} />
           <DetailField
             label="Blood group"

@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/date-utils";
 import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
 import {
@@ -203,11 +204,7 @@ export default function CITrainingSessionsTab() {
         renderMainCell={(s) => (
           <div className="flex items-center gap-1 text-sm text-card-foreground">
             <Calendar className="w-3 h-3 text-muted-foreground" />
-            {new Date(s.sessionDate).toLocaleDateString("en-IN", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })}
+            {formatDate(s.sessionDate)}
           </div>
         )}
         sortOptions={sortOptions}

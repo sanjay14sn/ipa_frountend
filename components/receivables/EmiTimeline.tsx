@@ -83,7 +83,9 @@ function hasReceivablePlan(
   return !("hasPlan" in summary) || Boolean(summary.hasPlan);
 }
 
-/** Returns "TODAY" / "JUN 3" / "PAID" / "DUE" depending on the item's state. */
+/** Returns "TODAY" / "JUN 3" / "PAID" / "DUE" depending on the item's state.
+ * SW-P3 exemption: compact timeline chips are deliberately not full dates
+ * (revisited by the CC-11 Timeline rebuild). */
 function timelineDateLabel(item: ReceivableSummaryItem): string {
   if (item.paidAt) {
     try {

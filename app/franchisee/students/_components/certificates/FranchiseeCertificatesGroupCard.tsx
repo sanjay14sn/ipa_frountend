@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { formatDate } from "@/lib/date-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Award, ChevronDown, ChevronUp } from "lucide-react";
@@ -94,7 +95,7 @@ export default function FranchiseeCertificatesGroupCard({
                       {certificate.dispatchStatus === "Dispatched" ? (
                         <StatusBadge
                           tone="success"
-                          label={`Dispatched${certificate.dispatchedAt ? ` ${new Date(certificate.dispatchedAt).toLocaleDateString()}` : ""}`}
+                          label={`Dispatched${certificate.dispatchedAt ? ` ${formatDate(certificate.dispatchedAt)}` : ""}`}
                         />
                       ) : (
                         <StatusBadge tone="neutral" label="Not dispatched" />

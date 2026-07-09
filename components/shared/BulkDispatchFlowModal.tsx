@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { formatDate } from "@/lib/date-utils";
 import {
   AppDialog,
   AppDialogBody,
@@ -670,7 +671,7 @@ export function BulkDispatchFlowModal({
                                 </span>
                                 <span>·</span>
                                 <span>
-                                  {new Date(order.createdAt).toLocaleDateString()}
+                                  {formatDate(order.createdAt)}
                                 </span>
                               </div>
                             </div>

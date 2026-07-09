@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format } from "date-fns";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -42,7 +41,7 @@ import { ciAgreementContent } from "@/lib/ciAgreementContent";
 import AgreementTerms from "@/components/agreements/AgreementTerms";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { CIAgreementDetail } from "@/components/agreements/CIAgreementDetail";
-import { fmtDate } from "@/lib/date-utils";
+import { formatDate } from "@/lib/date-utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -168,13 +167,13 @@ function SignatureStep({
         </p>
         {agreement.dateOfSigning && (
           <p className="mt-1 text-xs text-muted-foreground">
-            Signed on {fmtDate(agreement.dateOfSigning)}
+            Signed on {formatDate(agreement.dateOfSigning)}
           </p>
         )}
         {agreement.tenure != null && (
           <p className="mt-1 text-xs text-muted-foreground">
             {agreement.tenure}-month tenure
-            {agreement.expiresAt ? ` · Expires ${fmtDate(agreement.expiresAt)}` : ""}
+            {agreement.expiresAt ? ` · Expires ${formatDate(agreement.expiresAt)}` : ""}
           </p>
         )}
         <Button className="mt-5" onClick={onGoToPortal}>
@@ -585,7 +584,7 @@ function CIAgreementContent() {
  */
 function CIAgreementExpiredView({ agreement }: { agreement: CIAgreementRecord }) {
   const expiredOn = agreement.expiresAt
-    ? format(new Date(agreement.expiresAt), "d MMM yyyy")
+    ? formatDate(agreement.expiresAt)
     : null;
 
   return (

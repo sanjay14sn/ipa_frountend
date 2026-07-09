@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/date-utils";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -151,7 +152,7 @@ export default function OrdersTable({
       header: "Date",
       render: (order) =>
         order.createdAt
-          ? new Date(order.createdAt).toLocaleDateString("en-IN")
+          ? formatDate(order.createdAt)
           : "—",
     },
     {

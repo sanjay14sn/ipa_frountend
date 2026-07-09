@@ -30,7 +30,7 @@ import {
   buildAgreementDetailFranchiseData,
 } from "@/lib/agreement-page-terms";
 import { getErrorMessage } from "@/lib/error-utils";
-import { fmtDate } from "@/lib/date-utils";
+import { formatDate } from "@/lib/date-utils";
 import { getFranchiseFeePayable } from "@/lib/gst";
 import { formatRupees } from "@/lib/currency-utils";
 import { methodLabel } from "@/lib/payment-details-display";
@@ -276,11 +276,13 @@ function formatTimeLeft(expiresAt: string | null | undefined, now: number): stri
 
 function formatTimePart(iso: string | null | undefined): string {
   if (!iso) return "";
-  try {
-    return format(parseISO(iso), "p");
-  } catch {
-    return "";
-  }
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 function deriveInitials(name: string): string {
@@ -315,6 +317,7 @@ function AgreementOverviewTab({
   const franchiseeName = String(data.franchisee?.name ?? franchiseData.contactPerson ?? "-");
   const initials = deriveInitials(franchiseeName);
   const sinceRaw = data.dateOfSigning ?? data.createdAt;
+  // SW-P3 exemption: month-year "since" label (mirrors ui-helpers getSinceLabel).
   const sinceLabel = sinceRaw
     ? (() => { try { return format(parseISO(sinceRaw), "MMM yyyy"); } catch { return null; } })()
     : null;
@@ -369,7 +372,7 @@ function AgreementOverviewTab({
                   </div>
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Applied</p>
-                    <p className="text-xs mt-0.5 text-card-foreground">{fmtDate(String(franchiseData.date ?? ""))}</p>
+                    <p className="text-xs mt-0.5 text-card-foreground">{formatDate(String(franchiseData.date ?? ""))}</p>
                   </div>
                 </div>
               </div>
@@ -468,11 +471,11 @@ function AgreementOverviewTab({
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Date of signing</p>
-                  <p className="text-xs mt-0.5">{fmtDate(data.dateOfSigning)}</p>
+                  <p className="text-xs mt-0.5">{formatDate(data.dateOfSigning)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Captured at</p>
-                  <p className="text-xs mt-0.5">{fmtDate(data.franchiseeSignedAt)}</p>
+                  <p className="text-xs mt-0.5">{formatDate(data.franchiseeSignedAt)}</p>
                 </div>
               </div>
             </div>
@@ -566,7 +569,7 @@ function AgreementOverviewTab({
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-card-foreground">
-                      {fmtDate(p.paidAt)}
+                      {formatDate(p.paidAt)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {methodLabel(p.method)}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
+import { formatDate } from "@/lib/date-utils";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ export function AgreementExpiredView({
     agreement.title ??
     "this program";
   const expiredOn = agreement.expiresAt
-    ? format(new Date(agreement.expiresAt), "d MMM yyyy")
+    ? formatDate(agreement.expiresAt)
     : null;
 
   return (

@@ -1,5 +1,6 @@
 import { format, parseISO } from "date-fns";
 import { formatRupees } from "@/lib/currency-utils";
+import { formatDate, formatDateTime } from "@/lib/date-utils";
 
 export function getInitials(
   name: string | null | undefined,
@@ -18,6 +19,7 @@ export function getInitials(
     .toUpperCase();
 }
 
+// SW-P3 exemption: month-year "since" label is deliberately not a full date.
 function getSinceLabel(
   iso: string | null | undefined,
 ): string | null {
@@ -48,29 +50,23 @@ function getTimeRemaining(
 
 function fmtShort(iso: string | null | undefined): string {
   if (!iso) return "-";
-  try {
-    return format(parseISO(iso), "PP");
-  } catch {
-    return String(iso);
-  }
+  return formatDate(iso);
 }
 
 function fmtTime(iso: string | null | undefined): string {
   if (!iso) return "";
-  try {
-    return format(parseISO(iso), "p");
-  } catch {
-    return "";
-  }
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 function fmtDateTime(iso: string | null | undefined): string {
   if (!iso) return "-";
-  try {
-    return format(parseISO(iso), "PPpp");
-  } catch {
-    return String(iso);
-  }
+  return formatDateTime(iso);
 }
 
 function money(value: number | string | null | undefined): string {

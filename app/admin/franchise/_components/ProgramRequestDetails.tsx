@@ -1,4 +1,5 @@
 "use client";
+import { formatDate } from "@/lib/date-utils";
 
 import {
   Building2,
@@ -32,7 +33,7 @@ interface ProgramRequestDetailsProps {
 
 function fmt(date: string | null | undefined): string {
   if (!date) return "—";
-  return new Date(date).toLocaleDateString();
+  return formatDate(date);
 }
 
 export default function ProgramRequestDetails({

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { formatDate } from "@/lib/date-utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -143,7 +144,7 @@ export default function IdCardPreviewModal({
                       <p className="text-xs opacity-80">
                         DOB:{" "}
                         {student.dateOfBirth
-                          ? new Date(student.dateOfBirth).toLocaleDateString()
+                          ? formatDate(student.dateOfBirth)
                           : "N/A"}
                       </p>
                     </div>

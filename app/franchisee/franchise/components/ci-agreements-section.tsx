@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatDate } from "@/lib/date-utils";
 import dynamic from "next/dynamic";
-import { format, parseISO } from "date-fns";
 import { Eye, Loader2, PenLine } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -49,7 +49,7 @@ const ESignaturePad = dynamic(
 function fmtShort(iso: string | null | undefined) {
   if (!iso) return "—";
   try {
-    return format(parseISO(iso), "PP");
+    return formatDate(iso);
   } catch {
     return iso ?? "—";
   }

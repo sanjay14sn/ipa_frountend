@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Check, Loader2, Truck, X } from "lucide-react";
+import { formatDate } from "@/lib/date-utils";
 import {
   AppDialog,
   AppDialogBody,
@@ -195,7 +196,7 @@ export function BulkDispatchPickerModal({
                           {order.shipment?.status ?? "Awaiting shipment"}
                         </span>
                         <span className="ml-auto text-xs text-muted-foreground">
-                          {new Date(order.createdAt).toLocaleDateString()}
+                          {formatDate(order.createdAt)}
                         </span>
                       </label>
                     );

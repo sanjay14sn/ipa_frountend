@@ -1,4 +1,5 @@
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
+import { formatDate } from "@/lib/date-utils";
 import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
 import { formatRupees } from "@/lib/currency-utils";
 import {
@@ -16,11 +17,13 @@ export type BadgeTone = "default" | "secondary" | "outline" | "destructive";
 // ── Pure helpers ─────────────────────────────────────────────────────────────
 
 export function fmtShortDate(value: string | null | undefined): string {
+  // Display formatting goes through the shared formatter (SW-P3);
+  // "Jul 15, 2026" became "15 Jul 2026" app-wide with this change.
   if (value == null || value === "") return "-";
   try {
     const d = typeof value === "string" ? parseISO(value) : new Date(value);
     if (Number.isNaN(d.getTime())) return String(value);
-    return format(d, "PP");
+    return formatDate(d);
   } catch {
     return String(value);
   }

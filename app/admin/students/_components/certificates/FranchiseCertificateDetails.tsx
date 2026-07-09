@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatDate } from "@/lib/date-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
@@ -175,7 +176,7 @@ export default function FranchiseCertificateDetails({
         req.dispatchStatus === "Dispatched" ? (
           <StatusBadge
             tone="success"
-            label={`Dispatched${req.dispatchedAt ? ` ${new Date(req.dispatchedAt).toLocaleDateString()}` : ""}`}
+            label={`Dispatched${req.dispatchedAt ? ` ${formatDate(req.dispatchedAt)}` : ""}`}
           />
         ) : (
           <StatusBadge tone="neutral" label="Not dispatched" />

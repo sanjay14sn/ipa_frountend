@@ -1,4 +1,5 @@
 import { Building2 } from "lucide-react";
+import { formatDate } from "@/lib/date-utils";
 
 interface FranchiseDetailsProps {
   franchiseData: any;
@@ -54,19 +55,17 @@ export default function FranchiseDetails({
         )}
         {franchiseData.date && (
           <Cell label="Applied">
-            {new Date(franchiseData.date).toLocaleDateString()}
+            {formatDate(franchiseData.date)}
           </Cell>
         )}
         {franchiseData.dob && (
           <Cell label="DOB">
-            {new Date(franchiseData.dob).toLocaleDateString()}
+            {formatDate(franchiseData.dob)}
           </Cell>
         )}
         {franchiseData.paymentDetails?.dateOfJoining && (
           <Cell label="DOJ">
-            {new Date(
-              franchiseData.paymentDetails.dateOfJoining,
-            ).toLocaleDateString()}
+            {formatDate(franchiseData.paymentDetails.dateOfJoining)}
           </Cell>
         )}
       </div>

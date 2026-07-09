@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatDate } from "@/lib/date-utils";
 import {
   Building2,
   CalendarDays,
@@ -61,7 +62,7 @@ function showIssueButton(student: RequestedIdDetail, statusFilter: string) {
 
 function formatIssueDate(student: RequestedIdDetail) {
   if (student.idIssueDate) {
-    return new Date(student.idIssueDate).toLocaleDateString();
+    return formatDate(student.idIssueDate);
   }
   return "—";
 }
@@ -102,7 +103,7 @@ function StudentIdRequestDetailContent({
                 label="Born"
                 value={
                   student.dateOfBirth
-                    ? new Date(student.dateOfBirth).toLocaleDateString()
+                    ? formatDate(student.dateOfBirth)
                     : "—"
                 }
               />
@@ -116,7 +117,7 @@ function StudentIdRequestDetailContent({
                 label="Issue date"
                 value={
                   student.idIssueDate
-                    ? new Date(student.idIssueDate).toLocaleDateString()
+                    ? formatDate(student.idIssueDate)
                     : "—"
                 }
               />
@@ -256,7 +257,7 @@ export default function FranchiseIdDetails({
       className: "text-center",
       render: (student) =>
         student.dateOfBirth
-          ? new Date(student.dateOfBirth).toLocaleDateString()
+          ? formatDate(student.dateOfBirth)
           : "—",
     },
     {

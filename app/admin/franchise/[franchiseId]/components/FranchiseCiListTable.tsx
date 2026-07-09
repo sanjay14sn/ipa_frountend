@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatDate } from "@/lib/date-utils";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart2, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ interface FranchiseCiListTableProps {
 
 function fmtDate(value: Date | string | undefined): string {
   if (!value) return "N/A";
-  return new Date(value).toLocaleDateString();
+  return formatDate(value);
 }
 
 function AdminCIProgressContent({ instructorId }: { instructorId: number }) {
