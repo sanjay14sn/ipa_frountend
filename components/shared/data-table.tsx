@@ -38,10 +38,12 @@ import {
   ChevronLast,
   ArrowUp,
   ArrowDown,
-  Inbox,
   MoreHorizontal,
+  TriangleAlert,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "./empty-state";
 import {
   RawTableSurface,
   TableStatusBar,
@@ -120,6 +122,22 @@ export interface DataTableProps<T> {
   onPageChange?: (page: number) => void;
   itemsPerPage?: number;
   emptyMessage?: string;
+  /**
+   * Truthy → the error branch renders instead of rows/empty (pass
+   * query.error). A failed fetch must never masquerade as "no data" (R7).
+   */
+  error?: unknown;
+  /** Wired to query.refetch — renders the Retry button in the error branch. */
+  onRetry?: () => void;
+  /** @default "Couldn't load data" */
+  errorMessage?: string;
+  /** Structured empty state; supersedes emptyMessage (kept as title fallback). */
+  emptyState?: {
+    title: string;
+    hint?: string;
+    action?: ReactNode;
+    icon?: LucideIcon;
+  };
   resultsText?: (count: number, total: number) => string;
   toolbarActions?: ReactNode;
   /** Merged onto the inner `<table>` (e.g. `table-fixed` for dense layouts). */
@@ -181,6 +199,10 @@ export default function DataTable<T>({
   onPageChange,
   itemsPerPage = 10,
   emptyMessage = "No items found matching your criteria",
+  error,
+  onRetry,
+  errorMessage = "Couldn't load data",
+  emptyState,
   resultsText = (count, total) => `Showing ${count} of ${total} items`,
   toolbarActions,
   tableClassName,
@@ -553,16 +575,40 @@ export default function DataTable<T>({
                   ))}
                 </TableRow>
               ))
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="py-10">
+                  <div
+                    data-testid="data-table-error"
+                    className="flex flex-col items-center justify-center gap-2 text-center"
+                  >
+                    <TriangleAlert className="h-8 w-8 text-destructive" />
+                    <p className="text-sm text-destructive-soft-foreground">
+                      {errorMessage}
+                    </p>
+                    {onRetry ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-1"
+                        onClick={onRetry}
+                      >
+                        Retry
+                      </Button>
+                    ) : null}
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : data.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="py-10 text-center"
-                >
-                  <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
-                    <Inbox className="h-8 w-8 opacity-60" />
-                    <p>{emptyMessage}</p>
-                  </div>
+                <TableCell colSpan={columns.length} className="p-0">
+                  <EmptyState
+                    compact
+                    icon={emptyState?.icon}
+                    title={emptyState?.title ?? emptyMessage}
+                    hint={emptyState?.hint}
+                    action={emptyState?.action}
+                  />
                 </TableCell>
               </TableRow>
             ) : (
