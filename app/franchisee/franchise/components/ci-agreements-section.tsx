@@ -38,6 +38,7 @@ import { franchiseeProfileSignatureSrc } from "@/services/agreement.service";
 import { CIAgreementDetail } from "@/components/agreements/CIAgreementDetail";
 import { useUser } from "@/context/user-context";
 import type { ESignatureResult } from "@/components/esignature/ESignaturePad";
+import { cleanAgreementTitle } from "@/components/agreements/agreement-utils";
 
 const ESignaturePad = dynamic(
   () => import("@/components/esignature/ESignaturePad").then((m) => ({ default: m.ESignaturePad })),
@@ -237,13 +238,7 @@ function ViewDialog({
       <DialogContent className="max-h-[90vh] w-[96vw] overflow-y-auto sm:max-w-[1200px]">
         <DialogHeader>
           <DialogTitle>
-            {(() => {
-              const cleaned = (data?.title ?? "")
-                .replace(/\s+\S*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\S*$/i, "")
-                .replace(/\s+#?\d+\s*$/, "")
-                .trim();
-              return cleaned || "Course Instructor Agreement";
-            })()}
+            {cleanAgreementTitle(data?.title, "Course Instructor Agreement")}
           </DialogTitle>
           <DialogDescription>Read-only view of the CI agreement.</DialogDescription>
         </DialogHeader>

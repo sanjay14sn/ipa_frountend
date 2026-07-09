@@ -15,6 +15,7 @@ import {
   type AdminCourseInstructorAgreementRecord,
 } from "@/services/course-instructor.service";
 import type { CIAgreementRecord } from "@/services/ci-training.service";
+import { cleanAgreementTitle } from "@/components/agreements/agreement-utils";
 
 interface AdminCIAgreementDialogProps {
   instructor: { id: number; name?: string; programId?: number } | null;
@@ -41,13 +42,7 @@ export function AdminCIAgreementDialog({
       <DialogContent className="max-h-[90vh] w-[96vw] overflow-y-auto sm:max-w-[1320px]">
         <DialogHeader>
           <DialogTitle>
-            {(() => {
-              const cleaned = (data?.title ?? "")
-                .replace(/\s+\S*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\S*$/i, "")
-                .replace(/\s+#?\d+\s*$/, "")
-                .trim();
-              return cleaned || "Course Instructor Agreement";
-            })()}
+            {cleanAgreementTitle(data?.title, "Course Instructor Agreement")}
           </DialogTitle>
           <DialogDescription>
             {instructor?.name ? `Agreement view for ${instructor.name}` : "Agreement view"}

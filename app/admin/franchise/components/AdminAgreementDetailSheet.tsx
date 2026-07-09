@@ -23,18 +23,7 @@ import {
 import { AgreementActionBar } from "./AgreementActionBar";
 import { WaiveReceivableDialog } from "@/components/receivables/WaiveReceivableDialog";
 import { RecordReceivablePaymentDialog } from "./RecordReceivablePaymentDialog";
-
-/** Strip a trailing UUID and/or `#id` suffix from the stored agreement title. */
-function cleanAgreementTitle(title: string | null | undefined): string {
-  const cleaned = (title ?? "")
-    .replace(
-      /\s+\S*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\S*$/i,
-      "",
-    )
-    .replace(/\s+#?\d+\s*$/, "")
-    .trim();
-  return cleaned || "Franchise Agreement";
-}
+import { cleanAgreementTitle } from "@/components/agreements/agreement-utils";
 
 /**
  * The single canonical admin agreement detail surface: a right-side slide-over
