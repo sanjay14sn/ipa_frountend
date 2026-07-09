@@ -2,13 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DetailDialog } from "@/components/shared/dialog";
 import { CIAgreementDetail } from "@/components/agreements/CIAgreementDetail";
 import {
   getAdminCourseInstructorAgreement,
@@ -33,21 +27,19 @@ export function AdminCIAgreementDialog({
   });
 
   return (
-    <Dialog
+    <DetailDialog
       open={!!instructor}
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
+      size="2xl"
+      title={cleanAgreementTitle(data?.title, "Course Instructor Agreement")}
+      description={
+        instructor?.name
+          ? `Agreement view for ${instructor.name}`
+          : "Agreement view"
+      }
     >
-      <DialogContent className="max-h-[90vh] w-[96vw] overflow-y-auto sm:max-w-[1320px]">
-        <DialogHeader>
-          <DialogTitle>
-            {cleanAgreementTitle(data?.title, "Course Instructor Agreement")}
-          </DialogTitle>
-          <DialogDescription>
-            {instructor?.name ? `Agreement view for ${instructor.name}` : "Agreement view"}
-          </DialogDescription>
-        </DialogHeader>
 
         {isLoading ? (
           <div className="flex items-center gap-2 rounded-lg border p-4 text-sm text-muted-foreground">
@@ -61,8 +53,7 @@ export function AdminCIAgreementDialog({
         ) : (
           <CIAgreementDetail agreement={data as unknown as CIAgreementRecord} />
         )}
-      </DialogContent>
-    </Dialog>
+    </DetailDialog>
   );
 }
 

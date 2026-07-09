@@ -9,14 +9,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
   DataTable,
   type DataTableColumn,
   DetailField,
@@ -39,11 +31,9 @@ import { CIAgreementDetail } from "@/components/agreements/CIAgreementDetail";
 import { useUser } from "@/context/user-context";
 import type { ESignatureResult } from "@/components/esignature/ESignaturePad";
 import { cleanAgreementTitle } from "@/components/agreements/agreement-utils";
+import { AppDialog, AppDialogBody, AppDialogFooter, AppDialogHeader, DetailDialog } from "@/components/shared/dialog";
+import { SignatureCapturePanel } from "@/components/esignature/SignatureCapturePanel";
 
-const ESignaturePad = dynamic(
-  () => import("@/components/esignature/ESignaturePad").then((m) => ({ default: m.ESignaturePad })),
-  { ssr: false, loading: () => <Loader2 className="h-5 w-5 animate-spin" /> },
-);
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -84,7 +74,6 @@ function SignDialog({
 }) {
   const { user } = useUser();
   const [submitting, setSubmitting] = useState(false);
-  const [eSignatureOpen, setESignatureOpen] = useState(false);
 
   const profileSignatureSrc = franchiseeProfileSignatureSrc(
     user?.profile?.franchiseeSignature,
@@ -112,7 +101,6 @@ function SignDialog({
       const file = new File([blob], "signature.svg", { type: "image/svg+xml" });
       await signCIAgreementAsFranchiseeFile(agreement.id, file);
       toast.success("CI agreement signed successfully.");
-      setESignatureOpen(false);
       onSigned();
     } catch (err) {
       toast.error(getErrorMessage(err, "Could not sign agreement. Please try again."));
@@ -129,91 +117,35 @@ function SignDialog({
 
   return (
     <>
-      <Dialog open={!!agreement} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Sign CI Agreement</DialogTitle>
-            <DialogDescription>
-              {agreement?.title ?? "Sign this course instructor agreement."}
-            </DialogDescription>
-          </DialogHeader>
+      <AppDialog
+        open={!!agreement}
+        onOpenChange={handleOpenChange}
+        size="md"
+      >
+        <AppDialogHeader
+          title="Sign CI Agreement"
+          description={agreement?.title ?? "Sign this course instructor agreement."}
+        />
+        <AppDialogBody>
+          <SignatureCapturePanel
+            storedSignature={profileSignatureSrc ?? undefined}
+            signerLabel="Your signature"
+            ctaLabel="Sign agreement"
+            busy={submitting}
+            defaultName={user?.profile?.name ?? user?.name ?? ""}
+            onAdopt={handleAdoptESignature}
+            onUseStored={handleSignWithExisting}
+          />
+        </AppDialogBody>
+        <AppDialogFooter
+          secondary={{
+            label: "Cancel",
+            onClick: onClose,
+            disabled: submitting,
+          }}
+        />
+      </AppDialog>
 
-          <div className="space-y-4 py-2">
-            {profileSignatureSrc ? (
-              // Existing on-file signature
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Your signature on file will be applied to this agreement.
-                </p>
-                <div className="overflow-hidden rounded-lg border border-border bg-muted/30 p-3 flex items-center justify-center">
-                  <img
-                    src={profileSignatureSrc}
-                    alt="Your signature on file"
-                    className="max-h-32 max-w-full object-contain"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => setESignatureOpen(true)}
-                  disabled={submitting}
-                >
-                  <PenLine className="mr-1.5 h-3.5 w-3.5" />
-                  Draw a different signature
-                </Button>
-              </div>
-            ) : (
-              // No on-file signature — open e-signature pad
-              <button
-                type="button"
-                onClick={() => setESignatureOpen(true)}
-                className="w-full rounded-lg border-2 border-dashed border-muted-foreground/25 p-8 text-center hover:border-muted-foreground/50 hover:bg-muted/20 transition-colors"
-              >
-                <PenLine className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                <p className="text-sm font-medium">Click to create signature</p>
-                <p className="text-xs text-muted-foreground mt-1">Draw or type your signature</p>
-              </button>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-            {profileSignatureSrc && (
-              <Button
-                type="button"
-                disabled={submitting}
-                onClick={handleSignWithExisting}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                    Signing…
-                  </>
-                ) : (
-                  "Sign agreement"
-                )}
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <ESignaturePad
-        open={eSignatureOpen}
-        onOpenChange={setESignatureOpen}
-        defaultName={user?.profile?.name ?? user?.name ?? ""}
-        onAdopt={handleAdoptESignature}
-        submitting={submitting}
-      />
     </>
   );
 }
@@ -234,28 +166,28 @@ function ViewDialog({
   });
 
   return (
-    <Dialog open={agreementId !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-h-[90vh] w-[96vw] overflow-y-auto sm:max-w-[1200px]">
-        <DialogHeader>
-          <DialogTitle>
-            {cleanAgreementTitle(data?.title, "Course Instructor Agreement")}
-          </DialogTitle>
-          <DialogDescription>Read-only view of the CI agreement.</DialogDescription>
-        </DialogHeader>
-        {isLoading ? (
-          <div className="flex items-center gap-2 rounded-lg border p-4 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading agreement…
-          </div>
-        ) : !data ? (
-          <div className="rounded-lg border p-4 text-sm text-muted-foreground">
-            No agreement details found.
-          </div>
-        ) : (
-          <CIAgreementDetail agreement={data} />
-        )}
-      </DialogContent>
-    </Dialog>
+    <DetailDialog
+      open={agreementId !== null}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      size="2xl"
+      title={cleanAgreementTitle(data?.title, "Course Instructor Agreement")}
+      description="Read-only view of the CI agreement."
+    >
+      {isLoading ? (
+        <div className="flex items-center gap-2 rounded-lg border p-4 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading agreement…
+        </div>
+      ) : !data ? (
+        <div className="rounded-lg border p-4 text-sm text-muted-foreground">
+          No agreement details found.
+        </div>
+      ) : (
+        <CIAgreementDetail agreement={data} />
+      )}
+    </DetailDialog>
   );
 }
 

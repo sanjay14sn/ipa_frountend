@@ -5,13 +5,6 @@ import { Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { AgreementRecordDetail } from "@/components/agreements/AgreementRecordDetail";
 import {
   DataTable,
@@ -48,6 +41,7 @@ import {
 import { abandonOrderPayment } from "@/services/order.service";
 import { ComponentErrorBoundary } from "@/components/error/ComponentErrorBoundary";
 import { cleanAgreementTitle } from "@/components/agreements/agreement-utils";
+import { AppDialog, AppDialogBody, AppDialogHeader } from "@/components/shared/dialog";
 
 function FranchiseeAgreementViewDialog({
   agreementId,
@@ -104,16 +98,20 @@ function FranchiseeAgreementViewDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} modal={!paymentOpen}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-[min(1200px,94vw)]">
-        <DialogHeader className="border-b border-border px-4 py-4 text-left sm:px-5">
-          <DialogTitle>
-            {cleanAgreementTitle(agreement?.title)}
-          </DialogTitle>
-          <DialogDescription>
-            View the agreement without leaving the My agreements table.
-          </DialogDescription>
-        </DialogHeader>
+    <AppDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      modal={!paymentOpen}
+      size="2xl"
+      padding="flush"
+      maxHeight="max-h-[92vh]"
+      scrollBody
+    >
+      <AppDialogHeader
+        title={cleanAgreementTitle(agreement?.title)}
+        description="View the agreement without leaving the My agreements table."
+      />
+      <AppDialogBody>
         <div className="p-4 sm:p-5">
           {agreementQuery.isLoading ? (
             <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
@@ -133,8 +131,8 @@ function FranchiseeAgreementViewDialog({
             </p>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </AppDialogBody>
+    </AppDialog>
   );
 }
 
