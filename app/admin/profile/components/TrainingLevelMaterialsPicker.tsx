@@ -29,8 +29,12 @@ export function TrainingLevelMaterialsPicker({
       dialogTitle="Level Materials"
       dialogDescription="Add and remove inventory items for this CI training level."
       disabled={disabled}
-      useCatalog={(enabled) => useAllInventory(enabled)}
+      useCatalog={(enabled) =>
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- invoked during EntityLinkPicker render (hook-injection API, CMP-09)
+        useAllInventory(enabled)
+      }
       useAssigned={(enabled) =>
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- invoked during EntityLinkPicker render (hook-injection API, CMP-09)
         useInventoryItemsForTrainingLevel(trainingLevelId, enabled)
       }
       assign={async (items) => {

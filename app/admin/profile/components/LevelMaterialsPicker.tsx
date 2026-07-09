@@ -28,8 +28,14 @@ export function LevelMaterialsPicker({
       dialogTitle="Level Materials"
       dialogDescription="Add and remove inventory items for this level."
       disabled={disabled}
-      useCatalog={(enabled) => useAllInventory(enabled)}
-      useAssigned={(enabled) => useInventoryItemsForLevel(levelId, enabled)}
+      useCatalog={(enabled) =>
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- invoked during EntityLinkPicker render (hook-injection API, CMP-09)
+        useAllInventory(enabled)
+      }
+      useAssigned={(enabled) =>
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- invoked during EntityLinkPicker render (hook-injection API, CMP-09)
+        useInventoryItemsForLevel(levelId, enabled)
+      }
       assign={async (items) => {
         const { assigned: count, failed } = await bulkAssignInventoryToLevel(
           levelId,

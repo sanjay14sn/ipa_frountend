@@ -33,9 +33,11 @@ export function LevelCertificatesPicker({
       dialogDescription="Attach certificate templates issued when a student completes this level."
       disabled={disabled}
       useCatalog={(enabled) =>
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- invoked during EntityLinkPicker render (hook-injection API, CMP-09)
         useCertificateTemplatesForProgram(programId, enabled)
       }
       useAssigned={(enabled) =>
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- invoked during EntityLinkPicker render (hook-injection API, CMP-09)
         useCertificateTemplatesForLevel(levelId, enabled)
       }
       assign={async (templateIds) => {
