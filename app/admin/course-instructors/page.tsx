@@ -3,14 +3,14 @@
 import { Suspense, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { UserPlus } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
+import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { CiApprovalsSection } from "./_components/approvals/ci-approvals-section";
 import { CiTrainingSection } from "./ci-training-section";
 import ActiveCourseInstructorsTable from "./_components/approvals/ActiveCourseInstructorsTable";
 import SetupExistingCIDialog from "./_components/approvals/SetupExistingCIDialog";
-import { TablePageShell, PageSkeleton } from "@/components/shared";
+import { PageSkeleton } from "@/components/shared";
 
 const TABS = ["applications", "active", "training"] as const;
 
@@ -26,39 +26,39 @@ function AdminCourseInstructorsHubInner() {
   };
 
   return (
-    <TablePageShell
+    <PageTabs
       title="Course instructors"
       description="Applications, training sessions, and curriculum levels."
-      actions={
+      action={
         <Button onClick={() => setSetupOpen(true)} variant="outline" size="sm">
           <UserPlus className="mr-2 h-4 w-4" />
           Setup Existing CI
         </Button>
       }
+      tabs={[
+        { value: "applications", label: "Applications" },
+        { value: "active", label: "Active CIs" },
+        { value: "training", label: "CI training" },
+      ]}
+      value={tab}
+      onValueChange={setTab}
     >
-      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-        <TabsList className="flex h-auto flex-wrap justify-start gap-1">
-          <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="active">Active CIs</TabsTrigger>
-          <TabsTrigger value="training">CI training</TabsTrigger>
-        </TabsList>
-        <TabsContent value="applications" className="mt-4">
-          <CiApprovalsSection />
-        </TabsContent>
-        <TabsContent value="active" className="mt-4">
-          <ActiveCourseInstructorsTable />
-        </TabsContent>
-        <TabsContent value="training" className="mt-4">
-          <CiTrainingSection />
-        </TabsContent>
-      </Tabs>
+      <TabsContent value="applications" className="mt-0">
+        <CiApprovalsSection />
+      </TabsContent>
+      <TabsContent value="active" className="mt-0">
+        <ActiveCourseInstructorsTable />
+      </TabsContent>
+      <TabsContent value="training" className="mt-0">
+        <CiTrainingSection />
+      </TabsContent>
 
       <SetupExistingCIDialog
         open={setupOpen}
         onOpenChange={setSetupOpen}
         onSuccess={handleSetupSuccess}
       />
-    </TablePageShell>
+    </PageTabs>
   );
 }
 

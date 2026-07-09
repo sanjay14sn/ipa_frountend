@@ -291,22 +291,16 @@ export default function FranchiseeOrdersPage() {
   }
 
   return (
-    <TablePageShell>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Material Orders</h1>
-          <p className="text-muted-foreground">
-            Order student level materials and first-level kits, or re-order
-            custom items for students who already have materials.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={() => setIsUnifiedModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Material Request
-          </Button>
-        </div>
-      </div>
+    <TablePageShell
+      title="Material Orders"
+      description="Order student level materials and first-level kits, or re-order custom items for students who already have materials."
+      actions={
+        <Button onClick={() => setIsUnifiedModalOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Material Request
+        </Button>
+      }
+    >
 
       {cancelledOrders > 0 ? (
         <p className="text-sm text-muted-foreground">

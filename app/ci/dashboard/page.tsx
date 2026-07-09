@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { PageHeaderCard } from "@/components/shared";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -86,23 +87,21 @@ export default function CIDashboardPage() {
   return (
     <div className="space-y-4">
       <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-        <div className="flex flex-col gap-3 border-b px-4 py-5 sm:px-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="mb-2">
-              <ModulePill label="Course Instructor" />
+        <PageHeaderCard
+          embedded
+          className="border-b py-5"
+          eyebrow={<ModulePill label="Course Instructor" />}
+          title="Course Instructor Dashboard"
+          description={`Welcome back${user?.name ? `, ${user.name}` : ""}. Track your current level, next training and receivable status.`}
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={agreement?.phase === "SIGNED" ? "default" : "secondary"}>
+                {phaseLabel(agreement?.phase)}
+              </Badge>
+              {user?.instructorCode ? <Badge variant="outline">{user.instructorCode}</Badge> : null}
             </div>
-            <h1 className="text-2xl text-card-foreground">Course Instructor Dashboard</h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              Welcome back{user?.name ? `, ${user.name}` : ""}. Track your current level, next training and receivable status.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={agreement?.phase === "SIGNED" ? "default" : "secondary"}>
-              {phaseLabel(agreement?.phase)}
-            </Badge>
-            {user?.instructorCode ? <Badge variant="outline">{user.instructorCode}</Badge> : null}
-          </div>
-        </div>
+          }
+        />
 
         {loading ? (
           <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5">

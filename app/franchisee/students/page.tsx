@@ -1,16 +1,11 @@
 "use client";
 
 import { Suspense } from "react";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { StudentsManageSection } from "./students-manage-section";
 import { FranchiseeCertificateRequestsSection } from "./components/certificate-requests-section";
-import { TablePageShell } from "@/components/shared";
+import { PageSkeleton } from "@/components/shared";
 
 const TABS = ["manage", "certificates"] as const;
 
@@ -18,23 +13,23 @@ function FranchiseeStudentsHubInner() {
   const [tab, setTab] = useTabFromUrl("manage", TABS);
 
   return (
-    <TablePageShell
+    <PageTabs
       title="Students"
       description="Enrolment and certificates."
+      tabs={[
+        { value: "manage", label: "Manage students" },
+        { value: "certificates", label: "Certificate requests" },
+      ]}
+      value={tab}
+      onValueChange={setTab}
     >
-      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-        <TabsList className="flex h-auto flex-wrap justify-start gap-1">
-          <TabsTrigger value="manage">Manage students</TabsTrigger>
-          <TabsTrigger value="certificates">Certificate requests</TabsTrigger>
-        </TabsList>
-        <TabsContent value="manage" className="mt-4">
-          <StudentsManageSection />
-        </TabsContent>
-        <TabsContent value="certificates" className="mt-4">
-          <FranchiseeCertificateRequestsSection />
-        </TabsContent>
-      </Tabs>
-    </TablePageShell>
+      <TabsContent value="manage" className="mt-0">
+        <StudentsManageSection />
+      </TabsContent>
+      <TabsContent value="certificates" className="mt-0">
+        <FranchiseeCertificateRequestsSection />
+      </TabsContent>
+    </PageTabs>
   );
 }
 
@@ -42,7 +37,7 @@ export default function FranchiseeStudentsHubPage() {
   return (
     <Suspense
       fallback={
-        <div className="text-muted-foreground p-6 text-sm">Loading…</div>
+        <PageSkeleton />
       }
     >
       <FranchiseeStudentsHubInner />

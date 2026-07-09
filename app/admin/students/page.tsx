@@ -1,17 +1,12 @@
 "use client";
 
 import { Suspense } from "react";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
+import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { IdRequestsSection } from "./components/id-requests-section";
 import { CertificateRequestsSection } from "./components/certificate-requests-section";
 import { StudentLifecycleSection } from "./components/student-lifecycle-section";
-import { TablePageShell, PageSkeleton } from "@/components/shared";
+import { PageSkeleton } from "@/components/shared";
 
 const TABS = ["ids", "certificates", "lifecycle"] as const;
 
@@ -19,27 +14,27 @@ function AdminStudentsHubInner() {
   const [tab, setTab] = useTabFromUrl("ids", TABS);
 
   return (
-    <TablePageShell
+    <PageTabs
       title="Students"
       description="ID cards, certificates, and student-related admin workflows."
+      tabs={[
+        { value: "ids", label: "ID requests" },
+        { value: "certificates", label: "Certificate requests" },
+        { value: "lifecycle", label: "Lifecycle" },
+      ]}
+      value={tab}
+      onValueChange={setTab}
     >
-      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-        <TabsList className="flex h-auto flex-wrap justify-start gap-1">
-          <TabsTrigger value="ids">ID requests</TabsTrigger>
-          <TabsTrigger value="certificates">Certificate requests</TabsTrigger>
-          <TabsTrigger value="lifecycle">Lifecycle</TabsTrigger>
-        </TabsList>
-        <TabsContent value="ids" className="mt-4">
-          <IdRequestsSection />
-        </TabsContent>
-        <TabsContent value="certificates" className="mt-4">
-          <CertificateRequestsSection />
-        </TabsContent>
-        <TabsContent value="lifecycle" className="mt-4">
-          <StudentLifecycleSection />
-        </TabsContent>
-      </Tabs>
-    </TablePageShell>
+      <TabsContent value="ids" className="mt-0">
+        <IdRequestsSection />
+      </TabsContent>
+      <TabsContent value="certificates" className="mt-0">
+        <CertificateRequestsSection />
+      </TabsContent>
+      <TabsContent value="lifecycle" className="mt-0">
+        <StudentLifecycleSection />
+      </TabsContent>
+    </PageTabs>
   );
 }
 

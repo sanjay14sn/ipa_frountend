@@ -110,19 +110,13 @@ export function ProgramRequestsSection() {
   };
 
   return (
-    <TablePageShell
-      title="Program Requests"
-      description="Review and manage program requests from franchisees with filtering and search capabilities"
-      actions={
-        <Button
-          variant="outline"
-          className="border-gray-300 text-gray-700 hover:bg-gray-50"
-          onClick={triggerRefresh}
-        >
+    <TablePageShell embed>
+      {/* R6: the hub owns the page header; this section renders toolbar + content only. */}
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={triggerRefresh}>
           Refresh
         </Button>
-      }
-    >
+      </div>
       <TableSectionSurface className="w-full">
         <ProgramRequestsTable
           onApprove={handleApprove}

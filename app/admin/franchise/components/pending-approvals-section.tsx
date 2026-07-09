@@ -259,19 +259,13 @@ export function PendingApprovalsSection() {
   const program = payrollDetails.programPayroll;
 
   return (
-    <TablePageShell
-      title="Franchise Applications"
-      description="Review pending applications, inspect rejected ones, and approve pending rows after saving agreement terms."
-      actions={
-        <Button
-          variant="outline"
-          className="border-gray-300 text-gray-700 hover:bg-gray-50"
-          onClick={triggerRefresh}
-        >
+    <TablePageShell embed>
+      {/* R6: the hub owns the page header; this section renders toolbar + content only. */}
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={triggerRefresh}>
           Refresh
         </Button>
-      }
-    >
+      </div>
       <TableSectionSurface className="w-full">
         <PendingApprovalsTable
           onApprove={handleApprove}

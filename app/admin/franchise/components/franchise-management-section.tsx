@@ -33,10 +33,9 @@ export function FranchiseManagementSection() {
   };
 
   return (
-    <TablePageShell
-      title="Franchise Management"
-      description="Comprehensive franchise network oversight and administration"
-      actions={
+    <TablePageShell embed>
+      {/* R6: the hub owns the page header; this section renders toolbar + content only. */}
+      <div className="flex justify-end">
         <Button
           onClick={async () => {
             await ensureProgramsLoaded();
@@ -46,8 +45,7 @@ export function FranchiseManagementSection() {
           <Building2 className="h-4 w-4" />
           Setup Existing Franchise
         </Button>
-      }
-    >
+      </div>
 
       {/* Create Franchise Dialog */}
       <CreateFranchiseDialog

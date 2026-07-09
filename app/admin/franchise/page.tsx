@@ -38,7 +38,7 @@ function AdminFranchiseHubInner() {
         <ProgramRequestsSection />
       </TabsContent>
       <TabsContent value="agreements" className="mt-0">
-        <AdminAgreementsSection />
+        <AdminAgreementsSection embed />
       </TabsContent>
     </PageTabs>
   );

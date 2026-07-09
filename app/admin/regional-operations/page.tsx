@@ -1,13 +1,8 @@
 "use client";
 
 import { Suspense, useEffect } from "react";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { TablePageShell, PageSkeleton } from "@/components/shared";
+import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
+import { PageSkeleton } from "@/components/shared";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { useUser } from "@/context/user-context";
@@ -71,11 +66,20 @@ function RegionalOperationsInner() {
   };
 
   return (
-    <TablePageShell
+    <PageTabs
       title="Regional Operations"
       description="Read-only oversight of each region's orders, shipping, payments, inventory, and monitoring."
-    >
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      tabs={[
+        { value: "orders", label: "Orders" },
+        { value: "shipping", label: "Shipping" },
+        { value: "payments", label: "Payments" },
+        { value: "inventory", label: "Inventory" },
+        { value: "monitoring", label: "Monitoring" },
+      ]}
+      value={tab}
+      onValueChange={setTab}
+      headerExtras={
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-medium text-muted-foreground">Region</span>
         <Select
           value={selectedRegionAdminId ?? ""}
@@ -95,7 +99,8 @@ function RegionalOperationsInner() {
           </SelectContent>
         </Select>
       </div>
-
+      }
+    >
       {regionAdminId == null ? (
         <div className="rounded-2xl border border-dashed bg-muted/20 px-6 py-12 text-center text-sm text-muted-foreground">
           {regions.length === 0
@@ -103,15 +108,7 @@ function RegionalOperationsInner() {
             : "Select a region above to view its operations (read-only)."}
         </div>
       ) : (
-        <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-          <TabsList className="flex h-auto flex-wrap justify-start gap-1">
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="shipping">Shipping</TabsTrigger>
-            <TabsTrigger value="payments">Payments</TabsTrigger>
-            <TabsTrigger value="inventory">Inventory</TabsTrigger>
-            <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
-          </TabsList>
-
+        <>
           <TabsContent value="orders" className="mt-4 space-y-6">
             <div>
               <h2 className="text-2xl font-semibold tracking-tight">Order management</h2>
@@ -160,9 +157,9 @@ function RegionalOperationsInner() {
               />
             )}
           </TabsContent>
-        </Tabs>
+        </>
       )}
-    </TablePageShell>
+    </PageTabs>
   );
 }
 

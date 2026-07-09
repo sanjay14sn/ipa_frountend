@@ -1,13 +1,8 @@
 "use client";
 
 import { Suspense } from "react";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { TablePageShell, PageSkeleton } from "@/components/shared";
+import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
+import { PageSkeleton } from "@/components/shared";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { useUser } from "@/context/user-context";
 import AdminOrdersTable from "@/components/orders/AdminOrdersTable";
@@ -38,19 +33,20 @@ function AdminOperationsHubInner() {
   // Super-admin region oversight lives on the read-only Regional Operations page.
 
   return (
-    <TablePageShell
+    <PageTabs
       title="Operations"
       description="Demand, shipping, payments, inventory, procurement, and monitoring in one admin workspace."
+      tabs={[
+        { value: "orders", label: "Orders" },
+        { value: "shipping", label: "Shipping" },
+        { value: "payments", label: "Payments" },
+        { value: "inventory", label: "Inventory" },
+        { value: "procurement", label: "Procurement" },
+        { value: "monitoring", label: "Monitoring" },
+      ]}
+      value={tab}
+      onValueChange={setTab}
     >
-      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-        <TabsList className="flex h-auto flex-wrap justify-start gap-1">
-          <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="shipping">Shipping</TabsTrigger>
-          <TabsTrigger value="payments">Payments</TabsTrigger>
-          <TabsTrigger value="inventory">Inventory</TabsTrigger>
-          <TabsTrigger value="procurement">Procurement</TabsTrigger>
-          <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
-        </TabsList>
 
         <TabsContent value="orders" className="mt-4 space-y-6">
           <div>
@@ -101,8 +97,7 @@ function AdminOperationsHubInner() {
         <TabsContent value="monitoring" className="mt-4">
           {tab === "monitoring" && <MonitoringSection />}
         </TabsContent>
-      </Tabs>
-    </TablePageShell>
+    </PageTabs>
   );
 }
 

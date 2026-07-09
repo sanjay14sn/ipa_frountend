@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
+import { PageHeaderCard } from "@/components/shared";
 import { formatDate } from "@/lib/date-utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -669,38 +670,34 @@ export default function FranchiseeDashboard() {
       />
 
       <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-        <div className="flex flex-col gap-3 border-b px-4 py-5 sm:px-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="mb-2">
-              <ModulePill label="Franchise" />
-            </div>
-            <h1 className="text-2xl text-card-foreground">
-              {user.franchiseName ?? "Franchise Dashboard"}
-            </h1>
-            <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
-              Overview of your franchise activities.
-            </p>
-          </div>
-          {isOperational && (
-            <div className="flex shrink-0 flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRequestProgramsModalOpen(true)}
-              >
-                Request Programs
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRequestModalOpen(true)}
-              >
-                <Building2 className="h-4 w-4" />
-                Request New Franchise
-              </Button>
-            </div>
-          )}
-        </div>
+        <PageHeaderCard
+          embedded
+          className="border-b py-5"
+          eyebrow={<ModulePill label="Franchise" />}
+          title={user.franchiseName ?? "Franchise Dashboard"}
+          description="Overview of your franchise activities."
+          actions={
+            isOperational ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRequestProgramsModalOpen(true)}
+                >
+                  Request Programs
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRequestModalOpen(true)}
+                >
+                  <Building2 className="h-4 w-4" />
+                  Request New Franchise
+                </Button>
+              </>
+            ) : undefined
+          }
+        />
 
         {loading ? (
           <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5">

@@ -43,10 +43,8 @@ export function CiApprovalsSection() {
   };
 
   return (
-    <TablePageShell
-      title="Course Instructor Approvals"
-      description="Manage course instructor applications and approval states across franchises."
-    >
+    <TablePageShell embed>
+      {/* R6: the hub owns the page header. */}
       <TableSectionSurface>
         <CiApprovalsSummaryTable
           refreshTrigger={refreshTrigger}

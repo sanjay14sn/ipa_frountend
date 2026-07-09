@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, type ElementType, type ReactNode } from "react";
+import { PageHeaderCard } from "@/components/shared";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -425,19 +426,21 @@ export default function AdminDashboard() {
 
   return (
     <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-      <div className="flex flex-col gap-3 border-b px-4 py-5 sm:px-5 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h1 className="text-2xl text-card-foreground">Admin Dashboard</h1>
-          <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
-            {isSuperAdmin
-              ? "Overview of all franchises and platform activity."
-              : "Overview of your assigned franchises and regional activity."}
-          </p>
-        </div>
-        <div className="text-xs text-muted-foreground">
-          Last updated: {formatLastUpdated(statsQuery.dataUpdatedAt)}
-        </div>
-      </div>
+      <PageHeaderCard
+        embedded
+        className="border-b py-5"
+        title="Admin Dashboard"
+        description={
+          isSuperAdmin
+            ? "Overview of all franchises and platform activity."
+            : "Overview of your assigned franchises and regional activity."
+        }
+        actions={
+          <div className="text-xs text-muted-foreground">
+            Last updated: {formatLastUpdated(statsQuery.dataUpdatedAt)}
+          </div>
+        }
+      />
 
       <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5">
         {summary.map((item) => (
