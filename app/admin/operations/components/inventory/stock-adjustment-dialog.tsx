@@ -1,17 +1,10 @@
 "use client";
 
 import React from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormDialog } from "@/components/shared/dialog";
 import {
   Select,
   SelectContent,
@@ -52,19 +45,31 @@ export function StockAdjustmentDialog({
   onConfirm: () => void;
 }) {
   return (
-    <Dialog
+    <FormDialog
       open={open}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) {
           onClose();
         }
       }}
+      size="md"
+      title="Adjust stock"
+      formId="stock-adjustment-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onConfirm();
+      }}
+      isSubmitting={isAdjustSubmitting}
+      submitLabel={isAdjustSubmitting ? "Saving..." : "Apply adjustment"}
+      cancelLabel="Cancel"
+      canSubmit={
+        !isAdjustSubmitting &&
+        !adjustPreview.error &&
+        Boolean(adjustForm.quantity.trim()) &&
+        Boolean(adjustForm.reason.trim())
+      }
     >
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Adjust stock</DialogTitle>
-        </DialogHeader>
-        {adjustingItem ? (
+      {adjustingItem ? (
           <div className="space-y-4">
             <div className="rounded-md border bg-muted/30 p-3 text-sm">
               <div className="font-medium">{adjustingItem.name}</div>
@@ -197,34 +202,13 @@ export function StockAdjustmentDialog({
             </div>
 
             {adjustForm.direction === "INCREASE" ? (
-              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-900">
+              <div className="rounded-md border border-success/20 bg-success-soft p-2 text-xs text-success-soft-foreground">
                 Positive adjustments automatically replenish any
                 backordered orders for this item, oldest first.
               </div>
             ) : null}
           </div>
-        ) : null}
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={isAdjustSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={onConfirm}
-            disabled={
-              isAdjustSubmitting ||
-              Boolean(adjustPreview.error) ||
-              !adjustForm.quantity.trim() ||
-              !adjustForm.reason.trim()
-            }
-          >
-            {isAdjustSubmitting ? "Saving..." : "Apply adjustment"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      ) : null}
+    </FormDialog>
   );
 }

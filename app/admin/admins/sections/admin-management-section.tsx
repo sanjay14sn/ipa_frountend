@@ -23,16 +23,9 @@ import {
 } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormDialog } from "@/components/shared/dialog";
 import { ToggleField } from "@/components/shared/toggle-field";
 import {
   Select,
@@ -331,7 +324,7 @@ export function AdminManagementSection() {
         )}
       </TableSectionSurface>
 
-      <Dialog
+      <FormDialog
         open={dialogOpen}
         onOpenChange={(open) => {
           if (!open) {
@@ -340,19 +333,30 @@ export function AdminManagementSection() {
           }
           setDialogOpen(true);
         }}
+        size="md"
+        title={formMode === "create" ? "Create regional admin" : "Update admin"}
+        description={
+          formMode === "create"
+            ? "Create a state-locked admin who runs operations from their own regional warehouse."
+            : "Adjust contact details, region, password, or access status."
+        }
+        formId="admin-management-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+        isSubmitting={saving}
+        submitLabel={
+          saving
+            ? formMode === "create"
+              ? "Creating..."
+              : "Saving..."
+            : formMode === "create"
+              ? "Create admin"
+              : "Save changes"
+        }
+        cancelLabel="Cancel"
       >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {formMode === "create" ? "Create regional admin" : "Update admin"}
-            </DialogTitle>
-            <DialogDescription>
-              {formMode === "create"
-                ? "Create a state-locked admin who runs operations from their own regional warehouse."
-                : "Adjust contact details, region, password, or access status."}
-            </DialogDescription>
-          </DialogHeader>
-
           <div className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="admin-name">Name</Label>
@@ -501,22 +505,7 @@ export function AdminManagementSection() {
             ) : null}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={resetDialog} disabled={saving}>
-              Cancel
-            </Button>
-            <Button onClick={() => void submit()} disabled={saving}>
-              {saving
-                ? formMode === "create"
-                  ? "Creating..."
-                  : "Saving..."
-                : formMode === "create"
-                  ? "Create admin"
-                  : "Save changes"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormDialog>
     </TablePageShell>
   );
 }

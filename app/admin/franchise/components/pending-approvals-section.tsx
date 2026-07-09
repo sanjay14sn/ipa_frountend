@@ -3,15 +3,8 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { FormDialog } from "@/components/shared/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useUser } from "@/context/user-context";
 import {
@@ -276,54 +269,44 @@ export function PendingApprovalsSection() {
         />
       </TableSectionSurface>
 
-      <Dialog
+      <FormDialog
         open={rejectDialog.open}
         onOpenChange={(open) => setRejectDialog((prev) => ({ ...prev, open }))}
+        size="md"
+        title="Reject Franchise Application"
+        description={
+          <>
+            Rejecting the application for &ldquo;
+            {rejectDialog.application?.name}&rdquo;. This will notify the
+            franchisee. Please provide a reason.
+          </>
+        }
+        formId="franchise-reject-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          confirmReject();
+        }}
+        isSubmitting={rejecting}
+        submitLabel="Reject"
+        cancelLabel="Cancel"
+        canSubmit={!rejecting && Boolean(rejectDialog.reason.trim())}
       >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Reject Franchise Application</DialogTitle>
-            <DialogDescription>
-              Rejecting the application for &ldquo;
-              {rejectDialog.application?.name}&rdquo;. This will notify the
-              franchisee. Please provide a reason.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 py-2">
-            <Label htmlFor="franchise-reject-reason">Reason</Label>
-            <Textarea
-              id="franchise-reject-reason"
-              placeholder="Enter rejection reason..."
-              value={rejectDialog.reason}
-              onChange={(e) =>
-                setRejectDialog((prev) => ({
-                  ...prev,
-                  reason: e.target.value,
-                }))
-              }
-              rows={3}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              disabled={rejecting}
-              onClick={() =>
-                setRejectDialog((prev) => ({ ...prev, open: false }))
-              }
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmReject}
-              disabled={rejecting || !rejectDialog.reason.trim()}
-            >
-              Reject
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <div className="space-y-2 py-2">
+          <Label htmlFor="franchise-reject-reason">Reason</Label>
+          <Textarea
+            id="franchise-reject-reason"
+            placeholder="Enter rejection reason..."
+            value={rejectDialog.reason}
+            onChange={(e) =>
+              setRejectDialog((prev) => ({
+                ...prev,
+                reason: e.target.value,
+              }))
+            }
+            rows={3}
+          />
+        </div>
+      </FormDialog>
 
       <PayrollTermsDialog
         open={showPayrollDialog}

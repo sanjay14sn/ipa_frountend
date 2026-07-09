@@ -6,16 +6,9 @@ import type { AgreementRecord } from "@/services/agreement.service";
 import type { AgreementActionVisibility } from "@/components/agreements/record-detail/agreement-utils";
 import { useDispatchFranchiseKitMutation } from "@/hooks/api/agreement.hooks";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AgreementKitItemsPanel } from "./AgreementKitItemsDialog";
-import { ConfirmDialog } from "@/components/shared/dialog";
+import { ConfirmDialog, FormDialog } from "@/components/shared/dialog";
 import { FranchiseKitPanel } from "./FranchiseKitEditor";
 
 interface ManageKitDialogProps {
@@ -51,15 +44,15 @@ export function ManageKitDialog({
       : "dispatch";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>{`Manage kit - Agreement #${agreement.id}`}</DialogTitle>
-          <DialogDescription>
-            Manage kit items, the franchise kit, and the one-time kit dispatch
-            for this agreement.
-          </DialogDescription>
-        </DialogHeader>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="lg"
+      scrollBody
+      hideFooter
+      title={`Manage kit - Agreement #${agreement.id}`}
+      description="Manage kit items, the franchise kit, and the one-time kit dispatch for this agreement."
+    >
 
         <Tabs defaultValue={defaultTab} className="w-full">
           <TabsList className="flex w-full flex-wrap">
@@ -143,7 +136,6 @@ export function ManageKitDialog({
           }}
           isConfirming={dispatchKit.isPending}
         />
-      </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }

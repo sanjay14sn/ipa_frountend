@@ -1,19 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { CheckCircle, IndianRupee, Package, Settings } from "lucide-react";
+import { FormDialog } from "@/components/shared/dialog";
+import { IndianRupee, Package, Settings } from "lucide-react";
 import { StartingKitEditor, type KitRow } from "./StartingKitEditor";
 import type { ProgramPayroll } from "./types";
 
@@ -102,27 +95,24 @@ export function PayrollTermsDialog({
   extraContent,
 }: PayrollTermsDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-5xl flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="shrink-0 border-b border-border px-4 py-5 sm:px-5">
-          <div className="mb-3 flex">
-            <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-              Agreement terms
-            </span>
-          </div>
-          <DialogTitle className="flex items-center gap-2 text-2xl font-normal tracking-tight text-card-foreground">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary">
-              <Settings className="h-4 w-4" />
-            </span>
-            Setup terms for {subjectName}
-          </DialogTitle>
-          <DialogDescription className="max-w-3xl text-sm text-muted-foreground">
-            Save the fixed agreement terms for the selected program, then
-            approve the application and issue the draft agreement for signature.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="xl"
+      scrollBody
+      headerEyebrow="Agreement terms"
+      headerIcon={Settings}
+      title={`Setup terms for ${subjectName}`}
+      description="Save the fixed agreement terms for the selected program, then approve the application and issue the draft agreement for signature."
+      formId="payroll-terms-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit();
+      }}
+      isSubmitting={submitting}
+      submitLabel={submitting ? "Saving..." : "Save terms and approve"}
+      cancelLabel="Cancel"
+    >
           <div className="space-y-4">
             {extraContent}
 
@@ -305,28 +295,6 @@ export function PayrollTermsDialog({
               </div>
             )}
           </div>
-        </div>
-
-        <div className="shrink-0 border-t border-border bg-card px-4 py-4 sm:px-5">
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="h-10 rounded-lg sm:px-6"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={onSubmit}
-              disabled={submitting}
-              className="h-10 rounded-lg text-sm font-medium sm:min-w-[220px]"
-            >
-              <CheckCircle className="mr-2 h-4 w-4" />
-              {submitting ? "Saving..." : "Save terms and approve"}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }

@@ -1,15 +1,7 @@
 "use client";
 
 import React from "react";
-import { ConfirmDialog } from "@/components/shared/dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog, FormDialog } from "@/components/shared/dialog";
 import type { InventoryItemSummary } from "@/services/inventory.service";
 import { InventoryForm } from "@/app/admin/operations/components/inventory/inventory-form";
 import type { InventoryFormState } from "@/app/admin/operations/components/inventory/types";
@@ -30,20 +22,21 @@ export function AddInventoryDialog({
   onConfirm: () => void;
 }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Add inventory item</DialogTitle>
-        </DialogHeader>
-        <InventoryForm form={form} setForm={setForm} />
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={onConfirm}>Create item</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="lg"
+      title="Add inventory item"
+      formId="add-inventory-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onConfirm();
+      }}
+      submitLabel="Create item"
+      cancelLabel="Cancel"
+    >
+      <InventoryForm form={form} setForm={setForm} />
+    </FormDialog>
   );
 }
 
@@ -63,20 +56,21 @@ export function EditInventoryDialog({
   onConfirm: () => void;
 }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Edit inventory item</DialogTitle>
-        </DialogHeader>
-        <InventoryForm form={form} setForm={setForm} />
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={onConfirm}>Save changes</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="lg"
+      title="Edit inventory item"
+      formId="edit-inventory-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onConfirm();
+      }}
+      submitLabel="Save changes"
+      cancelLabel="Cancel"
+    >
+      <InventoryForm form={form} setForm={setForm} />
+    </FormDialog>
   );
 }
 
