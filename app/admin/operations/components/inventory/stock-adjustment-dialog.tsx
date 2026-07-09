@@ -4,7 +4,7 @@ import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FormDialog } from "@/components/shared/dialog";
+import { FormDialog, DialogFormField } from "@/components/shared/dialog";
 import {
   Select,
   SelectContent,
@@ -98,8 +98,7 @@ export function StockAdjustmentDialog({
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Action</Label>
+            <DialogFormField label="Action">
               <Select
                 value={adjustForm.direction}
                 onValueChange={(value) =>
@@ -124,10 +123,9 @@ export function StockAdjustmentDialog({
                   </SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </DialogFormField>
 
-            <div className="space-y-2">
-              <Label>Quantity</Label>
+            <DialogFormField label="Quantity">
               <Input
                 type="number"
                 min={1}
@@ -158,11 +156,10 @@ export function StockAdjustmentDialog({
                   {adjustPreview.error}
                 </p>
               ) : null}
-            </div>
+            </DialogFormField>
 
             {adjustForm.direction === "INCREASE" ? (
-              <div className="space-y-2">
-                <Label>Unit cost (optional)</Label>
+              <DialogFormField label="Unit cost (optional)">
                 <Input
                   type="number"
                   min={0}
@@ -180,11 +177,10 @@ export function StockAdjustmentDialog({
                   Supply a cost to blend into the weighted average; leave
                   blank to add quantity without changing WAC.
                 </p>
-              </div>
+              </DialogFormField>
             ) : null}
 
-            <div className="space-y-2">
-              <Label>Reason</Label>
+            <DialogFormField label="Reason">
               <Textarea
                 rows={3}
                 placeholder="e.g. Physical recount, damaged in storage, returned by franchisee..."
@@ -199,7 +195,7 @@ export function StockAdjustmentDialog({
               <p className="text-xs text-muted-foreground">
                 Stored on the audit trail. Required. Up to 500 characters.
               </p>
-            </div>
+            </DialogFormField>
 
             {adjustForm.direction === "INCREASE" ? (
               <div className="rounded-md border border-success/20 bg-success-soft p-2 text-xs text-success-soft-foreground">

@@ -15,6 +15,7 @@ import { BloodGroup } from "@/services/franchise.enums";
 import { StateCitySelect } from "@/components/StateCitySelect";
 import type { FranchiseeOption } from "@/services/franchisee.service";
 import type { FormData, FranchiseeMode } from "./types";
+import { DialogFormField } from "@/components/shared/dialog";
 
 interface StepBasicInfoProps {
   formData: FormData;
@@ -64,10 +65,7 @@ export function StepBasicInfo({
       />
       {franchiseeMode === "existing" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="existingFranchiseeId">
-              Existing Franchisee *
-            </Label>
+          <DialogFormField id="existingFranchiseeId" label="Existing Franchisee *">
             <Select
               value={existingFranchiseeId}
               onValueChange={(value) => {
@@ -102,7 +100,7 @@ export function StepBasicInfo({
                 {errors.existingFranchiseeId}
               </p>
             )}
-          </div>
+          </DialogFormField>
           <div className="space-y-2">
             <StateCitySelect
               stateValue={formData.state}
@@ -123,8 +121,7 @@ export function StepBasicInfo({
       {franchiseeMode === "new" && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name *</Label>
+            <DialogFormField id="name" label="Full Name *">
               <Input
                 id="name"
                 value={formData.name}
@@ -137,10 +134,9 @@ export function StepBasicInfo({
               {errors.name && (
                 <p className="text-red-500 text-sm">{errors.name}</p>
               )}
-            </div>
+            </DialogFormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
+            <DialogFormField id="email" label="Email *">
               <Input
                 id="email"
                 type="email"
@@ -154,12 +150,11 @@ export function StepBasicInfo({
               {errors.email && (
                 <p className="text-red-500 text-sm">{errors.email}</p>
               )}
-            </div>
+            </DialogFormField>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone *</Label>
+            <DialogFormField id="phone" label="Phone *">
               <Input
                 id="phone"
                 value={formData.phone}
@@ -172,21 +167,19 @@ export function StepBasicInfo({
               {errors.phone && (
                 <p className="text-red-500 text-sm">{errors.phone}</p>
               )}
-            </div>
+            </DialogFormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="dob">Date of Birth</Label>
+            <DialogFormField id="dob" label="Date of Birth">
               <DateInput
                 id="dob"
                 value={formData.dob}
                 onChange={(v) => setFormData({ ...formData, dob: v })}
               />
-            </div>
+            </DialogFormField>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="bloodGroup">Blood Group</Label>
+            <DialogFormField id="bloodGroup" label="Blood Group">
               <Select
                 value={formData.bloodGroup}
                 onValueChange={(value) =>
@@ -207,10 +200,9 @@ export function StepBasicInfo({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </DialogFormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="education">Education</Label>
+            <DialogFormField id="education" label="Education">
               <Input
                 id="education"
                 value={formData.education}
@@ -218,7 +210,7 @@ export function StepBasicInfo({
                   setFormData({ ...formData, education: e.target.value })
                 }
               />
-            </div>
+            </DialogFormField>
           </div>
 
           <StateCitySelect
@@ -238,8 +230,7 @@ export function StepBasicInfo({
             error={errors.city}
           />
 
-          <div className="space-y-2">
-            <Label htmlFor="pincode">Pincode *</Label>
+          <DialogFormField id="pincode" label="Pincode *">
             <Input
               id="pincode"
               inputMode="numeric"
@@ -254,13 +245,10 @@ export function StepBasicInfo({
             {errors.pincode ? (
               <p className="text-red-500 text-sm">{errors.pincode}</p>
             ) : null}
-          </div>
+          </DialogFormField>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="communicationAddress">
-                Communication Address
-              </Label>
+            <DialogFormField id="communicationAddress" label="Communication Address">
               <Input
                 id="communicationAddress"
                 value={formData.communicationAddress}
@@ -271,10 +259,9 @@ export function StepBasicInfo({
                   })
                 }
               />
-            </div>
+            </DialogFormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="occupation">Occupation</Label>
+            <DialogFormField id="occupation" label="Occupation">
               <Input
                 id="occupation"
                 value={formData.occupation}
@@ -282,11 +269,10 @@ export function StepBasicInfo({
                   setFormData({ ...formData, occupation: e.target.value })
                 }
               />
-            </div>
+            </DialogFormField>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="reference">Reference</Label>
+          <DialogFormField id="reference" label="Reference">
             <Input
               id="reference"
               value={formData.reference}
@@ -294,7 +280,7 @@ export function StepBasicInfo({
                 setFormData({ ...formData, reference: e.target.value })
               }
             />
-          </div>
+          </DialogFormField>
         </>
       )}
     </div>

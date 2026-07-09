@@ -22,6 +22,7 @@ import { getFranchiseFeePayable, GST_RATE_LABEL } from "@/lib/gst";
 import type { Program } from "@/services/program.service";
 import type { PaymentMode } from "@/services/franchisee.service";
 import type { ProgramPayroll, PaidPaymentRow } from "./types";
+import { DialogFormField } from "@/components/shared/dialog";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -366,13 +367,7 @@ function PaidUnpaidSection({
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {payroll.unpaidSplitEnabled && (
-                <div className="space-y-2">
-                  <Label
-                    htmlFor={`unpaid-count-${programId}`}
-                    className="text-sm font-medium text-card-foreground"
-                  >
-                    Number of EMIs
-                  </Label>
+                <DialogFormField label="Number of EMIs">
                   <Input
                     id={`unpaid-count-${programId}`}
                     type="number"
@@ -400,18 +395,16 @@ function PaidUnpaidSection({
                       {errors[`split-${programId}`]}
                     </p>
                   )}
-                </div>
+                </DialogFormField>
               )}
 
-              <div className="space-y-2">
-                <Label
-                  htmlFor={`unpaid-due-date-${programId}`}
-                  className="text-sm font-medium text-card-foreground"
-                >
-                  {payroll.unpaidSplitEnabled && splitCount > 1
+              <DialogFormField
+                label={
+                  payroll.unpaidSplitEnabled && splitCount > 1
                     ? "First due date"
-                    : "Due date"}
-                </Label>
+                    : "Due date"
+                }
+              >
                 <DateInput
                   id={`unpaid-due-date-${programId}`}
                   value={payroll.unpaidFirstDueDate}
@@ -426,7 +419,7 @@ function PaidUnpaidSection({
                     {errors[`unpaidDueDate-${programId}`]}
                   </p>
                 )}
-              </div>
+              </DialogFormField>
             </div>
 
             <p className="rounded-lg border border-dashed border-border bg-background px-4 py-3 text-sm text-card-foreground">
@@ -537,10 +530,7 @@ export function StepAgreement({
                   </div>
 
                   {/* Kit Cost */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-card-foreground">
-                      Kit Cost
-                    </Label>
+                  <DialogFormField label="Kit Cost">
                     <div className="relative">
                       <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -559,7 +549,7 @@ export function StepAgreement({
                         placeholder="0"
                       />
                     </div>
-                  </div>
+                  </DialogFormField>
 
                   {/* Material Cost */}
                   <div className="space-y-2">
@@ -603,10 +593,7 @@ export function StepAgreement({
                   </div>
 
                   {/* Monthly Fee */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-card-foreground">
-                      Monthly Fee
-                    </Label>
+                  <DialogFormField label="Monthly Fee">
                     <div className="relative">
                       <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -625,7 +612,7 @@ export function StepAgreement({
                         placeholder="0"
                       />
                     </div>
-                  </div>
+                  </DialogFormField>
 
                   {/* Royalty */}
                   <div className="space-y-2">
@@ -670,10 +657,7 @@ export function StepAgreement({
                   </div>
 
                   {/* CI Share */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-card-foreground">
-                      CI Share
-                    </Label>
+                  <DialogFormField label="CI Share">
                     <div className="relative">
                       <Percent className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -693,13 +677,10 @@ export function StepAgreement({
                         placeholder="0"
                       />
                     </div>
-                  </div>
+                  </DialogFormField>
 
                   {/* Franchise Share */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-card-foreground">
-                      Franchise Share
-                    </Label>
+                  <DialogFormField label="Franchise Share">
                     <div className="relative">
                       <Percent className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -719,16 +700,10 @@ export function StepAgreement({
                         placeholder="0"
                       />
                     </div>
-                  </div>
+                  </DialogFormField>
 
                   {/* Agreement Signing Date */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor={`signed-at-${programId}`}
-                      className="text-sm font-medium text-card-foreground"
-                    >
-                      Agreement Signing Date
-                    </Label>
+                  <DialogFormField label="Agreement Signing Date">
                     <DateInput
                       id={`signed-at-${programId}`}
                       value={payroll?.signedAt || ""}
@@ -743,16 +718,10 @@ export function StepAgreement({
                         {errors[`signedAt-${programId}`]}
                       </p>
                     )}
-                  </div>
+                  </DialogFormField>
 
                   {/* Agreement Tenure (months) */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor={`tenure-${programId}`}
-                      className="text-sm font-medium text-card-foreground"
-                    >
-                      Agreement Tenure (months)
-                    </Label>
+                  <DialogFormField label="Agreement Tenure (months)">
                     <Input
                       id={`tenure-${programId}`}
                       type="number"
@@ -777,7 +746,7 @@ export function StepAgreement({
                         {errors[`tenure-${programId}`]}
                       </p>
                     )}
-                  </div>
+                  </DialogFormField>
                 </div>
 
                 <PaidUnpaidSection

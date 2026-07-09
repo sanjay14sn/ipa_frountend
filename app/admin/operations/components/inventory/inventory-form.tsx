@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { DialogFormField } from "@/components/shared/dialog";
 import { ToggleField } from "@/components/shared/toggle-field";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -29,17 +29,15 @@ export function InventoryForm({
 }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <div className="space-y-2 md:col-span-2">
-        <Label>Name</Label>
+      <DialogFormField label="Name" className="md:col-span-2">
         <Input
           value={form.name}
           onChange={(event) =>
             setForm((prev) => ({ ...prev, name: event.target.value }))
           }
         />
-      </div>
-      <div className="space-y-2 md:col-span-2">
-        <Label>Description</Label>
+      </DialogFormField>
+      <DialogFormField label="Description" className="md:col-span-2">
         <Textarea
           rows={2}
           value={form.description}
@@ -47,9 +45,8 @@ export function InventoryForm({
             setForm((prev) => ({ ...prev, description: event.target.value }))
           }
         />
-      </div>
-      <div className="space-y-2">
-        <Label>Category</Label>
+      </DialogFormField>
+      <DialogFormField label="Category">
         <Select
           value={form.categoryName || undefined}
           onValueChange={(value) =>
@@ -67,9 +64,8 @@ export function InventoryForm({
             ))}
           </SelectContent>
         </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>Unit of measurement</Label>
+      </DialogFormField>
+      <DialogFormField label="Unit of measurement">
         <Input
           value={form.unitOfMeasurement}
           onChange={(event) =>
@@ -79,9 +75,8 @@ export function InventoryForm({
             }))
           }
         />
-      </div>
-      <div className="space-y-2">
-        <Label>Unit price (₹)</Label>
+      </DialogFormField>
+      <DialogFormField label="Unit price (₹)">
         <Input
           type="number"
           min={0}
@@ -94,27 +89,24 @@ export function InventoryForm({
             }))
           }
         />
-      </div>
-      <div className="space-y-2">
-        <Label>Legacy item code</Label>
+      </DialogFormField>
+      <DialogFormField label="Legacy item code">
         <Input
           value={form.legacyItemCode}
           onChange={(event) =>
             setForm((prev) => ({ ...prev, legacyItemCode: event.target.value }))
           }
         />
-      </div>
-      <div className="space-y-2">
-        <Label>Legacy ISO code</Label>
+      </DialogFormField>
+      <DialogFormField label="Legacy ISO code">
         <Input
           value={form.legacyIsoCode}
           onChange={(event) =>
             setForm((prev) => ({ ...prev, legacyIsoCode: event.target.value }))
           }
         />
-      </div>
-      <div className="space-y-2">
-        <Label>Inventory type</Label>
+      </DialogFormField>
+      <DialogFormField label="Inventory type">
         <Select
           value={form.inventoryType}
           onValueChange={(value) =>
@@ -135,9 +127,8 @@ export function InventoryForm({
             ))}
           </SelectContent>
         </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>Lifecycle status</Label>
+      </DialogFormField>
+      <DialogFormField label="Lifecycle status">
         <Select
           value={form.lifecycleStatus}
           onValueChange={(value) =>
@@ -158,9 +149,8 @@ export function InventoryForm({
             ))}
           </SelectContent>
         </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>Reorder point</Label>
+      </DialogFormField>
+      <DialogFormField label="Reorder point">
         <Input
           type="number"
           min={0}
@@ -172,9 +162,8 @@ export function InventoryForm({
             }))
           }
         />
-      </div>
-      <div className="space-y-2">
-        <Label>Safety stock</Label>
+      </DialogFormField>
+      <DialogFormField label="Safety stock">
         <Input
           type="number"
           min={0}
@@ -186,9 +175,8 @@ export function InventoryForm({
             }))
           }
         />
-      </div>
-      <div className="space-y-2">
-        <Label>Reorder cycle days</Label>
+      </DialogFormField>
+      <DialogFormField label="Reorder cycle days">
         <Input
           type="number"
           min={1}
@@ -200,7 +188,7 @@ export function InventoryForm({
             }))
           }
         />
-      </div>
+      </DialogFormField>
       <ToggleField
         label="Item status"
         value={form.isActive ? "active" : "inactive"}

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { User, Users } from "lucide-react";
 import { AlertCircle } from "lucide-react";
+import { DialogFormField } from "@/components/shared/dialog";
 
 export interface ParentInfoFieldsData {
   fatherName: string;
@@ -36,8 +37,7 @@ export function ParentInfoFields({
           Father&apos;s Information
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="fatherName">Father&apos;s Name *</Label>
+          <DialogFormField id="fatherName" label="Father&apos;s Name *">
             <Input
               id="fatherName"
               type="text"
@@ -52,10 +52,9 @@ export function ParentInfoFields({
                 {errors.fatherName}
               </p>
             )}
-          </div>
+          </DialogFormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="fatherContactNo">Father&apos;s Contact Number *</Label>
+          <DialogFormField id="fatherContactNo" label="Father&apos;s Contact Number *">
             <Input
               id="fatherContactNo"
               type="tel"
@@ -70,10 +69,9 @@ export function ParentInfoFields({
                 {errors.fatherContactNo}
               </p>
             )}
-          </div>
+          </DialogFormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="fatherQualification">Father&apos;s Qualification</Label>
+          <DialogFormField id="fatherQualification" label="Father&apos;s Qualification">
             <Input
               id="fatherQualification"
               type="text"
@@ -83,10 +81,9 @@ export function ParentInfoFields({
               }
               placeholder="e.g., B.Tech, MBA, etc."
             />
-          </div>
+          </DialogFormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="fatherOccupation">Father&apos;s Occupation</Label>
+          <DialogFormField id="fatherOccupation" label="Father&apos;s Occupation">
             <Input
               id="fatherOccupation"
               type="text"
@@ -94,7 +91,7 @@ export function ParentInfoFields({
               onChange={(e) => onFieldChange("fatherOccupation", e.target.value)}
               placeholder="e.g., Software Engineer, Teacher, etc."
             />
-          </div>
+          </DialogFormField>
         </div>
       </div>
 
@@ -105,8 +102,7 @@ export function ParentInfoFields({
           Mother&apos;s Information
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="motherName">Mother&apos;s Name *</Label>
+          <DialogFormField id="motherName" label="Mother&apos;s Name *">
             <Input
               id="motherName"
               type="text"
@@ -121,10 +117,9 @@ export function ParentInfoFields({
                 {errors.motherName}
               </p>
             )}
-          </div>
+          </DialogFormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="motherContactNo">Mother&apos;s Contact Number *</Label>
+          <DialogFormField id="motherContactNo" label="Mother&apos;s Contact Number *">
             <Input
               id="motherContactNo"
               type="tel"
@@ -139,10 +134,9 @@ export function ParentInfoFields({
                 {errors.motherContactNo}
               </p>
             )}
-          </div>
+          </DialogFormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="motherQualification">Mother&apos;s Qualification</Label>
+          <DialogFormField id="motherQualification" label="Mother&apos;s Qualification">
             <Input
               id="motherQualification"
               type="text"
@@ -152,10 +146,9 @@ export function ParentInfoFields({
               }
               placeholder="e.g., B.A., M.Sc., etc."
             />
-          </div>
+          </DialogFormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="motherOccupation">Mother&apos;s Occupation</Label>
+          <DialogFormField id="motherOccupation" label="Mother&apos;s Occupation">
             <Input
               id="motherOccupation"
               type="text"
@@ -163,7 +156,7 @@ export function ParentInfoFields({
               onChange={(e) => onFieldChange("motherOccupation", e.target.value)}
               placeholder="e.g., Homemaker, Doctor, etc."
             />
-          </div>
+          </DialogFormField>
         </div>
       </div>
     </div>

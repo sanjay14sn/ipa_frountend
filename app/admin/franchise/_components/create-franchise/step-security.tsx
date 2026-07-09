@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
 import type { FormData, FranchiseeMode } from "./types";
+import { DialogFormField } from "@/components/shared/dialog";
 
 interface StepSecurityProps {
   formData: FormData;
@@ -32,8 +33,7 @@ export function StepSecurity({
           : "A temporary password is auto-generated and emailed to the new franchisee. The values entered below are informational only."}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="password">Password *</Label>
+        <DialogFormField id="password" label="Password *">
           <div className="relative">
             <Input
               id="password"
@@ -58,10 +58,9 @@ export function StepSecurity({
           {errors.password && (
             <p className="text-red-500 text-sm">{errors.password}</p>
           )}
-        </div>
+        </DialogFormField>
 
-        <div className="space-y-2">
-          <Label htmlFor="confirmPassword">Confirm Password *</Label>
+        <DialogFormField id="confirmPassword" label="Confirm Password *">
           <div className="relative">
             <Input
               id="confirmPassword"
@@ -93,7 +92,7 @@ export function StepSecurity({
           {errors.confirmPassword && (
             <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
           )}
-        </div>
+        </DialogFormField>
       </div>
     </div>
   );

@@ -14,6 +14,7 @@ import { StateCitySelect } from "@/components/StateCitySelect";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Program } from "@/services/program.service";
 import type { FormData } from "./types";
+import { DialogFormField } from "@/components/shared/dialog";
 
 interface StepFranchiseDetailsProps {
   formData: FormData;
@@ -35,8 +36,7 @@ export function StepFranchiseDetails({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="franchiseName">Franchise Name *</Label>
+        <DialogFormField id="franchiseName" label="Franchise Name *">
           <Input
             id="franchiseName"
             value={formData.franchiseName}
@@ -50,10 +50,9 @@ export function StepFranchiseDetails({
           {errors.franchiseName && (
             <p className="text-red-500 text-sm">{errors.franchiseName}</p>
           )}
-        </div>
+        </DialogFormField>
 
-        <div className="space-y-2">
-          <Label htmlFor="franchiseType">Franchise Type *</Label>
+        <DialogFormField id="franchiseType" label="Franchise Type *">
           <Select
             value={formData.franchiseType}
             onValueChange={(value) =>
@@ -74,11 +73,10 @@ export function StepFranchiseDetails({
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </DialogFormField>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="franchiseAddress">Franchise Address *</Label>
+      <DialogFormField id="franchiseAddress" label="Franchise Address *">
         <Input
           id="franchiseAddress"
           value={formData.franchiseAddress}
@@ -95,7 +93,7 @@ export function StepFranchiseDetails({
         {errors.franchiseAddress && (
           <p className="text-red-500 text-sm">{errors.franchiseAddress}</p>
         )}
-      </div>
+      </DialogFormField>
 
       <StateCitySelect
         id="franchiseCity"
@@ -116,8 +114,7 @@ export function StepFranchiseDetails({
         error={errors.franchiseCity || errors.franchiseState}
       />
 
-      <div className="space-y-2">
-        <Label htmlFor="franchisePincode">Pincode</Label>
+      <DialogFormField id="franchisePincode" label="Pincode">
         <Input
           id="franchisePincode"
           inputMode="numeric"
@@ -135,10 +132,9 @@ export function StepFranchiseDetails({
         {errors.franchisePincode && (
           <p className="text-red-500 text-sm">{errors.franchisePincode}</p>
         )}
-      </div>
+      </DialogFormField>
 
-      <div className="space-y-2">
-        <Label>Programs * (Select one or more)</Label>
+      <DialogFormField label="Programs * (Select one or more)">
         <div
           className={`border rounded-md p-4 space-y-3 ${
             errors.selectedPrograms ? "border-red-500" : "border-border"
@@ -163,7 +159,7 @@ export function StepFranchiseDetails({
         {errors.selectedPrograms && (
           <p className="text-red-500 text-sm">{errors.selectedPrograms}</p>
         )}
-      </div>
+      </DialogFormField>
     </div>
   );
 }

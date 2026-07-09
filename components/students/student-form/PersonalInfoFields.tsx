@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { AlertCircle } from "lucide-react";
 import { calculateAge } from "@/lib/date-utils";
+import { DialogFormField } from "@/components/shared/dialog";
 
 const STANDARDS = [
   "Pre-KG",
@@ -62,8 +63,7 @@ export function PersonalInfoFields({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Student Name */}
-      <div className="space-y-2">
-        <Label htmlFor="studentName">Student Name *</Label>
+      <DialogFormField id="studentName" label="Student Name *">
         <Input
           id="studentName"
           type="text"
@@ -79,7 +79,7 @@ export function PersonalInfoFields({
             {errors.studentName}
           </p>
         )}
-      </div>
+      </DialogFormField>
 
       {/* Date of Birth */}
       <div className="space-y-2">
@@ -107,10 +107,11 @@ export function PersonalInfoFields({
       </div>
 
       {/* Date of Joining */}
-      <div className="space-y-2">
-        <Label htmlFor="dateOfJoining">
-          Date of Joining {dateOfJoiningRequired ? "*" : ""}
-        </Label>
+      <DialogFormField
+        id="dateOfJoining"
+        label="Date of Joining"
+        required={dateOfJoiningRequired}
+      >
         <DateInput
           id="dateOfJoining"
           value={formData.dateOfJoining}
@@ -124,11 +125,10 @@ export function PersonalInfoFields({
             {errors.dateOfJoining}
           </p>
         )}
-      </div>
+      </DialogFormField>
 
       {/* Gender */}
-      <div className="space-y-2">
-        <Label htmlFor="sex">Gender *</Label>
+      <DialogFormField id="sex" label="Gender *">
         <Select
           value={formData.sex}
           onValueChange={(value) => onFieldChange("sex", value)}
@@ -147,11 +147,10 @@ export function PersonalInfoFields({
             {errors.sex}
           </p>
         )}
-      </div>
+      </DialogFormField>
 
       {/* Standard */}
-      <div className="space-y-2">
-        <Label htmlFor="standard">Standard *</Label>
+      <DialogFormField id="standard" label="Standard *">
         <Select
           value={formData.standard}
           onValueChange={(value) => onFieldChange("standard", value)}
@@ -173,7 +172,7 @@ export function PersonalInfoFields({
             {errors.standard}
           </p>
         )}
-      </div>
+      </DialogFormField>
     </div>
   );
 }

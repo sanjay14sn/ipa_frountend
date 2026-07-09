@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertCircle } from "lucide-react";
+import { DialogFormField } from "@/components/shared/dialog";
 
 export interface ContactInfoFieldsData {
   residentialAddress: string;
@@ -23,8 +24,7 @@ export function ContactInfoFields({
 }: ContactInfoFieldsProps) {
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="residentialAddress">Residential Address *</Label>
+      <DialogFormField id="residentialAddress" label="Residential Address *">
         <Textarea
           id="residentialAddress"
           value={formData.residentialAddress}
@@ -39,10 +39,9 @@ export function ContactInfoFields({
             {errors.residentialAddress}
           </p>
         )}
-      </div>
+      </DialogFormField>
 
-      <div className="space-y-2">
-        <Label htmlFor="mailId">Email Address *</Label>
+      <DialogFormField id="mailId" label="Email Address *">
         <Input
           id="mailId"
           type="email"
@@ -57,7 +56,7 @@ export function ContactInfoFields({
             {errors.mailId}
           </p>
         )}
-      </div>
+      </DialogFormField>
     </div>
   );
 }

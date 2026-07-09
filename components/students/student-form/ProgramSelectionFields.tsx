@@ -12,6 +12,7 @@ import { AlertCircle } from "lucide-react";
 import type { Program } from "@/services/program.service";
 import type { Stream } from "@/services/stream.service";
 import type { Level } from "@/services/level.service";
+import { DialogFormField } from "@/components/shared/dialog";
 
 export interface ProgramSelectionFieldsData {
   programId: number;
@@ -70,8 +71,7 @@ export function ProgramSelectionFields({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Program */}
-      <div className="space-y-2">
-        <Label htmlFor="programId">Program *</Label>
+      <DialogFormField id="programId" label="Program *">
         <Select
           value={formData.programId.toString()}
           onValueChange={(value) => {
@@ -100,11 +100,10 @@ export function ProgramSelectionFields({
             {errors.programId}
           </p>
         )}
-      </div>
+      </DialogFormField>
 
       {/* Stream */}
-      <div className="space-y-2">
-        <Label htmlFor="streamId">Stream *</Label>
+      <DialogFormField id="streamId" label="Stream *">
         <Select
           value={formData.streamId.toString()}
           onValueChange={(value) => {
@@ -142,11 +141,10 @@ export function ProgramSelectionFields({
             {errors.streamId}
           </p>
         )}
-      </div>
+      </DialogFormField>
 
       {/* Level */}
-      <div className="space-y-2">
-        <Label htmlFor="levelId">Level *</Label>
+      <DialogFormField id="levelId" label="Level *">
         <Select
           value={formData.levelId.toString()}
           onValueChange={(value) => onFieldChange("levelId", value)}
@@ -184,7 +182,7 @@ export function ProgramSelectionFields({
             {errors.levelId}
           </p>
         )}
-      </div>
+      </DialogFormField>
     </div>
   );
 }
