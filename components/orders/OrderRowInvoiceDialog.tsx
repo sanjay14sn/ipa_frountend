@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { InvoicePreview, OrderData } from "@/services/order.service";
 import UnifiedInvoiceGroupedSummary from "@/app/franchisee/orders/components/UnifiedInvoiceGroupedSummary";
 import CustomMaterialsList from "@/app/franchisee/orders/components/CustomMaterialsList";
-import { DispatchRecipientTable } from "@/app/admin/orders/components/DispatchRecipientTable";
+import { DispatchRecipientTable } from "@/components/orders/DispatchRecipientTable";
 import { isStandaloneDispatchOrderType } from "@/lib/dispatch-order-helpers";
 import { OrderPaymentDetailsPanel } from "@/components/orders/OrderPaymentDetailsPanel";
 import { formatRupees } from "@/lib/currency-utils";

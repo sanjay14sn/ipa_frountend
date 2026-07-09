@@ -11,7 +11,7 @@ import { SummaryStatCard } from "@/components/shared";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { getFranchiseApplicationDetail } from "@/services/franchisee.service";
-import AdminOrdersTable from "@/app/admin/orders/components/AdminOrdersTable";
+import AdminOrdersTable from "@/components/orders/AdminOrdersTable";
 import { FranchiseStudentsTable } from "./components/FranchiseStudentsTable";
 import { FranchiseCiListTable } from "./components/FranchiseCiListTable";
 import { FranchiseCiSummary } from "./components/FranchiseCiSummary";

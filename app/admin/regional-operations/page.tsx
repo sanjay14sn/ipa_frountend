@@ -19,9 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import AdminOrdersTable from "../orders/components/AdminOrdersTable";
-import AdminShippingTable from "../shipping/components/AdminShippingTable";
-import PaymentsTable from "../payments/components/PaymentsTable";
+import AdminOrdersTable from "@/components/orders/AdminOrdersTable";
+import AdminShippingTable from "@/components/shipping/AdminShippingTable";
+import PaymentsTable from "@/components/payments/PaymentsTable";
 import { InventorySection } from "../operations/components/inventory-section";
 import { MonitoringSection } from "../operations/components/MonitoringSection";
 

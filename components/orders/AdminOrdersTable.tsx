@@ -15,7 +15,7 @@ import {
 } from "@/services/order.service";
 import { verifyShipment, downloadChallan, regenerateDc, type VerifyShipmentDto } from "@/services/fulfillment.service";
 import { useAdminOrderRows } from "@/hooks/api/order.hooks";
-import { VerifyShipmentDialog } from "@/app/admin/shipping/components/VerifyShipmentDialog";
+import { VerifyShipmentDialog } from "@/components/shipping/VerifyShipmentDialog";
 import { AdminOrderInvoiceDialog } from "./AdminOrderInvoiceDialog";
 import { DispatchItemsSummaryTable } from "./DispatchItemsSummaryTable";
 import { isStandaloneDispatchOrderType } from "./dispatch-order-helpers";

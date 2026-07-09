@@ -1,6 +1,6 @@
 "use client";
 
-import FranchisePaymentsDetails from "@/app/admin/payments/components/FranchisePaymentsDetails";
+import FranchisePaymentsDetails from "@/components/payments/FranchisePaymentsDetails";
 import { FranchisePaymentsSummary } from "./FranchisePaymentsSummary";
 
 interface FranchisePaymentsTabProps {

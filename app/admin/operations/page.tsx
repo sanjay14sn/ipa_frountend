@@ -10,9 +10,9 @@ import {
 import { TablePageShell } from "@/components/shared";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { useUser } from "@/context/user-context";
-import AdminOrdersTable from "../orders/components/AdminOrdersTable";
-import AdminShippingTable from "../shipping/components/AdminShippingTable";
-import PaymentsTable from "../payments/components/PaymentsTable";
+import AdminOrdersTable from "@/components/orders/AdminOrdersTable";
+import AdminShippingTable from "@/components/shipping/AdminShippingTable";
+import PaymentsTable from "@/components/payments/PaymentsTable";
 import { InventorySection } from "./components/inventory-section";
 import { ProcurementSection } from "./components/ProcurementSection";
 import { MonitoringSection } from "./components/MonitoringSection";

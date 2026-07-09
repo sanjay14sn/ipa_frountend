@@ -27,7 +27,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ConfirmDialog } from "@/components/shared/dialog";
 import { ShipShipmentDialog } from "./ShipShipmentDialog";
-import { DispatchItemsSummaryTable } from "@/app/admin/orders/components/DispatchItemsSummaryTable";
+import { DispatchItemsSummaryTable } from "@/components/orders/DispatchItemsSummaryTable";
 import type { ShipShipmentDto } from "@/services/fulfillment.service";
 
 const STATUS_LABEL: Record<string, string> = {
