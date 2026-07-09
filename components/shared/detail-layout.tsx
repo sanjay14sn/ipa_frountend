@@ -176,3 +176,31 @@ export function DetailMessage({
     </p>
   );
 }
+
+export interface DetailSubheadingProps {
+  children: React.ReactNode;
+  /** Right-aligned action slot. */
+  actions?: React.ReactNode;
+  className?: string;
+}
+
+/**
+ * Sub-section heading inside kit detail sections — the level between the
+ * section title and field labels (CC-02/CC-04). Codifies the de-facto
+ * `text-sm font-semibold text-foreground` style.
+ */
+export function DetailSubheading({
+  children,
+  actions,
+  className,
+}: DetailSubheadingProps) {
+  return (
+    <div
+      data-testid="detail-subheading"
+      className={cn("flex items-center justify-between gap-2", className)}
+    >
+      <h3 className="text-sm font-semibold text-foreground">{children}</h3>
+      {actions ? <div className="shrink-0">{actions}</div> : null}
+    </div>
+  );
+}
