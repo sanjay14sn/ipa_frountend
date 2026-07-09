@@ -252,6 +252,7 @@ export default function StudentsTable({
     <>
       <DataTable
         data={students ?? []}
+        initialSearchValue={searchValue}
         loading={isLoading ?? false}
         columns={columns}
         tableClassName="table-fixed"

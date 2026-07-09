@@ -33,7 +33,7 @@ beforeEach(() => {
 });
 
 describe("useListParams", () => {
-  it("round-trips state to the URL and omits defaults", () => {
+  it("round-trips state to the URL and omits defaults", async () => {
     const { result } = renderHook(() =>
       useListParams({ filterDefaults: { status: "all" } }),
     );
@@ -44,9 +44,9 @@ describe("useListParams", () => {
     // Defaults are omitted — URL stays clean.
     expect(url()).toBe("/admin/operations");
 
-    act(() => result.current.setSearch("kits"));
-    act(() => result.current.setFilter("status", "pending"));
-    act(() => result.current.setSort("createdAt", "desc"));
+    await act(async () => result.current.setSearch("kits"));
+    await act(async () => result.current.setFilter("status", "pending"));
+    await act(async () => result.current.setSort("createdAt", "desc"));
     expect(window.location.search).toContain("q=kits");
     expect(window.location.search).toContain("status=pending");
     expect(window.location.search).toContain("sort=createdAt.desc");
@@ -66,41 +66,41 @@ describe("useListParams", () => {
     expect(result.current.filters.status).toBe("failed");
   });
 
-  it("search/filter changes reset page to 1", () => {
+  it("search/filter changes reset page to 1", async () => {
     currentSearch = "page=3";
     const { result } = renderHook(() =>
       useListParams({ filterDefaults: { status: "all" } }),
     );
     expect(result.current.page).toBe(3);
-    act(() => result.current.setFilter("status", "paid"));
+    await act(async () => result.current.setFilter("status", "paid"));
     expect(result.current.page).toBe(1);
   });
 
-  it("preserves unknown params like ?tab=", () => {
+  it("preserves unknown params like ?tab=", async () => {
     window.history.replaceState(null, "", "/admin/operations?tab=orders");
     const { result } = renderHook(() =>
       useListParams({ filterDefaults: { status: "all" } }),
     );
-    act(() => result.current.setSearch("abc"));
+    await act(async () => result.current.setSearch("abc"));
     expect(window.location.search).toContain("tab=orders");
     expect(window.location.search).toContain("q=abc");
-    act(() => result.current.reset());
+    await act(async () => result.current.reset());
     expect(url()).toBe("/admin/operations?tab=orders");
   });
 
-  it("prefix namespaces every owned key", () => {
+  it("prefix namespaces every owned key", async () => {
     const { result } = renderHook(() =>
       useListParams({ filterDefaults: { status: "all" }, prefix: "proc" }),
     );
-    act(() => result.current.setSearch("abc"));
-    act(() => result.current.setFilter("status", "open"));
-    act(() => result.current.setPage(2));
+    await act(async () => result.current.setSearch("abc"));
+    await act(async () => result.current.setFilter("status", "open"));
+    await act(async () => result.current.setPage(2));
     expect(window.location.search).toContain("proc.q=abc");
     expect(window.location.search).toContain("proc.status=open");
     expect(window.location.search).toContain("proc.page=2");
   });
 
-  it("reset returns all owned params to defaults", () => {
+  it("reset returns all owned params to defaults", async () => {
     const { result } = renderHook(() =>
       useListParams({
         filterDefaults: { status: "all" },
@@ -108,9 +108,9 @@ describe("useListParams", () => {
         defaultSortOrder: "desc",
       }),
     );
-    act(() => result.current.setSearch("x"));
-    act(() => result.current.setSort("name", "asc"));
-    act(() => result.current.reset());
+    await act(async () => result.current.setSearch("x"));
+    await act(async () => result.current.setSort("name", "asc"));
+    await act(async () => result.current.reset());
     expect(result.current.search).toBe("");
     expect(result.current.sortBy).toBe("createdAt");
     expect(result.current.sortOrder).toBe("desc");

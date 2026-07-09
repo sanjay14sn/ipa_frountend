@@ -107,45 +107,56 @@ export function useListParams<F extends Record<string, string>>(
     );
   }, [resolveFromUrl, filterDefaults]);
 
+  const writeUrl = useCallback(
+    (next: ListState<F>) => {
+      if (typeof window === "undefined") return;
+      const params = new URLSearchParams(window.location.search);
+      if (next.search) params.set(key("q"), next.search);
+      else params.delete(key("q"));
+      if (next.page > 1) params.set(key("page"), String(next.page));
+      else params.delete(key("page"));
+      if (
+        next.sortBy &&
+        !(
+          next.sortBy === defaultSortBy &&
+          next.sortOrder === defaultSortOrder
+        )
+      ) {
+        params.set(key("sort"), `${next.sortBy}.${next.sortOrder}`);
+      } else {
+        params.delete(key("sort"));
+      }
+      for (const fk of Object.keys(filterDefaults)) {
+        if (next.filters[fk] !== filterDefaults[fk]) {
+          params.set(key(fk), next.filters[fk]);
+        } else {
+          params.delete(key(fk));
+        }
+      }
+      const qs = params.toString();
+      window.history.replaceState(
+        null,
+        "",
+        qs ? `${pathname}?${qs}` : pathname,
+      );
+    },
+    [key, pathname, defaultSortBy, defaultSortOrder, filterDefaults],
+  );
+
   const commit = useCallback(
     (updater: (prev: ListState<F>) => ListState<F>) => {
       setState((prev) => {
         const next = updater(prev);
-        if (typeof window !== "undefined") {
-          const params = new URLSearchParams(window.location.search);
-          if (next.search) params.set(key("q"), next.search);
-          else params.delete(key("q"));
-          if (next.page > 1) params.set(key("page"), String(next.page));
-          else params.delete(key("page"));
-          if (
-            next.sortBy &&
-            !(
-              next.sortBy === defaultSortBy &&
-              next.sortOrder === defaultSortOrder
-            )
-          ) {
-            params.set(key("sort"), `${next.sortBy}.${next.sortOrder}`);
-          } else {
-            params.delete(key("sort"));
-          }
-          for (const fk of Object.keys(filterDefaults)) {
-            if (next.filters[fk] !== filterDefaults[fk]) {
-              params.set(key(fk), next.filters[fk]);
-            } else {
-              params.delete(key(fk));
-            }
-          }
-          const qs = params.toString();
-          window.history.replaceState(
-            null,
-            "",
-            qs ? `${pathname}?${qs}` : pathname,
-          );
-        }
+        // Next.js patches history.replaceState to sync the Router, so the
+        // write must NOT run inside this updater (updaters execute during
+        // React's render phase — "Cannot update Router while rendering").
+        // A microtask defers it past the commit; the write is idempotent, so
+        // StrictMode's double-invoked updaters are harmless.
+        queueMicrotask(() => writeUrl(next));
         return next;
       });
     },
-    [key, pathname, defaultSortBy, defaultSortOrder, filterDefaults],
+    [writeUrl],
   );
 
   const setSearch = useCallback(

@@ -110,6 +110,11 @@ export interface DataTableProps<T> {
   onRowClick?: (item: T) => void;
   searchPlaceholder?: string;
   onSearchChange?: (search: string) => void;
+  /**
+   * Seeds the search input on mount (URL-persisted lists restoring state
+   * after a refresh). The input stays internally managed after mount.
+   */
+  initialSearchValue?: string;
   filters?: DataTableFilter[];
   multiSelectFilters?: DataTableMultiSelectFilter[];
   onFilterChange?: (key: string, value: string | string[]) => void;
@@ -187,6 +192,7 @@ export default function DataTable<T>({
   onRowClick,
   searchPlaceholder = "Search...",
   onSearchChange,
+  initialSearchValue,
   filters = [],
   multiSelectFilters = [],
   onFilterChange,
@@ -216,7 +222,7 @@ export default function DataTable<T>({
     new Set()
   );
 
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(initialSearchValue ?? "");
 
   const [filterValues, setFilterValues] = useState<Record<string, string>>(
     () => {

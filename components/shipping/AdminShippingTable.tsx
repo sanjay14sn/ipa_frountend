@@ -118,7 +118,7 @@ export default function AdminShippingTable({
         { value: "DELIVERED", label: "Delivered" },
         { value: "CANCELLED", label: "Cancelled" },
       ],
-      defaultValue: "all",
+      defaultValue: statusFilter,
     },
   ];
 
@@ -348,6 +348,7 @@ export default function AdminShippingTable({
           </ExpandedDetailSection>
           );
         }}
+        initialSearchValue={search}
         searchPlaceholder="Search by order, franchise, or tracking"
         onSearchChange={(s) => {
           listParams.setSearch(s);

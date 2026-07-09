@@ -218,7 +218,7 @@ export default function AdminOrdersTable({
         { value: "Delivered", label: "Delivered" },
         { value: "Cancelled", label: "Cancelled" },
       ],
-      defaultValue: "all",
+      defaultValue: statusFilter,
     },
   ];
 
@@ -548,6 +548,7 @@ export default function AdminOrdersTable({
         </>
         );
       }}
+      initialSearchValue={search}
       searchPlaceholder="Search by order, franchise, or status"
       onSearchChange={(s) => {
         listParams.setSearch(s);
