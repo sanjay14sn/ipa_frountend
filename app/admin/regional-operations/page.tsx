@@ -7,7 +7,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { TablePageShell } from "@/components/shared";
+import { TablePageShell, PageSkeleton } from "@/components/shared";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { useUser } from "@/context/user-context";
@@ -169,7 +169,7 @@ function RegionalOperationsInner() {
 export default function RegionalOperationsPage() {
   return (
     <Suspense
-      fallback={<div className="p-6 text-sm text-muted-foreground">Loading...</div>}
+      fallback={<PageSkeleton />}
     >
       <RegionalOperationsInner />
     </Suspense>

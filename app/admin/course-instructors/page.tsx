@@ -10,7 +10,7 @@ import { CiApprovalsSection } from "./_components/approvals/ci-approvals-section
 import { CiTrainingSection } from "./ci-training-section";
 import ActiveCourseInstructorsTable from "./_components/approvals/ActiveCourseInstructorsTable";
 import SetupExistingCIDialog from "./_components/approvals/SetupExistingCIDialog";
-import { TablePageShell } from "@/components/shared";
+import { TablePageShell, PageSkeleton } from "@/components/shared";
 
 const TABS = ["applications", "active", "training"] as const;
 
@@ -66,7 +66,7 @@ export default function AdminCourseInstructorsHubPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-6 text-sm text-muted-foreground">Loading...</div>
+        <PageSkeleton />
       }
     >
       <AdminCourseInstructorsHubInner />

@@ -11,7 +11,7 @@ import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { IdRequestsSection } from "./components/id-requests-section";
 import { CertificateRequestsSection } from "./components/certificate-requests-section";
 import { StudentLifecycleSection } from "./components/student-lifecycle-section";
-import { TablePageShell } from "@/components/shared";
+import { TablePageShell, PageSkeleton } from "@/components/shared";
 
 const TABS = ["ids", "certificates", "lifecycle"] as const;
 
@@ -45,7 +45,7 @@ function AdminStudentsHubInner() {
 
 export default function AdminStudentsHubPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<PageSkeleton />}>
       <AdminStudentsHubInner />
     </Suspense>
   );

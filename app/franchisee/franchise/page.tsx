@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
+import { PageSkeleton } from "@/components/shared";
 import {
   Tabs,
   TabsContent,
@@ -48,7 +49,7 @@ function FranchiseeFranchiseHubInner() {
 
 export default function FranchiseeFranchiseHubPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<PageSkeleton />}>
       <FranchiseeFranchiseHubInner />
     </Suspense>
   );

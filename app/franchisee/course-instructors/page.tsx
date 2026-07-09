@@ -6,7 +6,7 @@ import { ConfirmDialog } from "@/components/shared/dialog";
 import { Plus } from "lucide-react";
 import { useUser } from "@/context/user-context";
 import { deleteCourseInstructorWithRevalidation, useCourseInstructors } from "@/hooks/api/course-instructor.hooks";
-import { TablePageShell } from "@/components/shared";
+import { TablePageShell, PageSkeleton } from "@/components/shared";
 import AddCourseInstructorModal from "./components/AddCourseInstructorModal";
 import CourseInstructorTabs from "./components/CourseInstructorTabs";
 
@@ -43,7 +43,7 @@ export default function FranchiseeCourseInstructorsPage() {
   const franchiseName = user?.profile?.franchise?.name || user?.franchiseName || "your franchise";
 
   if (!user || !user.franchiseId || (isLoading && allCourseInstructors.length === 0)) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading...</div>;
+    return <PageSkeleton />;
   }
 
   return (

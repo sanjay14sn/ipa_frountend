@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { TableLoadingState, TablePageShell, StatusBadge } from "@/components/shared";
+import { TablePageShell, StatusBadge, CardListSkeleton, EmptyState } from "@/components/shared";
 import {
   abandonCIReceivablePayment,
   getCIAgreement,
@@ -223,16 +224,19 @@ export default function CITrainingReceivablesPage() {
       </div>
 
       {!isAgreementLoading && !isAgreementValid ? (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-          CI agreement is not signed/valid. Complete it before paying receivables.{" "}
-          <Link href="/ci/agreement" className="font-medium underline">
-            Open agreement
-          </Link>
-          .
-        </div>
+        <Alert variant="warning" className="text-sm">
+          <AlertDescription>
+            CI agreement is not signed/valid. Complete it before paying
+            receivables.{" "}
+            <Link href="/ci/agreement" className="font-medium underline">
+              Open agreement
+            </Link>
+            .
+          </AlertDescription>
+        </Alert>
       ) : null}
 
-      {isLoading ? <TableLoadingState message="Loading receivables..." /> : null}
+      {isLoading ? <CardListSkeleton /> : null}
 
       <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
         {sortedReceivables.map((r) => {
@@ -297,8 +301,8 @@ export default function CITrainingReceivablesPage() {
       </div>
 
       {!isLoading && receivables.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
-          No receivables have been set up for your profile yet.
+        <div className="rounded-xl border border-border bg-card">
+          <EmptyState title="No receivables yet" hint="No receivables have been set up for your profile yet" />
         </div>
       ) : null}
     </TablePageShell>

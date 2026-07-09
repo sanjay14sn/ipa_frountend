@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PageSkeleton } from "@/components/shared";
 import { toast } from "sonner";
 import { CreditCard, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ export function StudentsManageSection() {
   const [isRequestIdModalOpen, setIsRequestIdModalOpen] = useState(false);
 
   if (!user || !user.franchiseId) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading...</div>;
+    return <PageSkeleton />;
   }
 
   const hasRequestableIds = students.some(

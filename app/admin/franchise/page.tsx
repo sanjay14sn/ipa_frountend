@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
+import { PageSkeleton } from "@/components/shared";
 import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { FranchiseManagementSection } from "./components/franchise-management-section";
@@ -45,7 +46,7 @@ function AdminFranchiseHubInner() {
 
 export default function AdminFranchiseHubPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<PageSkeleton />}>
       <AdminFranchiseHubInner />
     </Suspense>
   );

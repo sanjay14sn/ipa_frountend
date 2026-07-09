@@ -17,6 +17,7 @@ import {
   StatusBadge,
   TableLoadingState,
   TablePageShell,
+  PageSkeleton,
 } from "@/components/shared";
 import {
   AppDialog,
@@ -496,7 +497,7 @@ function AdminCIAgreementsPageInner() {
 
 export default function AdminCIAgreementsPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<PageSkeleton />}>
       <AdminCIAgreementsPageInner />
     </Suspense>
   );
