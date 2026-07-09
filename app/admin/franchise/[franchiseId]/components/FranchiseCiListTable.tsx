@@ -27,7 +27,7 @@ import {
   type CITrainingProgressLevel,
 } from "@/services/course-instructor.service";
 import { AdminCIAgreementDialog } from "@/components/agreements/AdminCIAgreementDialog";
-import { AdminTrainingProgressModal } from "@/components/shared/AdminTrainingProgressModal";
+import { TrainingProgressModal } from "@/components/ci-training/TrainingProgressModal";
 
 interface FranchiseCiListTableProps {
   franchiseId: string;
@@ -321,12 +321,12 @@ export function FranchiseCiListTable({ franchiseId }: FranchiseCiListTableProps)
       />
 
       {progressModal && (
-        <AdminTrainingProgressModal
+        <TrainingProgressModal
+          audience="admin"
           isOpen={true}
           onClose={() => setProgressModal(null)}
           instructorId={progressModal.id}
           instructorName={progressModal.name}
-          programId={progressModal.programId}
         />
       )}
     </>

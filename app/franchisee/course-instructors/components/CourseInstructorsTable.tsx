@@ -17,7 +17,7 @@ import {
   getCITrainingProgress,
 } from "@/services/course-instructor.service";
 import CourseInstructorDetails from "./CourseInstructorDetails";
-import { TrainingProgressModal } from "./TrainingProgressModal";
+import { TrainingProgressModal } from "@/components/ci-training/TrainingProgressModal";
 
 function CILevelBadge({ instructorId }: { instructorId: number }) {
   const { data: progress } = useQuery({

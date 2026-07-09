@@ -16,7 +16,7 @@ import {
 import CourseInstructorDetails from "./CourseInstructorDetails";
 import { BarChart2, FileText } from "lucide-react";
 import { AdminCIAgreementDialog } from "@/components/agreements/AdminCIAgreementDialog";
-import { AdminTrainingProgressModal } from "@/components/shared/AdminTrainingProgressModal";
+import { TrainingProgressModal } from "@/components/ci-training/TrainingProgressModal";
 
 export default function ActiveCourseInstructorsTable() {
   const [expandedChildren, setExpandedChildren] = useState<Set<string>>(new Set());
@@ -184,12 +184,12 @@ export default function ActiveCourseInstructorsTable() {
       />
 
       {progressModal && (
-        <AdminTrainingProgressModal
+        <TrainingProgressModal
+          audience="admin"
           isOpen={true}
           onClose={() => setProgressModal(null)}
           instructorId={progressModal.id}
           instructorName={progressModal.name}
-          programId={progressModal.programId}
         />
       )}
     </>
