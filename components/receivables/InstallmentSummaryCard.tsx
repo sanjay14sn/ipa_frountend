@@ -171,7 +171,7 @@ export function ReceivableCompactProgress({
   return (
     <div className="flex min-w-[220px] flex-col gap-1.5">
       <div className="relative">
-        <Progress value={progressValue} className="h-3 bg-[#dceee6]" />
+        <Progress value={progressValue} className="h-3 bg-success-soft" />
       </div>
       <span className="text-sm text-muted-foreground">
         Paid {formatRupees(paid)}{" · "}Outstanding {formatRupees(outstanding)}

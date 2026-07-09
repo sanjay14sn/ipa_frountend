@@ -280,7 +280,7 @@ export function CertificateTemplateEditor({
         <div className="border-b border-border lg:border-b-0 lg:border-r">
           {templatePreviewUrl ? (
             <div className="overflow-hidden">
-              <div className="border-b border-border bg-[#0d3d63] px-4 py-1.5 text-[11px] font-medium uppercase tracking-wide text-white/90">
+              <div className="border-b border-border bg-primary px-4 py-1.5 text-[11px] font-medium uppercase tracking-wide text-white/90">
                 {templateImageUrl
                   ? `PDF · ${pageSizeLabel}`
                   : "PDF · loading…"}
