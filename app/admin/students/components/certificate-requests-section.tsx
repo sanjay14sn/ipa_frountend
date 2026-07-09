@@ -1,6 +1,6 @@
 "use client";
 
-import AdminCertificateRequestsTable from "@/app/admin/students/_components/certificates/AdminCertificateRequestsTable";
+import RequestReviewTable from "@/app/admin/students/_components/request-review-table";
 
 interface CertificateRequestsSectionProps {
   franchiseId?: string;
@@ -13,7 +13,7 @@ export function CertificateRequestsSection({
 }: CertificateRequestsSectionProps = {}) {
   return (
     <div className="space-y-6">
-      <AdminCertificateRequestsTable scopedFranchiseId={franchiseId} />
+      <RequestReviewTable kind="certificate" scopedFranchiseId={franchiseId} />
     </div>
   );
 }

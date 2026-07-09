@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import RequestedIdTable from "@/app/admin/students/_components/ids/RequestedIdTable";
+import RequestReviewTable from "@/app/admin/students/_components/request-review-table";
 
 interface IdRequestsSectionProps {
   franchiseId?: string;
@@ -21,10 +21,11 @@ export function IdRequestsSection({
 
   return (
     <div className="space-y-6">
-      <RequestedIdTable
+      <RequestReviewTable
+        kind="id"
         refreshTrigger={refreshTrigger}
         scopedFranchiseId={franchiseId}
-        onIssueSuccess={triggerRefresh}
+        onActionSuccess={triggerRefresh}
       />
     </div>
   );

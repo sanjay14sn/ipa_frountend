@@ -190,11 +190,13 @@ function useAdminCertificateRequests(
 export function useAdminIdCardSummaries(
   params: Record<string, unknown>,
   refreshKey = 0,
+  options?: { enabled?: boolean },
 ) {
   return useQuery({
     queryKey: [...queryKeys.studentAdmin.idCardSummaries(params), refreshKey],
     queryFn: () => getAdminIdCardSummaries(params),
     placeholderData: (prev) => prev,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -210,11 +212,15 @@ export function useAdminIdCardDetails(
   });
 }
 
-export function useAdminCertificateSummaries(params: Record<string, unknown>) {
+export function useAdminCertificateSummaries(
+  params: Record<string, unknown>,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: queryKeys.studentAdmin.certSummaries(params),
     queryFn: () => getAdminCertificateSummaries(params),
     placeholderData: (prev) => prev,
+    enabled: options?.enabled ?? true,
   });
 }
 
