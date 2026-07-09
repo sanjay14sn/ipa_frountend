@@ -167,7 +167,7 @@ const config: Config = {
       const newUtilities = {
         ".scrollbar-thin": {
           "scrollbar-width": "thin",
-          "scrollbar-color": "#064e3b #fafafa",
+          "scrollbar-color": "hsl(var(--input)) hsl(var(--background))",
         },
         ".scrollbar-none": {
           "scrollbar-width": "none",
@@ -175,23 +175,25 @@ const config: Config = {
             display: "none",
           },
         },
+        // DEPRECATED name kept for existing call sites — renders the same
+        // neutral slate scrollbar as the globals; do not use in new code.
         ".scrollbar-green": {
-          "scrollbar-color": "#064e3b #fafafa",
+          "scrollbar-color": "hsl(var(--input)) hsl(var(--background))",
           "&::-webkit-scrollbar": {
             width: "6px",
             height: "6px",
           },
           "&::-webkit-scrollbar-track": {
-            background: "#fafafa",
+            background: "hsl(var(--background))",
             borderRadius: "3px",
           },
           "&::-webkit-scrollbar-thumb": {
-            background: "#064e3b",
+            background: "hsl(var(--input))",
             borderRadius: "3px",
             transition: "background-color 0.2s ease",
           },
           "&::-webkit-scrollbar-thumb:hover": {
-            background: "#047857",
+            background: "hsl(var(--muted-foreground))",
           },
         },
       };
