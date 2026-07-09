@@ -1,7 +1,8 @@
 "use client";
 
-import { LogOut, User } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,7 +16,7 @@ import { NotificationBell } from "@/components/shared/notification-bell";
 import { useUser } from "@/context/user-context";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { getUserFromStorage } from "@/lib/auth";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { franchiseeLogout, logout } from "@/services/auth.service";
 import { logoutCI } from "@/services/ci-auth.service";
 import { markLogoutStart, markLogoutEnd } from "@/lib/axios";
@@ -30,18 +31,41 @@ function headerEmail(user: ReturnType<typeof useUser>["user"]): string {
   return user.profile?.mail ?? user.mail ?? "";
 }
 
-export function PortalHeaderActions() {
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+export interface PortalHeaderActionsProps {
+  portal: "admin" | "franchisee" | "ci";
+  /** Overrides the default per-portal "Profile & settings" target. */
+  profileHref?: string;
+}
+
+const DEFAULT_PROFILE_HREF: Record<
+  PortalHeaderActionsProps["portal"],
+  string | null
+> = {
+  admin: "/admin/profile",
+  // Until the Part C franchisee profile page exists.
+  franchisee: "/franchisee/franchise",
+  ci: null,
+};
+
+export function PortalHeaderActions({
+  portal,
+  profileHref,
+}: PortalHeaderActionsProps) {
   const { user, clearUser } = useUser();
   const { user: ciUser, clear: clearCI } = useCIAuth();
   const router = useRouter();
-  const pathname = usePathname();
   const queryClient = useQueryClient();
   const storedUser = getUserFromStorage();
   const currentUser = user ?? storedUser;
-  const isCiPortal = pathname.startsWith("/ci");
-  const isAdminPortal =
-    currentUser?.role === "admin" || pathname.startsWith("/admin");
-  const isPortalRoute = isAdminPortal || pathname.startsWith("/franchisee") || isCiPortal;
+  const isCiPortal = portal === "ci";
+  const isAdminPortal = portal === "admin";
 
   const handleLogout = async () => {
     // Cancel all in-flight React Query fetches before sending the logout
@@ -94,55 +118,65 @@ export function PortalHeaderActions() {
   const displayName = isCiPortal
     ? ciUser?.name ?? "Course Instructor"
     : currentUser?.name ?? (isAdminPortal ? "Admin" : "User");
+  const resolvedProfileHref = profileHref ?? DEFAULT_PROFILE_HREF[portal];
 
   return (
     <div className="ml-auto flex items-center gap-0.5 sm:gap-1">
       <NotificationBell />
-      {isPortalRoute && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 shrink-0 text-primary hover:bg-accent hover:text-accent-foreground"
-            >
-              <User className="h-4 w-4" />
-              <span className="sr-only">Open profile menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col gap-1.5">
-                <p className="text-sm font-medium leading-none">
-                  {displayName}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0 rounded-full"
+            data-testid="user-menu-trigger"
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
+              {initialsOf(displayName)}
+            </span>
+            <span className="sr-only">Open profile menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col gap-1.5">
+              <p className="text-sm font-medium leading-none">
+                {displayName}
+              </p>
+              <p className="break-all text-xs leading-none text-muted-foreground">
+                {email || (isAdminPortal ? "Administrator" : isCiPortal ? "Course Instructor" : "Signed in")}
+              </p>
+              {isCiPortal && ciUser?.instructorCode ? (
+                <p className="truncate text-xs leading-none text-muted-foreground">
+                  {ciUser.instructorCode}
                 </p>
-                <p className="break-all text-xs leading-none text-muted-foreground">
-                  {email || (isAdminPortal ? "Administrator" : isCiPortal ? "Course Instructor" : "Signed in")}
+              ) : null}
+              {currentUser?.role === "franchisee" &&
+              currentUser.franchiseName ? (
+                <p className="truncate text-xs leading-none text-muted-foreground">
+                  {currentUser.franchiseName}
                 </p>
-                {isCiPortal && ciUser?.instructorCode ? (
-                  <p className="truncate text-xs leading-none text-muted-foreground">
-                    {ciUser.instructorCode}
-                  </p>
-                ) : null}
-                {currentUser?.role === "franchisee" &&
-                currentUser.franchiseName ? (
-                  <p className="truncate text-xs leading-none text-muted-foreground">
-                    {currentUser.franchiseName}
-                  </p>
-                ) : null}
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={handleLogout}
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
+              ) : null}
+            </div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {resolvedProfileHref ? (
+            <DropdownMenuItem asChild>
+              <Link href={resolvedProfileHref}>
+                <Settings className="mr-2 h-4 w-4" />
+                Profile &amp; settings
+              </Link>
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+          ) : null}
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={handleLogout}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

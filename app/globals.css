@@ -73,23 +73,15 @@
 
     --radius: 0.5rem;
 
-    /* Orphan surface vars — deleted with the Phase-2 shell (F-07); their only
-       consumer is the old franchisee layout. */
-    --surface: #f9fafb;
-    --surface-green: #f0fdf4;
-    --text-muted: #6b7280;
-    --text-secondary: #374151;
-
-    /* Sidebar — TEMPORARY light values so the outgoing dynamic-sidebar stays
-       legible; the navy rail values land with portal-sidebar in Phase 2. */
-    --sidebar-background: 210 40% 98%;
-    --sidebar-foreground: 213 93% 22%;
-    --sidebar-primary: 212 68% 96%;
-    --sidebar-primary-foreground: 213 93% 22%;
-    --sidebar-accent: 212 68% 96%;
-    --sidebar-accent-foreground: 213 93% 22%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 213 81% 36%;
+    /* Sidebar — navy rail */
+    --sidebar-background: 213 93% 22%; /* #04346e navy rail */
+    --sidebar-foreground: 214 49% 85%; /* #c7d7ec rail text (8.3:1) */
+    --sidebar-primary: 45 100% 49%; /* #fbbe00 yellow active indicator */
+    --sidebar-primary-foreground: 213 93% 22%; /* navy on yellow */
+    --sidebar-accent: 212 86% 28%; /* #0a4487 hover/active surface */
+    --sidebar-accent-foreground: 0 0% 100%; /* white on hover/active */
+    --sidebar-border: 212 72% 31%; /* #164a86 rail borders */
+    --sidebar-ring: 45 100% 49%; /* yellow rail focus ring */
   }
 }
 
