@@ -35,13 +35,8 @@ import { useDirtyCloseGuard } from "@/hooks/use-dirty-close-guard";
 import { sendClientLog } from "@/lib/client-telemetry";
 import { calculateAge } from "@/lib/date-utils";
 import { handleFormApiError } from "@/lib/form-errors";
+import { CI_FORM_STEPS as FORM_STEPS } from "@/lib/constants/education";
 
-const FORM_STEPS: StepDef[] = [
-  { id: 1, title: "Basic Information" },
-  { id: 2, title: "Personal Details" },
-  { id: 3, title: "Contact & Address" },
-  { id: 4, title: "Professional Details" },
-];
 
 const BLOOD_GROUPS = [
   BloodGroup.A_POSITIVE,

@@ -19,6 +19,7 @@ import {
 import { CheckCircle, CreditCard } from "lucide-react";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { formatRupees } from "@/lib/currency-utils";
+import { Progress } from "@/components/ui/progress";
 
 function statusBadge(status: CITrainingReceivable["status"]) {
   if (status === "paid") return <StatusBadge label="Paid" />;
@@ -210,16 +211,14 @@ export default function CITrainingReceivablesPage() {
           <div className="text-sm font-medium text-card-foreground">
             {settledCount} of {receivables.length} receivables settled
           </div>
-          <div className="h-2 rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary"
-              style={{
-                width: receivables.length
-                  ? `${Math.round((settledCount / receivables.length) * 100)}%`
-                  : "0%",
-              }}
-            />
-          </div>
+          <Progress
+            className="h-2"
+            value={
+              receivables.length
+                ? Math.round((settledCount / receivables.length) * 100)
+                : 0
+            }
+          />
         </div>
       </div>
 

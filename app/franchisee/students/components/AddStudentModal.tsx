@@ -36,6 +36,7 @@ import { makeFieldChangeHandler } from "@/lib/form-utils";
 import { handleFormApiError } from "@/lib/form-errors";
 import { useFormSteps } from "@/hooks/use-form-steps";
 import { useDirtyCloseGuard } from "@/hooks/use-dirty-close-guard";
+import { STUDENT_FORM_STEPS as FORM_STEPS } from "@/lib/constants/education";
 import {
   PersonalInfoFields,
   ParentInfoFields,
@@ -44,12 +45,6 @@ import {
   useCascadingSelects,
 } from "@/components/students/student-form";
 
-const FORM_STEPS: StepDef[] = [
-  { id: 1, title: "Basic Information" },
-  { id: 2, title: "Parent Details" },
-  { id: 3, title: "Contact & Address" },
-  { id: 4, title: "Academic Details" },
-];
 
 interface AddStudentModalProps {
   open: boolean;

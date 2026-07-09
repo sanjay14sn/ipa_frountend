@@ -42,6 +42,8 @@ import AgreementTerms from "@/components/agreements/AgreementTerms";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { CIAgreementDetail } from "@/components/agreements/CIAgreementDetail";
 import { formatDate } from "@/lib/date-utils";
+import { Stepper } from "@/components/shared/stepper";
+import { CI_AGREEMENT_STEPS } from "@/lib/constants/education";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,55 +60,6 @@ function queryToStep(q: string | null): CIStepIndex | null {
 }
 
 
-// ─── Stepper ──────────────────────────────────────────────────────────────────
-
-function CIAgreementStepper({ currentStep }: { currentStep: CIStepIndex }) {
-  return (
-    <div className="w-full">
-      <div className="flex items-center justify-between">
-        {CI_STEP_LABELS.map((label, index) => {
-          const id = (index + 1) as CIStepIndex;
-          const done = currentStep > id;
-          const active = currentStep === id;
-          return (
-            <div key={id} className="flex flex-1 items-center">
-              <div className="flex flex-1 flex-col items-center">
-                <div
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full border text-xs font-medium transition-all duration-200",
-                    (active || done) &&
-                      "border-primary bg-primary text-primary-foreground shadow-sm",
-                    !active && !done && "border-border bg-card text-muted-foreground",
-                  )}
-                >
-                  {done ? <Check className="h-4 w-4" strokeWidth={3} /> : id}
-                </div>
-                <p
-                  className={cn(
-                    "mt-2 text-[10px] font-medium leading-tight sm:text-xs",
-                    currentStep >= id ? "text-card-foreground" : "text-muted-foreground",
-                  )}
-                >
-                  {label}
-                </p>
-              </div>
-              {index < CI_STEP_LABELS.length - 1 && (
-                <div className="flex max-w-[40px] flex-1 items-center justify-center px-1 sm:max-w-[60px] sm:px-2">
-                  <div
-                    className={cn(
-                      "h-0.5 w-full transition-all duration-200",
-                      done ? "bg-primary" : "bg-border",
-                    )}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 // ─── Signature Step ───────────────────────────────────────────────────────────
 
@@ -484,7 +437,7 @@ function CIAgreementContent() {
 
           {/* Stepper */}
           <div className="border-b border-border bg-accent/30 px-4 py-4 sm:px-5">
-            <CIAgreementStepper currentStep={currentStep} />
+            <Stepper steps={CI_AGREEMENT_STEPS} currentStep={currentStep} compact framed={false} />
           </div>
 
           {/* Body */}

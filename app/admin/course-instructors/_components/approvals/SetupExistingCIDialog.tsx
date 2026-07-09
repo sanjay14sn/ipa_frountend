@@ -35,17 +35,13 @@ import {
   BloodGroup,
 } from "@/services/course-instructor.service";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
+import { SETUP_EXISTING_CI_STEPS as FORM_STEPS } from "@/lib/constants/education";
 import {
   ReceivablePlanBuilder,
   validateReceivablePlan,
   type ReceivablePlanRow,
 } from "./ReceivablePlanBuilder";
 
-const FORM_STEPS: StepDef[] = [
-  { id: 1, title: "Franchise & Program" },
-  { id: 2, title: "CI Personal Details" },
-  { id: 3, title: "Receivables & Validity" },
-];
 
 const BLOOD_GROUPS = [
   BloodGroup.A_POSITIVE,

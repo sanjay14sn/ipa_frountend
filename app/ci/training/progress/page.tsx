@@ -7,6 +7,7 @@ import { BarChart2 } from "lucide-react";
 import { DataTable, TableLoadingState, TablePageShell, type DataTableColumn } from "@/components/shared";
 import { getCIProgress, type CIProgressItem } from "@/services/ci-training.service";
 import { formatDate } from "@/lib/date-utils";
+import { Progress } from "@/components/ui/progress";
 
 function statusBadge(status: string) {
   if (status === "COMPLETED") return <Badge>Completed</Badge>;
@@ -67,14 +68,10 @@ export default function CIProgressPage() {
             {completed} of {progress.length} levels completed
           </p>
         </div>
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-green-500 transition-all"
-            style={{
-              width: progress.length > 0 ? `${(completed / progress.length) * 100}%` : "0%",
-            }}
-          />
-        </div>
+        <Progress
+          className="mt-3 h-2 [&>div]:bg-success"
+          value={progress.length > 0 ? (completed / progress.length) * 100 : 0}
+        />
       </div>
 
       {isLoading && progress.length === 0 ? (

@@ -24,16 +24,13 @@ import {
   type TrainingLevel,
 } from "@/services/training-level.service";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
+import { APPROVE_CI_STEPS as FORM_STEPS } from "@/lib/constants/education";
 import {
   ReceivablePlanBuilder,
   validateReceivablePlan,
   type ReceivablePlanRow,
 } from "./ReceivablePlanBuilder";
 
-const FORM_STEPS: StepDef[] = [
-  { id: 1, title: "Tenure" },
-  { id: 2, title: "Receivables" },
-];
 
 const errorClass = "border-destructive focus-visible:ring-destructive";
 

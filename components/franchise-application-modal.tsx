@@ -33,6 +33,7 @@ import { useProgramsOnDemand } from "@/hooks/api/program.hooks";
 import { StateCitySelect } from "@/components/StateCitySelect";
 import { cn } from "@/lib/utils";
 import { useDirtyCloseGuard } from "@/hooks/use-dirty-close-guard";
+import { FRANCHISE_APPLICATION_STEPS as FORM_STEPS } from "@/lib/constants/education";
 import {
   ConfirmDialog,
   MultiStepDialog,
@@ -40,12 +41,6 @@ import {
   type StepDef,
 } from "@/components/shared/dialog";
 
-const FORM_STEPS: StepDef[] = [
-  { id: 1, title: "Personal Information" },
-  { id: 2, title: "Location & Communication" },
-  { id: 3, title: "Contact & Professional" },
-  { id: 4, title: "Franchise Details" },
-];
 
 /**
  * sessionStorage key for the public application draft. Contract:

@@ -22,6 +22,7 @@ import {
 import { Program } from "@/services/program.service";
 import { sendClientLog } from "@/lib/client-telemetry";
 import { useFormSteps } from "@/hooks/use-form-steps";
+import { CREATE_FRANCHISE_STEPS as FORM_STEPS } from "@/lib/constants/education";
 import {
   StepBasicInfo,
   StepFranchiseDetails,
@@ -36,12 +37,6 @@ import {
 // Constants
 // ---------------------------------------------------------------------------
 
-const FORM_STEPS: StepDef[] = [
-  { id: 1, title: "Personal Info" },
-  { id: 2, title: "Franchise Details" },
-  { id: 3, title: "Agreement Terms" },
-  { id: 4, title: "Security" },
-];
 
 const INITIAL_FORM_DATA: FormData = {
   name: "",
