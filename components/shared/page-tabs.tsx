@@ -9,6 +9,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import { PageHeaderCard } from "@/components/shared/page-header-card"
 
 export interface PageTabsTab<T extends string> {
   value: T
@@ -88,29 +89,13 @@ export function PageTabs<T extends string>({
       onValueChange={(v) => onValueChange(v as T)}
       className={cn("space-y-4 font-sans", className)}
     >
-      <div
-        className={cn(
-          "rounded-2xl border bg-card px-4 py-4 shadow-sm sm:px-5",
-          headerClassName
-        )}
+      <PageHeaderCard
+        eyebrow={eyebrow}
+        title={title}
+        description={description}
+        actions={action}
+        className={headerClassName}
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 space-y-1">
-            {eyebrow ? (
-              <div className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-                {eyebrow}
-              </div>
-            ) : null}
-            <h1 className="text-2xl text-card-foreground">{title}</h1>
-            {description ? (
-              <p className="max-w-2xl text-sm text-muted-foreground">
-                {description}
-              </p>
-            ) : null}
-          </div>
-          {action ? <div className="shrink-0">{action}</div> : null}
-        </div>
-
         {headerExtras ? <div className="mt-3">{headerExtras}</div> : null}
 
         <TabsList className="mt-4 flex h-auto flex-wrap justify-start gap-1">
@@ -126,7 +111,7 @@ export function PageTabs<T extends string>({
             </TabsTrigger>
           ))}
         </TabsList>
-      </div>
+      </PageHeaderCard>
 
       {children}
     </Tabs>
