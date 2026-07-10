@@ -37,12 +37,14 @@ function AdminOperationsHubInner() {
       title="Operations"
       description="Demand, shipping, payments, inventory, procurement, and monitoring in one admin workspace."
       tabs={[
+        // ADM-21: the default tab sits first and reads "Overview" — the
+        // value stays `monitoring` so deep links keep resolving.
+        { value: "monitoring", label: "Overview" },
         { value: "orders", label: "Orders" },
         { value: "shipping", label: "Shipping" },
         { value: "payments", label: "Payments" },
         { value: "inventory", label: "Inventory" },
         { value: "procurement", label: "Procurement" },
-        { value: "monitoring", label: "Monitoring" },
       ]}
       value={tab}
       onValueChange={setTab}
@@ -52,7 +54,9 @@ function AdminOperationsHubInner() {
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Order management</h2>
             <p className="text-muted-foreground">
-              Track paid demand, allocation, backorders, and cancellation from the order side.
+              Track paid demand, allocation, backorders, and cancellation from
+              the order side. Verified orders move to the Shipping tab for
+              dispatch.
             </p>
           </div>
           {tab === "orders" && <AdminOrdersTable />}
@@ -62,7 +66,9 @@ function AdminOperationsHubInner() {
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Shipping</h2>
             <p className="text-muted-foreground">
-              Only fully ready orders appear here, and the UI never exposes partial shipments.
+              Orders verified on the Orders tab arrive here for dispatch and
+              delivery. Only fully ready orders appear, and the UI never
+              exposes partial shipments.
             </p>
           </div>
           {tab === "shipping" && <AdminShippingTable />}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import Link from "next/link";
 import { formatDate } from "@/lib/date-utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -261,7 +262,29 @@ export default function AdminOrdersTable({
         header: "Fulfillment",
         render: (order) => {
           const label = order.adminStatus || order.fulfillmentStatus || "Unknown";
-          return <StatusBadge label={label} />;
+          // ADM-22: the fulfillment lifecycle continues on the Shipping tab —
+          // say so on the rows that have crossed over. HQ hub mount only
+          // (regional oversight and franchise-detail keep their own context).
+          const showShippingLink =
+            !readOnly &&
+            !franchiseId &&
+            (order.adminStatus === "Ready to ship" ||
+              order.adminStatus === "Shipped" ||
+              order.fulfillmentStatus === "READY_TO_SHIP" ||
+              order.fulfillmentStatus === "SHIPPED");
+          return (
+            <div className="flex flex-col items-start gap-1">
+              <StatusBadge label={label} />
+              {showShippingLink ? (
+                <Link
+                  href="/admin/operations?tab=shipping"
+                  className="text-[11px] text-primary hover:underline"
+                >
+                  Open Shipping tab →
+                </Link>
+              ) : null}
+            </div>
+          );
         },
       },
       {
@@ -398,7 +421,7 @@ export default function AdminOrdersTable({
         },
       },
     ],
-    [busyOrderId, handleMarkPaid, handleOpenCancelDialog, handleRegenerateDc, handleRefreshAllocation, setVerifyDialogOrderId, readOnly],
+    [busyOrderId, handleMarkPaid, handleOpenCancelDialog, handleRegenerateDc, handleRefreshAllocation, setVerifyDialogOrderId, readOnly, franchiseId],
   );
 
   return (
