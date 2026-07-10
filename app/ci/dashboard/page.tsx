@@ -1,8 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { PageHeaderCard } from "@/components/shared";
-import Link from "next/link";
+import {
+  LastUpdated,
+  ModulePill,
+  PageHeaderCard,
+  QuickAccessCard,
+  StatCell,
+} from "@/components/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +21,7 @@ import {
 } from "lucide-react";
 import { getCIAgreement, getCIProgress, getCIUpcomingSessions, listCIReceivables } from "@/services/ci-training.service";
 import { useCIAuth } from "@/context/ci-auth-context";
-import { CIDashboardPanel, CIStatCard, ModulePill } from "../_components/ci-dashboard-cards";
+import { CIDashboardPanel } from "../_components/ci-dashboard-cards";
 import { formatDate } from "@/lib/date-utils";
 
 function phaseLabel(phase?: string | null): string {
@@ -84,6 +89,20 @@ export default function CIDashboardPage() {
     upcomingQuery.isLoading ||
     receivablesQuery.isLoading;
 
+  // CI-06 (R5): freshness + manual refetch across the four dashboard queries.
+  const updatedAt = Math.max(
+    agreementQuery.dataUpdatedAt,
+    progressQuery.dataUpdatedAt,
+    upcomingQuery.dataUpdatedAt,
+    receivablesQuery.dataUpdatedAt,
+  );
+  const handleRefresh = () => {
+    void agreementQuery.refetch();
+    void progressQuery.refetch();
+    void upcomingQuery.refetch();
+    void receivablesQuery.refetch();
+  };
+
   return (
     <div className="space-y-4">
       <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
@@ -95,6 +114,11 @@ export default function CIDashboardPage() {
           description={`Welcome back${user?.name ? `, ${user.name}` : ""}. Track your current level, next training and receivable status.`}
           actions={
             <div className="flex flex-wrap items-center gap-2">
+              <LastUpdated
+                updatedAt={updatedAt || undefined}
+                onRefresh={handleRefresh}
+                isRefreshing={agreementQuery.isFetching}
+              />
               <Badge variant={agreement?.phase === "SIGNED" ? "default" : "secondary"}>
                 {phaseLabel(agreement?.phase)}
               </Badge>
@@ -115,74 +139,73 @@ export default function CIDashboardPage() {
           </div>
         ) : (
           <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5">
-            <CIStatCard
+            {/* CI-06: kit StatCell; navigation rides the chip + quick links
+                (R4), not whole-cell anchors. */}
+            <StatCell
               label="Current Trained Level"
               value={currentTrainedLevel?.trainingLevelName ?? "—"}
               sub={currentTrainedLevel ? `Completed ${formatDate(currentTrainedLevel.completedAt)}` : "No completed level yet"}
               icon={Trophy}
-              href="/ci/training/progress"
             />
-            <CIStatCard
+            <StatCell
               label="Next Training"
               value={nextTraining?.trainingLevelName ?? "—"}
               sub={nextTraining ? `${formatDate(nextTraining.sessionDate)} | ${nextTraining.assignmentStatus}` : "No upcoming session"}
               icon={CalendarDays}
-              href="/ci/training/upcoming"
             />
-            <CIStatCard
+            <StatCell
               label="Completed Levels"
               value={String(completedLevels.length)}
               sub={`${progress.length} total levels`}
               icon={GraduationCap}
-              href="/ci/training/progress"
             />
-            <CIStatCard
+            <StatCell
               label="Receivables Settled"
               value={String(settledReceivableCount)}
               sub={`${receivables.length} total receivables`}
               icon={Layers}
-              href="/ci/training/receivables"
+              pendingChip={{
+                count: pendingReceivableCount,
+                href: "/ci/training?tab=receivables",
+              }}
             />
-            <CIStatCard
+            <StatCell
               label="Pending Receivables"
               value={String(pendingReceivableCount)}
               sub="Due for payment"
               icon={ClipboardList}
-              href="/ci/training/receivables"
             />
           </div>
         )}
 
+        {/* CI-06: kit QuickAccessCard; links target the hub tabs directly —
+            no redirect hop. */}
         <CIDashboardPanel label="Tools" title="Quick access">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Link href="/ci/agreement" className="rounded-xl border bg-background p-3 text-sm font-medium text-card-foreground shadow-sm transition-colors hover:bg-accent">
-              <div className="mb-1 flex items-center gap-2 text-primary">
-                <FileText className="h-4 w-4" />
-                My Agreement
-              </div>
-              <p className="text-xs text-muted-foreground">Agreement details and status</p>
-            </Link>
-            <Link href="/ci/training/receivables" className="rounded-xl border bg-background p-3 text-sm font-medium text-card-foreground shadow-sm transition-colors hover:bg-accent">
-              <div className="mb-1 flex items-center gap-2 text-primary">
-                <Layers className="h-4 w-4" />
-                Training Receivables
-              </div>
-              <p className="text-xs text-muted-foreground">View and pay training fees</p>
-            </Link>
-            <Link href="/ci/training/progress" className="rounded-xl border bg-background p-3 text-sm font-medium text-card-foreground shadow-sm transition-colors hover:bg-accent">
-              <div className="mb-1 flex items-center gap-2 text-primary">
-                <GraduationCap className="h-4 w-4" />
-                Progress
-              </div>
-              <p className="text-xs text-muted-foreground">Track completed levels and marks</p>
-            </Link>
-            <Link href="/ci/training/upcoming" className="rounded-xl border bg-background p-3 text-sm font-medium text-card-foreground shadow-sm transition-colors hover:bg-accent">
-              <div className="mb-1 flex items-center gap-2 text-primary">
-                <CalendarDays className="h-4 w-4" />
-                Upcoming
-              </div>
-              <p className="text-xs text-muted-foreground">View next assigned sessions</p>
-            </Link>
+            <QuickAccessCard
+              title="My Agreement"
+              description="Agreement details and status"
+              href="/ci/agreement"
+              icon={FileText}
+            />
+            <QuickAccessCard
+              title="Training Receivables"
+              description="View and pay training fees"
+              href="/ci/training?tab=receivables"
+              icon={Layers}
+            />
+            <QuickAccessCard
+              title="Progress"
+              description="Track completed levels and marks"
+              href="/ci/training?tab=progress"
+              icon={GraduationCap}
+            />
+            <QuickAccessCard
+              title="Upcoming"
+              description="View next assigned sessions"
+              href="/ci/training?tab=upcoming"
+              icon={CalendarDays}
+            />
           </div>
         </CIDashboardPanel>
       </div>
