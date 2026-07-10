@@ -375,6 +375,9 @@ function CIAgreementContent() {
                 <p className="text-sm text-muted-foreground">
                   Read the agreement sections and confirm acceptance below.
                 </p>
+                {/* CI-07: no onDownloadPDF — the old handler was a hardcoded
+                    failure toast (no CI agreement PDF endpoint exists), so
+                    the button is hidden until backend support lands. */}
                 <AgreementTerms
                   agreementContent={ciAgreementContent}
                   expandedSections={expandedSections}
@@ -382,7 +385,6 @@ function CIAgreementContent() {
                   onToggleSection={toggleSection}
                   onExpandAll={expandAll}
                   onCollapseAll={collapseAll}
-                  onDownloadPDF={() => toast.info("PDF download is not available yet.")}
                   onAgreementChange={(v) => setTermsAccepted(v === true)}
                 />
               </div>
