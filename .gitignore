@@ -15,7 +15,8 @@ audit-report/
 graphify-out
 .claude
 .gitnexus
-/docs
+# docs/ is tracked (design-system.md); superpowers is a local tooling artifact
+/docs/superpowers
 
 .graphify_python
 # debug
