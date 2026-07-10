@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { useState } from "react";
 import { formatDate } from "@/lib/date-utils";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -484,21 +484,14 @@ function CIAgreementsTable() {
   );
 }
 
-function AdminCIAgreementsPageInner() {
+/**
+ * ADM-18: the former /admin/ci-agreements page, folded in as the CI hub's
+ * `agreements` tab. The hub owns the header (R6); the old URL 307s here.
+ */
+export function CiAgreementsSection() {
   return (
-    <TablePageShell
-      title="CI Agreements"
-      description="Course instructor agreements: lifecycle management and status controls."
-    >
+    <TablePageShell embed>
       <CIAgreementsTable />
     </TablePageShell>
-  );
-}
-
-export default function AdminCIAgreementsPage() {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <AdminCIAgreementsPageInner />
-    </Suspense>
   );
 }

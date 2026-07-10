@@ -8,11 +8,12 @@ import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { CiApprovalsSection } from "./_components/approvals/ci-approvals-section";
 import { CiTrainingSection } from "./ci-training-section";
+import { CiAgreementsSection } from "./_components/ci-agreements-section";
 import ActiveCourseInstructorsTable from "./_components/approvals/ActiveCourseInstructorsTable";
 import SetupExistingCIDialog from "./_components/approvals/SetupExistingCIDialog";
 import { PageSkeleton } from "@/components/shared";
 
-const TABS = ["applications", "active", "training"] as const;
+const TABS = ["applications", "active", "training", "agreements"] as const;
 
 function AdminCourseInstructorsHubInner() {
   const [tab, setTab] = useTabFromUrl("applications", TABS);
@@ -39,6 +40,7 @@ function AdminCourseInstructorsHubInner() {
         { value: "applications", label: "Applications" },
         { value: "active", label: "Active CIs" },
         { value: "training", label: "CI training" },
+        { value: "agreements", label: "Agreements" },
       ]}
       value={tab}
       onValueChange={setTab}
@@ -51,6 +53,10 @@ function AdminCourseInstructorsHubInner() {
       </TabsContent>
       <TabsContent value="training" className="mt-0">
         <CiTrainingSection />
+      </TabsContent>
+
+      <TabsContent value="agreements" className="mt-0">
+        <CiAgreementsSection />
       </TabsContent>
 
       <SetupExistingCIDialog

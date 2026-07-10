@@ -337,7 +337,7 @@ export default function AdminDashboard() {
           description: "Programs and level settings",
         }
       : {
-          href: "/admin/ci-agreements",
+          href: "/admin/course-instructors?tab=agreements",
           icon: ClipboardList,
           label: "CI Agreements",
           description: "Instructor agreements",

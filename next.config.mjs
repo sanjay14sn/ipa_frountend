@@ -220,7 +220,12 @@ const nextConfig = {
         permanent: false,
       },
       { source: "/ci", destination: "/ci/dashboard", permanent: false },
-      // Phase-8 IA moves (docs 06/08, rows C2–C5; C1 lands with ADM-18).
+      // Phase-8 IA moves (docs 06/08, rows C1–C5).
+      {
+        source: "/admin/ci-agreements",
+        destination: "/admin/course-instructors?tab=agreements",
+        permanent: false,
+      },
       {
         source: "/ci/training/receivables",
         destination: "/ci/training?tab=receivables",

@@ -8,7 +8,6 @@ import {
   Globe,
   GraduationCap,
   LayoutDashboard,
-  ScrollText,
   ShieldCheck,
   ShoppingCart,
   Store,
@@ -75,11 +74,11 @@ export const ADMIN_NAV = freezeNav([
       { title: "Franchise", href: "/admin/franchise", icon: Building2 },
       { title: "Students", href: "/admin/students", icon: Users },
       {
+        // ADM-18: CI agreements live inside this hub's `agreements` tab now.
         title: "Course Instructors",
         href: "/admin/course-instructors",
         icon: GraduationCap,
       },
-      { title: "CI Agreements", href: "/admin/ci-agreements", icon: ScrollText },
       { title: "Operations", href: "/admin/operations", icon: ShoppingCart },
       { title: "Bulk Import", href: "/admin/bulk-import", icon: Upload },
     ],
