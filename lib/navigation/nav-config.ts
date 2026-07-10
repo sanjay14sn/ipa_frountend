@@ -96,7 +96,8 @@ export const SUPER_ADMIN_NAV = freezeNav([
     items: [
       ...ADMIN_NAV[0].items,
       {
-        title: "Programs",
+        // ADM-27: training levels live here too — the label says so.
+        title: "Programs & Levels",
         href: "/admin/programs",
         icon: BookOpen,
         match: "exact",

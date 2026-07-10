@@ -41,9 +41,10 @@ export function FranchiseManagementSection() {
             await ensureProgramsLoaded();
             setIsCreateDialogOpen(true);
           }}
+          title="Record a franchise that already operates — distinct from approving a new application"
         >
           <Building2 className="h-4 w-4" />
-          Setup Existing Franchise
+          Onboard existing franchise
         </Button>
       </div>
 

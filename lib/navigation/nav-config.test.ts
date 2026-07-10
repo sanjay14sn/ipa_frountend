@@ -67,7 +67,7 @@ describe("getAdminNav composition", () => {
     const overview = SUPER_ADMIN_NAV[0];
     expect(overview.items.map((i) => i.title)).toEqual([
       "Dashboard",
-      "Programs",
+      "Programs & Levels",
       "Admins",
     ]);
     const management = SUPER_ADMIN_NAV[1];

@@ -31,9 +31,14 @@ function AdminCourseInstructorsHubInner() {
       title="Course instructors"
       description="Applications, training sessions, and curriculum levels."
       action={
-        <Button onClick={() => setSetupOpen(true)} variant="outline" size="sm">
+        <Button
+          onClick={() => setSetupOpen(true)}
+          variant="outline"
+          size="sm"
+          title="Record an instructor who already teaches — distinct from approving a new application"
+        >
           <UserPlus className="mr-2 h-4 w-4" />
-          Setup Existing CI
+          Onboard existing CI
         </Button>
       }
       tabs={[
