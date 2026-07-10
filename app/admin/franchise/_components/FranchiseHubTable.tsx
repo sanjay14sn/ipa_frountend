@@ -21,7 +21,7 @@ import {
   TableMainCell,
 } from "@/components/shared";
 import type { FranchiseData } from "@/services/franchisee.service";
-import { Edit, Eye, KeyRound, Trash2, Check, X } from "lucide-react";
+import { Eye, KeyRound, Check, X } from "lucide-react";
 import { FranchiseTableExpanded } from "./FranchiseTableExpanded";
 import { ReceivableCompactLine } from "@/components/receivables/InstallmentSummaryCard";
 import { formatDate } from "@/lib/date-utils";
@@ -82,15 +82,11 @@ function ApplicationsExpanded({ item }: { item: FranchiseData }) {
           <DetailField label="Name" value={fe?.name ?? "—"} />
           <DetailField label="Email" value={franchiseeMail(fe)} />
           <DetailField label="Phone" value={fe?.phone ?? "—"} />
-          <DetailField label="Date of birth" value={formatDate(fe?.dob)} />
-          <DetailField label="Blood group" value={fe?.bloodGroup ?? "—"} />
           <DetailField
             label="Communication address"
             value={fe?.communicationAddress ?? "—"}
-            span={3}
+            span={2}
           />
-          <DetailField label="Education" value={fe?.education ?? "—"} />
-          <DetailField label="Occupation" value={fe?.occupation ?? "—"} />
           <DetailField label="Reference" value={fe?.reference ?? "—"} />
         </DetailFieldsGrid>
       </ExpandedDetailSection>
@@ -268,12 +264,6 @@ export function FranchiseHubTable({
                     <KeyRound className="h-4 w-4" />
                   </Button>
                 ) : null}
-                <Button variant="ghost" size="sm" aria-label="Edit franchise">
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="sm" aria-label="Delete franchise">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
               </div>
             ),
           },

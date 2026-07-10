@@ -48,17 +48,10 @@ export function FranchiseTableExpanded({ item }: { item: FranchiseData }) {
           <DetailField label="Email" value={franchiseeMail(franchisee)} />
           <DetailField label="Phone" value={franchisee?.phone ?? "-"} />
           <DetailField
-            label="Date of birth"
-            value={franchisee?.dob ? String(franchisee.dob).slice(0, 10) : "-"}
-          />
-          <DetailField label="Blood group" value={franchisee?.bloodGroup ?? "-"} />
-          <DetailField
             label="Communication address"
             value={franchisee?.communicationAddress ?? "-"}
-            span={3}
+            span={2}
           />
-          <DetailField label="Education" value={franchisee?.education ?? "-"} />
-          <DetailField label="Occupation" value={franchisee?.occupation ?? "-"} />
           <DetailField label="Reference" value={franchisee?.reference ?? "-"} />
         </DetailFieldsGrid>
       </ExpandedDetailSection>
