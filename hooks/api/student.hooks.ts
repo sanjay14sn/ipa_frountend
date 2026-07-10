@@ -567,6 +567,21 @@ export function useBulkDispatchIdCards() {
   });
 }
 
+/**
+ * Network-wide admin roster (ADM-12): unscoped GET /admin/student —
+ * runtime-verified to return rows across all franchises when no franchiseId
+ * is sent.
+ */
+export function useAdminStudentsRoster(
+  params?: Omit<StudentPaginationParams, "franchiseId">,
+) {
+  return useQuery({
+    queryKey: ["admin-students", "roster", params ?? null],
+    queryFn: () => getPaginatedStudentsAdmin({ ...params }),
+    placeholderData: (prev) => prev,
+  });
+}
+
 export function useAdminStudentsByFranchise(
   franchiseId: string | null,
   params?: Omit<StudentPaginationParams, "franchiseId">,

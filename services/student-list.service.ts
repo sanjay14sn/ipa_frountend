@@ -29,6 +29,8 @@ export type StudentStatus = "active" | "inactive" | "completed";
 export interface StudentData {
   id: number;
   franchiseId: string;
+  /** Short franchise code segment (e.g. "017") — present on admin list rows. */
+  franchiseCode?: string;
   programId: number;
   name: string;
   rollNo: string;
@@ -183,6 +185,7 @@ export function mapStudentRow(row: Record<string, unknown>): StudentData {
   return {
     id: Number(row.id),
     franchiseId: String(row.franchiseId ?? ""),
+    franchiseCode: row.franchiseCode != null ? String(row.franchiseCode) : undefined,
     programId: Number(row.programId ?? 0),
     name: String(row.name ?? ""),
     rollNo: String(row.rollNo ?? ""),
