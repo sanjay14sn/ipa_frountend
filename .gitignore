@@ -40,3 +40,4 @@ next-env.d.ts
 yarn.lock
 bun.lock
 pnpm-lock.yaml.worktrees/
+playwright-report/
