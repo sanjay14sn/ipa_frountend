@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Boxes } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
@@ -307,15 +306,10 @@ export function InventorySection({
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">Inventory catalog</CardTitle>
+          {/* ADM-24: one line of orientation — detail lives in row tooltips. */}
           <p className="text-sm text-muted-foreground">
-            Manage the item master, stock foundation, reorder thresholds, and
-            level templates. Stock typically moves through PO receipts and
-            order allocation; use{" "}
-            <span className="inline-flex items-center gap-1 font-medium">
-              <Boxes className="h-3.5 w-3.5" /> Adjust
-            </span>{" "}
-            on a row to record manual corrections (recounts, damage, found
-            stock). Positive adjustments automatically replenish backorders.
+            The item master with stock levels; use a row&apos;s Adjust action
+            to record manual corrections.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">

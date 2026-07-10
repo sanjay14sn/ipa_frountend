@@ -62,14 +62,10 @@ describe("getAdminNav composition", () => {
     expect(getAdminNav(undefined)).toBe(ADMIN_NAV);
   });
 
-  it("super gets Programs + Admins in Overview and an Operations group", () => {
+  it("super gets Operations and Configuration groups (ADM-28)", () => {
     expect(getAdminNav("super")).toBe(SUPER_ADMIN_NAV);
     const overview = SUPER_ADMIN_NAV[0];
-    expect(overview.items.map((i) => i.title)).toEqual([
-      "Dashboard",
-      "Programs & Levels",
-      "Admins",
-    ]);
+    expect(overview.items.map((i) => i.title)).toEqual(["Dashboard"]);
     const management = SUPER_ADMIN_NAV[1];
     expect(management.items.some((i) => i.href === "/admin/operations")).toBe(
       false,
@@ -79,6 +75,12 @@ describe("getAdminNav composition", () => {
     expect(operations.items.map((i) => i.href)).toEqual([
       "/admin/operations",
       "/admin/regional-operations",
+    ]);
+    const configuration = SUPER_ADMIN_NAV[3];
+    expect(configuration.title).toBe("Configuration");
+    expect(configuration.items.map((i) => i.title)).toEqual([
+      "Programs & Levels",
+      "Admins",
     ]);
   });
 });

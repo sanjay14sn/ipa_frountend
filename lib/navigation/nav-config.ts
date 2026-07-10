@@ -93,17 +93,7 @@ export const ADMIN_NAV = freezeNav([
 export const SUPER_ADMIN_NAV = freezeNav([
   {
     title: "Overview",
-    items: [
-      ...ADMIN_NAV[0].items,
-      {
-        // ADM-27: training levels live here too — the label says so.
-        title: "Programs & Levels",
-        href: "/admin/programs",
-        icon: BookOpen,
-        match: "exact",
-      },
-      { title: "Admins", href: "/admin/admins", icon: ShieldCheck },
-    ],
+    items: [...ADMIN_NAV[0].items],
   },
   {
     title: "Management",
@@ -116,6 +106,21 @@ export const SUPER_ADMIN_NAV = freezeNav([
     items: [
       { title: "HQ", href: "/admin/operations", icon: ShoppingCart },
       { title: "Regional", href: "/admin/regional-operations", icon: Globe },
+    ],
+  },
+  {
+    // ADM-28: the two super-only configuration destinations get their own
+    // group instead of crowding Overview.
+    title: "Configuration",
+    items: [
+      {
+        // ADM-27: training levels live here too — the label says so.
+        title: "Programs & Levels",
+        href: "/admin/programs",
+        icon: BookOpen,
+        match: "exact",
+      },
+      { title: "Admins", href: "/admin/admins", icon: ShieldCheck },
     ],
   },
 ]);
