@@ -49,6 +49,9 @@ interface UnifiedMaterialRequestDialogProps {
   /** Students who have already ordered materials — eligible for custom (re-order)
    * items in the Custom Materials tab. */
   customEligibleStudents: StudentData[];
+  /** True while the page's student query is in flight — the student pickers
+   * show a loading row instead of a misleading "No results." */
+  studentsLoading?: boolean;
 }
 
 function getStudentLevelName(student: StudentData): string {
@@ -77,6 +80,7 @@ export default function UnifiedMaterialRequestDialog({
   onPaymentInitiated,
   eligibleStudents,
   customEligibleStudents,
+  studentsLoading = false,
 }: UnifiedMaterialRequestDialogProps) {
   const { courseInstructors, isLoading: ciListLoading } = useCourseInstructors(
     { page: 1, limit: 10_000 },
@@ -732,7 +736,12 @@ export default function UnifiedMaterialRequestDialog({
                   />
                 </div>
                 <div className="max-h-56 space-y-1 overflow-y-auto rounded-lg border border-border">
-                  {stuFiltered.length === 0 ? (
+                  {studentsLoading ? (
+                    <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading…
+                    </div>
+                  ) : stuFiltered.length === 0 ? (
                     <p className="px-3 py-4 text-center text-xs text-muted-foreground">
                       No results.
                     </p>
@@ -925,7 +934,12 @@ export default function UnifiedMaterialRequestDialog({
                   />
                 </div>
                 <div className="max-h-44 space-y-1 overflow-y-auto rounded-lg border border-border">
-                  {customStuFiltered.length === 0 ? (
+                  {studentsLoading ? (
+                    <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading…
+                    </div>
+                  ) : customStuFiltered.length === 0 ? (
                     <p className="px-3 py-4 text-center text-xs text-muted-foreground">
                       No eligible students.
                     </p>

@@ -14,7 +14,11 @@ import {
   invalidateAdminOrders,
   invalidateFranchiseeOrders,
 } from "@/hooks/api/order.hooks";
-import { TablePageShell } from "@/components/shared";
+import {
+  SummaryStatCard,
+  SummaryStatGrid,
+  TablePageShell,
+} from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import OrdersTable from "./components/OrdersTable";
 import dynamic from "next/dynamic";
@@ -144,7 +148,6 @@ export default function FranchiseeOrdersPage() {
     }
     return counts;
   }, [orders]);
-  const cancelledOrders = orderCounts.cancelled;
 
   async function handlePaymentSuccess(response: RazorpaySuccessResponse) {
     const pd = unifiedPaymentData;
@@ -289,17 +292,9 @@ export default function FranchiseeOrdersPage() {
     return <div>Loading...</div>;
   }
 
-  if (ordersLoading || studentsLoading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
+  // FR-18: no full-page spinner — header + CTA paint immediately; the table
+  // and KPI cells cover their own loading, and studentsLoading only gates the
+  // request modal's student pickers.
   return (
     <TablePageShell
       title="Material Orders"
@@ -312,11 +307,14 @@ export default function FranchiseeOrdersPage() {
       }
     >
 
-      {cancelledOrders > 0 ? (
-        <p className="text-sm text-muted-foreground">
-          {cancelledOrders} order{cancelledOrders !== 1 ? "s" : ""} cancelled.
-        </p>
-      ) : null}
+      {/* FR-17: the four computed counts finally render (the cancelled count
+          used to leak out as a lone caption line). */}
+      <SummaryStatGrid>
+        <SummaryStatCard label="Pending" value={orderCounts.pending} />
+        <SummaryStatCard label="Shipped" value={orderCounts.shipped} />
+        <SummaryStatCard label="Delivered" value={orderCounts.delivered} />
+        <SummaryStatCard label="Cancelled" value={orderCounts.cancelled} />
+      </SummaryStatGrid>
 
       {pendingOrderRetry && (
         <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -370,6 +368,7 @@ export default function FranchiseeOrdersPage() {
         }}
         eligibleStudents={eligibleStudents}
         customEligibleStudents={customEligibleStudents}
+        studentsLoading={studentsLoading}
       />
 
       {unifiedPaymentData && !unifiedPaymentData.isZeroAmount && unifiedPaymentData.amount > 0 ? (
