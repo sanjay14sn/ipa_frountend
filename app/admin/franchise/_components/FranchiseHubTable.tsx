@@ -209,7 +209,6 @@ export function FranchiseHubTable({
           {
             key: "emi",
             header: "EMI",
-            className: "min-w-[200px]",
             render: (item) => (
               <ReceivableCompactLine
                 summary={
@@ -229,10 +228,14 @@ export function FranchiseHubTable({
               // count of valid agreements instead of a stored "Active" status.
               const validCount = item.validAgreementsCount ?? 0;
               return (
-                <StatusBadge
-                  label={`${validCount} valid agreement${validCount === 1 ? "" : "s"}`}
-                  tone={validCount > 0 ? "success" : "neutral"}
-                />
+                <span
+                  title={`${validCount} valid agreement${validCount === 1 ? "" : "s"}`}
+                >
+                  <StatusBadge
+                    label={`${validCount} valid`}
+                    tone={validCount > 0 ? "success" : "neutral"}
+                  />
+                </span>
               );
             },
           },
@@ -336,12 +339,16 @@ export function FranchiseHubTable({
       columns={columns}
       getRowId={(item) => String(item.id)}
       renderMainCell={(item) => (
-        <TableMainCell
-          title={item.name}
-          subtitle={
-            item.code ? <span className="font-mono">{item.code}</span> : undefined
-          }
-        />
+        // Capped + truncated so long names can't inflate the column into a
+        // horizontal scroll; the full name is in the hover title.
+        <div className="max-w-[230px] truncate" title={item.name}>
+          <TableMainCell
+            title={item.name}
+            subtitle={
+              item.code ? <span className="font-mono">{item.code}</span> : undefined
+            }
+          />
+        </div>
       )}
       renderExpandedContent={(item) =>
         variant === "franchises" ? (

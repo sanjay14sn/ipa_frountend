@@ -202,11 +202,16 @@ export function AdminAgreementsSection({
         columns={columns}
         getRowId={(record) => String(record.id)}
         renderMainCell={(record) => (
-          <span className="font-medium">
+          // Capped + truncated so long franchise/program names can't force a
+          // horizontal scroll; full text in the hover title.
+          <div
+            className="max-w-[230px] truncate font-medium"
+            title={`${record.franchise?.name ?? record.franchiseId ?? "—"} - ${record.program?.name ?? record.programName ?? "—"}`}
+          >
             {record.franchise?.name ?? record.franchiseId ?? "—"}
             <span className="mx-1 text-muted-foreground">-</span>
             {record.program?.name ?? record.programName ?? "—"}
-          </span>
+          </div>
         )}
         searchPlaceholder="Search agreements by title..."
         onSearchChange={(value) => setSearchTerm(value)}
