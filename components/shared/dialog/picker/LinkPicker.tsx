@@ -208,7 +208,7 @@ export function LinkPicker<TLinked, TItem>({
 
           {/* RIGHT — pending list */}
           <div className="flex flex-col min-h-0 md:min-h-[260px] border-t md:border-t-0 border-border">
-            <div className="shrink-0 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-primary">
+            <div className="shrink-0 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
               {effectivePendingTitle}
             </div>
             <div

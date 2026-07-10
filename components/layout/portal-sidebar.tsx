@@ -92,7 +92,7 @@ export function PortalSidebar({
             key={group.title}
             className={cn("px-2 py-1", index === 0 ? "pt-1.5" : "pt-0")}
           >
-            <SidebarGroupLabel className="h-7 px-2 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/60">
+            <SidebarGroupLabel className="h-7 px-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-sidebar-foreground/60">
               {group.title}
             </SidebarGroupLabel>
             <SidebarGroupContent>

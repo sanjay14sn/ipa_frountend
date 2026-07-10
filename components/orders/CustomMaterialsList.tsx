@@ -38,7 +38,7 @@ export default function CustomMaterialsList({
             className="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
           >
             <div className="flex items-start gap-2 border-b border-border bg-muted/30 px-4 py-3">
-              <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-card-foreground ring-1 ring-border">
+              <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-card-foreground ring-1 ring-border">
                 Custom
               </span>
               <div className="min-w-0 flex-1">

@@ -156,7 +156,7 @@ export default function RequestIdModal({
 
         <div className="rounded-lg border border-border bg-card overflow-hidden">
           <div className="bg-muted/50 px-4 py-3 border-b border-border">
-            <div className="grid grid-cols-12 gap-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="grid grid-cols-12 gap-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               <div className="col-span-1">Select</div>
               <div className="col-span-3">Student</div>
               <div className="col-span-2">Roll No</div>

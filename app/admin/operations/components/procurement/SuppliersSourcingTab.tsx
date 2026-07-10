@@ -421,7 +421,7 @@ export function SuppliersSourcingTab({
             {sourcingSupplierId !== "" ? (
               <div className="rounded-lg border border-border bg-card px-3 py-2 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                     Existing sourcing
                   </div>
                   <div className="text-xs text-muted-foreground">

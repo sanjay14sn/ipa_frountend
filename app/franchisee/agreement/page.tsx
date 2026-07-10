@@ -1392,7 +1392,7 @@ function PostPayStep({
 }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         {step}
       </span>
       <p className="mt-3 text-sm font-medium text-card-foreground">{title}</p>

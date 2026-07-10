@@ -119,7 +119,8 @@ export function DetailField({
           mono && "rounded bg-muted px-1.5 py-1 font-mono text-xs font-normal",
         )}
       >
-        {value ?? "—"}
+        {/* CC-03: one empty-value glyph app-wide — em dash, never "-"/"N/A". */}
+        {value == null || value === "" ? "—" : value}
       </dd>
     </div>
   );

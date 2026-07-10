@@ -20,7 +20,7 @@ export function ContactPill({
         <Icon className="h-3 w-3 text-muted-foreground" />
       </div>
       <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
           {label}
         </p>
         <p className="truncate text-xs text-card-foreground">{value ?? "—"}</p>

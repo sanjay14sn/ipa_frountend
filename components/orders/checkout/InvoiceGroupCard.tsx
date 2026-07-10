@@ -80,7 +80,7 @@ export default function InvoiceGroupCard({
     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       <div className="flex items-start gap-2 border-b border-border bg-muted/30 px-4 py-3">
         <span
-          className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${kindStyles(kind)}`}
+          className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest ${kindStyles(kind)}`}
         >
           {kind}
         </span>
@@ -164,7 +164,7 @@ export default function InvoiceGroupCard({
 
       {tshirtBreakdown && tshirtBreakdown.length > 0 ? (
         <div className="border-b border-border">
-          <div className="bg-muted/20 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <div className="bg-muted/20 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             T-shirts
           </div>
           <div className="divide-y divide-border">
@@ -186,7 +186,7 @@ export default function InvoiceGroupCard({
       ) : null}
 
       <div className="border-b border-border bg-muted/20 px-4 py-2">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
           Items
         </div>
       </div>

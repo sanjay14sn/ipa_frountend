@@ -221,7 +221,7 @@ export function ReceiptsTab({
                       <div className="min-w-0 shrink-0 overflow-x-auto sm:overflow-visible">
                         <div className="flex w-max max-w-full shrink-0 items-center gap-2 rounded-md border bg-muted/30 px-1 py-1 sm:max-w-none sm:gap-0 sm:px-0 sm:py-1">
                           <div className="flex shrink-0 flex-col gap-0.5 px-2 py-0 sm:px-3">
-                            <span className="whitespace-nowrap text-xs font-medium uppercase tracking-wide leading-none text-muted-foreground">
+                            <span className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.08em] leading-none text-muted-foreground">
                               Ordered
                             </span>
                             <span className="flex h-8 items-center text-sm font-medium tabular-nums leading-none">
@@ -229,7 +229,7 @@ export function ReceiptsTab({
                             </span>
                           </div>
                           <div className="flex shrink-0 flex-col gap-0.5 px-2 py-0 sm:px-3">
-                            <span className="whitespace-nowrap text-xs font-medium uppercase tracking-wide leading-none text-muted-foreground">
+                            <span className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.08em] leading-none text-muted-foreground">
                               Prev. recv.
                             </span>
                             <span className="flex h-8 items-center text-sm font-medium tabular-nums leading-none">
@@ -237,7 +237,7 @@ export function ReceiptsTab({
                             </span>
                           </div>
                           <div className="flex shrink-0 flex-col gap-0.5 px-2 py-0 sm:px-3">
-                            <span className="whitespace-nowrap text-xs font-medium uppercase tracking-wide leading-none text-muted-foreground">
+                            <span className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.08em] leading-none text-muted-foreground">
                               Open
                             </span>
                             <span className="flex h-8 items-center text-sm font-semibold tabular-nums leading-none">
@@ -245,7 +245,7 @@ export function ReceiptsTab({
                             </span>
                           </div>
                           <div className="flex min-w-[6.75rem] shrink-0 flex-col gap-0.5 border-l border-border/60 px-2 py-0 sm:min-w-[7rem] sm:px-3">
-                            <span className="whitespace-nowrap text-xs font-medium uppercase tracking-wide leading-none text-muted-foreground">
+                            <span className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.08em] leading-none text-muted-foreground">
                               Unit cost
                             </span>
                             <span className="flex h-8 items-center text-sm font-medium tabular-nums leading-none">

@@ -509,7 +509,7 @@ export default function UnifiedMaterialRequestDialog({
             >
               {/* Kits */}
               <section>
-                <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   Kits
                 </h4>
                 {streamsQuery.isLoading ? (
@@ -585,7 +585,7 @@ export default function UnifiedMaterialRequestDialog({
                           </div>
 
                           {/* Column labels */}
-                          <div className="mt-3 grid grid-cols-[8rem_1fr_auto] gap-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          <div className="mt-3 grid grid-cols-[8rem_1fr_auto] gap-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                             <span>Qty</span>
                             <span>T-shirt size</span>
                             <span aria-hidden />
@@ -985,7 +985,7 @@ export default function UnifiedMaterialRequestDialog({
 
               {selectedCustomStudentIds.length > 0 ? (
                 <section className="space-y-3">
-                  <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                     Items
                   </h4>
                   {availableQuery.isLoading ? (
@@ -1148,7 +1148,7 @@ export default function UnifiedMaterialRequestDialog({
               className="mt-0 min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 focus-visible:outline-none"
             >
               <section>
-                <h4 className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <h4 className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   <Package className="h-3.5 w-3.5" />
                   Franchise kit
                 </h4>
@@ -1306,7 +1306,7 @@ export default function UnifiedMaterialRequestDialog({
         sticky
         leftSlot={
           <div className="flex flex-col">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               Estimated total
             </span>
             <span className="text-lg font-semibold tabular-nums text-card-foreground">

@@ -117,14 +117,14 @@ export default function CIDashboardPage() {
           <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5">
             <CIStatCard
               label="Current Trained Level"
-              value={currentTrainedLevel?.trainingLevelName ?? "-"}
+              value={currentTrainedLevel?.trainingLevelName ?? "—"}
               sub={currentTrainedLevel ? `Completed ${formatDate(currentTrainedLevel.completedAt)}` : "No completed level yet"}
               icon={Trophy}
               href="/ci/training/progress"
             />
             <CIStatCard
               label="Next Training"
-              value={nextTraining?.trainingLevelName ?? "-"}
+              value={nextTraining?.trainingLevelName ?? "—"}
               sub={nextTraining ? `${formatDate(nextTraining.sessionDate)} | ${nextTraining.assignmentStatus}` : "No upcoming session"}
               icon={CalendarDays}
               href="/ci/training/upcoming"

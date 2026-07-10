@@ -575,7 +575,7 @@ function CompleteSessionModal({
         ) : (
           <div className="space-y-4 pt-2">
             <div className="overflow-hidden rounded-xl border">
-              <div className="grid grid-cols-[1.3fr_1fr_120px_120px_1fr] gap-3 bg-muted/40 px-4 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <div className="grid grid-cols-[1.3fr_1fr_120px_120px_1fr] gap-3 bg-muted/40 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 <div>Course instructor</div>
                 <div>Franchise</div>
                 <div>Theory</div>

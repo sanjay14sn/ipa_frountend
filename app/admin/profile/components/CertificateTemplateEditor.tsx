@@ -280,7 +280,7 @@ export function CertificateTemplateEditor({
         <div className="border-b border-border lg:border-b-0 lg:border-r">
           {templatePreviewUrl ? (
             <div className="overflow-hidden">
-              <div className="border-b border-border bg-primary px-4 py-1.5 text-[11px] font-medium uppercase tracking-wide text-white/90">
+              <div className="border-b border-border bg-primary px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/90">
                 {templateImageUrl
                   ? `PDF · ${pageSizeLabel}`
                   : "PDF · loading…"}
@@ -437,7 +437,7 @@ export function CertificateTemplateEditor({
           {/* Fields list */}
           <div className="px-4 py-3 space-y-2">
             <div className="flex items-center justify-between">
-              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 Fields
               </h4>
               <DropdownMenu>
@@ -538,7 +538,7 @@ export function CertificateTemplateEditor({
           {/* Selected field properties */}
           {selectedFieldKey && selectedField ? (
             <div className="px-4 py-3 space-y-3">
-              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 Selected ·{" "}
                 <span className="text-card-foreground">
                   {selectedField.label ?? selectedDef?.label ?? selectedFieldKey}
@@ -645,7 +645,7 @@ export function CertificateTemplateEditor({
           {/* Source data (the field key IS the binding) */}
           {selectedFieldKey ? (
             <div className="px-4 py-3 space-y-1.5">
-              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 Source data
               </h4>
               <p className="text-sm text-card-foreground">

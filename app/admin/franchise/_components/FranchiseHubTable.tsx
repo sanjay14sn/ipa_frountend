@@ -66,8 +66,8 @@ function requestedPrograms(item: FranchiseData): string[] {
   return [...new Set(names)];
 }
 
-function primaryRequestedProgram(item: FranchiseData): string {
-  return requestedPrograms(item)[0] ?? "N/A";
+function primaryRequestedProgram(item: FranchiseData): string | undefined {
+  return requestedPrograms(item)[0];
 }
 
 function ApplicationsExpanded({ item }: { item: FranchiseData }) {

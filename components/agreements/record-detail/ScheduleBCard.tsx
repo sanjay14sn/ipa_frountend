@@ -276,7 +276,7 @@ export function ScheduleBCard({
                 IPA
               </div>
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                   Franchisor
                 </p>
                 <p className="font-medium text-sm">{data.centreName}</p>
@@ -292,7 +292,7 @@ export function ScheduleBCard({
                 {franchiseeInitials || "??"}
               </div>
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                   Franchisee
                 </p>
                 <p className="font-medium text-sm">{data.franchiseeName}</p>

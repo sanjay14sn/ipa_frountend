@@ -184,7 +184,7 @@ export function CIAgreementDetail({
                       <Phone className="h-3 w-3 text-muted-foreground" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Phone</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Phone</p>
                       <p className="text-xs truncate">{agreement.franchisee?.phone ?? "—"}</p>
                     </div>
                   </div>
@@ -193,7 +193,7 @@ export function CIAgreementDetail({
                       <Mail className="h-3 w-3 text-muted-foreground" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Email</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Email</p>
                       <p className="text-xs truncate">{agreement.franchisee?.mail ?? "—"}</p>
                     </div>
                   </div>

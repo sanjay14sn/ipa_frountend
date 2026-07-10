@@ -33,7 +33,7 @@ export function FranchiseTableExpanded({ item }: { item: FranchiseData }) {
     <ExpandedDetailSurface>
       <ExpandedDetailSection title="Franchise overview">
         <DetailFieldsGrid columns={3}>
-          <DetailField label="Type" value={item.type ?? "-"} />
+          <DetailField label="Type" value={item.type} />
           <DetailField label="Location" value={location} />
           <DetailField label="Created" value={formatDate(item.createdAt)} />
           <DetailField label="Programs" value={programLabels(agreements)} span={3} />
@@ -44,15 +44,15 @@ export function FranchiseTableExpanded({ item }: { item: FranchiseData }) {
 
       <ExpandedDetailSection title="Franchisee information">
         <DetailFieldsGrid columns={3}>
-          <DetailField label="Name" value={franchisee?.name ?? "-"} />
+          <DetailField label="Name" value={franchisee?.name} />
           <DetailField label="Email" value={franchiseeMail(franchisee)} />
-          <DetailField label="Phone" value={franchisee?.phone ?? "-"} />
+          <DetailField label="Phone" value={franchisee?.phone} />
           <DetailField
             label="Communication address"
-            value={franchisee?.communicationAddress ?? "-"}
+            value={franchisee?.communicationAddress}
             span={2}
           />
-          <DetailField label="Reference" value={franchisee?.reference ?? "-"} />
+          <DetailField label="Reference" value={franchisee?.reference} />
         </DetailFieldsGrid>
       </ExpandedDetailSection>
 

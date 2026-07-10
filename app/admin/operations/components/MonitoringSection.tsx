@@ -129,7 +129,7 @@ function SummaryCell({ item }: { item: OperationsMonitoringSummaryItem }) {
   return (
     <div className="space-y-3 px-5 py-5 sm:px-6">
       <div className="flex items-center justify-between gap-3">
-        <div className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           {item.label}
         </div>
         <span className={cn("h-2.5 w-2.5 rounded-full", toneDotClass(item.tone))} />
@@ -246,7 +246,7 @@ export function MonitoringSection({
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-3">
-                  <Badge className="border-primary/20 bg-primary/10 uppercase tracking-[0.18em] text-primary hover:bg-primary/10">
+                  <Badge className="border-primary/20 bg-primary/10 uppercase tracking-[0.16em] text-primary hover:bg-primary/10">
                     {panel.label}
                   </Badge>
                   <h3 className="text-2xl text-card-foreground">{panel.title}</h3>

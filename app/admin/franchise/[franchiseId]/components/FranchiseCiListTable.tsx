@@ -34,7 +34,7 @@ interface FranchiseCiListTableProps {
 }
 
 function fmtDate(value: Date | string | undefined): string {
-  if (!value) return "N/A";
+  if (!value) return "—";
   return formatDate(value);
 }
 
@@ -265,15 +265,15 @@ export function FranchiseCiListTable({ franchiseId }: FranchiseCiListTableProps)
             <ExpandedDetailSurface>
               <ExpandedDetailSection title="Course Instructor Information">
                 <DetailFieldsGrid columns={3}>
-                  <DetailField label="Instructor ID" value={c.instructorId || "N/A"} mono />
-                  <DetailField label="Email"         value={c.mail || "N/A"} />
-                  <DetailField label="Phone"         value={c.phone || "N/A"} />
+                  <DetailField label="Instructor ID" value={c.instructorId} mono />
+                  <DetailField label="Email"         value={c.mail} />
+                  <DetailField label="Phone"         value={c.phone} />
                   <DetailField label="Date of birth" value={fmtDate(c.dob)} />
-                  <DetailField label="Blood group"   value={c.bloodGroup || "N/A"} />
-                  <DetailField label="Education"     value={c.education || "N/A"} />
-                  <DetailField label="Occupation"    value={c.occupation || "N/A"} />
-                  <DetailField label="Status"        value={c.status || "N/A"} />
-                  <DetailField label="Address"       value={c.address || "N/A"} span={3} />
+                  <DetailField label="Blood group"   value={c.bloodGroup} />
+                  <DetailField label="Education"     value={c.education} />
+                  <DetailField label="Occupation"    value={c.occupation} />
+                  <DetailField label="Status"        value={c.status} />
+                  <DetailField label="Address"       value={c.address} span={3} />
                 </DetailFieldsGrid>
               </ExpandedDetailSection>
 
