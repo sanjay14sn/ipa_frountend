@@ -1,16 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
-import { ConfirmDialog } from "@/components/shared/dialog";
 import type { StudentData } from "@/services/student.service";
-import {
-  deleteStudentWithRevalidation,
-  useAdminStudentsByFranchise,
-} from "@/hooks/api/student.hooks";
+import { useAdminStudentsByFranchise } from "@/hooks/api/student.hooks";
 import EditStudentModal from "@/components/students/EditStudentModal";
 import StudentsTable from "@/components/students/StudentsTable";
-import { sendClientLog } from "@/lib/client-telemetry";
 
 interface FranchiseStudentsTableProps {
   franchiseId: string;
@@ -27,8 +21,6 @@ export function FranchiseStudentsTable({ franchiseId }: FranchiseStudentsTablePr
 
   const [editStudent, setEditStudent] = useState<StudentData | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [deleteStudentId, setDeleteStudentId] = useState<string | null>(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const { data, isLoading } = useAdminStudentsByFranchise(
     franchiseId || null,
@@ -77,10 +69,6 @@ export function FranchiseStudentsTable({ franchiseId }: FranchiseStudentsTablePr
           setEditStudent(student);
           setIsEditModalOpen(true);
         }}
-        onStudentDelete={(studentId) => {
-          setDeleteStudentId(studentId);
-          setIsDeleteModalOpen(true);
-        }}
       />
 
       <EditStudentModal
@@ -94,25 +82,6 @@ export function FranchiseStudentsTable({ franchiseId }: FranchiseStudentsTablePr
         }}
       />
 
-      <ConfirmDialog
-        open={isDeleteModalOpen}
-        onOpenChange={setIsDeleteModalOpen}
-        variant="destructive"
-        title="Delete Student"
-        description="Are you sure you want to delete this student? This action cannot be undone."
-        confirmLabel="Delete"
-        onConfirm={async () => {
-          if (!deleteStudentId) return;
-          try {
-            await deleteStudentWithRevalidation(Number(deleteStudentId));
-            setIsDeleteModalOpen(false);
-            setDeleteStudentId(null);
-          } catch (error) {
-            sendClientLog({ level: "error", event: "student-delete-error", message: "Error deleting student", context: { error } });
-            toast.error("Failed to delete student");
-          }
-        }}
-      />
     </>
   );
 }

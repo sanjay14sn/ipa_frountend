@@ -2,22 +2,16 @@
 
 import { useState } from "react";
 import { PageSkeleton } from "@/components/shared";
-import { toast } from "sonner";
 import { CreditCard, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/shared/dialog";
 import { useUser } from "@/context/user-context";
 import type { StudentData } from "@/services/student.service";
 import { StudentIdStatus } from "@/services/student.service";
-import {
-  deleteStudentWithRevalidation,
-  useStudents,
-} from "@/hooks/api/student.hooks";
+import { useStudents } from "@/hooks/api/student.hooks";
 import AddStudentModal from "./components/AddStudentModal";
 import EditStudentModal from "@/components/students/EditStudentModal";
 import RequestIdModal from "./components/RequestIdModal";
 import StudentsTable from "@/components/students/StudentsTable";
-import { sendClientLog } from "@/lib/client-telemetry";
 import { useListParams } from "@/hooks/use-list-params";
 
 export function StudentsManageSection() {
@@ -60,8 +54,6 @@ export function StudentsManageSection() {
 
   const [editStudent, setEditStudent] = useState<StudentData | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [deleteStudentId, setDeleteStudentId] = useState<string | null>(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isRequestIdModalOpen, setIsRequestIdModalOpen] = useState(false);
 
@@ -100,10 +92,6 @@ export function StudentsManageSection() {
           );
         }}
         onStudentUpdate={() => void revalidate()}
-        onStudentDelete={(studentId) => {
-          setDeleteStudentId(studentId);
-          setIsDeleteModalOpen(true);
-        }}
         onStudentEdit={(student) => {
           setEditStudent(student);
           setIsEditModalOpen(true);
@@ -135,27 +123,6 @@ export function StudentsManageSection() {
           setIsEditModalOpen(false);
           setEditStudent(null);
           void revalidate();
-        }}
-      />
-
-      <ConfirmDialog
-        open={isDeleteModalOpen}
-        onOpenChange={setIsDeleteModalOpen}
-        variant="destructive"
-        title="Delete Student"
-        description="Are you sure you want to delete this student? This action cannot be undone."
-        confirmLabel="Delete"
-        onConfirm={async () => {
-          if (!deleteStudentId) return;
-          try {
-            await deleteStudentWithRevalidation(Number(deleteStudentId));
-            setIsDeleteModalOpen(false);
-            setDeleteStudentId(null);
-            void revalidate();
-          } catch (error) {
-            sendClientLog({ level: "error", event: "student-delete-error", message: "Error deleting student", context: { error } });
-            toast.error("Failed to delete student");
-          }
         }}
       />
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, Award, CalendarClock, CreditCard, Edit, Trash2 } from "lucide-react";
+import { AlertTriangle, Award, CalendarClock, CreditCard, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable, StatusBadge, type StatusTone } from "@/components/shared";
@@ -46,7 +46,6 @@ interface StudentsTableProps {
   onFilterChange?: (key: string, value: string) => void;
   onSortChange?: (sortBy: string, sortOrder: "ASC" | "DESC") => void;
   onStudentUpdate?: (updatedStudent: StudentData) => void;
-  onStudentDelete?: (studentId: string) => void;
   onStudentEdit?: (student: StudentData) => void;
   onRequestIds?: () => void;
   toolbarActions?: ReactNode;
@@ -82,7 +81,6 @@ export default function StudentsTable({
   isLoading,
   onFilterChange,
   onSortChange,
-  onStudentDelete,
   onStudentEdit,
   onRequestIds,
   toolbarActions,
@@ -184,16 +182,6 @@ export default function StudentsTable({
             aria-label="Edit student"
           >
             <Edit className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 shrink-0 p-0"
-            onClick={() => onStudentDelete?.(student.id.toString())}
-            title="Delete student"
-            aria-label="Delete student"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
       ),

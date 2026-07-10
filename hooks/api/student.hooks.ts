@@ -10,7 +10,6 @@ import {
   getAllStudents,
   createStudent,
   updateStudent,
-  deleteStudent,
   requestStudentIds,
   issueIdCard,
   getAllRequestedIdDetails,
@@ -356,15 +355,6 @@ export async function updateStudentAdminWithRevalidation(
     /* bridge not mounted */
   }
   return result;
-}
-
-export async function deleteStudentWithRevalidation(studentId: number) {
-  await deleteStudent(studentId);
-  try {
-    invalidateStudentLists(getQueryClientBridge());
-  } catch {
-    /* ignore */
-  }
 }
 
 export async function requestStudentIdsWithRevalidation(studentIds: number[]) {
