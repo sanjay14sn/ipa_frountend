@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
-import { PageHeaderCard } from "@/components/shared";
+import { LastUpdated, PageHeaderCard, StatCell } from "@/components/shared";
 import { formatDate } from "@/lib/date-utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,9 +15,8 @@ import {
   IndianRupee,
   Package,
   ShoppingCart,
-  TrendingDown,
-  TrendingUp,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/context/user-context";
@@ -39,71 +38,17 @@ import type {
   ReceivableInstallmentSummary,
 } from "@/services/agreement.service";
 
-interface StatCardProps {
+/**
+ * FR-01: stat cells carry NO trend props — R4 bans trend arrows and percent
+ * badges. Attention travels through chips instead (FR-02/FR-03).
+ */
+interface StatCellConfig {
   label: string;
   value: string;
   sub?: string;
-  icon: ElementType;
-  trend?: { value: number; up: boolean };
-  href?: string;
-}
-
-function StatCard({ label, value, sub, icon: Icon, trend, href }: StatCardProps) {
-  const content = (
-    <>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-            <Icon className="h-4 w-4" />
-          </span>
-          {label}
-        </div>
-        {trend ? (
-          <span
-            className={cn(
-              "inline-flex items-center gap-0.5 text-xs font-medium",
-              trend.up ? "text-emerald-600" : "text-amber-600",
-            )}
-          >
-            {trend.up ? (
-              <TrendingUp className="h-3 w-3" />
-            ) : (
-              <TrendingDown className="h-3 w-3" />
-            )}
-            {trend.value}%
-          </span>
-        ) : null}
-      </div>
-      <div>
-        <p className="text-4xl font-normal leading-none text-card-foreground">
-          {value}
-        </p>
-        {sub ? (
-          <p className="mt-1 max-w-44 text-xs leading-snug text-muted-foreground">
-            {sub}
-          </p>
-        ) : null}
-      </div>
-    </>
-  );
-
-  if (href) {
-    return (
-      <Link
-        href={href}
-        className="group block space-y-2 px-4 py-4 transition-colors hover:bg-accent sm:px-5"
-        aria-label={`${label}: open franchise fee payment details`}
-      >
-        {content}
-      </Link>
-    );
-  }
-
-  return (
-    <div className="space-y-2 px-4 py-4 sm:px-5">
-      {content}
-    </div>
-  );
+  icon: LucideIcon;
+  pendingChip?: { count: number; href: string };
+  alertChip?: { label: string; href?: string };
 }
 
 interface QuickLinkProps {
@@ -276,7 +221,7 @@ function buildFranchiseFeeCardDisplay({
   upcomingAmount: number | null;
   upcomingDueAt: string | null;
   hasSchedule: boolean;
-}): Pick<StatCardProps, "value" | "sub"> {
+}): Pick<StatCellConfig, "value" | "sub"> {
   const hasUpcoming = upcomingAmount != null && upcomingAmount > 0;
   const upcomingLabel = hasUpcoming
     ? `Next ${formatRupees(upcomingAmount)}${
@@ -523,8 +468,13 @@ export default function FranchiseeDashboard() {
 
   const loading = canFetch && (statsQuery.isLoading || ordersQuery.isLoading);
 
-  const pct = (part: number, whole: number) =>
-    whole > 0 ? Math.round((part / whole) * 100) : 0;
+  // FR-04 (R5): freshness + manual refetch across the dashboard queries.
+  const handleRefresh = () => {
+    void statsQuery.refetch();
+    void ordersQuery.revalidate();
+    void agreementsQuery.refetch();
+    void emiAgreementQuery.refetch();
+  };
 
   useEffect(() => {
     if (user?.role === "franchisee" && !isOperational) {
@@ -544,19 +494,17 @@ export default function FranchiseeDashboard() {
     );
   }
 
-  const statCards: StatCardProps[] = [
+  const statCards: StatCellConfig[] = [
     {
+      // FR-03: overdue EMIs show a red "Overdue" chip deep-linking to the
+      // agreements tab — never the old fake 100%-down trend.
       label: "Franchise Fee Paid",
       value: franchiseFeeCard.value,
       sub: franchiseFeeCard.sub,
       icon: IndianRupee,
-      href: emiAgreement ? "/franchisee/franchise?tab=agreements" : undefined,
-      trend:
+      alertChip:
         emiOverdue > 0
-          ? {
-              value: 100,
-              up: false,
-            }
+          ? { label: "Overdue", href: "/franchisee/franchise?tab=agreements" }
           : undefined,
     },
     {
@@ -567,67 +515,33 @@ export default function FranchiseeDashboard() {
           ? `${stats.students.active} active`
           : undefined,
       icon: Users,
-      trend:
-        stats.students.active > 0
-          ? {
-              value: pct(stats.students.active, stats.students.total),
-              up: true,
-            }
-          : undefined,
     },
     {
       label: "Course Instructors",
       value: stats.courseInstructors.total.toString(),
-      sub:
-        stats.courseInstructors.pending > 0
-          ? `${stats.courseInstructors.pending} pending`
-          : undefined,
       icon: GraduationCap,
-      trend:
-        stats.courseInstructors.pending > 0
-          ? {
-              value: pct(
-                stats.courseInstructors.pending,
-                stats.courseInstructors.total,
-              ),
-              up: false,
-            }
-          : undefined,
+      pendingChip: {
+        count: stats.courseInstructors.pending,
+        href: "/franchisee/course-instructors",
+      },
     },
     {
       label: "Total Orders",
       value: stats.orders.total.toString(),
-      sub:
-        stats.orders.pending > 0
-          ? `${stats.orders.pending} pending`
-          : undefined,
       icon: ShoppingCart,
-      trend:
-        stats.orders.pending > 0
-          ? {
-              value: pct(stats.orders.pending, stats.orders.total),
-              up: false,
-            }
-          : undefined,
+      pendingChip: {
+        count: stats.orders.pending,
+        href: "/franchisee/orders",
+      },
     },
     {
       label: "Certificates",
       value: stats.certificates.total.toString(),
-      sub:
-        stats.certificates.pending > 0
-          ? `${stats.certificates.pending} pending`
-          : undefined,
       icon: Award,
-      trend:
-        stats.certificates.pending > 0
-          ? {
-              value: pct(
-                stats.certificates.pending,
-                stats.certificates.total,
-              ),
-              up: false,
-            }
-          : undefined,
+      pendingChip: {
+        count: stats.certificates.pending,
+        href: "/franchisee/students?tab=certificates",
+      },
     },
   ];
 
@@ -677,25 +591,32 @@ export default function FranchiseeDashboard() {
           title={user.franchiseName ?? "Franchise Dashboard"}
           description="Overview of your franchise activities."
           actions={
-            isOperational ? (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRequestProgramsModalOpen(true)}
-                >
-                  Request Programs
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRequestModalOpen(true)}
-                >
-                  <Building2 className="h-4 w-4" />
-                  Request New Franchise
-                </Button>
-              </>
-            ) : undefined
+            <>
+              <LastUpdated
+                updatedAt={statsQuery.dataUpdatedAt}
+                onRefresh={handleRefresh}
+                isRefreshing={statsQuery.isFetching}
+              />
+              {isOperational ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRequestProgramsModalOpen(true)}
+                  >
+                    Request Programs
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRequestModalOpen(true)}
+                  >
+                    <Building2 className="h-4 w-4" />
+                    Request New Franchise
+                  </Button>
+                </>
+              ) : null}
+            </>
           }
         />
 
@@ -712,7 +633,7 @@ export default function FranchiseeDashboard() {
         ) : (
           <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5">
             {statCards.map((s) => (
-              <StatCard key={s.label} {...s} />
+              <StatCell key={s.label} {...s} />
             ))}
           </div>
         )}
