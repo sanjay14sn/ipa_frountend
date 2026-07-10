@@ -8,11 +8,14 @@
   }
 }
 
+/* ── design tokens: BEGIN ──
+   PORT-02: a future app copies exactly two artifacts — this marked block and
+   tailwind.preset.ts. See docs/design-system.md for the adoption recipe. */
 @layer base {
   :root {
     /* IPA design system — light-only, dark-ready.
        Every token is an HSL channel triplet consumed as hsl(var(--x) / <alpha>)
-       via tailwind.config.ts. A future dark mode is a single .dark {} block
+       via tailwind.preset.ts. A future dark mode is a single .dark {} block
        re-declaring channel values — no component changes. */
 
     /* Brand constants — never used directly on UI surfaces; exposed as flat
@@ -84,6 +87,7 @@
     --sidebar-ring: 45 100% 49%; /* yellow rail focus ring */
   }
 }
+/* ── design tokens: END ── */
 
 @layer base {
   * {
