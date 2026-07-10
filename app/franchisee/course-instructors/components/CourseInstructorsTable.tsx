@@ -1,62 +1,37 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared";
-import { Edit, Trash2, BarChart2 } from "lucide-react";
+import { BarChart2 } from "lucide-react";
 import { DataTable } from "@/components/shared";
 import type {
   DataTableColumn,
   DataTableFilter,
   DataTableSortOption,
 } from "@/components/shared";
-import {
-  CourseInstructorData,
-  getCITrainingProgress,
-} from "@/services/course-instructor.service";
+import { CourseInstructorData } from "@/services/course-instructor.service";
 import CourseInstructorDetails from "./CourseInstructorDetails";
 import { TrainingProgressModal } from "@/components/ci-training/TrainingProgressModal";
 
-function CILevelBadge({ instructorId }: { instructorId: number }) {
-  const { data: progress } = useQuery({
-    queryKey: ["ci-training-progress", instructorId],
-    queryFn: () => getCITrainingProgress(instructorId),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const highestCompleted = progress?.trainings
-    ?.filter((t) => t.isCompleted)
-    .sort((a, b) => (b.displayOrder ?? 0) - (a.displayOrder ?? 0))[0];
-
-  if (!highestCompleted) return null;
-
-  return (
-    <Badge variant="default" className="mt-1 text-xs">
-      {highestCompleted.trainingLevelName}
-    </Badge>
-  );
-}
-
 interface CourseInstructorsTableProps {
   courseInstructors?: CourseInstructorData[];
+  loading?: boolean;
+  error?: unknown;
+  onRetry?: () => void;
   onCourseInstructorUpdate?: (
     updatedCourseInstructor: CourseInstructorData
   ) => void;
-  onCourseInstructorDelete?: (courseInstructorId: string) => void;
-  onCourseInstructorEdit?: (courseInstructor: CourseInstructorData) => void;
 }
 
 export default function CourseInstructorsTable({
   courseInstructors,
-  onCourseInstructorUpdate,
-  onCourseInstructorDelete,
-  onCourseInstructorEdit,
+  loading = false,
+  error,
+  onRetry,
 }: CourseInstructorsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [bloodGroupFilter, setBloodGroupFilter] = useState<string>("all");
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"name" | "dateJoined" | "city">(
     "dateJoined"
@@ -83,11 +58,9 @@ export default function CourseInstructorsTable({
         statusFilter === "all" ||
         (ci.operationalStatus ?? "void") === statusFilter;
 
-      const matchesBloodGroup =
-        bloodGroupFilter === "all" || ci.bloodGroup === bloodGroupFilter;
       const matchesCity = cityFilter === "all" || ci.city === cityFilter;
 
-      return matchesSearch && matchesStatus && matchesBloodGroup && matchesCity;
+      return matchesSearch && matchesStatus && matchesCity;
     });
 
     filtered.sort((a, b) => {
@@ -108,7 +81,7 @@ export default function CourseInstructorsTable({
     });
 
     return filtered;
-  }, [courseInstructors, searchTerm, statusFilter, bloodGroupFilter, cityFilter, sortBy, sortOrder]);
+  }, [courseInstructors, searchTerm, statusFilter, cityFilter, sortBy, sortOrder]);
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -118,9 +91,6 @@ export default function CourseInstructorsTable({
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
 
-  const uniqueBloodGroups = [
-    ...new Set(courseInstructors?.map((ci) => ci.bloodGroup).filter(Boolean)),
-  ];
   const uniqueCities = [
     ...new Set(courseInstructors?.map((ci) => ci.city).filter(Boolean)),
   ];
@@ -130,12 +100,9 @@ export default function CourseInstructorsTable({
       key: "instructor",
       header: "Instructor",
     },
-    {
-      key: "eligibility",
-      header: "Eligibility",
-      className: "w-[180px]",
-      render: (ci) => <CILevelBadge instructorId={ci.id} />,
-    },
+    // FR-15: no per-row eligibility column — it fired one training-progress
+    // request per row. Levels live in the expanded details and the progress
+    // modal, both of which fetch on demand.
     {
       key: "status",
       header: "Status",
@@ -145,7 +112,7 @@ export default function CourseInstructorsTable({
     {
       key: "actions",
       header: "Actions",
-      className: "w-[140px]",
+      className: "w-[80px]",
       render: (ci) => (
         <div className="flex items-center gap-1">
           <Button
@@ -157,24 +124,6 @@ export default function CourseInstructorsTable({
             onClick={() => setProgressModal({ id: ci.id, name: ci.name })}
           >
             <BarChart2 className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            aria-label="Edit course instructor"
-            onClick={() => onCourseInstructorEdit?.(ci)}
-          >
-            <Edit className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            aria-label="Delete course instructor"
-            onClick={() => onCourseInstructorDelete?.(ci.id.toString())}
-          >
-            <Trash2 className="w-4 h-4" />
           </Button>
         </div>
       ),
@@ -190,15 +139,6 @@ export default function CourseInstructorsTable({
         { value: "valid", label: "Valid" },
         { value: "expired", label: "Expired" },
         { value: "void", label: "Void" },
-      ],
-      defaultValue: "all",
-    },
-    {
-      key: "bloodGroup",
-      label: "Blood Group",
-      options: [
-        { value: "all", label: "All Blood Groups" },
-        ...uniqueBloodGroups.map((bg) => ({ value: bg, label: bg })),
       ],
       defaultValue: "all",
     },
@@ -223,7 +163,7 @@ export default function CourseInstructorsTable({
     <>
     <DataTable
       data={paginatedData}
-      loading={false}
+      loading={loading}
       columns={columns}
       getRowId={(ci) => ci.id.toString()}
       renderMainCell={(ci) => (
@@ -244,7 +184,6 @@ export default function CourseInstructorsTable({
       filters={filters}
       onFilterChange={(key, value) => {
         if (key === "status") setStatusFilter(value as string);
-        else if (key === "bloodGroup") setBloodGroupFilter(value as string);
         else if (key === "city") setCityFilter(value as string);
       }}
       sortOptions={sortOptions}
@@ -258,6 +197,9 @@ export default function CourseInstructorsTable({
       currentPage={currentPage}
       onPageChange={setCurrentPage}
       itemsPerPage={itemsPerPage}
+      error={error}
+      onRetry={onRetry}
+      errorMessage="Couldn't load course instructors."
       emptyMessage="No course instructors found matching your criteria"
       resultsText={(count, total) =>
         `Showing ${count} of ${total} course instructors`

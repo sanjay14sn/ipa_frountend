@@ -10,19 +10,21 @@ import type { CourseInstructorData } from "@/services/course-instructor.service"
 interface CourseInstructorTabsProps {
   courseInstructors: CourseInstructorData[];
   approvalPendingCourseInstructors: CourseInstructorData[];
+  loading?: boolean;
+  error?: unknown;
+  onRetry?: () => void;
   onCourseInstructorUpdate?: (
     updatedCourseInstructor: CourseInstructorData,
   ) => void;
-  onCourseInstructorDelete?: (courseInstructorId: string) => void;
-  onCourseInstructorEdit?: (courseInstructor: CourseInstructorData) => void;
 }
 
 export default function CourseInstructorTabs({
   courseInstructors,
   approvalPendingCourseInstructors,
+  loading,
+  error,
+  onRetry,
   onCourseInstructorUpdate,
-  onCourseInstructorDelete,
-  onCourseInstructorEdit,
 }: CourseInstructorTabsProps) {
   return (
     <Tabs defaultValue="regular" className="space-y-4">
@@ -43,9 +45,10 @@ export default function CourseInstructorTabs({
       <TabsContent value="regular">
         <CourseInstructorsTable
           courseInstructors={courseInstructors}
+          loading={loading}
+          error={error}
+          onRetry={onRetry}
           onCourseInstructorUpdate={onCourseInstructorUpdate}
-          onCourseInstructorDelete={onCourseInstructorDelete}
-          onCourseInstructorEdit={onCourseInstructorEdit}
         />
       </TabsContent>
 
