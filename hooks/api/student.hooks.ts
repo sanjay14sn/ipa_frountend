@@ -14,6 +14,7 @@ import {
   requestStudentIds,
   issueIdCard,
   getAllRequestedIdDetails,
+  getRequestedIdCount,
   getIssuedIdDetails,
   getAllRequestedCertificateDetails,
   getIssuedCertificateDetails,
@@ -101,6 +102,18 @@ export function useStudents(params?: StudentPaginationParams) {
     error: q.error,
     revalidate: q.refetch,
   };
+}
+
+/**
+ * Open ID-card request count for the admin dashboard (ADM-04). Consumers
+ * must hide the count on error/loading — `data` stays undefined; never
+ * render a fake 0.
+ */
+export function useRequestedIdCount() {
+  return useQuery({
+    queryKey: queryKeys.studentAdmin.requestedIdCount,
+    queryFn: getRequestedIdCount,
+  });
 }
 
 function useRequestedIdDetails() {

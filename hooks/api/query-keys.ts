@@ -19,6 +19,7 @@ export const queryKeys = {
   },
   studentAdmin: {
     requestedIds: ["students", "requested-ids"] as const,
+    requestedIdCount: ["students", "requested-id-count"] as const,
     issuedIds: ["students", "issued-ids"] as const,
     requestedCerts: ["students", "requested-certs"] as const,
     issuedCerts: ["students", "issued-certs"] as const,

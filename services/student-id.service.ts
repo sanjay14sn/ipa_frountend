@@ -175,6 +175,11 @@ export async function getIssuedIdDetails(): Promise<RequestedIdDetailsByFranchis
   return (await getPaginatedIssuedIds({ page: 1, limit: 5000 })).data;
 }
 
+/** Count of open ID-card requests — `meta.total` of a limit-1 page. */
+export async function getRequestedIdCount(): Promise<number> {
+  return (await getPaginatedRequestedIdDetails({ page: 1, limit: 1 })).meta.total;
+}
+
 async function getPaginatedRequestedIdDetails(
   params: StudentPaginationParams,
 ): Promise<PaginatedIdDetailsResponse> {
