@@ -3,10 +3,27 @@
 import { useCallback, useMemo, useState } from "react";
 import { formatDate } from "@/lib/date-utils";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Eye, ShieldCheck, X, Download, Loader2, RefreshCw, RotateCw } from "lucide-react";
+import {
+  CreditCard,
+  Download,
+  Eye,
+  MoreHorizontal,
+  RefreshCw,
+  RotateCw,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { FormDialog } from "@/components/shared/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { DcDownload } from "@/components/orders/DcDownload";
 import { formatRupees } from "@/lib/currency-utils";
 import { orderTypeLabel } from "@/lib/payment-details-display";
 import {
@@ -35,8 +52,10 @@ import {
   DetailFieldsGrid,
   DetailField,
   MoneyCell,
+  RowActionButton,
   StatusBadge,
   ItemsTable,
+  TableMainCell,
 } from "@/components/shared";
 
 function clubOrderItems(lines: OrderItemData[]) {
@@ -285,102 +304,94 @@ export default function AdminOrdersTable({
             (order.lineItems ?? []).some(
               (line) => (line.backorderedQty ?? 0) > 0,
             );
+          const busy = busyOrderId === order.id;
+          const hasDc =
+            !!order.shipment?.dcPdfPath && order.adminStatus !== "Cancelled";
+          // Overflow items (R1): everything that isn't the read action or
+          // the single top state action. Destructive item renders last.
+          const canRefreshAllocation = isBackordered && !isFinal;
+          const canCancel = !isFinal;
+          const hasOverflow =
+            !readOnly && (canRefreshAllocation || hasDc || canCancel);
+
           return (
             <div className="flex items-center justify-end gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 p-0"
-                title="View details"
-                aria-label="View details"
+              <RowActionButton
+                icon={Eye}
+                label="View details"
                 onClick={() => setDetailOrderId(order.id)}
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-              {!readOnly && isBackordered && !isFinal ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 p-0"
-                  title="Refresh allocation (reconcile backordered items against current inventory)"
-                  aria-label="Refresh allocation"
-                  disabled={busyOrderId === order.id}
-                  onClick={() => void handleRefreshAllocation(order.id)}
-                >
-                  {busyOrderId === order.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RotateCw className="h-4 w-4" />
-                  )}
-                </Button>
-              ) : null}
-              {!readOnly && order.paymentStatus === "PENDING" ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 p-0"
-                  title="Mark as paid"
-                  aria-label="Mark as paid"
-                  disabled={busyOrderId === order.id}
-                  onClick={() => void handleMarkPaid(order.id)}
-                >
-                  <CreditCard className="h-4 w-4" />
-                </Button>
-              ) : null}
+              />
+              {/* Single inline state action: verify beats mark-as-paid. */}
               {!readOnly && isReadyToShip ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 p-0"
-                  title="Verify shipment"
-                  aria-label="Verify shipment"
-                  disabled={busyOrderId === order.id}
+                <RowActionButton
+                  icon={ShieldCheck}
+                  label="Verify shipment"
+                  busy={busy}
                   onClick={() => setVerifyDialogOrderId(order.id)}
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                </Button>
+                />
+              ) : !readOnly && order.paymentStatus === "PENDING" ? (
+                <RowActionButton
+                  icon={CreditCard}
+                  label="Mark as paid"
+                  busy={busy}
+                  onClick={() => void handleMarkPaid(order.id)}
+                />
               ) : null}
-              {!readOnly && order.shipment?.dcPdfPath && order.adminStatus !== "Cancelled" ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 p-0"
-                  title="Download delivery challan"
-                  aria-label="Download delivery challan"
-                  onClick={() => void downloadChallan(order.shipment!.dcPdfPath!)}
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              ) : null}
-              {!readOnly && order.shipment?.dcPdfPath && order.adminStatus !== "Cancelled" ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 p-0"
-                  title="Regenerate delivery challan"
-                  aria-label="Regenerate delivery challan"
-                  disabled={busyOrderId === order.id}
-                  onClick={() => void handleRegenerateDc(order.id)}
-                >
-                  {busyOrderId === order.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                </Button>
-              ) : null}
-              {!readOnly && !isFinal ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                  title="Cancel order"
-                  aria-label="Cancel order"
-                  disabled={busyOrderId === order.id}
-                  onClick={() => handleOpenCancelDialog(order)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+              {hasOverflow ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 p-0"
+                      title="More actions"
+                      aria-label="More actions"
+                      disabled={busy}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {canRefreshAllocation ? (
+                      <DropdownMenuItem
+                        onSelect={() => void handleRefreshAllocation(order.id)}
+                      >
+                        <RotateCw className="mr-2 h-4 w-4" />
+                        Refresh allocation
+                      </DropdownMenuItem>
+                    ) : null}
+                    {hasDc ? (
+                      <DropdownMenuItem
+                        onSelect={() =>
+                          void downloadChallan(order.shipment!.dcPdfPath!)
+                        }
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download delivery challan
+                      </DropdownMenuItem>
+                    ) : null}
+                    {hasDc ? (
+                      <DropdownMenuItem
+                        onSelect={() => void handleRegenerateDc(order.id)}
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Regenerate delivery challan
+                      </DropdownMenuItem>
+                    ) : null}
+                    {canCancel ? (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onSelect={() => handleOpenCancelDialog(order)}
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          Cancel order
+                        </DropdownMenuItem>
+                      </>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : null}
             </div>
           );
@@ -398,9 +409,7 @@ export default function AdminOrdersTable({
       columns={columns}
       getRowId={(order) => String(order.id)}
       renderMainCell={(order) => (
-        <span className="font-medium">
-          {order.referenceId || `Order #${order.id}`}
-        </span>
+        <TableMainCell title={order.referenceId || `Order #${order.id}`} />
       )}
       renderExpandedContent={(order) => {
         const standalone = isStandaloneDispatchOrderType(order.orderType);
@@ -489,13 +498,11 @@ export default function AdminOrdersTable({
                 label="DC Challan"
                 value={
                   order.shipment?.dcPdfPath && order.adminStatus !== "Cancelled" ? (
-                    <button
-                      className="flex items-center gap-1 text-primary underline underline-offset-2 hover:opacity-75"
+                    <DcDownload
+                      variant="link"
+                      label="Download"
                       onClick={() => void downloadChallan(order.shipment!.dcPdfPath!)}
-                    >
-                      <Download className="h-3 w-3" />
-                      Download
-                    </button>
+                    />
                   ) : (
                     "Not generated"
                   )
@@ -563,6 +570,9 @@ export default function AdminOrdersTable({
       currentPage={currentPage}
       onPageChange={listParams.setPage}
       itemsPerPage={10}
+      error={ordersQuery.error}
+      onRetry={() => void ordersQuery.refetch()}
+      errorMessage="Couldn't load orders."
       emptyMessage="No orders match the current filters."
       resultsText={(count, tot) =>
         `Showing ${count} of ${tot} order${tot !== 1 ? "s" : ""}`

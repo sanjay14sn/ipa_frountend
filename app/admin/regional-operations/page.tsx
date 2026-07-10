@@ -72,7 +72,9 @@ function RegionalOperationsInner() {
       tabs={[
         { value: "orders", label: "Orders" },
         { value: "shipping", label: "Shipping" },
-        { value: "payments", label: "Payments" },
+        // ADM-25: this tab shows all-regions data inside a per-region page —
+        // the label must say so honestly (region-scoped payments need backend).
+        { value: "payments", label: "Payments (all regions)" },
         { value: "inventory", label: "Inventory" },
         { value: "monitoring", label: "Monitoring" },
       ]}
