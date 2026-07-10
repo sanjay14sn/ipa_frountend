@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Plus, X } from "lucide-react";
 import {
   DataTable,
@@ -11,31 +11,19 @@ import {
   DetailFieldsGrid,
   ExpandedDetailSection,
   ExpandedDetailSurface,
+  StatusBadge,
   TablePageShell,
-  TableLoadingState,
 } from "@/components/shared";
 import {
   listProgramRequests,
   cancelProgramRequest,
   type ProgramRequestItem,
 } from "@/services/program-request.service";
+import { queryKeys } from "@/hooks/api/query-keys";
 import { RequestProgramsModal } from "@/components/request-programs-modal";
 import { useUser } from "@/context/user-context";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/error-utils";
-
-// ---------------------------------------------------------------------------
-// Status badge — mirrors the 3-value ProgramRequest enum:
-// Pending → Approved | Rejected.
-// ---------------------------------------------------------------------------
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    Pending: "bg-blue-100 text-blue-800",
-    Approved: "bg-amber-100 text-amber-800",
-    Rejected: "bg-red-100 text-red-800",
-  };
-  return <Badge className={colors[status] ?? ""}>{status}</Badge>;
-}
 
 // ---------------------------------------------------------------------------
 // ProgramsSection
@@ -43,36 +31,30 @@ function StatusBadge({ status }: { status: string }) {
 export function ProgramsSection() {
   const { user } = useUser();
   const franchiseId = user?.franchiseId;
-  const [requests, setRequests] = useState<ProgramRequestItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [cancelling, setCancelling] = useState<number | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
+  // FR-08: query-driven load (was a useEffect/useState fetch) — real
+  // isLoading/isError drive the table's skeleton and error states, and the
+  // franchise scope keying refetches on scope switch.
+  const requestsQuery = useQuery({
+    queryKey: queryKeys.programRequests.franchisee({ franchiseId }),
+    queryFn: async () => {
       const data = await listProgramRequests();
-      const filtered = franchiseId
+      return franchiseId
         ? data.filter((r) => r.franchiseId === franchiseId)
         : data;
-      setRequests(filtered);
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Failed to load programs"));
-    } finally {
-      setLoading(false);
-    }
-  }, [franchiseId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+    },
+  });
+  const requests = requestsQuery.data ?? [];
+  const loading = requestsQuery.isLoading;
 
   const handleCancel = async (id: number) => {
     setCancelling(id);
     try {
       await cancelProgramRequest(id);
       toast.success("Request cancelled");
-      load();
+      void requestsQuery.refetch();
     } catch (err) {
       toast.error(getErrorMessage(err, "Failed to cancel request"));
     } finally {
@@ -86,10 +68,12 @@ export function ProgramsSection() {
       header: "Program",
     },
     {
+      // FR-07: shared StatusBadge semantics — Approved green, Pending amber,
+      // Rejected red (the old local badge rendered Approved as amber).
       key: "status",
       header: "Status",
       className: "text-center",
-      render: (r) => <StatusBadge status={r.status} />,
+      render: (r) => <StatusBadge label={r.status} />,
     },
     {
       key: "actions",
@@ -124,10 +108,7 @@ export function ProgramsSection() {
         </Button>
       }
     >
-      {loading && requests.length === 0 ? (
-        <TableLoadingState message="Loading programs..." />
-      ) : (
-        <DataTable<ProgramRequestItem>
+      <DataTable<ProgramRequestItem>
           data={requests}
           loading={loading}
           columns={columns}
@@ -162,18 +143,20 @@ export function ProgramsSection() {
               </ExpandedDetailSection>
             </ExpandedDetailSurface>
           )}
+          error={requestsQuery.error}
+          onRetry={() => void requestsQuery.refetch()}
+          errorMessage="Couldn't load program requests."
           emptyMessage="No program requests yet. Click 'Request Program' to get started."
           resultsText={(_count, total) =>
             `${total} request${total === 1 ? "" : "s"}`
           }
         />
-      )}
 
       <RequestProgramsModal
         open={requestModalOpen}
         onOpenChange={(open) => {
           setRequestModalOpen(open);
-          if (!open) load();
+          if (!open) void requestsQuery.refetch();
         }}
       />
     </TablePageShell>
