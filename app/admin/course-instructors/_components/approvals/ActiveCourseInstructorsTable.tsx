@@ -69,6 +69,28 @@ export default function ActiveCourseInstructorsTable() {
       header: "Instructor",
     },
     {
+      // ADM-17: the service exposes the franchise CODE as the name field
+      // (no display name on CI rows — deferred to backend work).
+      key: "franchise",
+      header: "Franchise",
+      render: (instructor) =>
+        instructor.franchise?.name ? (
+          <span className="font-mono text-xs">{instructor.franchise.name}</span>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      key: "contact",
+      header: "Contact",
+      render: (instructor) => (
+        <div className="flex flex-col text-xs">
+          <span>{instructor.phone || "—"}</span>
+          <span className="text-muted-foreground">{instructor.mail || "—"}</span>
+        </div>
+      ),
+    },
+    {
       key: "city",
       header: "City",
       render: (instructor) => instructor.city || "—",
