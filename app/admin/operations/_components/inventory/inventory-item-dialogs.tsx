@@ -3,8 +3,8 @@
 import React from "react";
 import { ConfirmDialog, FormDialog } from "@/components/shared/dialog";
 import type { InventoryItemSummary } from "@/services/inventory.service";
-import { InventoryForm } from "@/app/admin/operations/components/inventory/inventory-form";
-import type { InventoryFormState } from "@/app/admin/operations/components/inventory/types";
+import { InventoryForm } from "./inventory-form";
+import type { InventoryFormState } from "./types";
 
 // ── Add dialog ────────────────────────────────────────────────────────────────
 

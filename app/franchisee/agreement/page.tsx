@@ -11,22 +11,22 @@ import {
   AgreementContent,
   getProcessedAgreementContent,
 } from "@/lib/agreementContent";
-import FranchiseeInformation from "./components/FranchiseeInformation";
-import LocationDetails from "./components/LocationDetails";
-import FranchiseDetails from "./components/FranchiseDetails";
+import FranchiseeInformation from "./_components/FranchiseeInformation";
+import LocationDetails from "./_components/LocationDetails";
+import FranchiseDetails from "./_components/FranchiseDetails";
 import PaymentBreakdown from "@/components/agreements/PaymentBreakdown";
 import AgreementTerms from "@/components/agreements/AgreementTerms";
-import PaymentAction from "./components/PaymentAction";
-import { AgreementExpiredView } from "./components/AgreementExpiredView";
+import PaymentAction from "./_components/PaymentAction";
+import { AgreementExpiredView } from "./_components/AgreementExpiredView";
 import { EmiTimeline } from "@/components/receivables/EmiTimeline";
 import { getFranchiseFeePayable } from "@/lib/gst";
-import { FranchiseAgreementSignaturePanel } from "./components/FranchiseAgreementSignaturePanel";
+import { FranchiseAgreementSignaturePanel } from "./_components/FranchiseAgreementSignaturePanel";
 import {
   AgreementStepper,
   queryToStep,
   stepToQuery,
   type AgreementStepIndex,
-} from "./components/AgreementStepper";
+} from "./_components/AgreementStepper";
 import dynamic from "next/dynamic";
 import {
   type RazorpaySuccessResponse,

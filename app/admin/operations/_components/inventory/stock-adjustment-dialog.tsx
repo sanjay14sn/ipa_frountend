@@ -17,7 +17,7 @@ import { formatRupees } from "@/lib/currency-utils";
 import type {
   AdjustmentDirection,
   AdjustmentFormState,
-} from "@/app/admin/operations/components/inventory/types";
+} from "./types";
 
 export type AdjustmentPreview = {
   error: string | null;

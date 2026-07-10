@@ -36,13 +36,13 @@ import type {
   Supplier,
   SupplierItemTerm,
 } from "@/services/procurement.service";
-import { ProcurementRecordsCard } from "@/app/admin/operations/components/procurement/ProcurementRecordsCard";
+import { ProcurementRecordsCard } from "./ProcurementRecordsCard";
 import {
   DateToolbarField,
   ITEMS_PER_PAGE,
   statusBadge,
   type PurchaseOrderFormState,
-} from "@/app/admin/operations/components/procurement/procurement-utils";
+} from "./procurement-utils";
 import { formatDate } from "@/lib/date-utils";
 import type { InventoryItemSummary as InventoryItem } from "@/services/inventory.service";
 

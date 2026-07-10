@@ -2,8 +2,8 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TablePageShell } from "@/components/shared";
-import { SessionsTab } from "@/app/admin/course-instructors/ci-training/CITrainingSessionsTab";
-import { WaitingTab } from "@/app/admin/course-instructors/ci-training/CITrainingWaitingTab";
+import { SessionsTab } from "./ci-training/CITrainingSessionsTab";
+import { WaitingTab } from "./ci-training/CITrainingWaitingTab";
 export function CiTrainingSection() {
   return (
     <TablePageShell embed>

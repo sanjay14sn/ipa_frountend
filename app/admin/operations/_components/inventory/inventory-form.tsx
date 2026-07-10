@@ -18,7 +18,7 @@ import {
   INVENTORY_TYPES,
   LIFECYCLE_STATUSES,
   type InventoryFormState,
-} from "@/app/admin/operations/components/inventory/types";
+} from "./types";
 
 export function InventoryForm({
   form,

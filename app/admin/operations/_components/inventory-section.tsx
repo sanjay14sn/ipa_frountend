@@ -33,21 +33,21 @@ import {
   mapItemToEditForm,
   type AdjustmentFormState,
   type InventoryFormState,
-} from "@/app/admin/operations/components/inventory/types";
+} from "./inventory/types";
 import {
   AddInventoryDialog,
   DeleteInventoryDialog,
   EditInventoryDialog,
-} from "@/app/admin/operations/components/inventory/inventory-item-dialogs";
-import { StockAdjustmentDialog } from "@/app/admin/operations/components/inventory/stock-adjustment-dialog";
+} from "./inventory/inventory-item-dialogs";
+import { StockAdjustmentDialog } from "./inventory/stock-adjustment-dialog";
 import {
   buildInventoryColumns,
   InventoryExpandedRow,
   INVENTORY_TABLE_FILTERS,
   INVENTORY_SORT_OPTIONS,
-} from "@/app/admin/operations/components/inventory/inventory-table-columns";
-import { InventoryLevelAssignmentCard } from "@/app/admin/operations/components/inventory/inventory-level-assignment-card";
-import { InventoryTableToolbar } from "@/app/admin/operations/components/inventory/inventory-table-toolbar";
+} from "./inventory/inventory-table-columns";
+import { InventoryLevelAssignmentCard } from "./inventory/inventory-level-assignment-card";
+import { InventoryTableToolbar } from "./inventory/inventory-table-toolbar";
 
 const ITEMS_PER_PAGE = 10;
 

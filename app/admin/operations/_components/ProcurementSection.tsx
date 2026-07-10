@@ -47,11 +47,11 @@ import {
   type ReceiptPoLineSnapshot,
   type ReceiptRow,
   type SupplierFormState,
-} from "@/app/admin/operations/components/procurement/procurement-utils";
-import { SuppliersSourcingTab } from "@/app/admin/operations/components/procurement/SuppliersSourcingTab";
-import { PurchaseOrdersTab } from "@/app/admin/operations/components/procurement/PurchaseOrdersTab";
-import { ReceiptsTab } from "@/app/admin/operations/components/procurement/ReceiptsTab";
-import { ReplenishmentTab } from "@/app/admin/operations/components/procurement/ReplenishmentTab";
+} from "./procurement/procurement-utils";
+import { SuppliersSourcingTab } from "./procurement/SuppliersSourcingTab";
+import { PurchaseOrdersTab } from "./procurement/PurchaseOrdersTab";
+import { ReceiptsTab } from "./procurement/ReceiptsTab";
+import { ReplenishmentTab } from "./procurement/ReplenishmentTab";
 
 interface ProcurementSectionProps {
   regionLocationId?: number;

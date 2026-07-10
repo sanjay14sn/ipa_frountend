@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { StudentsManageSection } from "./students-manage-section";
-import { FranchiseeCertificateRequestsSection } from "./components/certificate-requests-section";
+import { FranchiseeCertificateRequestsSection } from "./_components/certificate-requests-section";
 import { PageSkeleton } from "@/components/shared";
 
 const TABS = ["manage", "certificates"] as const;

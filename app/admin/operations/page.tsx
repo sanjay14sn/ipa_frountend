@@ -8,9 +8,9 @@ import { useUser } from "@/context/user-context";
 import AdminOrdersTable from "@/components/orders/AdminOrdersTable";
 import AdminShippingTable from "@/components/shipping/AdminShippingTable";
 import PaymentsTable from "@/components/payments/PaymentsTable";
-import { InventorySection } from "./components/inventory-section";
-import { ProcurementSection } from "./components/ProcurementSection";
-import { MonitoringSection } from "./components/MonitoringSection";
+import { InventorySection } from "./_components/inventory-section";
+import { ProcurementSection } from "./_components/ProcurementSection";
+import { MonitoringSection } from "./_components/MonitoringSection";
 
 const TABS = [
   "orders",

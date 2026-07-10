@@ -9,11 +9,11 @@ import {
 } from "@/components/shared";
 import { TabsContent } from "@/components/ui/tabs";
 import type { PurchaseOrderSummary } from "@/services/procurement.service";
-import { ProcurementRecordsCard } from "@/app/admin/operations/components/procurement/ProcurementRecordsCard";
+import { ProcurementRecordsCard } from "./ProcurementRecordsCard";
 import {
   ITEMS_PER_PAGE,
   statusBadge,
-} from "@/app/admin/operations/components/procurement/procurement-utils";
+} from "./procurement-utils";
 import { formatDate } from "@/lib/date-utils";
 
 // ---------------------------------------------------------------------------

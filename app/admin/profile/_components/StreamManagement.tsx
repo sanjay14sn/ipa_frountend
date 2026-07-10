@@ -27,13 +27,13 @@ import {
   EditStreamDialog,
   DeleteStreamDialog,
   type AddStreamFormData,
-} from "@/app/admin/profile/components/StreamFormDialog";
+} from "./StreamFormDialog";
 import {
   StreamTransitionDialog,
   DeleteTransitionDialog,
   type TransitionFormData,
-} from "@/app/admin/profile/components/StreamTransitionDialog";
-import { StreamList, TransitionList } from "@/app/admin/profile/components/StreamList";
+} from "./StreamTransitionDialog";
+import { StreamList, TransitionList } from "./StreamList";
 
 interface StreamManagementProps {
   programId: number;

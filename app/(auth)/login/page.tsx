@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { LoginCard } from "./components/LoginCard";
+import { LoginCard } from "./_components/LoginCard";
 import { FranchiseApplicationModal } from "@/components/franchise-application-modal";
 
 export default function Page() {

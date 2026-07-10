@@ -3,9 +3,9 @@
 import { Suspense } from "react";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
-import { IdRequestsSection } from "./components/id-requests-section";
-import { CertificateRequestsSection } from "./components/certificate-requests-section";
-import { StudentLifecycleSection } from "./components/student-lifecycle-section";
+import { IdRequestsSection } from "./_components/id-requests-section";
+import { CertificateRequestsSection } from "./_components/certificate-requests-section";
+import { StudentLifecycleSection } from "./_components/student-lifecycle-section";
 import { RosterSection } from "./_components/roster-section";
 import { PageSkeleton } from "@/components/shared";
 

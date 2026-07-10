@@ -4,10 +4,10 @@ import { Suspense } from "react";
 import { PageSkeleton } from "@/components/shared";
 import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
-import { FranchiseManagementSection } from "./components/franchise-management-section";
-import { PendingApprovalsSection } from "./components/pending-approvals-section";
-import { ProgramRequestsSection } from "./components/program-requests-section";
-import { AdminAgreementsSection } from "./components/admin-agreements-section";
+import { FranchiseManagementSection } from "./_components/franchise-management-section";
+import { PendingApprovalsSection } from "./_components/pending-approvals-section";
+import { ProgramRequestsSection } from "./_components/program-requests-section";
+import { AdminAgreementsSection } from "./_components/admin-agreements-section";
 
 const TABS = ["franchises", "applications", "programs", "agreements"] as const;
 

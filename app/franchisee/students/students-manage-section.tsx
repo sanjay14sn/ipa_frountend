@@ -8,9 +8,9 @@ import { useUser } from "@/context/user-context";
 import type { StudentData } from "@/services/student.service";
 import { StudentIdStatus } from "@/services/student.service";
 import { useStudents } from "@/hooks/api/student.hooks";
-import AddStudentModal from "./components/AddStudentModal";
+import AddStudentModal from "./_components/AddStudentModal";
 import EditStudentModal from "@/components/students/EditStudentModal";
-import RequestIdModal from "./components/RequestIdModal";
+import RequestIdModal from "./_components/RequestIdModal";
 import StudentsTable from "@/components/students/StudentsTable";
 import { useListParams } from "@/hooks/use-list-params";
 

@@ -13,11 +13,11 @@ import {
   AddProgramDialog,
   EditProgramDialog,
   DeleteProgramDialog,
-} from "@/app/admin/profile/components/ProgramFormDialog";
+} from "./ProgramFormDialog";
 import {
   ProgramList,
   type ProgramTabMode,
-} from "@/app/admin/profile/components/ProgramList";
+} from "./ProgramList";
 
 export function ProgramManagement() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);

@@ -26,11 +26,11 @@ import {
   EditLevelDialog,
   DeleteLevelDialog,
   type AddLevelFormData,
-} from "@/app/admin/profile/components/LevelFormDialog";
+} from "./LevelFormDialog";
 import {
   LevelList,
   sortLevelsByDisplayOrder,
-} from "@/app/admin/profile/components/LevelList";
+} from "./LevelList";
 
 interface LevelManagementProps {
   programId: number;

@@ -22,8 +22,8 @@ import {
 import type { Level, UpdateLevelDto } from "@/services/level.service";
 import type { Stream } from "@/services/stream.service";
 import type { StreamTransition } from "@/services/stream-transition.service";
-import { LevelMaterialsPicker } from "@/app/admin/profile/components/LevelMaterialsPicker";
-import { LevelCertificatesPicker } from "@/app/admin/profile/components/LevelCertificatesPicker";
+import { LevelMaterialsPicker } from "./LevelMaterialsPicker";
+import { LevelCertificatesPicker } from "./LevelCertificatesPicker";
 import { StatusBadge } from "@/components/shared/status-badge";
 
 export function sortLevelsByDisplayOrder(list: Level[]) {

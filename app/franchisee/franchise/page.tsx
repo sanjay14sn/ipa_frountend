@@ -4,9 +4,9 @@ import { Suspense } from "react";
 import { PageSkeleton } from "@/components/shared";
 import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
-import { ProgramsSection } from "./components/programs-section";
-import { MyAgreementsSection } from "./components/my-agreements-section";
-import { CIAgreementsSection } from "./components/ci-agreements-section";
+import { ProgramsSection } from "./_components/programs-section";
+import { MyAgreementsSection } from "./_components/my-agreements-section";
+import { CIAgreementsSection } from "./_components/ci-agreements-section";
 
 const TABS = ["programs", "agreements", "ci-agreements"] as const;
 

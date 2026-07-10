@@ -1,6 +1,6 @@
 "use client";
 
-import RequestReviewTable from "@/app/admin/students/_components/request-review-table";
+import RequestReviewTable from "./request-review-table";
 
 interface CertificateRequestsSectionProps {
   franchiseId?: string;

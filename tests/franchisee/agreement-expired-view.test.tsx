@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { AgreementExpiredView } from "@/app/franchisee/agreement/components/AgreementExpiredView";
+import { AgreementExpiredView } from "../../app/franchisee/agreement/_components/AgreementExpiredView";
 import type { AgreementRecord } from "@/services/agreement.service";
 
 const push = vi.fn();

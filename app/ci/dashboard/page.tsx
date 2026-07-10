@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { getCIAgreement, getCIProgress, getCIUpcomingSessions, listCIReceivables } from "@/services/ci-training.service";
 import { useCIAuth } from "@/context/ci-auth-context";
-import { CIDashboardPanel, CIStatCard, ModulePill } from "../components/ci-dashboard-cards";
+import { CIDashboardPanel, CIStatCard, ModulePill } from "../_components/ci-dashboard-cards";
 import { formatDate } from "@/lib/date-utils";
 
 function phaseLabel(phase?: string | null): string {

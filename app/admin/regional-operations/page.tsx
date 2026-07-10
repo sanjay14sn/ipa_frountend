@@ -17,8 +17,8 @@ import {
 import AdminOrdersTable from "@/components/orders/AdminOrdersTable";
 import AdminShippingTable from "@/components/shipping/AdminShippingTable";
 import PaymentsTable from "@/components/payments/PaymentsTable";
-import { InventorySection } from "../operations/components/inventory-section";
-import { MonitoringSection } from "../operations/components/MonitoringSection";
+import { InventorySection } from "../operations/_components/inventory-section";
+import { MonitoringSection } from "../operations/_components/MonitoringSection";
 
 // Same surface as Operations, minus Procurement — this is a read-only oversight view.
 const TABS = ["orders", "shipping", "payments", "inventory", "monitoring"] as const;

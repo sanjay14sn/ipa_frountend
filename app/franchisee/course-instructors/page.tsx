@@ -6,8 +6,8 @@ import { Plus } from "lucide-react";
 import { useUser } from "@/context/user-context";
 import { useCourseInstructors } from "@/hooks/api/course-instructor.hooks";
 import { TablePageShell, PageSkeleton } from "@/components/shared";
-import AddCourseInstructorModal from "./components/AddCourseInstructorModal";
-import CourseInstructorTabs from "./components/CourseInstructorTabs";
+import AddCourseInstructorModal from "./_components/AddCourseInstructorModal";
+import CourseInstructorTabs from "./_components/CourseInstructorTabs";
 
 
 export default function FranchiseeCourseInstructorsPage() {

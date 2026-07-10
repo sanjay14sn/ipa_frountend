@@ -13,12 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TabsContent } from "@/components/ui/tabs";
 import type { PostPurchaseReceiptDto } from "@/services/procurement.service";
-import { ProcurementRecordsCard } from "@/app/admin/operations/components/procurement/ProcurementRecordsCard";
+import { ProcurementRecordsCard } from "./ProcurementRecordsCard";
 import {
   ITEMS_PER_PAGE,
   type ReceiptPoLineSnapshot,
   type ReceiptRow,
-} from "@/app/admin/operations/components/procurement/procurement-utils";
+} from "./procurement-utils";
 import { formatDateTime } from "@/lib/date-utils";
 import type { InventoryItemSummary as InventoryItem } from "@/services/inventory.service";
 

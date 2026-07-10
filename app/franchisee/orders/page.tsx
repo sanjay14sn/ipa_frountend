@@ -20,7 +20,7 @@ import {
   TablePageShell,
 } from "@/components/shared";
 import { Button } from "@/components/ui/button";
-import OrdersTable from "./components/OrdersTable";
+import OrdersTable from "./_components/OrdersTable";
 import dynamic from "next/dynamic";
 import { type RazorpaySuccessResponse } from "@/components/RazorpayPayment";
 
@@ -39,7 +39,7 @@ import {
   type CustomMaterialLine,
   type FranchiseKitOrderItem,
 } from "@/services/order.service";
-import UnifiedMaterialRequestDialog from "./components/UnifiedMaterialRequestDialog";
+import UnifiedMaterialRequestDialog from "./_components/UnifiedMaterialRequestDialog";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { ComponentErrorBoundary } from "@/components/error/ComponentErrorBoundary";
 import { ConfirmDialog } from "@/components/shared/dialog";
