@@ -177,15 +177,11 @@ export const CI_NAV = freezeNav([
     items: [{ title: "My Agreement", href: "/ci/agreement", icon: FileText }],
   },
   {
+    // CI-04: the three training routes collapsed into the /ci/training hub
+    // (prefix match keeps Training active on every ?tab=).
     title: "Training",
     items: [
-      {
-        title: "Receivables",
-        href: "/ci/training/receivables",
-        icon: ClipboardList,
-      },
-      { title: "Progress", href: "/ci/training/progress", icon: GraduationCap },
-      { title: "Upcoming", href: "/ci/training/upcoming", icon: Calendar },
+      { title: "Training", href: "/ci/training", icon: GraduationCap },
     ],
   },
 ]);

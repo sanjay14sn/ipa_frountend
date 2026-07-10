@@ -13,7 +13,8 @@ function statusBadge(status: string) {
   return <Badge variant="secondary">{status}</Badge>;
 }
 
-export default function CIUpcomingPage() {
+// CI-02: title-stripped tab section — the /ci/training hub owns the header (R6).
+export function UpcomingSection() {
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["ci-upcoming"],
     queryFn: getCIUpcomingSessions,
@@ -53,10 +54,7 @@ export default function CIUpcomingPage() {
   ];
 
   return (
-    <TablePageShell
-      title="Upcoming sessions"
-      description="Your assigned and waiting training sessions."
-    >
+    <TablePageShell embed>
       {isLoading && sessions.length === 0 ? (
         <TableLoadingState message="Loading upcoming sessions..." />
       ) : (

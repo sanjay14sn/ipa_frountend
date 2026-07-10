@@ -27,7 +27,8 @@ function statusBadge(status: CITrainingReceivable["status"]) {
   return <Badge variant="outline">Pending</Badge>;
 }
 
-export default function CITrainingReceivablesPage() {
+// CI-02: title-stripped tab section — the /ci/training hub owns the header (R6).
+export function ReceivablesSection() {
   const [payingId, setPayingId] = useState<number | null>(null);
   const pendingPayRef = useRef<{ orderId: string; paymentId?: number } | null>(null);
   const isPaymentSettledRef = useRef(false);
@@ -202,10 +203,7 @@ export default function CITrainingReceivablesPage() {
   };
 
   return (
-    <TablePageShell
-      title="Training receivables"
-      description="Pay your CI training receivables to unlock upcoming training levels."
-    >
+    <TablePageShell embed>
       <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(140px,1.4fr)_auto] sm:items-center">
           <div className="text-sm font-medium text-card-foreground">

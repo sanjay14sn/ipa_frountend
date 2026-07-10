@@ -83,6 +83,20 @@ describe("getAdminNav composition", () => {
   });
 });
 
+describe("CI nav (CI-04 collapse)", () => {
+  it("has exactly three items: Dashboard, My Agreement, Training", () => {
+    const titles = CI_NAV.flatMap((s) => s.items.map((i) => i.title));
+    expect(titles).toEqual(["Dashboard", "My Agreement", "Training"]);
+  });
+
+  it("Training is active on the hub and any of its tabs", () => {
+    const training = findItem(CI_NAV, "Training");
+    expect(isNavItemActive("/ci/training", training)).toBe(true);
+    // ?tab= lives in the querystring — pathname stays /ci/training.
+    expect(isNavItemActive("/ci/dashboard", training)).toBe(false);
+  });
+});
+
 describe("frozen-ness", () => {
   it("nav constants are deeply frozen", () => {
     for (const nav of [ADMIN_NAV, SUPER_ADMIN_NAV, FRANCHISEE_NAV, CI_NAV]) {

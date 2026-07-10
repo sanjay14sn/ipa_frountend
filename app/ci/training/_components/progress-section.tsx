@@ -17,7 +17,8 @@ function statusBadge(status: string) {
   return <Badge variant="outline">{status}</Badge>;
 }
 
-export default function CIProgressPage() {
+// CI-02: title-stripped tab section — the /ci/training hub owns the header (R6).
+export function ProgressSection() {
   const { data: progress = [], isLoading } = useQuery({
     queryKey: ["ci-progress"],
     queryFn: getCIProgress,
@@ -57,10 +58,7 @@ export default function CIProgressPage() {
   ];
 
   return (
-    <TablePageShell
-      title="Training progress"
-      description="Track your progress across all training levels."
-    >
+    <TablePageShell embed>
       <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
         <div className="flex items-center gap-3">
           <BarChart2 className="h-4 w-4 text-primary" />

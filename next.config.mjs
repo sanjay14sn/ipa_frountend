@@ -220,6 +220,28 @@ const nextConfig = {
         permanent: false,
       },
       { source: "/ci", destination: "/ci/dashboard", permanent: false },
+      // Phase-8 IA moves (docs 06/08, rows C2–C5; C1 lands with ADM-18).
+      {
+        source: "/ci/training/receivables",
+        destination: "/ci/training?tab=receivables",
+        permanent: false,
+      },
+      {
+        source: "/ci/training/progress",
+        destination: "/ci/training?tab=progress",
+        permanent: false,
+      },
+      {
+        source: "/ci/training/upcoming",
+        destination: "/ci/training?tab=upcoming",
+        permanent: false,
+      },
+      {
+        // Retarget of the old inline redirect page (preserves its destination).
+        source: "/ci/training/packages",
+        destination: "/ci/training?tab=receivables",
+        permanent: false,
+      },
     ];
   },
 };
