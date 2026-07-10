@@ -51,9 +51,14 @@ export default function OrdersTable({
     }
 
     let filtered = orders.filter((order) => {
+      // FR-20: the human-readable order-type label is part of the haystack —
+      // "custom" / "level" / "kit" narrow to matching order types.
       const matchesSearch =
         order.id.toString().includes(searchTerm) ||
-        order.status.toLowerCase().includes(searchTerm.toLowerCase());
+        order.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        orderTypeLabel(order.orderType)
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
 
       const matchesStatus =
         statusFilter === "all" || order.status === statusFilter;
