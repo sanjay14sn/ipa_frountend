@@ -19,7 +19,8 @@ export function LabeledValue({
       <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
         {label}
       </p>
-      <p
+      {/* div, not p: `value` is a ReactNode and may contain block content */}
+      <div
         className={cn(
           "mt-0.5 break-words text-xs text-card-foreground",
           mono &&
@@ -27,7 +28,7 @@ export function LabeledValue({
         )}
       >
         {value ?? "—"}
-      </p>
+      </div>
     </div>
   );
 }

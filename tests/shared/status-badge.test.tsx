@@ -49,7 +49,10 @@ describe("StatusBadge rendering", () => {
   it("renders capitalized label with the resolved tone classes", () => {
     render(<StatusBadge label="shipped" />);
     const badge = screen.getByText("Shipped");
-    expect(badge.closest("div")?.className ?? "").toContain("bg-info-soft");
+    // Tag-agnostic: Badge renders a span (inline element, legal inside <p>).
+    expect(badge.closest('[class*="rounded-full"]')?.className ?? "").toContain(
+      "bg-info-soft",
+    );
   });
 
   it("OnFileBadge is exported and renders", () => {
