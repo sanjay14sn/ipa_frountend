@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { format, isToday, parseISO } from "date-fns";
+import { isToday, parseISO } from "date-fns";
+import { formatTimelineDate } from "@/lib/date-utils";
 import {
   Banknote,
   Bell,
@@ -88,20 +89,17 @@ function hasReceivablePlan(
  * (revisited by the CC-11 Timeline rebuild). */
 function timelineDateLabel(item: ReceivableSummaryItem): string {
   if (item.paidAt) {
-    try {
-      return `PAID ${format(parseISO(item.paidAt), "d MMM").toUpperCase()}`;
-    } catch {
-      return "PAID";
-    }
+    const label = formatTimelineDate(item.paidAt);
+    return label === "-" ? "PAID" : `PAID ${label}`;
   }
   if (item.dueAt) {
     try {
-      const d = parseISO(item.dueAt);
-      if (isToday(d)) return "TODAY";
-      return format(d, "MMM d").toUpperCase();
+      if (isToday(parseISO(item.dueAt))) return "TODAY";
     } catch {
       return "DUE";
     }
+    const label = formatTimelineDate(item.dueAt);
+    return label === "-" ? "DUE" : label;
   }
   if (item.status === "due") return "TODAY";
   return "TBD";

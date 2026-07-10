@@ -1,5 +1,6 @@
 "use client";
 
+import { RUPEE_SYMBOL } from "@/lib/currency-utils";
 import { useMemo } from "react";
 import { Plus, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -205,7 +206,7 @@ export function ReceivablePlanBuilder({
               </div>
 
               <div className="flex items-center gap-1">
-                <span className="text-xs text-muted-foreground">₹</span>
+                <span className="text-xs text-muted-foreground">{RUPEE_SYMBOL}</span>
                 <Input
                   type="number"
                   min="0"

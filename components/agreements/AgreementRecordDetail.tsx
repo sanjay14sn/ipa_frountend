@@ -3,7 +3,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
-import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,8 @@ import {
   buildAgreementDetailFranchiseData,
 } from "@/lib/agreement-page-terms";
 import { getErrorMessage } from "@/lib/error-utils";
-import { formatDate } from "@/lib/date-utils";
+import { parseISO } from "date-fns";
+import { formatDate, formatMonthYear } from "@/lib/date-utils";
 import { getFranchiseFeePayable } from "@/lib/gst";
 import { formatRupees } from "@/lib/currency-utils";
 import { methodLabel } from "@/lib/payment-details-display";
@@ -281,10 +281,8 @@ function AgreementOverviewTab({
   const franchiseeName = String(data.franchisee?.name ?? franchiseData.contactPerson ?? "-");
   const initials = deriveInitials(franchiseeName);
   const sinceRaw = data.dateOfSigning ?? data.createdAt;
-  // SW-P3 exemption: month-year "since" label (mirrors ui-helpers getSinceLabel).
-  const sinceLabel = sinceRaw
-    ? (() => { try { return format(parseISO(sinceRaw), "MMM yyyy"); } catch { return null; } })()
-    : null;
+  // Month-year "since" label is deliberately not a full date (SW-P3).
+  const sinceLabel = formatMonthYear(sinceRaw);
   const franchiseStatus = data.franchise?.status;
   const centreCity = data.franchise?.city ?? "";
   const centreState = data.franchise?.state ?? "";

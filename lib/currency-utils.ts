@@ -22,6 +22,10 @@ const INR_FORMATTER = new Intl.NumberFormat("en-IN", {
  *
  * Returns "N/A" for `null`, `undefined`, or `NaN` input.
  */
+/** The currency glyph — kit/app code interpolates this instead of a ₹
+ * literal (the Phase-9 lint bans raw ₹ outside this module). */
+export const RUPEE_SYMBOL = "₹";
+
 export function formatRupees(value?: number | null): string {
   if (value == null || Number.isNaN(Number(value))) return "N/A";
   try {

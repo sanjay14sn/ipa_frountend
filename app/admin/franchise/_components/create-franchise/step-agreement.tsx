@@ -17,7 +17,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
-import { formatRupees } from "@/lib/currency-utils";
+import { formatRupees, RUPEE_SYMBOL } from "@/lib/currency-utils";
 import { getFranchiseFeePayable, GST_RATE_LABEL } from "@/lib/gst";
 import type { Program } from "@/services/program.service";
 import type { PaymentMode } from "@/services/franchisee.service";
@@ -70,7 +70,7 @@ function PaidPaymentEditor({
   return (
     <div className="grid grid-cols-12 items-end gap-2 rounded-lg border border-border bg-card p-3">
       <div className="col-span-3 space-y-1">
-        <Label className="text-xs">Amount (₹)</Label>
+        <Label className="text-xs">Amount ({RUPEE_SYMBOL})</Label>
         <Input
           type="number"
           min="0"

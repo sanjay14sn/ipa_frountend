@@ -73,13 +73,27 @@ function formatShortDate(date: Date | string | null | undefined): string {
  *
  * Returns "-" for falsy / unparseable input.
  */
-function formatTimelineDate(date: Date | string | null | undefined): string {
+export function formatTimelineDate(date: Date | string | null | undefined): string {
   if (!date) return "-";
   const d = date instanceof Date ? date : new Date(date);
   if (Number.isNaN(d.getTime())) return String(date);
   return d
     .toLocaleDateString("en-IN", { day: "numeric", month: "short" })
     .toUpperCase();
+}
+
+/**
+ * Formats a date to a month-year label (e.g. "Jun 2026") — for "member
+ * since"-style durations where the day is noise.
+ *
+ * Returns null for falsy / unparseable input (callers typically hide the
+ * label entirely).
+ */
+export function formatMonthYear(date: Date | string | null | undefined): string | null {
+  if (!date) return null;
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
 }
 
 /**

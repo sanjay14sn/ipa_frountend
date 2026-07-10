@@ -37,7 +37,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { formatRupees } from "@/lib/currency-utils";
+import { formatRupees, RUPEE_SYMBOL } from "@/lib/currency-utils";
 
 type SelectedRow = {
   franchiseKitItemId: number;
@@ -212,7 +212,7 @@ export function FranchiseKitPanel({
                         <TableHead>Item</TableHead>
                         <TableHead className="text-center">Quantity</TableHead>
                         <TableHead className="text-center">
-                          Unit price (₹)
+                          Unit price ({RUPEE_SYMBOL})
                         </TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { formatDate } from "@/lib/date-utils";
 import { Button } from "@/components/ui/button";
-/* SW-P11 sanctioned raw-dialog exemption (full-screen ID-card preview; the standard header/footer layout does not apply). Phase 9 turns this into an inline eslint-disable when the no-restricted-imports rule lands. */
+// eslint-disable-next-line no-restricted-imports -- SW-P11 sanctioned raw-dialog exemption: full-screen ID-card preview; the standard header/footer layout does not apply.
 import {
   Dialog,
   DialogContent,

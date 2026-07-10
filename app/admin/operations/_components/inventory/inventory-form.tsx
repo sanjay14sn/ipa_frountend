@@ -1,5 +1,6 @@
 "use client";
 
+import { RUPEE_SYMBOL } from "@/lib/currency-utils";
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { DialogFormField } from "@/components/shared/dialog";
@@ -76,7 +77,7 @@ export function InventoryForm({
           }
         />
       </DialogFormField>
-      <DialogFormField label="Unit price (₹)">
+      <DialogFormField label={`Unit price (${RUPEE_SYMBOL})`}>
         <Input
           type="number"
           min={0}

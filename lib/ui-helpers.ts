@@ -1,6 +1,6 @@
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
 import { formatRupees } from "@/lib/currency-utils";
-import { formatDate, formatDateTime } from "@/lib/date-utils";
+import { formatDate, formatDateTime, formatMonthYear } from "@/lib/date-utils";
 
 export function getInitials(
   name: string | null | undefined,
@@ -19,16 +19,9 @@ export function getInitials(
     .toUpperCase();
 }
 
-// SW-P3 exemption: month-year "since" label is deliberately not a full date.
-function getSinceLabel(
-  iso: string | null | undefined,
-): string | null {
-  if (!iso) return null;
-  try {
-    return format(parseISO(iso), "MMM yyyy");
-  } catch {
-    return null;
-  }
+// Month-year "since" label is deliberately not a full date (SW-P3).
+function getSinceLabel(iso: string | null | undefined): string | null {
+  return formatMonthYear(iso);
 }
 
 function getTimeRemaining(
