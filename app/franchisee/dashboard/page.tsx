@@ -250,84 +250,45 @@ function buildFranchiseFeeCardDisplay({
   return { value: formatRupees(paidAmount), sub: undefined };
 }
 
-function PayrollItem({ p, index }: { p: any; index: number }) {
-  return (
-    <div className={cn("rounded-xl border bg-accent/30 p-3", index > 0 && "mt-3")}>
-      {p?.program?.name && (
-        <p className="mb-2 text-xs text-muted-foreground">{p.program.name}</p>
-      )}
-      <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm">
-        {(
-          [
-            ["Fee", p?.franchiseFee],
-            ["Monthly", p?.monthlyFee],
-            ["Royalty", p?.royalty],
-          ] as [string, number | undefined][]
-        ).map(([label, val]) => (
-          <div key={label}>
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-              {label}
-            </p>
-            <p className="font-medium text-card-foreground">
-              {formatRupees(Number(val ?? 0))}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ProfileCard({ profile }: { profile: NonNullable<ReturnType<typeof import("@/context/user-context").useUser>["user"]>["profile"] }) {
-  if (!profile) return null;
-  const rows: ([string, string | undefined] | null)[] = [
-    ["Name", profile.name],
-    ["Phone", profile.phone],
-    ["Email", profile.mail],
-    ["City", profile.city],
-    ["Franchise", profile.franchise?.name],
-    ["Type", profile.franchise?.type],
-    ["Status", profile.franchise?.status],
-    profile.franchise?.approvedAt
-      ? ["Approved", formatDate(profile.franchise.approvedAt)]
-      : null,
-  ];
-  const filteredRows = rows.filter((row): row is [string, string | undefined] => row != null);
+/**
+ * FR-05: prime dashboard space belongs to work, not identity — the profile
+ * card moved to /franchisee/profile; this panel surfaces every non-zero
+ * pending item as a deep link (targets mirror the stat-cell chips).
+ */
+function PendingActionsCard({
+  items,
+}: {
+  items: { label: string; count: number; href: string }[];
+}) {
+  const actionable = items.filter((item) => item.count > 0);
   return (
     <Card className="rounded-2xl border-border bg-card shadow-sm">
       <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
         <CardTitle className="flex items-center gap-3 text-xl font-normal text-card-foreground">
-          <ModulePill label="Profile" />
-          Profile
+          <ModulePill label="Actions" />
+          Pending actions
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4 p-4 pt-2 sm:p-5 sm:pt-2">
-        <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-          {filteredRows.map(([label, value]) => (
-            <div
-              key={label}
-              className="col-span-1 flex justify-between gap-3 border-b border-border/60 pb-2 last:border-b-0"
+      <CardContent className="space-y-3 p-4 pt-2 sm:p-5 sm:pt-2">
+        {actionable.length === 0 ? (
+          <p className="rounded-xl border border-dashed bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+            You&apos;re all caught up.
+          </p>
+        ) : (
+          actionable.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="flex items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-sm transition-colors hover:border-primary/30 hover:bg-accent"
             >
-              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                {label}
+              <span className="text-sm font-medium text-card-foreground">
+                {item.label}
               </span>
-              <span className="text-right font-medium text-card-foreground">
-                {value ?? "-"}
+              <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-warning-soft px-2 text-xs font-medium text-warning-soft-foreground">
+                {item.count}
               </span>
-            </div>
-          ))}
-        </div>
-        {profile.franchise?.franchisePayroll && (
-          <div className="border-t border-border pt-3">
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-              Payroll
-            </p>
-            {[profile.franchise.franchisePayroll]
-              .filter(Boolean)
-              .map((p: any, i: number) => (
-                <PayrollItem key={i} p={p} index={i} />
-              ))}
-          </div>
+            </Link>
+          ))
         )}
       </CardContent>
     </Card>
@@ -648,7 +609,30 @@ export default function FranchiseeDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {user.profile && <ProfileCard profile={user.profile} />}
+        <PendingActionsCard
+          items={[
+            {
+              label: "Course instructor approvals",
+              count: stats.courseInstructors.pending,
+              href: "/franchisee/course-instructors",
+            },
+            {
+              label: "Pending orders",
+              count: stats.orders.pending,
+              href: "/franchisee/orders",
+            },
+            {
+              label: "Certificate requests",
+              count: stats.certificates.pending,
+              href: "/franchisee/students?tab=certificates",
+            },
+            {
+              label: "Overdue EMI",
+              count: emiOverdue > 0 ? 1 : 0,
+              href: "/franchisee/franchise?tab=agreements",
+            },
+          ]}
+        />
         <RecentOrdersCard orders={recentOrders} />
       </div>
     </div>

@@ -49,8 +49,7 @@ const DEFAULT_PROFILE_HREF: Record<
   string | null
 > = {
   admin: "/admin/profile",
-  // Until the Part C franchisee profile page exists.
-  franchisee: "/franchisee/franchise",
+  franchisee: "/franchisee/profile",
   ci: null,
 };
 
