@@ -288,6 +288,22 @@ type AgreementStatus =
   | "PendingSignature"
   | "Expired";
 
+/** Legacy → canonical status values (see AgreementStatus docs above). */
+const LEGACY_AGREEMENT_STATUS: Record<string, string> = {
+  Signed: "Valid",
+  PendingSignature: "Approved",
+  Expired: "Void",
+};
+
+/**
+ * Map legacy stored statuses to their canonical equivalents for display.
+ * Filtering/persistence still uses raw values — only render through this.
+ */
+export function canonicalAgreementStatus(status?: string | null): string {
+  if (!status) return "Unknown";
+  return LEGACY_AGREEMENT_STATUS[status] ?? status;
+}
+
 export interface AgreementRecord extends AgreementTermsSnapshot {
   id: number;
   type: string;

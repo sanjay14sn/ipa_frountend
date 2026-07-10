@@ -1,13 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Ban, PackageOpen, PauseCircle, Settings2 } from "lucide-react";
+import {
+  Ban,
+  Download,
+  MoreHorizontal,
+  PackageOpen,
+  PauseCircle,
+  RefreshCw,
+} from "lucide-react";
 import type { AgreementRecord } from "@/services/agreement.service";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -15,23 +23,27 @@ import {
   useVoidAgreementMutation,
 } from "@/hooks/api/agreement.hooks";
 import { getAgreementActionVisibility } from "@/components/agreements/record-detail/agreement-utils";
+import { IssueRenewalDialog } from "@/components/agreements/IssueRenewalButton";
 import { ManageKitDialog } from "./ManageKitDialog";
 import { AgreementReasonDialog } from "./AgreementReasonDialog";
 
 /**
- * Compact, row-level agreement management actions for the admin agreements list:
- * a single "Manage kit" trigger (tabbed kit dialog) and a "Manage" dropdown for
- * the suspend / void lifecycle actions. Lets admins act on an agreement straight
- * from the table without opening the detail sheet.
+ * Row overflow menu for the admin agreements list (R1: Eye stays inline,
+ * everything else lives here — destructive item last). Hosts the kit,
+ * renewal, and suspend/void reason dialogs so menu items stay plain
+ * triggers.
  */
 export function AgreementRowActions({
   agreement,
+  onDownloadScheduleB,
 }: {
   agreement: AgreementRecord;
+  onDownloadScheduleB: () => void | Promise<void>;
 }) {
   const vis = getAgreementActionVisibility(agreement, "admin");
 
   const [manageKitOpen, setManageKitOpen] = useState(false);
+  const [renewalOpen, setRenewalOpen] = useState(false);
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
 
@@ -43,49 +55,51 @@ export function AgreementRowActions({
     vis.franchiseKitEditor ||
     vis.dispatchKit ||
     vis.kitDispatched;
-  const showManageMenu = vis.suspend || vis.void;
-
-  if (!showManageKit && !showManageMenu) return null;
+  // Same gate IssueRenewalButton applies internally (legacy stored status).
+  const showRenewal = agreement.status === "Expired";
 
   return (
     <>
-      {showManageKit ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 p-0"
-          title="Manage kit"
-          aria-label="Manage kit"
-          onClick={() => setManageKitOpen(true)}
-        >
-          <PackageOpen className="h-4 w-4" />
-        </Button>
-      ) : null}
-
-      {showManageMenu ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 p-0"
-              title="Manage agreement"
-              aria-label="Manage agreement"
-              disabled={suspend.isPending || voidMutation.isPending}
-            >
-              <Settings2 className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {vis.suspend ? (
-              <DropdownMenuItem onSelect={() => setSuspendOpen(true)}>
-                <PauseCircle className="mr-2 h-4 w-4" />
-                Suspend
-              </DropdownMenuItem>
-            ) : null}
-            {vis.void ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 p-0"
+            title="More actions"
+            aria-label="More actions"
+            disabled={suspend.isPending || voidMutation.isPending}
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => void onDownloadScheduleB()}>
+            <Download className="mr-2 h-4 w-4" />
+            Download Schedule B
+          </DropdownMenuItem>
+          {showManageKit ? (
+            <DropdownMenuItem onSelect={() => setManageKitOpen(true)}>
+              <PackageOpen className="mr-2 h-4 w-4" />
+              Manage kit
+            </DropdownMenuItem>
+          ) : null}
+          {showRenewal ? (
+            <DropdownMenuItem onSelect={() => setRenewalOpen(true)}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Issue renewal
+            </DropdownMenuItem>
+          ) : null}
+          {vis.suspend ? (
+            <DropdownMenuItem onSelect={() => setSuspendOpen(true)}>
+              <PauseCircle className="mr-2 h-4 w-4" />
+              Suspend
+            </DropdownMenuItem>
+          ) : null}
+          {vis.void ? (
+            <>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 onSelect={() => setVoidOpen(true)}
@@ -93,10 +107,10 @@ export function AgreementRowActions({
                 <Ban className="mr-2 h-4 w-4" />
                 Void
               </DropdownMenuItem>
-            ) : null}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {showManageKit ? (
         <ManageKitDialog
@@ -104,6 +118,14 @@ export function AgreementRowActions({
           vis={vis}
           open={manageKitOpen}
           onOpenChange={setManageKitOpen}
+        />
+      ) : null}
+
+      {showRenewal ? (
+        <IssueRenewalDialog
+          agreement={agreement}
+          open={renewalOpen}
+          onOpenChange={setRenewalOpen}
         />
       ) : null}
 

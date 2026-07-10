@@ -1,22 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Download, Eye } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Check, Eye, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IssueRenewalButton } from "@/components/agreements/IssueRenewalButton";
 import {
   DataTable,
   type DataTableColumn,
   type DataTableFilter,
   type DataTableSortOption,
+  StatusBadge,
   TablePageShell,
 } from "@/components/shared";
 import {
+  canonicalAgreementStatus,
   downloadScheduleBPdfAdmin,
   type AgreementRecord,
 } from "@/services/agreement.service";
+import { formatDate } from "@/lib/date-utils";
 import { agreementTypeBadgeClass, agreementTypeLabel } from "@/lib/payment-details-display";
 import {
   ReceivableCompactProgress,
@@ -92,12 +94,6 @@ export function AdminAgreementsSection({
     { value: "createdAt", label: "Date" },
   ];
 
-  useEffect(() => {
-    if (agreementsQuery.error) {
-      toast.error(getErrorMessage(agreementsQuery.error, "Failed to load agreements"));
-    }
-  }, [agreementsQuery.error]);
-
   const columns: DataTableColumn<AgreementRecord>[] = [
     {
       key: "agreement",
@@ -113,6 +109,41 @@ export function AdminAgreementsSection({
       ),
     },
     {
+      key: "status",
+      header: "Status",
+      render: (record) => (
+        <StatusBadge label={canonicalAgreementStatus(record.status)} />
+      ),
+    },
+    {
+      key: "signed",
+      header: "Signed",
+      render: (record) => {
+        const signedAt = record.franchiseeSignedAt ?? record.dateOfSigning;
+        return record.signed ? (
+          <span className="inline-flex items-center gap-1.5 text-sm">
+            <Check className="h-4 w-4 shrink-0 text-success" />
+            {signedAt ? formatDate(signedAt) : "—"}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+            <X className="h-4 w-4 shrink-0" />
+            Not signed
+          </span>
+        );
+      },
+    },
+    {
+      key: "validity",
+      header: "Validity",
+      render: (record) => (
+        <span className="text-xs text-muted-foreground">
+          {record.tenure != null ? `${record.tenure}mo` : "—"}
+          {record.expiresAt ? ` · exp ${formatDate(record.expiresAt)}` : ""}
+        </span>
+      ),
+    },
+    {
       key: "emi",
       header: "EMI",
       className: "min-w-[180px]",
@@ -123,7 +154,7 @@ export function AdminAgreementsSection({
     {
       key: "actions",
       header: "Actions",
-      className: "w-[200px] text-center",
+      className: "w-[110px] text-center",
       render: (record) => (
         <div className="flex items-center justify-center gap-1">
           <Button
@@ -137,14 +168,9 @@ export function AdminAgreementsSection({
           >
             <Eye className="h-4 w-4" />
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 p-0"
-            title="Download Schedule B PDF"
-            aria-label="Download Schedule B PDF"
-            onClick={async () => {
+          <AgreementRowActions
+            agreement={record}
+            onDownloadScheduleB={async () => {
               try {
                 await downloadScheduleBPdfAdmin(record.id);
                 toast.success("Schedule B PDF download started");
@@ -154,11 +180,7 @@ export function AdminAgreementsSection({
                 );
               }
             }}
-          >
-            <Download className="h-4 w-4" />
-          </Button>
-          <AgreementRowActions agreement={record} />
-          <IssueRenewalButton agreement={record} />
+          />
         </div>
       ),
     },
@@ -200,7 +222,13 @@ export function AdminAgreementsSection({
           setSortBy(newSortBy);
           setSortOrder(newSortOrder);
         }}
-        emptyMessage="No agreements found."
+        error={agreementsQuery.error}
+        onRetry={() => void agreementsQuery.refetch()}
+        errorMessage="Couldn't load agreements."
+        emptyState={{
+          title: "No agreements found",
+          hint: "Agreements appear here once a franchise application or program request is approved.",
+        }}
       />
 
       <AdminAgreementDetailSheet
