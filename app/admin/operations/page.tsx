@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { PageSkeleton } from "@/components/shared";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
+import { useVisitedTabs } from "@/hooks/use-visited-tabs";
 import { useUser } from "@/context/user-context";
 import AdminOrdersTable from "@/components/orders/AdminOrdersTable";
 import AdminShippingTable from "@/components/shipping/AdminShippingTable";
@@ -23,6 +24,8 @@ const TABS = [
 
 function AdminOperationsHubInner() {
   const [tab, setTab] = useTabFromUrl("monitoring", TABS);
+  // ADM-23: panels mount on first activation and stay mounted after.
+  const hasVisited = useVisitedTabs(tab);
   const { user } = useUser();
   const isRegionalAdmin =
     user?.role === "admin" && user.adminRole === "staff";
@@ -50,7 +53,7 @@ function AdminOperationsHubInner() {
       onValueChange={setTab}
     >
 
-        <TabsContent value="orders" className="mt-4 space-y-6">
+        <TabsContent value="orders" forceMount className="data-[state=inactive]:hidden mt-4 space-y-6">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Order management</h2>
             <p className="text-muted-foreground">
@@ -59,10 +62,10 @@ function AdminOperationsHubInner() {
               dispatch.
             </p>
           </div>
-          {tab === "orders" && <AdminOrdersTable />}
+          {hasVisited("orders") && <AdminOrdersTable />}
         </TabsContent>
 
-        <TabsContent value="shipping" className="mt-4 space-y-6">
+        <TabsContent value="shipping" forceMount className="data-[state=inactive]:hidden mt-4 space-y-6">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Shipping</h2>
             <p className="text-muted-foreground">
@@ -71,24 +74,24 @@ function AdminOperationsHubInner() {
               exposes partial shipments.
             </p>
           </div>
-          {tab === "shipping" && <AdminShippingTable />}
+          {hasVisited("shipping") && <AdminShippingTable />}
         </TabsContent>
 
-        <TabsContent value="payments" className="mt-4 space-y-6">
+        <TabsContent value="payments" forceMount className="data-[state=inactive]:hidden mt-4 space-y-6">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Payments</h2>
             <p className="text-muted-foreground">
               Billing stays in the hub, but order creation and stock allocation are now handled elsewhere.
             </p>
           </div>
-          {tab === "payments" && <PaymentsTable />}
+          {hasVisited("payments") && <PaymentsTable />}
         </TabsContent>
 
-        <TabsContent value="inventory" className="mt-4">
-          {tab === "inventory" && <InventorySection />}
+        <TabsContent value="inventory" forceMount className="data-[state=inactive]:hidden mt-4">
+          {hasVisited("inventory") && <InventorySection />}
         </TabsContent>
 
-        <TabsContent value="procurement" className="mt-4 space-y-6">
+        <TabsContent value="procurement" forceMount className="data-[state=inactive]:hidden mt-4 space-y-6">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Procurement</h2>
             <p className="text-muted-foreground">
@@ -97,11 +100,11 @@ function AdminOperationsHubInner() {
                 : "Manage suppliers, item sourcing, purchase orders, receipts, and replenishment drafts."}
             </p>
           </div>
-          {tab === "procurement" && <ProcurementSection />}
+          {hasVisited("procurement") && <ProcurementSection />}
         </TabsContent>
 
-        <TabsContent value="monitoring" className="mt-4">
-          {tab === "monitoring" && <MonitoringSection />}
+        <TabsContent value="monitoring" forceMount className="data-[state=inactive]:hidden mt-4">
+          {hasVisited("monitoring") && <MonitoringSection />}
         </TabsContent>
     </PageTabs>
   );

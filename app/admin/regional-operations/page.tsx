@@ -5,6 +5,7 @@ import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { PageSkeleton } from "@/components/shared";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
+import { useVisitedTabs } from "@/hooks/use-visited-tabs";
 import { useUser } from "@/context/user-context";
 import { useRegions } from "@/hooks/api/region-tracking.hooks";
 import {
@@ -31,6 +32,8 @@ function RegionalOperationsInner() {
   const isSuperAdmin = user?.role === "admin" && user.adminRole === "super";
 
   const [tab, setTab] = useTabFromUrl("monitoring", TABS);
+  // ADM-23: panels mount on first activation and stay mounted after.
+  const hasVisited = useVisitedTabs(tab);
 
   // Region is chosen here (not "my region"): orders/shipping/payments scope by the
   // region's admin, inventory/monitoring by its warehouse. Both ride in the URL.
@@ -111,48 +114,48 @@ function RegionalOperationsInner() {
         </div>
       ) : (
         <>
-          <TabsContent value="orders" className="mt-4 space-y-6">
+          <TabsContent value="orders" forceMount className="data-[state=inactive]:hidden mt-4 space-y-6">
             <div>
               <h2 className="text-2xl font-semibold tracking-tight">Order management</h2>
               <p className="text-muted-foreground">
                 Paid demand, allocation, backorders, and cancellations for this region.
               </p>
             </div>
-            {tab === "orders" && (
+            {hasVisited("orders") && (
               <AdminOrdersTable regionAdminId={regionAdminId} readOnly />
             )}
           </TabsContent>
 
-          <TabsContent value="shipping" className="mt-4 space-y-6">
+          <TabsContent value="shipping" forceMount className="data-[state=inactive]:hidden mt-4 space-y-6">
             <div>
               <h2 className="text-2xl font-semibold tracking-tight">Shipping</h2>
               <p className="text-muted-foreground">
                 Dispatch status for this region&apos;s ready orders.
               </p>
             </div>
-            {tab === "shipping" && (
+            {hasVisited("shipping") && (
               <AdminShippingTable regionAdminId={regionAdminId} readOnly />
             )}
           </TabsContent>
 
-          <TabsContent value="payments" className="mt-4 space-y-6">
+          <TabsContent value="payments" forceMount className="data-[state=inactive]:hidden mt-4 space-y-6">
             <div>
               <h2 className="text-2xl font-semibold tracking-tight">Payments</h2>
               <p className="text-muted-foreground">
                 Billing summaries across all regions (not region-filtered).
               </p>
             </div>
-            {tab === "payments" && <PaymentsTable />}
+            {hasVisited("payments") && <PaymentsTable />}
           </TabsContent>
 
-          <TabsContent value="inventory" className="mt-4">
-            {tab === "inventory" && (
+          <TabsContent value="inventory" forceMount className="data-[state=inactive]:hidden mt-4">
+            {hasVisited("inventory") && (
               <InventorySection regionLocationId={regionLocationId} readOnly />
             )}
           </TabsContent>
 
-          <TabsContent value="monitoring" className="mt-4">
-            {tab === "monitoring" && (
+          <TabsContent value="monitoring" forceMount className="data-[state=inactive]:hidden mt-4">
+            {hasVisited("monitoring") && (
               <MonitoringSection
                 regionAdminId={regionAdminId}
                 regionLocationId={regionLocationId}
