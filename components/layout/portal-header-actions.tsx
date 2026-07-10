@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { NotificationBell } from "@/components/shared/notification-bell";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { useUser } from "@/context/user-context";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { getUserFromStorage } from "@/lib/auth";
