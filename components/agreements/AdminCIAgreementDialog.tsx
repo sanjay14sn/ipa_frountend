@@ -4,11 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { DetailDialog } from "@/components/shared/dialog";
 import { CIAgreementDetail } from "@/components/agreements/CIAgreementDetail";
-import {
-  getAdminCourseInstructorAgreement,
-  type AdminCourseInstructorAgreementRecord,
-} from "@/services/course-instructor.service";
-import type { CIAgreementRecord } from "@/services/ci-training.service";
+import { getAdminCourseInstructorAgreement } from "@/services/course-instructor.service";
 import { cleanAgreementTitle } from "@/components/agreements/agreement-utils";
 
 interface AdminCIAgreementDialogProps {
@@ -51,7 +47,7 @@ export function AdminCIAgreementDialog({
             No CI agreement found for this instructor.
           </div>
         ) : (
-          <CIAgreementDetail agreement={data as unknown as CIAgreementRecord} />
+          <CIAgreementDetail agreement={data} />
         )}
     </DetailDialog>
   );

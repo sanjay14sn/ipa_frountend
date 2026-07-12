@@ -11,22 +11,42 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   AppDialog,
   AppDialogBody,
   AppDialogHeader,
   AppDialogFooter,
 } from "@/components/shared/dialog";
 import {
-  renewProgramAgreementAdmin,
+  renewAgreementAdmin,
   type AgreementRecord,
-  type RenewProgramAgreementInput,
+  type RenewAgreementInput,
+  type UnpaidItemsPolicy,
 } from "@/services/agreement.service";
 import { getErrorMessage } from "@/lib/error-utils";
 
-const schema = z.object({
-  franchiseFee: z.coerce.number().min(0),
-  tenure: z.coerce.number().int().min(1),
-});
+const schema = z
+  .object({
+    franchiseFee: z.coerce.number().min(0),
+    tenure: z.coerce.number().int().min(1),
+    unpaidItemsPolicy: z.enum(["carry", "cancel"]),
+    cancelReason: z.string().trim().optional(),
+  })
+  .refine(
+    (v) =>
+      v.unpaidItemsPolicy !== "cancel" ||
+      (v.cancelReason != null && v.cancelReason.length > 0),
+    {
+      message: "Give a reason for cancelling the unpaid items",
+      path: ["cancelReason"],
+    },
+  );
 type FormValues = z.infer<typeof schema>;
 
 interface IssueRenewalButtonProps {
@@ -42,6 +62,7 @@ export interface IssueRenewalDialogProps {
 /**
  * Controlled renewal-terms dialog — used by IssueRenewalButton and by the
  * agreements-table row overflow menu (which supplies its own trigger).
+ * Serves FRANCHISE and PROGRAM kinds (one renew endpoint for both).
  */
 export function IssueRenewalDialog({
   agreement,
@@ -54,12 +75,19 @@ export function IssueRenewalDialog({
     defaultValues: {
       franchiseFee: agreement.franchiseFee ?? 0,
       tenure: agreement.tenure ?? 12,
+      unpaidItemsPolicy: "carry",
+      cancelReason: "",
     },
   });
+  // Mirrored in local state (instead of form.watch) so the conditional
+  // reason field re-renders without opting the component out of the compiler.
+  const [unpaidItemsPolicy, setUnpaidItemsPolicy] =
+    useState<UnpaidItemsPolicy>("carry");
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
-      const dto: RenewProgramAgreementInput = {
+      const installment = agreement.installment ?? false;
+      const dto: RenewAgreementInput = {
         franchiseFee: values.franchiseFee,
         tenure: values.tenure,
         monthlyFee: agreement.monthlyFee ?? 0,
@@ -71,9 +99,19 @@ export function IssueRenewalDialog({
         gstFranchiseFee: agreement.gstFranchiseFee ?? false,
         gstRoyalty: agreement.gstRoyalty ?? false,
         gstMaterialCost: agreement.gstMaterialCost ?? false,
-        installment: agreement.installment ?? false,
+        installment,
+        // Required when installment=true — carried from the expired terms.
+        installmentMonths: installment
+          ? (agreement.installmentMonths ?? 12)
+          : undefined,
+        downPayment: installment ? (agreement.downPayment ?? null) : undefined,
+        unpaidItemsPolicy: values.unpaidItemsPolicy,
+        cancelReason:
+          values.unpaidItemsPolicy === "cancel"
+            ? values.cancelReason
+            : undefined,
       };
-      return renewProgramAgreementAdmin(agreement.id, dto);
+      return renewAgreementAdmin(agreement.id, dto);
     },
     onSuccess: async () => {
       toast.success("Renewal issued — the franchisee can now sign and pay.");
@@ -87,8 +125,8 @@ export function IssueRenewalDialog({
   return (
     <AppDialog open={open} onOpenChange={onOpenChange}>
       <AppDialogHeader
-        title="Issue program renewal"
-        description="Set the renewal terms. The franchisee will sign and pay to reactivate the program."
+        title="Issue renewal"
+        description="Set the renewal terms. The franchisee will sign and pay to reactivate."
       />
       <AppDialogBody>
         <form
@@ -104,6 +142,42 @@ export function IssueRenewalDialog({
             <Label htmlFor="renewal-tenure">Tenure (months)</Label>
             <Input id="renewal-tenure" type="number" step="1" {...form.register("tenure")} />
           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="renewal-unpaid-policy">Unpaid items on the old plan</Label>
+            <Select
+              value={unpaidItemsPolicy}
+              onValueChange={(v) => {
+                const policy = v as UnpaidItemsPolicy;
+                setUnpaidItemsPolicy(policy);
+                form.setValue("unpaidItemsPolicy", policy, {
+                  shouldValidate: true,
+                });
+              }}
+            >
+              <SelectTrigger id="renewal-unpaid-policy" className="rounded-lg">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="carry">Carry onto the renewal plan</SelectItem>
+                <SelectItem value="cancel">Cancel them (with reason)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {unpaidItemsPolicy === "cancel" ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="renewal-cancel-reason">Cancellation reason</Label>
+              <Input
+                id="renewal-cancel-reason"
+                placeholder="Why are the unpaid items being cancelled?"
+                {...form.register("cancelReason")}
+              />
+              {form.formState.errors.cancelReason ? (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.cancelReason.message}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </form>
       </AppDialogBody>
       <AppDialogFooter
@@ -122,7 +196,7 @@ export function IssueRenewalDialog({
 export function IssueRenewalButton({ agreement }: IssueRenewalButtonProps) {
   const [open, setOpen] = useState(false);
 
-  if (agreement.status !== "Expired") return null;
+  if (agreement.status !== "EXPIRED") return null;
 
   return (
     <>

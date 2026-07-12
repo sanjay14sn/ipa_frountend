@@ -27,8 +27,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ciAgreementContent } from "@/lib/ciAgreementContent";
-import type { CIAgreementRecord } from "@/services/ci-training.service";
-import { ciSignatureSrc } from "@/services/ci-training.service";
+import { ciSignatureSrc, type CIAgreementRecord } from "@/services/contracting.service";
 import { formatRupees } from "@/lib/currency-utils";
 import type { ESignatureResult, ESignaturePadProps } from "@/components/esignature/ESignaturePad";
 import { ContactPill, ContactPillGrid, FactCell, Timeline } from "@/components/shared";
@@ -53,7 +52,17 @@ function fmtTime(value?: string | null): string {
 
 type BadgeTone = "default" | "secondary" | "outline" | "destructive";
 
-function phaseBadge(phase: string): { label: string; tone: BadgeTone } {
+function phaseBadge(
+  agreement: Pick<CIAgreementRecord, "phase" | "status">,
+): { label: string; tone: BadgeTone } {
+  // Lifecycle status outranks the signing phase: a voided/suspended/superseded
+  // agreement keeps phase SIGNED server-side but is no longer in force.
+  if (agreement.status === "VOID") return { label: "Void", tone: "destructive" };
+  if (agreement.status === "SUSPENDED")
+    return { label: "Suspended", tone: "secondary" };
+  if (agreement.status === "SUPERSEDED")
+    return { label: "Superseded", tone: "secondary" };
+  const phase = agreement.phase;
   if (phase === "PENDING_FRANCHISEE_SIGNATURE")
     return { label: "Awaiting franchisee signature", tone: "secondary" };
   if (phase === "SIGNED") return { label: "Signed", tone: "default" };
@@ -94,7 +103,7 @@ export function CIAgreementDetail({
     [agreement.tenure],
   );
   const receivables = agreement.receivables ?? [];
-  const badge = phaseBadge(agreement.phase);
+  const badge = phaseBadge(agreement);
 
   const instructorName = agreement.instructor?.name ?? "—";
   const instructorInitials = (() => {
@@ -111,8 +120,9 @@ export function CIAgreementDetail({
   })();
 
   const ciSignedAt = agreement.ciSignedAt ?? agreement.dateOfSigning;
-  const ciSigned = !!ciSignedAt;
-  const franchiseeSigned = !!agreement.franchiseeSignedAt;
+  const ciSigned = agreement.ciSigned ?? !!ciSignedAt;
+  const franchiseeSigned =
+    agreement.franchiseeSigned ?? !!agreement.franchiseeSignedAt;
   const sigSrc = ciSignatureSrc(agreement.ciSignatureUrl);
 
   async function handleAdoptCISignature(result: ESignatureResult) {

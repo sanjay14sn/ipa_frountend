@@ -5,6 +5,7 @@ import {
   StatusBadge,
   TableMainCell,
   TablePageShell,
+  formatStatusLabel,
   type DataTableColumn,
   type DataTableFilter,
 } from "@/components/shared";
@@ -85,6 +86,16 @@ export function RosterSection() {
       key: "status",
       header: "Status",
       render: (s) => <StatusBadge label={s.status} />,
+    },
+    {
+      key: "agreement",
+      header: "Agreement",
+      render: (s) =>
+        s.enrolledAgreementId != null && s.agreementStatus ? (
+          <StatusBadge label={formatStatusLabel(s.agreementStatus)} />
+        ) : (
+          <span className="text-xs text-muted-foreground">No agreement</span>
+        ),
     },
     {
       key: "joined",

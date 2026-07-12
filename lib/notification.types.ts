@@ -58,7 +58,7 @@ enum NotificationType {
   SHIPMENT_CREATED = 'SHIPMENT_CREATED',
 }
 
-export type UserType = 'admin' | 'franchisee';
+export type UserType = 'admin' | 'franchisee' | 'ci';
 
 export interface Notification {
   id: number;

@@ -67,21 +67,21 @@ export function AgreementSwitcher() {
     try {
       await switchAgreement(agreementId);
 
-      // Status-driven routing (post-refactor — agreement.status IS the lifecycle).
+      // Status-driven routing (agreement.status IS the lifecycle).
       // Two contexts matter:
       //   1. Standing on a regular portal page (dashboard, students, orders…)
       //      → only navigate AWAY for the "needs action" statuses
-      //        (Approved goes to sign page; Pending goes to Programs tab).
-      //        Valid/Suspended/Void stay put — the page just rescopes.
+      //        (APPROVED goes to sign page; Pending goes to Programs tab).
+      //        ACTIVE/SUSPENDED/VOID stay put — the page just rescopes.
       //   2. Standing on /franchisee/agreement → the user is currently signing.
-      //      Selecting an Approved sibling re-pins the URL to that agreementId.
-      //      Selecting a Valid/Suspended/Void/Draft means "I'm done here" —
-      //      send them to the dashboard so the program scope they picked
-      //      becomes the working view.
-      const isSignNeeded = agreementId != null && lifecycleStatus === "Approved";
+      //      Selecting an APPROVED sibling re-pins the URL to that agreementId.
+      //      Selecting an ACTIVE/SUSPENDED/VOID/DRAFT one means "I'm done
+      //      here" — send them to the dashboard so the program scope they
+      //      picked becomes the working view.
+      const isSignNeeded = agreementId != null && lifecycleStatus === "APPROVED";
       const isPendingRequest = lifecycleStatus === "Pending";
       const isExpired =
-        agreementId != null && lifecycleStatus === "Expired";
+        agreementId != null && lifecycleStatus === "EXPIRED";
 
       if (isSignNeeded) {
         router.push(`/franchisee/agreement?agreementId=${agreementId}`);
@@ -90,9 +90,9 @@ export function AgreementSwitcher() {
       } else if (isExpired) {
         router.push(`/franchisee/agreement?agreementId=${agreementId}`);
       } else if (isOnAgreementPage) {
-        // Picked a non-actionable agreement (Valid / Suspended / Void / Draft)
-        // while sitting on the sign page — leave the sign flow and land on
-        // the dashboard with the new scope already active.
+        // Picked a non-actionable agreement (ACTIVE / SUSPENDED / VOID /
+        // DRAFT) while sitting on the sign page — leave the sign flow and
+        // land on the dashboard with the new scope already active.
         router.push("/franchisee/dashboard");
       }
       // else: regular portal page + non-actionable status → silent scope switch.

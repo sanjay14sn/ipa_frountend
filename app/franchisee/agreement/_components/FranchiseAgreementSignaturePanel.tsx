@@ -42,7 +42,7 @@ export function FranchiseAgreementSignaturePanel({
   const previewSrc = onAgreementSrc ?? profileSignatureSrc;
 
   const alreadySigned = Boolean(agreement?.signed);
-  const canSign = agreement?.status === "Approved" && !alreadySigned;
+  const canSign = agreement?.status === "APPROVED" && !alreadySigned;
 
   if (loading) {
     return (
@@ -125,13 +125,15 @@ export function FranchiseAgreementSignaturePanel({
       ) : (
         // Status hint for not-signable states.
         <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          {agreement.status === "Valid"
+          {agreement.status === "ACTIVE"
             ? "Your agreement is already in force."
-            : agreement.status === "Suspended"
+            : agreement.status === "SUSPENDED"
               ? "This agreement is currently suspended."
-              : agreement.status === "Void"
+              : agreement.status === "VOID"
                 ? "This agreement has been voided."
-                : "Your agreement is not yet approved by the admin. Signing unlocks once admin issues the agreement."}
+                : agreement.status === "SUPERSEDED"
+                  ? "This agreement has been replaced by a newer one."
+                  : "Your agreement is not yet approved by the admin. Signing unlocks once admin issues the agreement."}
         </div>
       )}
     </div>

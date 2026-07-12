@@ -55,8 +55,7 @@ export function AgreementRowActions({
     vis.franchiseKitEditor ||
     vis.dispatchKit ||
     vis.kitDispatched;
-  // Same gate IssueRenewalButton applies internally (legacy stored status).
-  const showRenewal = agreement.status === "Expired";
+  const showRenewal = vis.renew;
 
   return (
     <>

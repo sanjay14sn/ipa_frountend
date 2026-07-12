@@ -33,7 +33,7 @@ import { parseISO } from "date-fns";
 import { formatDate, formatMonthYear } from "@/lib/date-utils";
 import { getFranchiseFeePayable } from "@/lib/gst";
 import { formatRupees } from "@/lib/currency-utils";
-import { methodLabel } from "@/lib/payment-details-display";
+import { agreementTypeLabel, methodLabel } from "@/lib/payment-details-display";
 import PaymentBreakdown from "@/components/agreements/PaymentBreakdown";
 import {
   Check,
@@ -325,7 +325,11 @@ function AgreementOverviewTab({
                 <div className="flex flex-wrap gap-1">
                   {programTag && <Badge variant="secondary" className="text-[10px]">{programTag}</Badge>}
                   {typeTag && <Badge variant="secondary" className="text-[10px]">{typeTag}</Badge>}
-                  {data.type && <Badge variant="secondary" className="text-[10px]">{data.type}</Badge>}
+                  {data.kind && (
+                    <Badge variant="secondary" className="text-[10px]">
+                      {agreementTypeLabel(data.kind, data.origin)}
+                    </Badge>
+                  )}
                 </div>
                 <div className="pt-1 space-y-1.5">
                   <div>
@@ -486,7 +490,7 @@ function AgreementOverviewTab({
 
             <div className="flex-1" />
             <div className="grid grid-cols-2 gap-2 border-t border-border pt-4">
-              <FactCell label="Last updated" value={data.updatedAt ? fmtShortDate(data.updatedAt) : "—"} />
+              <FactCell label="Last updated" value={data.pendingSince ? fmtShortDate(data.pendingSince) : "—"} />
               <FactCell label="Time remaining" value={timeLeft} />
             </div>
           </CardContent>

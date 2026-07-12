@@ -190,26 +190,3 @@ export async function listInstructorReceivables(
   const payload = res.data.result;
   return Array.isArray(payload) ? payload : [];
 }
-
-export interface CreateCIReceivableInput {
-  levelFrom: number;
-  levelTo: number;
-  fee: number;
-  label?: string;
-}
-
-export async function createCIReceivablePlan(
-  instructorId: number,
-  receivables: CreateCIReceivableInput[],
-): Promise<void> {
-  await api.post(`/admin/ci-training/instructors/${instructorId}/receivables`, {
-    receivables,
-  });
-}
-
-export async function waiveCIReceivable(
-  receivableId: number,
-  reason: string,
-): Promise<void> {
-  await api.post(`/admin/ci-training/receivables/${receivableId}/waive`, { reason });
-}

@@ -18,7 +18,6 @@ import {
   approveCourseInstructor,
   type AdminCourseInstructorData,
 } from "@/services/course-instructor.service";
-import { createCIReceivablePlan } from "@/services/ci-training-admin.service";
 import {
   getTrainingLevelsByProgram,
   type TrainingLevel,
@@ -148,18 +147,18 @@ export default function ApproveCIModal({
 
     setLoading(true);
     try {
-      await approveCourseInstructor(instructor.id, { tenure });
-      // Receivables are created in a follow-up call — backend approve endpoint
-      // only takes tenure today; createReceivablePlan is the dedicated route.
-      await createCIReceivablePlan(
-        instructor.id,
-        receivables.map((r) => ({
+      // Single-call approval: the training-fee plan rides the approve payload
+      // and the backend builds the receivable plan at agreement issuance.
+      await approveCourseInstructor(instructor.id, {
+        tenure,
+        trainingPlan: receivables.map((r, index) => ({
+          order: index + 1,
+          label: r.label.trim() || undefined,
           levelFrom: r.levelFrom,
           levelTo: r.levelTo,
           fee: Number(r.fee) || 0,
-          label: r.label.trim() || undefined,
         })),
-      );
+      });
       toast.success(`${instructor.name} has been approved.`);
       onSuccess();
       onClose();

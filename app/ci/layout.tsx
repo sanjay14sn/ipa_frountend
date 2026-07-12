@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { AlertCircle } from "lucide-react";
 
 import { CIAuthProvider, useCIAuth } from "@/context/ci-auth-context";
+import { NotificationProvider } from "@/context/notification-context";
 import { logoutCI } from "@/services/ci-auth.service";
 import { PortalShell } from "@/components/layout/portal-shell";
 import { PortalSidebarBanner } from "@/components/layout/portal-sidebar";
@@ -60,8 +61,8 @@ function CIShell({ children }: { children: React.ReactNode }) {
   }
 
   // Agreement page gets a minimal shell (header + sign-out) until both
-  // parties have signed. No default actions cluster: CI has no notification
-  // stream, so the bell would be dead pre-signature.
+  // parties have signed. No default actions cluster: the notification bell
+  // only mounts for signed-in CIs on the full shell below.
   if (pathname === "/ci/agreement" && agreementPhase !== "SIGNED") {
     const handleLogout = async () => {
       await logoutCI().catch(() => {});
@@ -94,7 +95,7 @@ function CIShell({ children }: { children: React.ReactNode }) {
   const signed = agreementPhase === "SIGNED";
   const ciHomeHref = signed ? "/ci/dashboard" : "/ci/agreement";
 
-  return (
+  const shell = (
     <PortalShell
       variant="full"
       portal="ci"
@@ -116,6 +117,19 @@ function CIShell({ children }: { children: React.ReactNode }) {
       {children}
     </PortalShell>
   );
+
+  // Signed-in CIs get a CI-scoped notification feed (GET /ci/notification +
+  // SSE stream). The nested provider shadows the app-level one, so the bell
+  // rendered by the shell header talks to the CI endpoints.
+  if (user && signed) {
+    return (
+      <NotificationProvider identity={{ userId: user.id, userType: "ci" }}>
+        {shell}
+      </NotificationProvider>
+    );
+  }
+
+  return shell;
 }
 
 export default function CILayout({ children }: { children: React.ReactNode }) {

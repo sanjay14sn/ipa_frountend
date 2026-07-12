@@ -4,26 +4,28 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { AgreementRecord } from "@/services/agreement.service";
+import type {
+  AgreementRecord,
+  AgreementStatus,
+} from "@/services/agreement.service";
 import {
   agreementOutstandingEmi,
-  normalizeStatus,
   type BadgeTone,
-  type NormalizedAgreementStatus,
 } from "@/components/agreements/record-detail/agreement-utils";
 import { formatRupees } from "@/lib/currency-utils";
 
 const STATUS_BUCKETS: {
-  status: NormalizedAgreementStatus;
+  status: AgreementStatus;
   label: string;
   tone: BadgeTone;
 }[] = [
-  { status: "Valid", label: "Valid", tone: "default" },
-  { status: "Approved", label: "Awaiting", tone: "secondary" },
-  { status: "Draft", label: "Draft", tone: "outline" },
-  { status: "Suspended", label: "Suspended", tone: "secondary" },
-  { status: "Expired", label: "Expired", tone: "destructive" },
-  { status: "Void", label: "Void", tone: "destructive" },
+  { status: "ACTIVE", label: "Active", tone: "default" },
+  { status: "APPROVED", label: "Awaiting", tone: "secondary" },
+  { status: "DRAFT", label: "Draft", tone: "outline" },
+  { status: "SUSPENDED", label: "Suspended", tone: "secondary" },
+  { status: "EXPIRED", label: "Expired", tone: "destructive" },
+  { status: "SUPERSEDED", label: "Superseded", tone: "secondary" },
+  { status: "VOID", label: "Void", tone: "destructive" },
 ];
 
 /**
@@ -43,7 +45,7 @@ export function FranchiseAgreementsSummary({
   }
 
   const counts = agreements.reduce<Record<string, number>>((acc, agreement) => {
-    const key = normalizeStatus(agreement.status);
+    const key = agreement.status ?? "UNKNOWN";
     acc[key] = (acc[key] ?? 0) + 1;
     return acc;
   }, {});

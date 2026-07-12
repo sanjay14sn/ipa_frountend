@@ -204,8 +204,11 @@ export function MyAgreementsSection() {
       key: "type",
       header: "Type",
       render: (record) => (
-        <Badge variant="outline" className={agreementTypeBadgeClass(record.type)}>
-          {agreementTypeLabel(record.type)}
+        <Badge
+          variant="outline"
+          className={agreementTypeBadgeClass(record.kind, record.origin)}
+        >
+          {agreementTypeLabel(record.kind, record.origin)}
         </Badge>
       ),
     },
@@ -222,8 +225,13 @@ export function MyAgreementsSection() {
       header: "Status",
       className: "text-center",
       render: (record) => {
+        // `paymentId` died with the unification — activation (status ACTIVE /
+        // activatedAt) is the "paid" signal now.
         const paid =
-          record.paymentId != null || record.payment?.id != null;
+          record.activatedAt != null ||
+          record.status === "ACTIVE" ||
+          record.status === "SUSPENDED" ||
+          record.payment?.id != null;
         const parts: string[] = [];
         parts.push(record.signed ? "Signed" : "Unsigned");
         parts.push(paid ? "Paid" : "Awaiting payment");

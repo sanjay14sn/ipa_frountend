@@ -2,17 +2,25 @@ import { describe, it, expect } from "vitest";
 import { toLifecycleStatus } from "@/hooks/use-scope";
 
 describe("toLifecycleStatus", () => {
-  it("preserves Expired (regression: previously defaulted to Approved)", () => {
-    expect(toLifecycleStatus("Expired")).toBe("Expired");
+  it("preserves EXPIRED (regression: previously defaulted to Approved)", () => {
+    expect(toLifecycleStatus("EXPIRED")).toBe("EXPIRED");
   });
 
-  it("passes through known statuses", () => {
-    expect(toLifecycleStatus("Valid")).toBe("Valid");
-    expect(toLifecycleStatus("Approved")).toBe("Approved");
-    expect(toLifecycleStatus("Suspended")).toBe("Suspended");
+  it("passes through known UPPER_SNAKE agreement statuses", () => {
+    expect(toLifecycleStatus("ACTIVE")).toBe("ACTIVE");
+    expect(toLifecycleStatus("APPROVED")).toBe("APPROVED");
+    expect(toLifecycleStatus("SUSPENDED")).toBe("SUSPENDED");
+    expect(toLifecycleStatus("SUPERSEDED")).toBe("SUPERSEDED");
+    expect(toLifecycleStatus("VOID")).toBe("VOID");
+    expect(toLifecycleStatus("DRAFT")).toBe("DRAFT");
   });
 
-  it("falls back to Approved for unknown values", () => {
-    expect(toLifecycleStatus("Whatever")).toBe("Approved");
+  it("keeps the request-only Pending value (not recased)", () => {
+    expect(toLifecycleStatus("Pending")).toBe("Pending");
+  });
+
+  it("falls back to APPROVED for unknown values (incl. dead legacy casings)", () => {
+    expect(toLifecycleStatus("Whatever")).toBe("APPROVED");
+    expect(toLifecycleStatus("Valid")).toBe("APPROVED");
   });
 });

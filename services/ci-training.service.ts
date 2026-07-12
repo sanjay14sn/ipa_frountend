@@ -1,25 +1,56 @@
 import { api } from "@/lib/axios";
 import { unwrapData } from "@/lib/unwrap-api";
-import { franchiseeProfileSignatureSrc } from "./agreement.service";
+
+/**
+ * Settlement status of a CI training receivable item. Ids are RECEIVABLE ITEM
+ * ids (they changed at the receivables migration — always list-then-pay).
+ * Any of the unsettled statuses ('pending' | 'due' | 'scheduled') is payable
+ * when it is the FIRST unsettled item; sequential order is enforced
+ * server-side.
+ */
+export type CITrainingReceivableStatus =
+  | "pending"
+  | "due"
+  | "scheduled"
+  | "paid"
+  | "waived";
 
 export interface CITrainingReceivable {
+  /** Receivable ITEM id — pass this to the pay endpoint. */
   id: number;
   receivableOrder: number;
   label: string;
   levelFrom: number;
   levelTo: number;
+  /** Training levels covered by this receivable. */
+  trainingLevelIds?: Array<{
+    id: number;
+    name: string;
+    code: string;
+    displayOrder: number;
+  }>;
+  /** The actual Razorpay payable for this item (incl. GST). */
   fee: number;
-  status: "pending" | "paid" | "waived";
+  status: CITrainingReceivableStatus;
   paidAt?: string | null;
   waivedAt?: string | null;
 }
 
+/** True when the item still needs settling (payable once it's first in line). */
+export function isUnsettledCIReceivable(r: Pick<CITrainingReceivable, "status">): boolean {
+  return r.status !== "paid" && r.status !== "waived";
+}
+
+/**
+ * Payment-order shape returned by POST /ci/training/receivables/:id/pay —
+ * the SAME shape every other checkout in the app uses.
+ */
 export interface CIReceivablePayResponse {
-  key: string;
+  razorpayOrderId: string;
+  paymentId: number;
   amount: number;
   currency: string;
-  orderId: string;
-  paymentId?: number;
+  keyId: string;
 }
 
 export interface CIProgressItem {
@@ -55,19 +86,12 @@ export async function listCIReceivables(): Promise<CITrainingReceivable[]> {
   return Array.isArray(payload) ? payload : [];
 }
 
+/** :receivableItemId = item id from the list (ids changed at migration). */
 export async function initiateCIReceivablePayment(
-  receivableId: number,
+  receivableItemId: number,
 ): Promise<CIReceivablePayResponse> {
-  const res = await api.post(`/ci/training/receivables/${receivableId}/pay`);
-  const payload = asRecord(unwrapData<unknown>(res));
-  const payment = asRecord(payload.payment);
-  return {
-    key: String(payload.key ?? payload.keyId ?? payment.key ?? payment.keyId ?? ""),
-    amount: Number(payload.amount ?? payment.amount),
-    currency: String(payload.currency ?? payment.currency ?? "INR"),
-    orderId: String(payload.orderId ?? payload.razorpayOrderId ?? payment.orderId ?? payment.razorpayOrderId ?? ""),
-    paymentId: asNumber(payload.paymentId ?? payment.paymentId),
-  };
+  const res = await api.post(`/ci/training/receivables/${receivableItemId}/pay`);
+  return unwrapData<CIReceivablePayResponse>(res);
 }
 
 export async function verifyCIReceivablePayment(data: {
@@ -167,101 +191,4 @@ export async function getCIUpcomingSessions(): Promise<CIUpcomingSession[]> {
   const res = await api.get("/ci/training/upcoming");
   const payload = unwrapData<unknown>(res);
   return Array.isArray(payload) ? payload : [];
-}
-
-export type CIAgreementPhase =
-  | "PENDING_CI_SIGNATURE"
-  | "PENDING_FRANCHISEE_SIGNATURE"
-  | "SIGNED"
-  | "EXPIRED";
-
-export interface CIAgreementRecord {
-  id: number;
-  title: string;
-  phase: CIAgreementPhase;
-  /** Raw lifecycle status: "Valid" | "Suspended" | "Expired" | "Void" | "Approved". */
-  status?: string;
-  tenure: number | null;
-  expiresAt: string | null;
-  dateOfSigning: string | null;
-  ciShare: number | null;
-  levelDurations: { l1: number; l2: number };
-  franchisee: {
-    name: string;
-    centreName: string;
-    centreAddress: string;
-    phone?: string | null;
-    mail?: string | null;
-  } | null;
-  instructor: { name: string; address: string | null; phone: string | null } | null;
-  ciSignedAt?: string | null;
-  franchiseeSignedAt?: string | null;
-  ciSignatureUrl?: string | null;
-  franchiseeSignatureUrl?: string | null;
-  receivables?: CITrainingReceivable[];
-}
-
-export async function getCIAgreement(): Promise<CIAgreementRecord | null> {
-  const res = await api.get("/ci/agreement");
-  return unwrapData<CIAgreementRecord | null>(res) ?? null;
-}
-
-async function signCIAgreement(agreementId: number, signaturePath: string): Promise<void> {
-  await api.post(`/ci/agreement/${agreementId}/sign`, { signaturePath });
-}
-
-export interface CIESignaturePayload {
-  svg: string;
-  method: "drawn" | "typed";
-  consentVersion: string;
-}
-
-export async function signCIAgreementWithESignature(
-  agreementId: number,
-  payload: CIESignaturePayload,
-): Promise<void> {
-  const blob = new Blob([payload.svg], { type: "image/svg+xml" });
-  const file = new File([blob], "signature.svg", { type: "image/svg+xml" });
-  const form = new FormData();
-  form.append("signature", file);
-  form.append("signatureMethod", payload.method);
-  form.append("consentVersion", payload.consentVersion);
-  await api.post(`/ci/agreement/${agreementId}/sign`, form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-}
-
-/** Update the CI's on-file signature without changing agreement state.
- *  Used for already-signed agreements where the signature file was never captured. */
-export async function updateCIAgreementSignature(
-  agreementId: number,
-  payload: CIESignaturePayload,
-): Promise<void> {
-  const blob = new Blob([payload.svg], { type: "image/svg+xml" });
-  const file = new File([blob], "signature.svg", { type: "image/svg+xml" });
-  const form = new FormData();
-  form.append("signature", file);
-  form.append("signatureMethod", payload.method);
-  form.append("consentVersion", payload.consentVersion);
-  await api.patch(`/ci/agreement/${agreementId}/signature`, form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-}
-
-/**
- * Resolves a raw stored CI signature path to a full URL.
- * The raw path is stored on `course_instructor.ciSignature` and
- * returned in `CIAgreementRecord.ciSignatureUrl`.
- */
-export function ciSignatureSrc(stored: string | null | undefined): string | null {
-  return franchiseeProfileSignatureSrc(stored);
-}
-
-/** Sign CI agreement using the CI's on-file signature (no upload needed). */
-export async function signCIAgreementWithStored(agreementId: number): Promise<void> {
-  const form = new FormData();
-  form.append("useExisting", "true");
-  await api.post(`/ci/agreement/${agreementId}/sign`, form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
 }

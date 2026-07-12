@@ -91,6 +91,9 @@ export function NotificationBell() {
     if (notification.action?.href) {
       return notification.action.href;
     }
+    // The static map targets /admin/** routes only — never bounce a
+    // franchisee/CI recipient into the admin portal.
+    if (notification.userType !== "admin") return undefined;
     return NOTIFICATION_REDIRECT_MAP[notification.type as keyof typeof NOTIFICATION_REDIRECT_MAP];
   };
 

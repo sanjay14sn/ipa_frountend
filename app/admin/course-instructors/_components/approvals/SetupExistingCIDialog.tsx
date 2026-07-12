@@ -135,7 +135,7 @@ export default function SetupExistingCIDialog({
     const seen = new Map<number, string>();
     for (const a of agreements) {
       const status = (a.status ?? "").trim();
-      if (status !== "Valid" && status !== "Signed") continue;
+      if (status !== "ACTIVE") continue;
       const pid = a.programId;
       if (typeof pid !== "number") continue;
       if (seen.has(pid)) continue;

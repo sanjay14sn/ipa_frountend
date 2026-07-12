@@ -18,6 +18,7 @@ import {
   TableLoadingState,
   TablePageShell,
   PageSkeleton,
+  formatStatusLabel,
 } from "@/components/shared";
 import {
   AppDialog,
@@ -43,10 +44,11 @@ interface ActionDialogState {
   title: string;
 }
 
-/** CI agreement statuses render through StatusBadge; "Approved" reads as
- * "Pending signature" (the CI-facing meaning). */
+/** CI agreement statuses render through StatusBadge; "APPROVED" reads as
+ * "Pending signature" (the CI-facing meaning). Other statuses prettify
+ * ("ACTIVE" → "Active") via the shared label formatter. */
 function statusLabel(status: string): string {
-  return status === "Approved" ? "Pending signature" : status;
+  return status === "APPROVED" ? "Pending signature" : formatStatusLabel(status);
 }
 
 /** One entry of metadata.renewals, recorded by the backend on each renewal. */
@@ -362,7 +364,10 @@ function CIAgreementsTable() {
               variant="ghost"
               className="h-7 text-xs"
               onClick={() =>
-                setViewInstructor({ id: row.courseInstructorId!, name: row.ciName })
+                setViewInstructor({
+                  id: row.courseInstructorId!,
+                  name: row.instructorName ?? undefined,
+                })
               }
             >
               <Eye className="h-3.5 w-3.5" />
@@ -381,7 +386,7 @@ function CIAgreementsTable() {
               <History className="h-3.5 w-3.5" />
             </Button>
           )}
-          {row.status === "Valid" && (
+          {row.status === "ACTIVE" && (
             <Button
               size="sm"
               variant="outline"
@@ -393,7 +398,7 @@ function CIAgreementsTable() {
               Suspend
             </Button>
           )}
-          {row.status === "Suspended" && (
+          {row.status === "SUSPENDED" && (
             <Button
               size="sm"
               variant="outline"
@@ -404,7 +409,7 @@ function CIAgreementsTable() {
               {reactivatingId === row.id ? "..." : "Reactivate"}
             </Button>
           )}
-          {row.status === "Expired" && (
+          {row.status === "EXPIRED" && (
             <Button
               size="sm"
               variant="outline"
@@ -414,7 +419,7 @@ function CIAgreementsTable() {
               Renew
             </Button>
           )}
-          {row.status !== "Void" && (
+          {row.status !== "VOID" && row.status !== "SUPERSEDED" && (
             <Button
               size="sm"
               variant="ghost"
@@ -443,7 +448,7 @@ function CIAgreementsTable() {
           getRowId={(row) => String(row.id)}
           renderMainCell={(row) => (
             <span className="font-medium">
-              {row.ciName ?? "—"} - {row.franchiseName ?? "—"}
+              {row.instructorName ?? "—"} - {row.franchiseName ?? "—"}
             </span>
           )}
           emptyMessage="No CI agreements found."

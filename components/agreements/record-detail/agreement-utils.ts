@@ -5,6 +5,7 @@ import { formatRupees } from "@/lib/currency-utils";
 import {
   type AgreementRecord,
   type AgreementScheduleBView,
+  type AgreementStatus,
   type ReceivableCompactSummary,
   type ReceivableFranchiseeSummary,
   type ReceivableInstallmentSummary,
@@ -98,82 +99,46 @@ export function hasReceivablePlan(
 }
 
 /**
- * Lifecycle badge for an agreement. The new contract (post-refactor):
+ * Lifecycle badge for an agreement (statuses are UPPER_SNAKE on the wire):
  *   - `agreement.signed` is the single source of truth for "signed".
- *   - `agreement.status === 'Valid'` only after BOTH signed AND payment-linked.
- * The combo `status='Approved' && signed=true` means "signed, awaiting payment"
- * — a real intermediate state that was previously rendered as plain "Approved".
+ *   - `status === 'ACTIVE'` only after BOTH fully signed AND payment landed.
+ * The combo `status='APPROVED' && signed=true` means "signed, awaiting
+ * payment" — a real intermediate state rendered distinctly from "Approved".
  */
 export function agreementStatusBadge(
-  status: string | null | undefined,
+  status: AgreementStatus | null | undefined,
   signed: boolean | undefined,
 ): { label: string; tone: BadgeTone } {
   switch (status) {
-    case "Valid":
-    case "Signed": // legacy alias — same tone
-      return { label: "Valid", tone: "default" };
-    case "Approved":
-    case "PendingSignature": // legacy alias — same family
+    case "ACTIVE":
+      return { label: "Active", tone: "default" };
+    case "APPROVED":
       return signed
         ? { label: "Signed · awaiting payment", tone: "default" }
         : { label: "Approved · awaiting signature", tone: "secondary" };
-    case "Suspended":
+    case "SUSPENDED":
       return { label: "Suspended", tone: "secondary" };
-    case "Void":
-    case "Expired":
+    case "EXPIRED":
+      return { label: "Expired", tone: "destructive" };
+    case "VOID":
       return { label: "Void", tone: "destructive" };
-    case "Draft":
+    case "SUPERSEDED":
+      return { label: "Superseded", tone: "secondary" };
+    case "DRAFT":
       return { label: "Draft", tone: "outline" };
     default:
       return { label: status ?? "-", tone: "secondary" };
   }
 }
 
-// ── Status normalization + action visibility ─────────────────────────────────
-
-export type NormalizedAgreementStatus =
-  | "Draft"
-  | "Approved"
-  | "Valid"
-  | "Suspended"
-  | "Expired"
-  | "Void";
-
-/**
- * Collapse backend status aliases to a canonical set for UI logic.
- * `Signed`→`Valid`, `PendingSignature`→`Approved`. `Expired` is kept DISTINCT
- * from `Void` because expired agreements are still renewable. Unknown values
- * fall through unchanged so action predicates simply match nothing.
- */
-export function normalizeStatus(
-  status: string | null | undefined,
-): NormalizedAgreementStatus {
-  switch (status) {
-    case "Valid":
-    case "Signed":
-      return "Valid";
-    case "Approved":
-    case "PendingSignature":
-      return "Approved";
-    case "Suspended":
-      return "Suspended";
-    case "Expired":
-      return "Expired";
-    case "Void":
-      return "Void";
-    case "Draft":
-      return "Draft";
-    default:
-      return (status ?? "Draft") as NormalizedAgreementStatus;
-  }
-}
+// ── Action visibility ─────────────────────────────────────────────────────────
 
 export interface AgreementActionVisibility {
   download: boolean;
   manageKitItems: boolean;
   franchiseKitEditor: boolean;
   dispatchKit: boolean;
-  /** NEW_FRANCHISE + Valid + already dispatched — render a disabled "Kit dispatched" pill. */
+  /** FRANCHISE kind + ACTIVE + already dispatched — render a disabled "Kit dispatched" pill. */
   kitDispatched: boolean;
   suspend: boolean;
   reactivate: boolean;
@@ -183,12 +148,13 @@ export interface AgreementActionVisibility {
 
 /**
  * Pure predicate for which agreement actions are available, given role + the
- * agreement's normalized status and type. Kept side-effect free for unit tests.
+ * agreement's status and kind. SUPERSEDED rows are historical — download is
+ * the only action they expose. Kept side-effect free for unit tests.
  */
 export function getAgreementActionVisibility(
   agreement: Pick<
     AgreementRecord,
-    | "type"
+    | "kind"
     | "status"
     | "programId"
     | "franchiseId"
@@ -211,26 +177,40 @@ export function getAgreementActionVisibility(
     };
   }
 
-  const status = normalizeStatus(agreement.status);
-  const isNewFranchise = agreement.type === "NEW_FRANCHISE";
+  const status = agreement.status;
+  const isFranchiseKind = agreement.kind === "FRANCHISE";
   const hasProgram = agreement.programId != null;
   const dispatched = Boolean(agreement.materialsDispatched);
 
+  if (status === "SUPERSEDED") {
+    return {
+      download: true,
+      manageKitItems: false,
+      franchiseKitEditor: false,
+      dispatchKit: false,
+      kitDispatched: false,
+      suspend: false,
+      reactivate: false,
+      void: false,
+      renew: false,
+    };
+  }
+
   return {
     download: true,
-    manageKitItems: hasProgram && status !== "Void",
+    manageKitItems: hasProgram && status !== "VOID",
     franchiseKitEditor:
-      isNewFranchise && Boolean(agreement.franchiseId) && hasProgram,
-    dispatchKit: isNewFranchise && status === "Valid" && !dispatched,
-    kitDispatched: isNewFranchise && status === "Valid" && dispatched,
-    suspend: status === "Valid",
-    reactivate: status === "Suspended",
+      isFranchiseKind && Boolean(agreement.franchiseId) && hasProgram,
+    dispatchKit: isFranchiseKind && status === "ACTIVE" && !dispatched,
+    kitDispatched: isFranchiseKind && status === "ACTIVE" && dispatched,
+    suspend: status === "ACTIVE",
+    reactivate: status === "SUSPENDED",
     void:
-      status === "Draft" ||
-      status === "Approved" ||
-      status === "Valid" ||
-      status === "Suspended",
-    renew: status === "Expired",
+      status === "DRAFT" ||
+      status === "APPROVED" ||
+      status === "ACTIVE" ||
+      status === "SUSPENDED",
+    renew: status === "EXPIRED",
   };
 }
 

@@ -12,11 +12,13 @@ import {
   type DataTableSortOption,
   StatusBadge,
   TablePageShell,
+  formatStatusLabel,
 } from "@/components/shared";
 import {
-  canonicalAgreementStatus,
   downloadScheduleBPdfAdmin,
+  type AgreementKind,
   type AgreementRecord,
+  type AgreementStatus,
 } from "@/services/agreement.service";
 import { formatDate } from "@/lib/date-utils";
 import { agreementTypeBadgeClass, agreementTypeLabel } from "@/lib/payment-details-display";
@@ -48,8 +50,9 @@ export function AdminAgreementsSection({
   const listParams = useMemo(
     () => ({
       search: searchTerm || undefined,
-      status: statusFilter !== "all" ? statusFilter : undefined,
-      type: typeFilter !== "all" ? typeFilter : undefined,
+      status:
+        statusFilter !== "all" ? (statusFilter as AgreementStatus) : undefined,
+      type: typeFilter !== "all" ? (typeFilter as AgreementKind) : undefined,
       sortBy: sortBy || undefined,
       sortOrder,
     }),
@@ -67,23 +70,25 @@ export function AdminAgreementsSection({
       label: "Status",
       options: [
         { value: "all", label: "All statuses" },
-        { value: "Draft", label: "Draft" },
-        { value: "Approved", label: "Approved" },
-        { value: "Valid", label: "Valid" },
-        { value: "Suspended", label: "Suspended" },
-        { value: "Void", label: "Void" },
-        { value: "Expired", label: "Expired" },
+        { value: "DRAFT", label: "Draft" },
+        { value: "APPROVED", label: "Approved" },
+        { value: "ACTIVE", label: "Active" },
+        { value: "SUSPENDED", label: "Suspended" },
+        { value: "EXPIRED", label: "Expired" },
+        { value: "SUPERSEDED", label: "Superseded" },
+        { value: "VOID", label: "Void" },
       ],
       defaultValue: "all",
     },
     {
+      // Server-side this filters on the agreement `kind` (param name kept as
+      // `type`); renewal-vs-new is the `origin` column shown in the Type badge.
       key: "type",
-      label: "Type",
+      label: "Kind",
       options: [
-        { value: "all", label: "All types" },
-        { value: "NEW_FRANCHISE", label: agreementTypeLabel("NEW_FRANCHISE") },
-        { value: "NEW_PROGRAM", label: agreementTypeLabel("NEW_PROGRAM") },
-        { value: "RENEWAL", label: agreementTypeLabel("RENEWAL") },
+        { value: "all", label: "All kinds" },
+        { value: "FRANCHISE", label: agreementTypeLabel("FRANCHISE") },
+        { value: "PROGRAM", label: agreementTypeLabel("PROGRAM") },
       ],
       defaultValue: "all",
     },
@@ -103,8 +108,11 @@ export function AdminAgreementsSection({
       key: "type",
       header: "Type",
       render: (record) => (
-        <Badge variant="outline" className={agreementTypeBadgeClass(record.type)}>
-          {agreementTypeLabel(record.type)}
+        <Badge
+          variant="outline"
+          className={agreementTypeBadgeClass(record.kind, record.origin)}
+        >
+          {agreementTypeLabel(record.kind, record.origin)}
         </Badge>
       ),
     },
@@ -112,7 +120,7 @@ export function AdminAgreementsSection({
       key: "status",
       header: "Status",
       render: (record) => (
-        <StatusBadge label={canonicalAgreementStatus(record.status)} />
+        <StatusBadge label={formatStatusLabel(record.status ?? "Unknown")} />
       ),
     },
     {

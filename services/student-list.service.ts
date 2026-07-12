@@ -59,6 +59,10 @@ export interface StudentData {
   createdBy: number;
   updatedBy: number;
   materialsOrdered?: boolean;
+  /** Agreement the student enrolled under; null for pre-migration orphans. */
+  enrolledAgreementId?: number | null;
+  /** Admin list rows only: live status of that agreement (UPPER_SNAKE). */
+  agreementStatus?: string | null;
 }
 
 export interface StudentsResponse {

@@ -19,7 +19,8 @@ import {
   Layers,
   Trophy,
 } from "lucide-react";
-import { getCIAgreement, getCIProgress, getCIUpcomingSessions, listCIReceivables } from "@/services/ci-training.service";
+import { getCIProgress, getCIUpcomingSessions, listCIReceivables } from "@/services/ci-training.service";
+import { getCIAgreement } from "@/services/contracting.service";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { CIDashboardPanel } from "../_components/ci-dashboard-cards";
 import { formatDate } from "@/lib/date-utils";
@@ -82,7 +83,7 @@ export default function CIDashboardPage() {
   }, [upcoming]);
 
   const settledReceivableCount = receivables.filter((r) => r.status === "paid" || r.status === "waived").length;
-  const pendingReceivableCount = receivables.filter((r) => r.status === "pending").length;
+  const pendingReceivableCount = receivables.length - settledReceivableCount;
   const loading =
     agreementQuery.isLoading ||
     progressQuery.isLoading ||

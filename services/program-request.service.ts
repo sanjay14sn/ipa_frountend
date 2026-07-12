@@ -1,8 +1,8 @@
 import { api } from "@/lib/axios";
 import { compactRequestParams, normalizePaginatedResult, unwrapData } from "@/lib/unwrap-api";
 
-export interface ProgramRequestPayroll {
-  programId?: number;
+/** Program terms sent with an approval (backend `ProgramTermsDto`). */
+export interface ProgramRequestTerms {
   franchiseFee: number;
   kitCost: number;
   materialCost: number;
@@ -15,17 +15,17 @@ export interface ProgramRequestPayroll {
   installmentMonths?: number;
   /** Optional down payment collected up-front before installments begin. */
   downPaymentAmount?: number | null;
-  tenure?: number;
+  tenure: number;
   gstFranchiseFee: boolean;
   gstRoyalty: boolean;
   gstMaterialCost: boolean;
 }
 
 export interface ApproveProgramRequestPayload {
-  payroll: ProgramRequestPayroll;
+  /** Renamed from `payroll` in the partner-flow revamp (fields unchanged). */
+  terms: ProgramRequestTerms;
   dateOfPayment?: string;
   dateOfJoining?: string;
-  kitItems?: { inventoryId: number; quantity: number }[];
 }
 
 /**
@@ -46,16 +46,14 @@ export interface ProgramRequestItem {
   agreementId: number | null;
   /**
    * Live status of the linked agreement on franchisee-facing rows (null when
-   * no agreement is linked). "Void"/"Expired" mean the program can be
-   * re-requested even though the request row still reads "Approved".
+   * no agreement is linked), UPPER_SNAKE. "VOID"/"EXPIRED" mean the program
+   * can be re-requested even though the request row still reads "Approved".
    */
   agreementStatus?: string | null;
   requestedAt: string;
   approvedAt: string | null;
-  activatedAt: string | null;
   rejectedAt: string | null;
   rejectionReason: string | null;
-  cancelledAt: string | null;
   franchise?: { id: string; name: string; city?: string };
   program?: { id: number; name: string };
   franchisee?: { id: number; name: string; mail?: string; phone?: string };

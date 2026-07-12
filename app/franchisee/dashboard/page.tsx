@@ -135,7 +135,7 @@ function resolveEmiAgreement(agreements: AgreementRecord[]) {
   return agreements
     .filter(
       (agreement) =>
-        agreement.type === "NEW_FRANCHISE" &&
+        agreement.kind === "FRANCHISE" &&
         Boolean(agreement.receivables?.installmentSummary),
     )
     .sort((left, right) => right.id - left.id)[0];

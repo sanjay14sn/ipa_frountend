@@ -26,7 +26,7 @@ import {
   updateCIAgreementSignature,
   type CIAgreementRecord,
   type CIESignaturePayload,
-} from "@/services/ci-training.service";
+} from "@/services/contracting.service";
 import type { ESignatureResult } from "@/components/esignature/ESignaturePad";
 
 import { ciAgreementContent } from "@/lib/ciAgreementContent";
@@ -303,6 +303,16 @@ function CIAgreementContent() {
     );
   }
 
+  // VOID is a lifecycle status, not a signing phase — the server keeps the
+  // phase at SIGNED/PENDING_* for voided rows, so check status first.
+  if (agreement.status === "VOID") {
+    return <CIAgreementVoidView />;
+  }
+
+  if (agreement.phase === "EXPIRED") {
+    return <CIAgreementExpiredView agreement={agreement} />;
+  }
+
   if (agreement.phase === "SIGNED") {
     return (
       <div className="space-y-4">
@@ -314,14 +324,6 @@ function CIAgreementContent() {
           onCISign={!ciSignatureSrc(agreement.ciSignatureUrl) ? handleCISign : undefined}
         />
       </div>
-    );
-  }
-
-  if (agreement.phase === "EXPIRED") {
-    return agreement.status === "Void" ? (
-      <CIAgreementVoidView />
-    ) : (
-      <CIAgreementExpiredView agreement={agreement} />
     );
   }
 

@@ -74,8 +74,7 @@ export function ProgramRequestsSection() {
     setSubmitting(true);
     try {
       await approveProgramRequestAdmin(selectedRequest.id, {
-        payroll: {
-          programId: program.programId,
+        terms: {
           franchiseFee: Number(program.franchiseFee) || 0,
           kitCost: Number(program.kitCost) || 0,
           materialCost: Number(program.materialCost) || 0,
@@ -98,7 +97,7 @@ export function ProgramRequestsSection() {
         dateOfPayment: new Date().toISOString().split("T")[0],
         dateOfJoining: new Date().toISOString().split("T")[0],
       });
-      toast.success("Program request approved and payroll configured");
+      toast.success("Program request approved and terms configured");
       setShowPayrollDialog(false);
       setSelectedRequest(null);
       triggerRefresh();

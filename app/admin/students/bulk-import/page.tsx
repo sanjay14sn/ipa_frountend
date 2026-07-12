@@ -118,12 +118,16 @@ export default function StudentBulkImportPage() {
     }));
   }, [programsQ.data]);
 
-  /** Map `franchiseId → Set<programId>` of programs with a non-Void agreement. */
+  /**
+   * Map `franchiseId → Set<programId>` of programs with an ACTIVE agreement.
+   * Commit stamps `enrolledAgreementId` from the current ACTIVE agreement and
+   * rejects rows without one (INVALID_STATE), so the picker mirrors that rule.
+   */
   const programsByFranchise = useMemo(() => {
     const m = new Map<string, Set<number>>();
     (agreementsQ.data ?? []).forEach((a) => {
       if (!a.franchiseId || a.programId == null) return;
-      if (a.status === "Void") return;
+      if (a.status !== "ACTIVE") return;
       const s = m.get(a.franchiseId) ?? new Set<number>();
       s.add(a.programId);
       m.set(a.franchiseId, s);

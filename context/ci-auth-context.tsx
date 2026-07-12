@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { CIUser, getCIMe } from "@/services/ci-auth.service";
-import { getCIAgreement, CIAgreementPhase } from "@/services/ci-training.service";
+import { getCIAgreement, type CIAgreementPhase } from "@/services/contracting.service";
 
 interface CIAuthContextValue {
   user: CIUser | null;

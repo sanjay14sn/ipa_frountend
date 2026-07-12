@@ -18,13 +18,14 @@ import { AdminCourseInstructorData } from "@/services/course-instructor.service"
 import { formatDate } from "@/lib/date-utils";
 import { formatRupees } from "@/lib/currency-utils";
 import { getErrorMessage } from "@/lib/error-utils";
-import {
-  listInstructorReceivables,
-  waiveCIReceivable,
-} from "@/services/ci-training-admin.service";
+import { listInstructorReceivables } from "@/services/ci-training-admin.service";
 import type { CITrainingReceivable } from "@/services/ci-training.service";
+import { isUnsettledCIReceivable } from "@/services/ci-training.service";
 import { WaiveReceivableDialog } from "@/components/receivables/WaiveReceivableDialog";
-import type { ReceivableSummaryItem } from "@/services/agreement.service";
+import {
+  waiveReceivableItem,
+  type ReceivableSummaryItem,
+} from "@/services/agreement.service";
 
 interface CourseInstructorDetailsProps {
   instructors: AdminCourseInstructorData[];
@@ -42,6 +43,12 @@ function statusBadge(status: CITrainingReceivable["status"]) {
   }
   if (status === "waived") {
     return <Badge variant="secondary">Waived</Badge>;
+  }
+  if (status === "due") {
+    return <Badge variant="outline">Due</Badge>;
+  }
+  if (status === "scheduled") {
+    return <Badge variant="outline">Scheduled</Badge>;
   }
   return <Badge variant="outline">Pending</Badge>;
 }
@@ -79,8 +86,9 @@ function InstructorReceivablesSection({ instructorId }: InstructorReceivablesSec
   });
 
   const waiveMutation = useMutation({
+    // Generic receivable-item waive (per-receivable CI routes are gone).
     mutationFn: ({ receivableId, reason }: { receivableId: number; reason: string }) =>
-      waiveCIReceivable(receivableId, reason),
+      waiveReceivableItem(receivableId, reason),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["ci-receivables", "admin", instructorId],
@@ -120,7 +128,7 @@ function InstructorReceivablesSection({ instructorId }: InstructorReceivablesSec
                   {formatRupees(r.fee)}
                 </div>
                 {statusBadge(r.status)}
-                {r.status === "pending" && (
+                {isUnsettledCIReceivable(r) && (
                   <Button
                     size="sm"
                     variant="outline"
