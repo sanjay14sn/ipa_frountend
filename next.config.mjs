@@ -41,6 +41,16 @@ function buildCsp() {
     "https://checkout.razorpay.com",
     ...(apiOrigin ? [apiOrigin] : []),
   ];
+  const imgSources = [
+    "'self'",
+    "data:",
+    "blob:",
+    "https:",
+    // Signature/upload images are served from the backend origin
+    // (`${API_BASE_URL}/uploads/...`); `https:` covers prod but not the
+    // http://localhost dev API.
+    ...(apiOrigin ? [apiOrigin] : []),
+  ];
 
   const directives = [
     "default-src 'self'",
@@ -50,8 +60,8 @@ function buildCsp() {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     // Fonts
     "font-src 'self' https://fonts.gstatic.com data:",
-    // Images: self + data URIs (signatures stored as data:image/svg+xml)
-    "img-src 'self' data: blob: https:",
+    // Images: self + data URIs + backend-served signature files
+    `img-src ${imgSources.join(" ")}`,
     // Connections: frontend + Razorpay + backend API (+ ws schemes for socket.io)
     `connect-src ${connectSources.join(" ")}`,
     // Frames: Razorpay payment modal
