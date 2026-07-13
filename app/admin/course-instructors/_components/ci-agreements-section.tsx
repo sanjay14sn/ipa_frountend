@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Check, X, Eye, History } from "lucide-react";
-import { AdminCIAgreementDialog } from "@/components/agreements/AdminCIAgreementDialog";
+import { AdminCIAgreementSheet } from "@/components/agreements/AdminCIAgreementSheet";
+import { useAgreementIdFromUrl } from "@/hooks/use-agreement-id-from-url";
 import {
   DataTable,
   type DataTableColumn,
@@ -275,7 +276,9 @@ function CIAgreementsTable() {
   const [renewAgreement, setRenewAgreement] = useState<{ id: number; title: string } | null>(null);
   const [historyAgreement, setHistoryAgreement] = useState<{ title: string; renewals: RenewalEntry[] } | null>(null);
   const [reactivatingId, setReactivatingId] = useState<number | null>(null);
-  const [viewInstructor, setViewInstructor] = useState<{ id: number; name?: string } | null>(null);
+  // Open agreement synced to `?agreementId=` — same drawer pattern as the
+  // admin franchise agreements tab (shareable, survives reload).
+  const [agreementId, setAgreementId] = useAgreementIdFromUrl();
 
   const query = useQuery({
     queryKey: ["ci-agreements", "admin", page],
@@ -358,21 +361,16 @@ function CIAgreementsTable() {
       className: "w-[200px] text-right",
       render: (row) => (
         <div className="flex items-center justify-end gap-1">
-          {row.courseInstructorId != null && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 text-xs"
-              onClick={() =>
-                setViewInstructor({
-                  id: row.courseInstructorId!,
-                  name: row.instructorName ?? undefined,
-                })
-              }
-            >
-              <Eye className="h-3.5 w-3.5" />
-            </Button>
-          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-xs"
+            title="View agreement"
+            aria-label="View agreement"
+            onClick={() => setAgreementId(row.id)}
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
           {getRenewals(row.metadata).length > 0 && (
             <Button
               size="sm"
@@ -481,9 +479,9 @@ function CIAgreementsTable() {
         />
       )}
 
-      <AdminCIAgreementDialog
-        instructor={viewInstructor}
-        onClose={() => setViewInstructor(null)}
+      <AdminCIAgreementSheet
+        agreementId={agreementId}
+        onClose={() => setAgreementId(null)}
       />
     </div>
   );

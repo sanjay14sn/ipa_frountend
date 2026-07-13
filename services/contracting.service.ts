@@ -223,6 +223,14 @@ export async function listCIAgreementsForAdmin(params?: {
   return normalizePaginatedResult<CIAgreementAdminRow>(result);
 }
 
+/** Admin detail view of one CI agreement by agreement id (null if not a CI agreement). */
+export async function getCIAgreementForAdmin(
+  agreementId: number,
+): Promise<CIAgreementRecord | null> {
+  const res = await api.get(`/admin/ci-agreement/${agreementId}`);
+  return unwrapData<CIAgreementRecord | null>(res);
+}
+
 export async function suspendCIAgreement(
   agreementId: number,
   reason?: string,

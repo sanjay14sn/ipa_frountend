@@ -15,7 +15,7 @@ import {
 } from "@/services/course-instructor.service";
 import CourseInstructorDetails from "./CourseInstructorDetails";
 import { BarChart2, FileText } from "lucide-react";
-import { AdminCIAgreementDialog } from "@/components/agreements/AdminCIAgreementDialog";
+import { AdminCIAgreementSheet } from "@/components/agreements/AdminCIAgreementSheet";
 import { TrainingProgressModal } from "@/components/ci-training/TrainingProgressModal";
 
 export default function ActiveCourseInstructorsTable() {
@@ -200,7 +200,7 @@ export default function ActiveCourseInstructorsTable() {
         }
       />
 
-      <AdminCIAgreementDialog
+      <AdminCIAgreementSheet
         instructor={agreementInstructor}
         onClose={() => setAgreementInstructor(null)}
       />

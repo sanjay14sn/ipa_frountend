@@ -26,7 +26,7 @@ import {
   type CITrainingProgress,
   type CITrainingProgressLevel,
 } from "@/services/course-instructor.service";
-import { AdminCIAgreementDialog } from "@/components/agreements/AdminCIAgreementDialog";
+import { AdminCIAgreementSheet } from "@/components/agreements/AdminCIAgreementSheet";
 import { TrainingProgressModal } from "@/components/ci-training/TrainingProgressModal";
 
 interface FranchiseCiListTableProps {
@@ -315,7 +315,7 @@ export function FranchiseCiListTable({ franchiseId }: FranchiseCiListTableProps)
         }
       />
 
-      <AdminCIAgreementDialog
+      <AdminCIAgreementSheet
         instructor={agreementInstructor}
         onClose={() => setAgreementInstructor(null)}
       />
