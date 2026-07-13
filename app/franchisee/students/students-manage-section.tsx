@@ -1,33 +1,44 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { PageSkeleton } from "@/components/shared";
 import { CreditCard, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/shared/dialog";
 import { useUser } from "@/context/user-context";
 import type { StudentData } from "@/services/student.service";
 import { StudentIdStatus } from "@/services/student.service";
-import {
-  deleteStudentWithRevalidation,
-  useStudents,
-} from "@/hooks/api/student.hooks";
-import AddStudentModal from "./components/AddStudentModal";
-import EditStudentModal from "./components/EditStudentModal";
-import RequestIdModal from "./components/RequestIdModal";
-import StudentsTable from "./components/StudentsTable";
-import { sendClientLog } from "@/lib/client-telemetry";
+import { useStudents } from "@/hooks/api/student.hooks";
+import AddStudentModal from "./_components/AddStudentModal";
+import EditStudentModal from "@/components/students/EditStudentModal";
+import RequestIdModal from "./_components/RequestIdModal";
+import StudentsTable from "@/components/students/StudentsTable";
+import { useListParams } from "@/hooks/use-list-params";
 
 export function StudentsManageSection() {
   const { user } = useUser();
 
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [levelId, setLevelId] = useState<number | undefined>(undefined);
-  const [idStatus, setIdStatus] = useState<string | undefined>(undefined);
-  const [sortBy, setSortBy] = useState("createdAt");
-  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC");
+  // List state lives in the URL (SW-P10) — filters survive refresh/back and
+  // coexist with the hub's ?tab= param.
+  const listParams = useListParams({
+    filterDefaults: { status: "all", level: "all", idStatus: "all" },
+    defaultSortBy: "createdAt",
+    defaultSortOrder: "desc",
+  });
+  const page = listParams.page;
+  const search = listParams.search;
+  const statusFilter = listParams.filters.status;
+  const levelId =
+    listParams.filters.level === "all"
+      ? undefined
+      : Number(listParams.filters.level);
+  const idStatus =
+    listParams.filters.idStatus === "all"
+      ? undefined
+      : listParams.filters.idStatus;
+  const sortBy = listParams.sortBy ?? "createdAt";
+  const sortOrder = (listParams.sortOrder === "asc" ? "ASC" : "DESC") as
+    | "ASC"
+    | "DESC";
   const ITEMS_PER_PAGE = 10;
 
   const { students, meta, isLoading, revalidate } = useStudents({
@@ -43,13 +54,11 @@ export function StudentsManageSection() {
 
   const [editStudent, setEditStudent] = useState<StudentData | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [deleteStudentId, setDeleteStudentId] = useState<string | null>(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isRequestIdModalOpen, setIsRequestIdModalOpen] = useState(false);
 
   if (!user || !user.franchiseId) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading...</div>;
+    return <PageSkeleton />;
   }
 
   const hasRequestableIds = students.some(
@@ -62,9 +71,9 @@ export function StudentsManageSection() {
         students={students}
         meta={meta}
         currentPage={page}
-        onPageChange={(p) => setPage(p)}
+        onPageChange={listParams.setPage}
         searchValue={search}
-        onSearchChange={(v) => { setSearch(v); setPage(1); }}
+        onSearchChange={listParams.setSearch}
         statusFilter={statusFilter}
         levelId={levelId}
         idStatus={idStatus ?? "all"}
@@ -72,20 +81,17 @@ export function StudentsManageSection() {
         sortOrder={sortOrder}
         isLoading={isLoading}
         onFilterChange={(key, value) => {
-          if (key === "status")   { setStatusFilter(value); setPage(1); }
-          if (key === "level")    { setLevelId(value === "all" ? undefined : Number(value)); setPage(1); }
-          if (key === "idStatus") { setIdStatus(value === "all" ? undefined : value); setPage(1); }
+          if (key === "status" || key === "level" || key === "idStatus") {
+            listParams.setFilter(key, value);
+          }
         }}
         onSortChange={(newSortBy, newSortOrder) => {
-          setSortBy(newSortBy);
-          setSortOrder(newSortOrder);
-          setPage(1);
+          listParams.setSort(
+            newSortBy,
+            newSortOrder === "ASC" ? "asc" : "desc",
+          );
         }}
         onStudentUpdate={() => void revalidate()}
-        onStudentDelete={(studentId) => {
-          setDeleteStudentId(studentId);
-          setIsDeleteModalOpen(true);
-        }}
         onStudentEdit={(student) => {
           setEditStudent(student);
           setIsEditModalOpen(true);
@@ -117,27 +123,6 @@ export function StudentsManageSection() {
           setIsEditModalOpen(false);
           setEditStudent(null);
           void revalidate();
-        }}
-      />
-
-      <ConfirmDialog
-        open={isDeleteModalOpen}
-        onOpenChange={setIsDeleteModalOpen}
-        variant="destructive"
-        title="Delete Student"
-        description="Are you sure you want to delete this student? This action cannot be undone."
-        confirmLabel="Delete"
-        onConfirm={async () => {
-          if (!deleteStudentId) return;
-          try {
-            await deleteStudentWithRevalidation(Number(deleteStudentId));
-            setIsDeleteModalOpen(false);
-            setDeleteStudentId(null);
-            void revalidate();
-          } catch (error) {
-            sendClientLog({ level: "error", event: "student-delete-error", message: "Error deleting student", context: { error } });
-            toast.error("Failed to delete student");
-          }
         }}
       />
 

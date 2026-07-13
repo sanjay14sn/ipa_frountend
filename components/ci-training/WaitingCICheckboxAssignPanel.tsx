@@ -81,7 +81,7 @@ export function WaitingCICheckboxAssignPanel({
       )}
     >
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-1">
-        <h4 className="text-xs font-medium leading-tight text-gray-900 sm:text-sm">
+        <h4 className="text-xs font-medium leading-tight text-card-foreground sm:text-sm">
           Assign from waiting list
         </h4>
         {isDirty ? (
@@ -125,7 +125,7 @@ export function WaitingCICheckboxAssignPanel({
                 key={ci.assignmentId}
                 className="flex w-full flex-row flex-wrap items-center justify-between gap-2 py-0.5"
               >
-                <span className="min-w-0 max-w-[50%] shrink-0 truncate text-sm font-medium text-gray-900 sm:max-w-[45%]">
+                <span className="min-w-0 max-w-[50%] shrink-0 truncate text-sm font-medium text-card-foreground sm:max-w-[45%]">
                   {ci.instructorName ?? "Unknown Instructor"}
                 </span>
                 <button
@@ -158,12 +158,12 @@ export function WaitingCICheckboxAssignPanel({
 
           <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
             {isWaitingLoading ? (
-              <div className="flex items-center gap-2 px-2.5 py-4 text-sm text-gray-500 sm:px-3">
+              <div className="flex items-center gap-2 px-2.5 py-4 text-sm text-muted-foreground sm:px-3">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading waiting CIs...
               </div>
             ) : filtered.length === 0 ? (
-              <div className="px-2.5 py-4 text-sm text-gray-500 sm:px-3">
+              <div className="px-2.5 py-4 text-sm text-muted-foreground sm:px-3">
                 {waitingCIs.length === 0
                   ? "No CIs are currently waiting for this training level."
                   : "No CIs match your search."}
@@ -196,10 +196,10 @@ export function WaitingCICheckboxAssignPanel({
                     </button>
 
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-gray-900">
+                      <div className="truncate text-sm font-medium text-card-foreground">
                         {ci.instructorName ?? "Unknown Instructor"}
                       </div>
-                      <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-gray-500">
+                      <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
                         {ci.instructorCode ? <span>{ci.instructorCode}</span> : null}
                         {ci.franchiseName ? <span>{ci.franchiseName}</span> : null}
                       </div>

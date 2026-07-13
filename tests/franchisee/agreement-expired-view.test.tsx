@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { AgreementExpiredView } from "@/app/franchisee/agreement/components/AgreementExpiredView";
+import { AgreementExpiredView } from "../../app/franchisee/agreement/_components/AgreementExpiredView";
 import type { AgreementRecord } from "@/services/agreement.service";
 
 const push = vi.fn();
@@ -11,23 +11,20 @@ vi.mock("next/navigation", () => ({
 function makeAgreement(over: Partial<AgreementRecord> = {}): AgreementRecord {
   return {
     id: 50,
-    type: "NEW_PROGRAM",
-    status: "Expired",
+    kind: "PROGRAM",
+    origin: "NEW",
+    status: "EXPIRED",
     expiresAt: "2026-01-01T00:00:00.000Z",
     programName: "Abacus L1",
     dateOfSigning: null,
     franchiseId: "F-1",
     franchiseeId: 7,
-    paymentId: null,
-    franchiseeSignature: null,
     franchiseeSignedAt: null,
-    franchiseeSignatureUrl: null,
     title: "Abacus L1",
     notes: null,
     metadata: null,
     referenceCode: null,
     createdAt: "",
-    updatedAt: "",
     ...over,
   } as AgreementRecord;
 }

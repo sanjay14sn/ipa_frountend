@@ -7,7 +7,7 @@ import type { AgreementRecord } from "@/services/agreement.service";
 const renewMock = vi.fn().mockResolvedValue({ id: 100 });
 vi.mock("@/services/agreement.service", async (orig) => {
   const actual = await orig<typeof import("@/services/agreement.service")>();
-  return { ...actual, renewProgramAgreementAdmin: (...a: unknown[]) => renewMock(...a) };
+  return { ...actual, renewAgreementAdmin: (...a: unknown[]) => renewMock(...a) };
 });
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -18,14 +18,13 @@ function wrap(ui: React.ReactElement) {
 
 function agreement(over: Partial<AgreementRecord> = {}): AgreementRecord {
   return {
-    id: 50, type: "NEW_PROGRAM", status: "Expired", franchiseFee: 10000,
+    id: 50, kind: "PROGRAM", origin: "NEW", status: "EXPIRED", franchiseFee: 10000,
     monthlyFee: 0, royalty: 0, materialCost: 0, kitCost: 0, ciShare: 0,
     franchiseShare: 0, gstFranchiseFee: false, gstRoyalty: false,
     gstMaterialCost: false, installment: false, tenure: 12,
     programName: "Abacus L1", dateOfSigning: null, franchiseId: "F-1",
-    franchiseeId: 7, paymentId: null, franchiseeSignature: null,
-    franchiseeSignedAt: null, franchiseeSignatureUrl: null, title: "Abacus L1",
-    notes: null, metadata: null, referenceCode: null, createdAt: "", updatedAt: "",
+    franchiseeId: 7, franchiseeSignedAt: null, title: "Abacus L1",
+    notes: null, metadata: null, referenceCode: null, createdAt: "",
     ...over,
   } as AgreementRecord;
 }
@@ -39,7 +38,7 @@ describe("IssueRenewalButton", () => {
   });
 
   it("renders nothing for a non-expired agreement", () => {
-    const { container } = wrap(<IssueRenewalButton agreement={agreement({ status: "Valid" })} />);
+    const { container } = wrap(<IssueRenewalButton agreement={agreement({ status: "ACTIVE" })} />);
     expect(container).toBeEmptyDOMElement();
   });
 
@@ -53,7 +52,11 @@ describe("IssueRenewalButton", () => {
     await userEvent.click(screen.getByRole("button", { name: /^issue$/i }));
     expect(renewMock).toHaveBeenCalledWith(
       50,
-      expect.objectContaining({ franchiseFee: 5000, tenure: 12 }),
+      expect.objectContaining({
+        franchiseFee: 5000,
+        tenure: 12,
+        unpaidItemsPolicy: "carry",
+      }),
     );
   });
 });

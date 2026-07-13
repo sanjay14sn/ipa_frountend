@@ -3,26 +3,23 @@
 import type React from "react";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { AlertCircle } from "lucide-react";
 
-import { DynamicSidebar } from "@/components/dynamic-sidebar";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-} from "@/components/ui/breadcrumb";
-import { PortalHeaderActions } from "@/components/layout/portal-header-actions";
+import { PortalShell } from "@/components/layout/portal-shell";
+import { PortalSidebarBanner } from "@/components/layout/portal-sidebar";
 import { FranchiseSwitcher } from "@/components/franchisee/franchise-switcher";
 import { AgreementSwitcher } from "@/components/franchisee/agreement-switcher";
 import { ChangePasswordGate } from "@/components/franchisee/change-password-gate";
 import { useUser } from "@/context/user-context";
-import { isFranchiseOperational } from "@/lib/auth";
+import {
+  getEffectiveFranchiseStatus,
+  isFranchiseOperational,
+} from "@/lib/auth";
+import {
+  FRANCHISEE_NAV,
+  FRANCHISEE_ONBOARDING_NAV,
+} from "@/lib/navigation/nav-config";
+import { PageSkeleton } from "@/components/shared/skeletons";
 
 export default function FranchiseeLayout({
   children,
@@ -37,8 +34,11 @@ export default function FranchiseeLayout({
     (pathname?.startsWith("/franchisee/agreement/") ?? false);
   // "Operational" is derived from agreements now (>=1 valid agreement); a
   // franchisee with no valid agreement is funnelled to the agreement page.
+  const isActiveFranchisee = isFranchiseOperational(user);
   const isPreActiveFranchisee =
-    user?.role === "franchisee" && !isFranchiseOperational(user);
+    user?.role === "franchisee" && !isActiveFranchisee;
+  const isApprovedFranchisee =
+    getEffectiveFranchiseStatus(user) === "Approved";
 
   useEffect(() => {
     if (loading) return;
@@ -55,19 +55,24 @@ export default function FranchiseeLayout({
   }, [user, loading, isOnAgreementPage, isPreActiveFranchisee, router]);
 
   if (loading) {
-    return <div className="min-h-screen bg-surface" />;
+    return (
+      <div className="min-h-screen bg-background p-4">
+        <PageSkeleton />
+      </div>
+    );
   }
 
   if (!user || user.role !== "franchisee") return null;
 
   if (isPreActiveFranchisee && !isOnAgreementPage) {
-    return <div className="min-h-screen bg-surface" />;
+    return <div className="min-h-screen bg-background" />;
   }
 
   // Temporary-password gate (after the pre-active funnel): the portal chrome
   // stays (so logout remains reachable) but content is replaced until the
   // franchisee sets their own password.
   const mustChangePassword = user.profile?.mustChangePassword === true;
+  const content = mustChangePassword ? <ChangePasswordGate /> : children;
 
   // Header-only shell for ANY /franchisee/agreement* visit. The agreement page
   // itself decides whether the user should actually see the sign form
@@ -79,48 +84,66 @@ export default function FranchiseeLayout({
   // various stages can move between them without leaving the sign page.
   if (isOnAgreementPage) {
     return (
-      <div className="min-h-screen bg-surface">
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-brand-white-200/50 px-4">
+      <PortalShell
+        variant="header-only"
+        portal="franchisee"
+        homeHref="/franchisee/agreement"
+        brand={{ title: "IPA Portal" }}
+        breadcrumbRoot={{ label: "Agreement", href: "/franchisee/agreement" }}
+        headerStart={
           <div className="flex items-center gap-2">
             <FranchiseSwitcher fallbackLabel="Franchise Setup" />
             <AgreementSwitcher />
           </div>
-          <PortalHeaderActions />
-        </header>
-        {mustChangePassword ? <ChangePasswordGate /> : children}
-      </div>
+        }
+      >
+        {content}
+      </PortalShell>
     );
   }
 
   return (
-    <SidebarProvider>
-      <DynamicSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-brand-white-200/50 px-4">
-          <SidebarTrigger className="-ml-1 text-primary hover:bg-accent hover:text-accent-foreground" />
-          <Separator orientation="vertical" className="mr-2 h-4 bg-border" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  href="/franchisee/dashboard"
-                  className="text-primary hover:text-primary hover:underline"
-                >
-                  Franchise Dashboard
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          <div className="flex items-center gap-2">
-            <FranchiseSwitcher />
-            <AgreementSwitcher />
-          </div>
-          <PortalHeaderActions />
-        </header>
-        <div className="flex flex-1 flex-col gap-4 bg-background p-4">
-          {mustChangePassword ? <ChangePasswordGate /> : children}
+    <PortalShell
+      variant="full"
+      portal="franchisee"
+      homeHref={
+        isActiveFranchisee ? "/franchisee/dashboard" : "/franchisee/agreement"
+      }
+      brand={
+        isActiveFranchisee
+          ? {
+              title: "Franchise Portal",
+              subtitle: user.franchiseName || "Franchise Dashboard",
+            }
+          : {
+              title: "Franchise Setup",
+              subtitle: isApprovedFranchisee
+                ? "Sign and pay to activate"
+                : "Awaiting admin approval",
+            }
+      }
+      nav={isActiveFranchisee ? FRANCHISEE_NAV : FRANCHISEE_ONBOARDING_NAV}
+      breadcrumbRoot={{ label: "Dashboard", href: "/franchisee/dashboard" }}
+      headerStart={
+        <div className="flex items-center gap-2">
+          <FranchiseSwitcher />
+          <AgreementSwitcher />
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+      }
+      sidebarBanner={
+        isPreActiveFranchisee ? (
+          <PortalSidebarBanner
+            icon={<AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-white" />}
+            title="Setup Required"
+          >
+            {isApprovedFranchisee
+              ? "Sign your agreement and complete payment to activate your franchise."
+              : "Your application is waiting for admin approval. Portal access will unlock after approval."}
+          </PortalSidebarBanner>
+        ) : undefined
+      }
+    >
+      {content}
+    </PortalShell>
   );
 }

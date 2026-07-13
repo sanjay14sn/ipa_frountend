@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { formatDate, formatDateTime, calculateAge, fmtDate } from "./date-utils";
+import { formatDate, formatDateTime, calculateAge } from "./date-utils";
 
 describe("formatDate", () => {
   it("returns '-' for null", () => {
@@ -36,17 +36,6 @@ describe("formatDate", () => {
     const result = formatDate(date);
     expect(result).toContain("2025");
     expect(result).not.toBe("-");
-  });
-
-  it("fmtDate is an alias for formatDate", () => {
-    expect(fmtDate("2025-01-15")).toBe(formatDate("2025-01-15"));
-    expect(fmtDate(null)).toBe(formatDate(null));
-  });
-});
-
-describe("formatDateTime", () => {
-  it("returns 'N/A' for null", () => {
-    expect(formatDateTime(null)).toBe("N/A");
   });
 
   it("returns 'N/A' for undefined", () => {

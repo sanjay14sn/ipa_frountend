@@ -18,15 +18,6 @@ export interface ProgramAgreementTemplate {
 }
 
 /**
- * Map an agreement `type` to the template kind it uses. Renewal agreements use
- * the RENEWAL template; everything else (NEW_FRANCHISE, NEW_PROGRAM, …) uses
- * INITIAL.
- */
-export function agreementTemplateKindForType(type: string): AgreementTemplateKind {
-  return type === "RENEWAL" ? "RENEWAL" : "INITIAL";
-}
-
-/**
  * Fetch the program's current agreement template for `kind` (or the global
  * default when the program has none). Returns null when the backend has no
  * template at all.

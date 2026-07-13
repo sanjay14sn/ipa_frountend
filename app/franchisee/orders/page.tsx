@@ -14,9 +14,13 @@ import {
   invalidateAdminOrders,
   invalidateFranchiseeOrders,
 } from "@/hooks/api/order.hooks";
-import { TablePageShell } from "@/components/shared";
+import {
+  SummaryStatCard,
+  SummaryStatGrid,
+  TablePageShell,
+} from "@/components/shared";
 import { Button } from "@/components/ui/button";
-import OrdersTable from "./components/OrdersTable";
+import OrdersTable from "./_components/OrdersTable";
 import dynamic from "next/dynamic";
 import { type RazorpaySuccessResponse } from "@/components/RazorpayPayment";
 
@@ -35,7 +39,7 @@ import {
   type CustomMaterialLine,
   type FranchiseKitOrderItem,
 } from "@/services/order.service";
-import UnifiedMaterialRequestDialog from "./components/UnifiedMaterialRequestDialog";
+import UnifiedMaterialRequestDialog from "./_components/UnifiedMaterialRequestDialog";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { ComponentErrorBoundary } from "@/components/error/ComponentErrorBoundary";
 import { ConfirmDialog } from "@/components/shared/dialog";
@@ -121,20 +125,29 @@ export default function FranchiseeOrdersPage() {
     [students],
   );
 
-  const pendingOrders = orders.filter((order) =>
-    [OrderStatus.PENDING, OrderStatus.PROCESSING].includes(
-      order.status as OrderStatus,
-    ),
-  ).length;
-  const shippedOrders = orders.filter(
-    (order) => order.status === OrderStatus.SHIPPED,
-  ).length;
-  const deliveredOrders = orders.filter(
-    (order) => order.status === OrderStatus.DELIVERED,
-  ).length;
-  const cancelledOrders = orders.filter(
-    (order) => order.status === OrderStatus.CANCELLED,
-  ).length;
+  // One pass over the client-side order list (SW-P10); the KPI row renders
+  // these in doc 07's orders work.
+  const orderCounts = useMemo(() => {
+    const counts = { pending: 0, shipped: 0, delivered: 0, cancelled: 0 };
+    for (const order of orders) {
+      switch (order.status as OrderStatus) {
+        case OrderStatus.PENDING:
+        case OrderStatus.PROCESSING:
+          counts.pending += 1;
+          break;
+        case OrderStatus.SHIPPED:
+          counts.shipped += 1;
+          break;
+        case OrderStatus.DELIVERED:
+          counts.delivered += 1;
+          break;
+        case OrderStatus.CANCELLED:
+          counts.cancelled += 1;
+          break;
+      }
+    }
+    return counts;
+  }, [orders]);
 
   async function handlePaymentSuccess(response: RazorpaySuccessResponse) {
     const pd = unifiedPaymentData;
@@ -279,40 +292,29 @@ export default function FranchiseeOrdersPage() {
     return <div>Loading...</div>;
   }
 
-  if (ordersLoading || studentsLoading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
+  // FR-18: no full-page spinner — header + CTA paint immediately; the table
+  // and KPI cells cover their own loading, and studentsLoading only gates the
+  // request modal's student pickers.
   return (
-    <TablePageShell>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Material Orders</h1>
-          <p className="text-muted-foreground">
-            Order student level materials and first-level kits, or re-order
-            custom items for students who already have materials.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={() => setIsUnifiedModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Material Request
-          </Button>
-        </div>
-      </div>
+    <TablePageShell
+      title="Material Orders"
+      description="Order student level materials and first-level kits, or re-order custom items for students who already have materials."
+      actions={
+        <Button onClick={() => setIsUnifiedModalOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Material Request
+        </Button>
+      }
+    >
 
-      {cancelledOrders > 0 ? (
-        <p className="text-sm text-muted-foreground">
-          {cancelledOrders} order{cancelledOrders !== 1 ? "s" : ""} cancelled.
-        </p>
-      ) : null}
+      {/* FR-17: the four computed counts finally render (the cancelled count
+          used to leak out as a lone caption line). */}
+      <SummaryStatGrid>
+        <SummaryStatCard label="Pending" value={orderCounts.pending} />
+        <SummaryStatCard label="Shipped" value={orderCounts.shipped} />
+        <SummaryStatCard label="Delivered" value={orderCounts.delivered} />
+        <SummaryStatCard label="Cancelled" value={orderCounts.cancelled} />
+      </SummaryStatGrid>
 
       {pendingOrderRetry && (
         <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -366,6 +368,7 @@ export default function FranchiseeOrdersPage() {
         }}
         eligibleStudents={eligibleStudents}
         customEligibleStudents={customEligibleStudents}
+        studentsLoading={studentsLoading}
       />
 
       {unifiedPaymentData && !unifiedPaymentData.isZeroAmount && unifiedPaymentData.amount > 0 ? (

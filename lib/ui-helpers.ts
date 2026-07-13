@@ -1,4 +1,6 @@
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
+import { formatRupees } from "@/lib/currency-utils";
+import { formatDate, formatDateTime, formatMonthYear } from "@/lib/date-utils";
 
 export function getInitials(
   name: string | null | undefined,
@@ -17,15 +19,9 @@ export function getInitials(
     .toUpperCase();
 }
 
-function getSinceLabel(
-  iso: string | null | undefined,
-): string | null {
-  if (!iso) return null;
-  try {
-    return format(parseISO(iso), "MMM yyyy");
-  } catch {
-    return null;
-  }
+// Month-year "since" label is deliberately not a full date (SW-P3).
+function getSinceLabel(iso: string | null | undefined): string | null {
+  return formatMonthYear(iso);
 }
 
 function getTimeRemaining(
@@ -47,37 +43,27 @@ function getTimeRemaining(
 
 function fmtShort(iso: string | null | undefined): string {
   if (!iso) return "-";
-  try {
-    return format(parseISO(iso), "PP");
-  } catch {
-    return String(iso);
-  }
+  return formatDate(iso);
 }
 
 function fmtTime(iso: string | null | undefined): string {
   if (!iso) return "";
-  try {
-    return format(parseISO(iso), "p");
-  } catch {
-    return "";
-  }
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 function fmtDateTime(iso: string | null | undefined): string {
   if (!iso) return "-";
-  try {
-    return format(parseISO(iso), "PPpp");
-  } catch {
-    return String(iso);
-  }
+  return formatDateTime(iso);
 }
 
 function money(value: number | string | null | undefined): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(value ?? 0));
+  return formatRupees(Number(value ?? 0));
 }
 
 function stripIdSuffix(value: string | null | undefined): string {

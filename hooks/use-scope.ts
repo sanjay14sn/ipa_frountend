@@ -15,24 +15,25 @@ type AgreementLifecycleStatus = AgreementSwitcherItem["lifecycleStatus"];
 
 export function toLifecycleStatus(status: string): AgreementLifecycleStatus {
   switch (status) {
-    case "Draft":
-    case "Approved":
-    case "Valid":
-    case "Suspended":
-    case "Void":
-    case "Rejected":
-    case "Pending":
-    case "Expired":
+    case "DRAFT":
+    case "APPROVED":
+    case "ACTIVE":
+    case "SUSPENDED":
+    case "EXPIRED":
+    case "VOID":
+    case "SUPERSEDED":
+    case "Pending": // request-only rows (program-request status, not recased)
       return status as AgreementLifecycleStatus;
     default:
-      return "Approved";
+      return "APPROVED";
   }
 }
 
 function mapActiveProgramToSwitcher(
   row: ActiveProgramRow,
 ): AgreementSwitcherItem | null {
-  if (row.type === "CI_AGREEMENT") return null;
+  // CI agreements aren't part of the program-scope switcher.
+  if (row.kind === "CI") return null;
   return {
     kind: "agreement",
     agreementId: row.id,
@@ -41,7 +42,7 @@ function mapActiveProgramToSwitcher(
     programId: row.programId,
     programName: row.program?.name ?? null,
     programCode: null,
-    agreementType: row.type as AgreementSwitcherItem["agreementType"],
+    agreementType: row.kind as AgreementSwitcherItem["agreementType"],
     lifecycleStatus: toLifecycleStatus(row.status),
     signed: row.signed,
     title: row.title,

@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DetailDialog } from "@/components/shared/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -156,31 +150,32 @@ export function StudentLifecycleDetailsDialog({
   loadError?: boolean;
 }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>Lifecycle details</DialogTitle>
-          <DialogDescription title={row?.rollNo ?? undefined}>
-            {row?.name || "Student"} ·{" "}
-            {row?.rollNo
-              ? formatEntityCodeForDisplay(row.rollNo)
-              : "No roll number"}
-          </DialogDescription>
-        </DialogHeader>
-
-        {isLoading ? (
-          <div className="space-y-3 py-1">
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-20 w-full" />
-          </div>
-        ) : loadError ? (
-          <p className="text-sm text-muted-foreground">
-            Could not load lifecycle details for this student.
-          </p>
-        ) : row ? (
-          <StudentLifecycleDetailContent row={row} />
-        ) : null}
-      </DialogContent>
-    </Dialog>
+    <DetailDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="2xl"
+      title="Lifecycle details"
+      description={
+        <span title={row?.rollNo ?? undefined}>
+          {row?.name || "Student"} ·{" "}
+          {row?.rollNo
+            ? formatEntityCodeForDisplay(row.rollNo)
+            : "No roll number"}
+        </span>
+      }
+    >
+      {isLoading ? (
+        <div className="space-y-3 py-1">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      ) : loadError ? (
+        <p className="text-sm text-muted-foreground">
+          Could not load lifecycle details for this student.
+        </p>
+      ) : row ? (
+        <StudentLifecycleDetailContent row={row} />
+      ) : null}
+    </DetailDialog>
   );
 }

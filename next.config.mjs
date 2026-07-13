@@ -41,6 +41,16 @@ function buildCsp() {
     "https://checkout.razorpay.com",
     ...(apiOrigin ? [apiOrigin] : []),
   ];
+  const imgSources = [
+    "'self'",
+    "data:",
+    "blob:",
+    "https:",
+    // Signature/upload images are served from the backend origin
+    // (`${API_BASE_URL}/uploads/...`); `https:` covers prod but not the
+    // http://localhost dev API.
+    ...(apiOrigin ? [apiOrigin] : []),
+  ];
 
   const directives = [
     "default-src 'self'",
@@ -50,8 +60,8 @@ function buildCsp() {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     // Fonts
     "font-src 'self' https://fonts.gstatic.com data:",
-    // Images: self + data URIs (signatures stored as data:image/svg+xml)
-    "img-src 'self' data: blob: https:",
+    // Images: self + data URIs + backend-served signature files
+    `img-src ${imgSources.join(" ")}`,
     // Connections: frontend + Razorpay + backend API (+ ws schemes for socket.io)
     `connect-src ${connectSources.join(" ")}`,
     // Frames: Razorpay payment modal
@@ -123,6 +133,129 @@ const nextConfig = {
         // Apply security headers to all routes.
         source: "/(.*)",
         headers: securityHeaders,
+      },
+    ];
+  },
+  async redirects() {
+    // Legacy-URL preservation (FE revamp doc 03, RT-02). All temporary (307)
+    // while the IA settles. NOTE: these run BEFORE proxy.ts, so an
+    // unauthenticated hit 307s here first and the proxy's ?next= carries the
+    // destination — same end state after login.
+    return [
+      { source: "/", destination: "/login", permanent: false },
+      { source: "/admin", destination: "/admin/dashboard", permanent: false },
+      {
+        source: "/admin/orders",
+        destination: "/admin/operations?tab=orders",
+        permanent: false,
+      },
+      {
+        source: "/admin/inventory",
+        destination: "/admin/operations?tab=inventory",
+        permanent: false,
+      },
+      {
+        source: "/admin/payments",
+        destination: "/admin/operations?tab=payments",
+        permanent: false,
+      },
+      {
+        source: "/admin/shipping",
+        destination: "/admin/operations?tab=shipping",
+        permanent: false,
+      },
+      {
+        source: "/admin/franchises",
+        destination: "/admin/franchise?tab=franchises",
+        permanent: false,
+      },
+      {
+        source: "/admin/pending-approvals",
+        destination: "/admin/franchise?tab=applications",
+        permanent: false,
+      },
+      {
+        source: "/admin/agreements",
+        destination: "/admin/franchise?tab=agreements",
+        permanent: false,
+      },
+      {
+        source: "/admin/program-requests",
+        destination: "/admin/franchise?tab=programs",
+        permanent: false,
+      },
+      {
+        source: "/admin/certificate-requests",
+        destination: "/admin/students?tab=certificates",
+        permanent: false,
+      },
+      {
+        source: "/admin/id-requests",
+        destination: "/admin/students?tab=ids",
+        permanent: false,
+      },
+      {
+        source: "/admin/ci-training",
+        destination: "/admin/course-instructors?tab=training",
+        permanent: false,
+      },
+      {
+        source: "/admin/course-instructor-approvals",
+        destination: "/admin/course-instructors?tab=applications",
+        permanent: false,
+      },
+      {
+        source: "/admin/training-levels",
+        destination: "/admin/programs",
+        permanent: false,
+      },
+      {
+        source: "/franchisee",
+        destination: "/franchisee/dashboard",
+        permanent: false,
+      },
+      {
+        source: "/franchisee/agreements",
+        destination: "/franchisee/franchise?tab=agreements",
+        permanent: false,
+      },
+      {
+        source: "/franchisee/program-agreements",
+        destination: "/franchisee/franchise?tab=programs",
+        permanent: false,
+      },
+      {
+        source: "/franchisee/certificate-requests",
+        destination: "/franchisee/students?tab=certificates",
+        permanent: false,
+      },
+      { source: "/ci", destination: "/ci/dashboard", permanent: false },
+      // Phase-8 IA moves (docs 06/08, rows C1–C5).
+      {
+        source: "/admin/ci-agreements",
+        destination: "/admin/course-instructors?tab=agreements",
+        permanent: false,
+      },
+      {
+        source: "/ci/training/receivables",
+        destination: "/ci/training?tab=receivables",
+        permanent: false,
+      },
+      {
+        source: "/ci/training/progress",
+        destination: "/ci/training?tab=progress",
+        permanent: false,
+      },
+      {
+        source: "/ci/training/upcoming",
+        destination: "/ci/training?tab=upcoming",
+        permanent: false,
+      },
+      {
+        // Retarget of the old inline redirect page (preserves its destination).
+        source: "/ci/training/packages",
+        destination: "/ci/training?tab=receivables",
+        permanent: false,
       },
     ];
   },

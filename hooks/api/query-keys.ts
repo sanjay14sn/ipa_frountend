@@ -19,6 +19,7 @@ export const queryKeys = {
   },
   studentAdmin: {
     requestedIds: ["students", "requested-ids"] as const,
+    requestedIdCount: ["students", "requested-id-count"] as const,
     issuedIds: ["students", "issued-ids"] as const,
     requestedCerts: ["students", "requested-certs"] as const,
     issuedCerts: ["students", "issued-certs"] as const,
@@ -142,8 +143,11 @@ export const queryKeys = {
       listQueryKey("notifications", { scope: "franchisee", ...params }),
     admin: (params?: Record<string, unknown> | null) =>
       listQueryKey("notifications", { scope: "admin", ...params }),
+    ci: (params?: Record<string, unknown> | null) =>
+      listQueryKey("notifications", { scope: "ci", ...params }),
     unreadFranchisee: ["notifications", "unread", "franchisee"] as const,
     unreadAdmin: ["notifications", "unread", "admin"] as const,
+    unreadCi: ["notifications", "unread", "ci"] as const,
   },
   admin: {
     dashboard: ["admin", "dashboard"] as const,

@@ -14,24 +14,24 @@ export type StatusTone =
 
 const toneClasses: Record<StatusTone, { pill: string; dot: string }> = {
   success: {
-    pill: "bg-primary text-primary-foreground hover:bg-primary",
-    dot: "bg-primary-foreground",
+    pill: "bg-success-soft text-success-soft-foreground hover:bg-success-soft",
+    dot: "bg-success",
   },
   warning: {
-    pill: "bg-amber-100 text-amber-900 hover:bg-amber-100",
-    dot: "bg-amber-500",
+    pill: "bg-warning-soft text-warning-soft-foreground hover:bg-warning-soft",
+    dot: "bg-warning",
   },
   destructive: {
-    pill: "bg-red-100 text-red-900 hover:bg-red-100",
-    dot: "bg-red-500",
+    pill: "bg-destructive-soft text-destructive-soft-foreground hover:bg-destructive-soft",
+    dot: "bg-destructive",
   },
   neutral: {
     pill: "bg-muted text-muted-foreground hover:bg-muted",
     dot: "bg-muted-foreground",
   },
   info: {
-    pill: "bg-sky-100 text-sky-900 hover:bg-sky-100",
-    dot: "bg-sky-500",
+    pill: "bg-info-soft text-info-soft-foreground hover:bg-info-soft",
+    dot: "bg-info",
   },
 };
 
@@ -43,7 +43,6 @@ const LABEL_TONE_MAP: Record<string, StatusTone> = {
   complete: "success",
   verified: "success",
   paid: "success",
-  shipped: "success",
   issued: "success",
   fulfilled: "success",
   success: "success",
@@ -54,6 +53,7 @@ const LABEL_TONE_MAP: Record<string, StatusTone> = {
   granted: "success",
   ready: "success",
   valid: "success",
+  received: "success",
   // warning
   pending: "warning",
   "in progress": "warning",
@@ -64,6 +64,11 @@ const LABEL_TONE_MAP: Record<string, StatusTone> = {
   "in review": "warning",
   review: "warning",
   hold: "warning",
+  partial: "warning",
+  requested: "warning",
+  "at risk": "warning",
+  "partially received": "warning",
+  "pending signature": "warning",
   // destructive
   rejected: "destructive",
   suspended: "destructive",
@@ -74,6 +79,7 @@ const LABEL_TONE_MAP: Record<string, StatusTone> = {
   expired: "destructive",
   unpaid: "destructive",
   overdue: "destructive",
+  invalidated: "destructive",
   // neutral
   inactive: "neutral",
   void: "neutral",
@@ -81,11 +87,47 @@ const LABEL_TONE_MAP: Record<string, StatusTone> = {
   closed: "neutral",
   none: "neutral",
   unknown: "neutral",
+  refunded: "neutral",
+  waived: "neutral",
+  "not issued": "neutral",
   // info
   submitted: "info",
   new: "info",
   open: "info",
+  extended: "info",
+  reactivated: "info",
+  confirmed: "info",
+  "ready to ship": "info",
+  // Deliberate remap (CMP-06): shipped = in transit = info; delivered stays success.
+  shipped: "info",
 };
+
+/**
+ * Resolve a raw status label to its tone: trim → lowercase → overrides →
+ * LABEL_TONE_MAP → "neutral".
+ */
+export function resolveStatusTone(
+  label: string,
+  overrides?: Record<string, StatusTone>,
+): StatusTone {
+  const normalized = label.trim().toLowerCase();
+  return overrides?.[normalized] ?? LABEL_TONE_MAP[normalized] ?? "neutral";
+}
+
+/**
+ * Normalize enum-style values for display: underscores and camelCase
+ * boundaries → spaces ("READY_TO_SHIP" → "ready to ship",
+ * "PendingSignature" → "pending signature"). StatusBadge's own
+ * capitalization normalizes casing at render.
+ */
+export function formatStatusLabel(value: string): string {
+  return value
+    .replace(/_/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
 
 interface StatusBadgeProps {
   label: string;
@@ -111,20 +153,20 @@ interface OnFileBadgeProps {
 }
 
 /**
- * Soft emerald outline pill used for "attached / captured / uploaded" cues
+ * Soft success outline pill used for "attached / captured / uploaded" cues
  * (signatures on file, document captured, etc.). Distinct from full status —
  * this is for binary "present vs absent" indicators inside detail cards.
  */
-function OnFileBadge({ label = "On file", className }: OnFileBadgeProps) {
+export function OnFileBadge({ label = "On file", className }: OnFileBadgeProps) {
   return (
     <Badge
       variant="outline"
       className={cn(
-        "gap-1 border-emerald-200 bg-emerald-50 py-0 text-[10px] text-emerald-700",
+        "gap-1 border-success/20 bg-success-soft py-0 text-[10px] text-success-soft-foreground",
         className,
       )}
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+      <span className="h-1.5 w-1.5 rounded-full bg-success" />
       {label}
     </Badge>
   );
@@ -136,8 +178,7 @@ export function StatusBadge({
   showDot = true,
   className,
 }: StatusBadgeProps) {
-  const resolvedTone: StatusTone =
-    tone ?? LABEL_TONE_MAP[label.trim().toLowerCase()] ?? "neutral";
+  const resolvedTone: StatusTone = tone ?? resolveStatusTone(label);
   const styles = toneClasses[resolvedTone];
   return (
     <Badge

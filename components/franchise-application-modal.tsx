@@ -33,19 +33,15 @@ import { useProgramsOnDemand } from "@/hooks/api/program.hooks";
 import { StateCitySelect } from "@/components/StateCitySelect";
 import { cn } from "@/lib/utils";
 import { useDirtyCloseGuard } from "@/hooks/use-dirty-close-guard";
+import { FRANCHISE_APPLICATION_STEPS as FORM_STEPS } from "@/lib/constants/education";
 import {
   ConfirmDialog,
   MultiStepDialog,
   SuccessDialog,
   type StepDef,
+  DialogFormField,
 } from "@/components/shared/dialog";
 
-const FORM_STEPS: StepDef[] = [
-  { id: 1, title: "Personal Information" },
-  { id: 2, title: "Location & Communication" },
-  { id: 3, title: "Contact & Professional" },
-  { id: 4, title: "Franchise Details" },
-];
 
 /**
  * sessionStorage key for the public application draft. Contract:
@@ -376,8 +372,7 @@ export function FranchiseApplicationModal({
         return (
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+              <DialogFormField id="name" label="Name *">
                 <Input
                   id="name"
                   type="text"
@@ -391,9 +386,8 @@ export function FranchiseApplicationModal({
                 {errors.name && (
                   <p className="text-sm text-destructive">{errors.name}</p>
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dob">Date of Birth *</Label>
+              </DialogFormField>
+              <DialogFormField id="dob" label="Date of Birth *">
                 <DateInput
                   id="dob"
                   value={
@@ -410,11 +404,10 @@ export function FranchiseApplicationModal({
                 {errors.dob && (
                   <p className="text-sm text-destructive">{errors.dob}</p>
                 )}
-              </div>
+              </DialogFormField>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="bloodGroup">Blood Group</Label>
+            <DialogFormField id="bloodGroup" label="Blood Group">
               <Select
                 value={formData.franchisee.bloodGroup}
                 onValueChange={(value) =>
@@ -435,17 +428,14 @@ export function FranchiseApplicationModal({
                   <SelectItem value="O-">O-</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </DialogFormField>
           </div>
         );
 
       case 2:
         return (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="communicationAddress">
-                Communication Address
-              </Label>
+            <DialogFormField id="communicationAddress" label="Communication Address">
               <Textarea
                 id="communicationAddress"
                 value={formData.franchisee.communicationAddress}
@@ -455,7 +445,7 @@ export function FranchiseApplicationModal({
                 rows={3}
                 className="rounded-lg border-border"
               />
-            </div>
+            </DialogFormField>
 
             <div className="flex justify-between gap-2">
               <StateCitySelect
@@ -474,8 +464,7 @@ export function FranchiseApplicationModal({
                 error={errors.franchiseeCity}
               />
 
-              <div className="w-[50%] space-y-2">
-                <Label htmlFor="franchiseePincode">Pincode *</Label>
+              <DialogFormField id="franchiseePincode" label="Pincode *" className="w-[50%]">
                 <Input
                   id="franchiseePincode"
                   value={formData.franchisee.pincode ?? ""}
@@ -492,7 +481,7 @@ export function FranchiseApplicationModal({
                     {errors.franchiseePincode}
                   </p>
                 )}
-              </div>
+              </DialogFormField>
             </div>
           </div>
         );
@@ -501,8 +490,7 @@ export function FranchiseApplicationModal({
         return (
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number *</Label>
+              <DialogFormField id="phone" label="Phone Number *">
                 <Input
                   id="phone"
                   type="tel"
@@ -516,9 +504,8 @@ export function FranchiseApplicationModal({
                 {errors.phone && (
                   <p className="text-sm text-destructive">{errors.phone}</p>
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mail">Email ID *</Label>
+              </DialogFormField>
+              <DialogFormField id="mail" label="Email ID *">
                 <Input
                   id="mail"
                   type="email"
@@ -532,11 +519,10 @@ export function FranchiseApplicationModal({
                 {errors.mail && (
                   <p className="text-sm text-destructive">{errors.mail}</p>
                 )}
-              </div>
+              </DialogFormField>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="education">Educational Qualification</Label>
+            <DialogFormField id="education" label="Educational Qualification">
               <Input
                 id="education"
                 type="text"
@@ -544,10 +530,9 @@ export function FranchiseApplicationModal({
                 onChange={(e) => handleInputChange("education", e.target.value)}
                 className="rounded-lg border-border"
               />
-            </div>
+            </DialogFormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="occupation">Present Occupation</Label>
+            <DialogFormField id="occupation" label="Present Occupation">
               <Input
                 id="occupation"
                 type="text"
@@ -557,10 +542,9 @@ export function FranchiseApplicationModal({
                 }
                 className="rounded-lg border-border"
               />
-            </div>
+            </DialogFormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="reference">Reference</Label>
+            <DialogFormField id="reference" label="Reference">
               <Input
                 id="reference"
                 type="text"
@@ -568,15 +552,14 @@ export function FranchiseApplicationModal({
                 onChange={(e) => handleInputChange("reference", e.target.value)}
                 className="rounded-lg border-border"
               />
-            </div>
+            </DialogFormField>
           </div>
         );
 
       case 4:
         return (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="franchiseName">Franchise Name *</Label>
+            <DialogFormField id="franchiseName" label="Franchise Name *">
               <Input
                 id="franchiseName"
                 type="text"
@@ -593,10 +576,9 @@ export function FranchiseApplicationModal({
               {errors.franchiseName && (
                 <p className="text-sm text-destructive">{errors.franchiseName}</p>
               )}
-            </div>
+            </DialogFormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="franchiseType">Franchise Type *</Label>
+            <DialogFormField id="franchiseType" label="Franchise Type *">
               <Select
                 value={formData.franchise.type}
                 onValueChange={(value) =>
@@ -620,10 +602,9 @@ export function FranchiseApplicationModal({
               {errors.franchiseType && (
                 <p className="text-sm text-destructive">{errors.franchiseType}</p>
               )}
-            </div>
+            </DialogFormField>
 
-            <div className="space-y-2">
-              <Label>Program * (Select one)</Label>
+            <DialogFormField label="Program * (Select one)">
               <Popover
                 onOpenChange={(open) => {
                   if (open) ensureProgramsRequested();
@@ -718,11 +699,10 @@ export function FranchiseApplicationModal({
               {errors.programIds && (
                 <p className="text-sm text-destructive">{errors.programIds}</p>
               )}
-            </div>
+            </DialogFormField>
 
             <div className="space-y-4 border-t border-border pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="address">Centre Address *</Label>
+              <DialogFormField id="address" label="Centre Address *">
                 <Textarea
                   id="address"
                   value={formData.franchise.address}
@@ -739,7 +719,7 @@ export function FranchiseApplicationModal({
                 {errors.address && (
                   <p className="text-sm text-destructive">{errors.address}</p>
                 )}
-              </div>
+              </DialogFormField>
 
               <div className="flex justify-between gap-2">
                 <StateCitySelect
@@ -756,8 +736,7 @@ export function FranchiseApplicationModal({
                   error={errors.centerCity}
                 />
 
-                <div className="w-[50%] space-y-2">
-                  <Label htmlFor="centerPincode">Pincode *</Label>
+                <DialogFormField id="centerPincode" label="Pincode *" className="w-[50%]">
                   <Input
                     id="centerPincode"
                     value={formData.franchise.pincode ?? ""}
@@ -774,7 +753,7 @@ export function FranchiseApplicationModal({
                       {errors.centerPincode}
                     </p>
                   )}
-                </div>
+                </DialogFormField>
               </div>
             </div>
           </div>

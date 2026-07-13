@@ -10,7 +10,6 @@
  *     → `formatDate(value)`
  *   - Any `toLocaleString("en-IN")` for full date+time → `formatDateTime(value)`
  *   - Any inline age-from-DOB calculation → `calculateAge(dateOfBirth)`
- *   - `fmtDate` is an alias for `formatDate` kept for legacy callers.
  */
 
 /**
@@ -30,8 +29,6 @@ export function formatDate(value?: string | Date | null): string {
   });
 }
 
-/** Alias for {@link formatDate} — kept for legacy callers. */
-export const fmtDate = formatDate;
 
 /**
  * Formats a date string to a human-readable date + time in locale format
@@ -43,7 +40,14 @@ export function formatDateTime(value?: string | Date | null): string {
   if (!value) return "N/A";
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString("en-IN");
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }); // → "15 Jan 2025, 10:30 am"
 }
 
 /**
@@ -69,13 +73,27 @@ function formatShortDate(date: Date | string | null | undefined): string {
  *
  * Returns "-" for falsy / unparseable input.
  */
-function formatTimelineDate(date: Date | string | null | undefined): string {
+export function formatTimelineDate(date: Date | string | null | undefined): string {
   if (!date) return "-";
   const d = date instanceof Date ? date : new Date(date);
   if (Number.isNaN(d.getTime())) return String(date);
   return d
     .toLocaleDateString("en-IN", { day: "numeric", month: "short" })
     .toUpperCase();
+}
+
+/**
+ * Formats a date to a month-year label (e.g. "Jun 2026") — for "member
+ * since"-style durations where the day is noise.
+ *
+ * Returns null for falsy / unparseable input (callers typically hide the
+ * label entirely).
+ */
+export function formatMonthYear(date: Date | string | null | undefined): string | null {
+  if (!date) return null;
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
 }
 
 /**
@@ -94,4 +112,26 @@ export function calculateAge(dateOfBirth: string | Date | null | undefined): num
     age -= 1;
   }
   return age;
+}
+
+/**
+ * Relative "Updated Xm ago" formatter for dashboard headers (R5). Returns
+ * "just now" under a minute, then Xm/Xh/Xd ago. Accepts a timestamp, ISO
+ * string, or Date; falsy/unparseable input reads as "just now".
+ */
+export function formatLastUpdated(value?: string | number | Date): string {
+  if (!value) return "just now";
+  const time =
+    value instanceof Date
+      ? value.getTime()
+      : typeof value === "number"
+        ? value
+        : new Date(value).getTime();
+  const diffMs = Date.now() - time;
+  if (!Number.isFinite(diffMs) || diffMs < 60_000) return "just now";
+  const diffMinutes = Math.floor(diffMs / 60_000);
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${Math.floor(diffHours / 24)}d ago`;
 }

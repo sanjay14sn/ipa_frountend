@@ -1,8 +1,6 @@
 import { api } from "@/lib/axios";
 import { unwrapData, normalizePaginatedResult } from "@/lib/unwrap-api";
-import type { PaymentOrderResponse } from "./franchisee.service";
-import { requestPrograms, approveProgramRequestAdmin } from "./program-request.service";
-import type { ApproveProgramRequestPayload } from "./program-request.service";
+import { requestPrograms } from "./program-request.service";
 
 /** Apply for a new franchise (franchisee JWT). */
 export interface ApplyForFranchisePayload {
@@ -53,7 +51,7 @@ export async function requestNewFranchise(body: ApplyForFranchisePayload) {
   return unwrapData(response);
 }
 
-/** Legacy program-request flow — not in ipa-new. */
+/** Program-request row shape consumed by the admin requests table. */
 export interface ProgramRequestRow {
   id: number;
   franchiseId: string;
@@ -64,58 +62,6 @@ export interface ProgramRequestRow {
   franchisee?: { id: number; name: string; mail?: string; phone?: string };
   requestedBy?: string;
   createdAt?: string;
-}
-
-
-async function getProgramRequests(_params?: {
-  status?: string;
-}): Promise<ProgramRequestRow[]> {
-  return [];
-}
-
-async function getPaginatedProgramRequests(_params?: {
-  page?: number;
-  limit?: number;
-  search?: string;
-  status?: string;
-  sortBy?: string;
-  sortOrder?: string;
-}): Promise<{
-  data: ProgramRequestRow[];
-  meta: { total: number; totalPages: number };
-}> {
-  return { data: [], meta: { total: 0, totalPages: 0 } };
-}
-
-async function approveProgramRequest(
-  id: number,
-  payload: ApproveProgramRequestPayload,
-) {
-  return approveProgramRequestAdmin(id, payload);
-}
-
-/** Per-program fee agreement row (legacy UI) */
-interface ProgramAgreement {
-  id: number;
-  programId: number;
-  franchiseId: string;
-  createdAt?: string;
-  franchise?: { id: string; name: string };
-  franchiseProgram?: { program?: { id: number; name: string } };
-}
-
-async function getProgramAgreements(): Promise<ProgramAgreement[]> {
-  return [];
-}
-
-async function initiateProgramFeePayment(
-  _agreementId: number,
-): Promise<PaymentOrderResponse> {
-  throw new Error("Not supported in ipa-new");
-}
-
-async function verifyProgramFeePayment(_payload: unknown) {
-  throw new Error("Not supported in ipa-new");
 }
 
 export interface RequestProgramDto {

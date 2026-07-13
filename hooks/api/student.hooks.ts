@@ -10,10 +10,10 @@ import {
   getAllStudents,
   createStudent,
   updateStudent,
-  deleteStudent,
   requestStudentIds,
   issueIdCard,
   getAllRequestedIdDetails,
+  getRequestedIdCount,
   getIssuedIdDetails,
   getAllRequestedCertificateDetails,
   getIssuedCertificateDetails,
@@ -103,6 +103,18 @@ export function useStudents(params?: StudentPaginationParams) {
   };
 }
 
+/**
+ * Open ID-card request count for the admin dashboard (ADM-04). Consumers
+ * must hide the count on error/loading — `data` stays undefined; never
+ * render a fake 0.
+ */
+export function useRequestedIdCount() {
+  return useQuery({
+    queryKey: queryKeys.studentAdmin.requestedIdCount,
+    queryFn: getRequestedIdCount,
+  });
+}
+
 function useRequestedIdDetails() {
   const q = useQuery({
     queryKey: queryKeys.studentAdmin.requestedIds,
@@ -190,11 +202,13 @@ function useAdminCertificateRequests(
 export function useAdminIdCardSummaries(
   params: Record<string, unknown>,
   refreshKey = 0,
+  options?: { enabled?: boolean },
 ) {
   return useQuery({
     queryKey: [...queryKeys.studentAdmin.idCardSummaries(params), refreshKey],
     queryFn: () => getAdminIdCardSummaries(params),
     placeholderData: (prev) => prev,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -210,11 +224,15 @@ export function useAdminIdCardDetails(
   });
 }
 
-export function useAdminCertificateSummaries(params: Record<string, unknown>) {
+export function useAdminCertificateSummaries(
+  params: Record<string, unknown>,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: queryKeys.studentAdmin.certSummaries(params),
     queryFn: () => getAdminCertificateSummaries(params),
     placeholderData: (prev) => prev,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -337,15 +355,6 @@ export async function updateStudentAdminWithRevalidation(
     /* bridge not mounted */
   }
   return result;
-}
-
-export async function deleteStudentWithRevalidation(studentId: number) {
-  await deleteStudent(studentId);
-  try {
-    invalidateStudentLists(getQueryClientBridge());
-  } catch {
-    /* ignore */
-  }
 }
 
 export async function requestStudentIdsWithRevalidation(studentIds: number[]) {
@@ -555,6 +564,21 @@ export function useBulkDispatchIdCards() {
     onError: (error) => {
       toast.error(extractErrorMessage(error));
     },
+  });
+}
+
+/**
+ * Network-wide admin roster (ADM-12): unscoped GET /admin/student —
+ * runtime-verified to return rows across all franchises when no franchiseId
+ * is sent.
+ */
+export function useAdminStudentsRoster(
+  params?: Omit<StudentPaginationParams, "franchiseId">,
+) {
+  return useQuery({
+    queryKey: ["admin-students", "roster", params ?? null],
+    queryFn: () => getPaginatedStudentsAdmin({ ...params }),
+    placeholderData: (prev) => prev,
   });
 }
 

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
+import { FormDialog } from "@/components/shared/dialog";
 import {
   Select,
   SelectContent,
@@ -13,14 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   CITrainingSession,
@@ -37,7 +30,7 @@ import {
   getTrainingLevelsByProgram,
   TrainingLevel,
 } from "@/services/training-level.service";
-import { DataTable, type DataTableColumn } from "@/components/shared";
+import { DataTable, type DataTableColumn, TableMainCell } from "@/components/shared";
 import { Plus, CheckCircle2, CalendarDays } from "lucide-react";
 import {
   formatStateLabel,
@@ -146,20 +139,21 @@ function CreateSessionModal({
   };
 
   return (
-    <Dialog
+    <FormDialog
       open={open}
       onOpenChange={(o) => {
         if (!o && !loading) onClose();
       }}
+      size="sm"
+      title="Create Training Session"
+      description="Schedule a new CI training session"
+      formId="create-training-session-form"
+      onSubmit={handleSubmit}
+      isSubmitting={loading}
+      submitLabel={loading ? "Creating..." : "Create"}
+      cancelLabel="Cancel"
     >
-      <DialogContent className="sm:max-w-[420px]">
-        <DialogHeader>
-          <DialogTitle>Create Training Session</DialogTitle>
-          <DialogDescription>
-            Schedule a new CI training session
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+      <div className="space-y-4 pt-2">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="programId">Program</Label>
@@ -255,22 +249,8 @@ function CreateSessionModal({
               placeholder="Session notes"
             />
           </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Creating..." : "Create"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormDialog>
   );
 }
 
@@ -314,20 +294,21 @@ function RecordMarksModal({
   };
 
   return (
-    <Dialog
+    <FormDialog
       open={!!assignment}
       onOpenChange={(o) => {
         if (!o && !loading) onClose();
       }}
+      size="sm"
+      title="Record Marks"
+      description={assignment?.instructorName ?? `Assignment #${assignment?.id}`}
+      formId="record-marks-form"
+      onSubmit={handleSubmit}
+      isSubmitting={loading}
+      submitLabel={loading ? "Saving..." : "Save Marks"}
+      cancelLabel="Cancel"
     >
-      <DialogContent className="sm:max-w-[380px]">
-        <DialogHeader>
-          <DialogTitle>Record Marks</DialogTitle>
-          <DialogDescription>
-            {assignment?.instructorName ?? `Assignment #${assignment?.id}`}
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+      <div className="space-y-4 pt-2">
           <div className="space-y-2">
             <Label htmlFor="theoryMarks">Theory Marks</Label>
             <Input
@@ -349,22 +330,8 @@ function RecordMarksModal({
               onChange={(e) => setPracticalMarks(e.target.value)}
             />
           </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : "Save Marks"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormDialog>
   );
 }
 
@@ -404,18 +371,21 @@ function ReassignModal({
   };
 
   return (
-    <Dialog
+    <FormDialog
       open={!!assignment}
       onOpenChange={(o) => {
         if (!o && !loading) onClose();
       }}
+      size="sm"
+      title="Reassign to Session"
+      description={assignment?.instructorName}
+      formId="reassign-session-form"
+      onSubmit={handleSubmit}
+      isSubmitting={loading}
+      submitLabel={loading ? "Reassigning..." : "Reassign"}
+      cancelLabel="Cancel"
     >
-      <DialogContent className="sm:max-w-[360px]">
-        <DialogHeader>
-          <DialogTitle>Reassign to Session</DialogTitle>
-          <DialogDescription>{assignment?.instructorName}</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+      <div className="space-y-4 pt-2">
           <div className="space-y-2">
             <Label htmlFor="targetSession">Target Session ID</Label>
             <Input
@@ -427,22 +397,8 @@ function ReassignModal({
               required
             />
           </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Reassigning..." : "Reassign"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormDialog>
   );
 }
 
@@ -585,24 +541,29 @@ function CompleteSessionModal({
   };
 
   return (
-    <Dialog
+    <FormDialog
       open={!!session}
       onOpenChange={(open) => {
         if (!open && !loading) closeModal();
       }}
+      size="xl"
+      scrollBody
+      maxHeight="max-h-[85vh]"
+      title="Complete Session"
+      description={
+        session
+          ? `${formatStateLabel(session.region)} - ${
+              session.trainingLevelName ?? `Level ${session.trainingLevelId}`
+            } - ${session.sessionDate}`
+          : "Record marks for assigned CIs"
+      }
+      formId="complete-session-form"
+      onSubmit={handleSubmit}
+      isSubmitting={loading}
+      submitLabel={loading ? "Completing..." : "Mark Session Completed"}
+      cancelLabel="Cancel"
+      canSubmit={!loading && rows.length > 0}
     >
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[900px]">
-        <DialogHeader>
-          <DialogTitle>Complete Session</DialogTitle>
-          <DialogDescription>
-            {session
-              ? `${formatStateLabel(session.region)} - ${
-                  session.trainingLevelName ?? `Level ${session.trainingLevelId}`
-                } - ${session.sessionDate}`
-              : "Record marks for assigned CIs"}
-          </DialogDescription>
-        </DialogHeader>
-
         {isLoading ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
             Loading assigned CIs...
@@ -612,9 +573,9 @@ function CompleteSessionModal({
             No assigned CIs found for this session.
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          <div className="space-y-4 pt-2">
             <div className="overflow-hidden rounded-xl border">
-              <div className="grid grid-cols-[1.3fr_1fr_120px_120px_1fr] gap-3 bg-muted/40 px-4 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <div className="grid grid-cols-[1.3fr_1fr_120px_120px_1fr] gap-3 bg-muted/40 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 <div>Course instructor</div>
                 <div>Franchise</div>
                 <div>Theory</div>
@@ -688,23 +649,9 @@ function CompleteSessionModal({
                 ))}
               </div>
             </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeModal}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading || rows.length === 0}>
-                {loading ? "Completing..." : "Mark Session Completed"}
-              </Button>
-            </DialogFooter>
-          </form>
+          </div>
         )}
-      </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }
 
@@ -784,14 +731,10 @@ function SessionAssignmentsPanel({
         columns={columns}
         getRowId={(a) => String(a.id)}
         renderMainCell={(a) => (
-          <div className="flex flex-col">
-            <div className="font-medium text-gray-900">
-              {a.instructorName ?? `CI-${a.instructorId}`}
-            </div>
-            <div className="text-sm text-gray-500">
-              {a.instructorCode ?? "—"}
-            </div>
-          </div>
+          <TableMainCell
+            title={a.instructorName ?? `CI-${a.instructorId}`}
+            subtitle={a.instructorCode ?? "—"}
+          />
         )}
         emptyMessage="No assignments for this session"
       />
@@ -835,39 +778,39 @@ function RescheduleSessionModal({
   }
 
   return (
-    <Dialog
+    <FormDialog
       open={!!session}
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
+      size="md"
+      title="Reschedule Session"
+      description={
+        <>
+          Session #{session?.id} &mdash;{" "}
+          {formatStateLabel(session?.region)} /{" "}
+          {session?.trainingLevelName ?? `Level ${session?.trainingLevelId}`}
+        </>
+      }
+      formId="reschedule-session-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSubmit();
+      }}
+      isSubmitting={loading}
+      submitLabel={loading ? "Rescheduling..." : "Reschedule"}
+      cancelLabel="Cancel"
+      canSubmit={!loading && Boolean(newDate)}
     >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Reschedule Session</DialogTitle>
-          <DialogDescription>
-            Session #{session?.id} &mdash;{" "}
-            {formatStateLabel(session?.region)} /{" "}
-            {session?.trainingLevelName ?? `Level ${session?.trainingLevelId}`}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2">
-          <Label htmlFor="reschedule-date">New Session Date</Label>
-          <DateInput
-            id="reschedule-date"
-            value={newDate}
-            onChange={(v) => setNewDate(v)}
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={loading || !newDate}>
-            {loading ? "Rescheduling..." : "Reschedule"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <div className="space-y-2">
+        <Label htmlFor="reschedule-date">New Session Date</Label>
+        <DateInput
+          id="reschedule-date"
+          value={newDate}
+          onChange={(v) => setNewDate(v)}
+        />
+      </div>
+    </FormDialog>
   );
 }
 
@@ -993,14 +936,10 @@ export function SessionsTab() {
         columns={columns}
         getRowId={(s) => String(s.id)}
         renderMainCell={(s) => (
-          <div className="flex flex-col">
-            <div className="font-medium text-gray-900">
-              {formatStateLabel(s.region)}
-            </div>
-            <div className="text-sm text-gray-500">
-              #{s.id} - {s.trainingLevelName ?? `Level ${s.trainingLevelId}`}
-            </div>
-          </div>
+          <TableMainCell
+            title={formatStateLabel(s.region)}
+            subtitle={`#${s.id} - ${s.trainingLevelName ?? `Level ${s.trainingLevelId}`}`}
+          />
         )}
         renderExpandedContent={(session) => (
           <SessionAssignmentsPanel

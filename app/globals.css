@@ -8,53 +8,90 @@
   }
 }
 
+/* ── design tokens: BEGIN ──
+   PORT-02: a future app copies exactly two artifacts — this marked block and
+   tailwind.preset.ts. See docs/design-system.md for the adoption recipe. */
 @layer base {
   :root {
-    /* Light mode only — primary green #064e3b, modern neutrals */
-    --background: #fafafa;
-    --foreground: #064e3b;
-    --card: #ffffff;
-    --card-foreground: #111827;
-    --popover: #ffffff;
-    --popover-foreground: #111827;
-    --primary: #064e3b;
-    --primary-foreground: #fafafa;
-    --secondary: #f3f4f6;
-    --secondary-foreground: #064e3b;
-    --muted: #f3f4f6;
-    --muted-foreground: #6b7280;
-    --accent: #ecfdf5;
-    --accent-foreground: #064e3b;
-    --destructive: #dc2626;
-    --destructive-foreground: #fafafa;
-    --border: #e5e7eb;
-    --input: #e5e7eb;
-    --ring: #064e3b;
-    --chart-1: #064e3b;
-    --chart-2: #6b7280;
-    --chart-3: #047857;
-    --chart-4: #9ca3af;
-    --chart-5: #065f46;
-    --radius: 0.75rem;
-    --surface: #f9fafb;
-    --surface-green: #f0fdf4;
-    --text-muted: #6b7280;
-    --text-secondary: #374151;
-    /* Sidebar */
-    --sidebar-background: #fafafa;
-    --sidebar-foreground: #064e3b;
-    --sidebar-primary: #ecfdf5;
-    --sidebar-primary-foreground: #064e3b;
-    --sidebar-accent: #f0fdf4;
-    --sidebar-accent-foreground: #064e3b;
-    --sidebar-border: #e5e7eb;
-    --sidebar-ring: #064e3b;
+    /* IPA design system — light-only, dark-ready.
+       Every token is an HSL channel triplet consumed as hsl(var(--x) / <alpha>)
+       via tailwind.preset.ts. A future dark mode is a single .dark {} block
+       re-declaring channel values — no component changes. */
+
+    /* Brand constants — never used directly on UI surfaces; exposed as flat
+       brand.* utilities for the rare literal-brand need. */
+    --brand-navy: 213 93% 22%; /* #04346e */
+    --brand-red: 356 91% 42%; /* #cd0a17 */
+    --brand-yellow: 45 100% 49%; /* #fbbe00 */
+    --brand-green: 146 100% 21%; /* #006d2f */
+
+    /* Neutrals (slate) */
+    --background: 210 40% 98%; /* #f8fafc */
+    --foreground: 222 47% 11%; /* #0f172a */
+    --card: 0 0% 100%; /* #ffffff */
+    --card-foreground: 222 47% 11%; /* #0f172a */
+    --popover: 0 0% 100%; /* #ffffff */
+    --popover-foreground: 222 47% 11%; /* #0f172a */
+    --secondary: 210 40% 96%; /* #f1f5f9 */
+    --secondary-foreground: 222 47% 11%; /* #0f172a */
+    --muted: 210 40% 96%; /* #f1f5f9 */
+    --muted-foreground: 215 16% 47%; /* #64748b */
+    --border: 214 32% 91%; /* #e2e8f0 */
+    --input: 213 27% 84%; /* #cbd5e1 — one step darker than --border */
+    --ring: 213 81% 36%; /* #1155a6 — mid navy; full navy too dark as a ring */
+
+    /* Primary / interactive (navy) */
+    --primary: 213 93% 22%; /* #04346e */
+    --primary-foreground: 0 0% 100%; /* #ffffff */
+    --primary-hover: 212 86% 28%; /* #0a4487 */
+    --primary-active: 213 93% 18%; /* #032a59 */
+    --accent: 212 68% 96%; /* #eff5fc — navy-50 hover tint */
+    --accent-foreground: 213 93% 22%; /* #04346e */
+
+    /* Semantic status — the "beads": small, countable, meaningful */
+    --success: 146 100% 21%; /* #006d2f */
+    --success-foreground: 0 0% 100%; /* #ffffff */
+    --success-soft: 143 39% 94%; /* #e8f5ed */
+    --success-soft-foreground: 146 100% 21%; /* #006d2f */
+    --warning: 45 100% 49%; /* #fbbe00 */
+    --warning-foreground: 213 93% 22%; /* navy on yellow — never white */
+    --warning-soft: 46 94% 93%; /* #fef6dc */
+    --warning-soft-foreground: 45 100% 24%; /* #7a5b00 */
+    --destructive: 356 91% 42%; /* #cd0a17 */
+    --destructive-foreground: 0 0% 100%; /* #ffffff */
+    --destructive-hover: 356 90% 36%; /* #b00914 */
+    --destructive-soft: 357 69% 95%; /* #fbe9ea */
+    --destructive-soft-foreground: 356 91% 34%; /* #a30812 */
+    --info: 213 81% 36%; /* #1155a6 */
+    --info-foreground: 0 0% 100%; /* #ffffff */
+    --info-soft: 212 68% 96%; /* #eff5fc */
+    --info-soft-foreground: 212 86% 28%; /* #0a4487 */
+
+    /* Charts (tokens kept; no chart lib yet) */
+    --chart-1: 213 93% 22%; /* navy */
+    --chart-2: 146 100% 21%; /* green */
+    --chart-3: 45 100% 49%; /* yellow */
+    --chart-4: 356 91% 42%; /* red */
+    --chart-5: 215 16% 47%; /* slate */
+
+    --radius: 0.5rem;
+
+    /* Sidebar — navy rail */
+    --sidebar-background: 213 93% 22%; /* #04346e navy rail */
+    --sidebar-foreground: 214 49% 85%; /* #c7d7ec rail text (8.3:1) */
+    --sidebar-primary: 45 100% 49%; /* #fbbe00 yellow active indicator */
+    --sidebar-primary-foreground: 213 93% 22%; /* navy on yellow */
+    --sidebar-accent: 212 86% 28%; /* #0a4487 hover/active surface */
+    --sidebar-accent-foreground: 0 0% 100%; /* white on hover/active */
+    --sidebar-border: 212 72% 31%; /* #164a86 rail borders */
+    --sidebar-ring: 45 100% 49%; /* yellow rail focus ring */
   }
 }
+/* ── design tokens: END ── */
 
 @layer base {
   * {
-    border-color: var(--border);
+    border-color: hsl(var(--border));
   }
 
   html {
@@ -65,8 +102,8 @@
   }
 
   body {
-    background-color: var(--background);
-    color: var(--foreground);
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
     font-family: var(--font-sans);
     line-height: 1.6;
     text-size-adjust: 100%;
@@ -77,44 +114,6 @@
   .razorpay-container iframe {
     z-index: 2147483647 !important;
     pointer-events: auto !important;
-  }
-
-  /* MUI X DateField — force every internal piece to inherit the app's font
-     stack so it visually matches the shadcn Input next to it instead of
-     falling back to Roboto + MUI letter-spacing. */
-  .date-input-wrapper,
-  .date-input-wrapper .MuiPickersOutlinedInput-root,
-  .date-input-wrapper .MuiPickersInputBase-root,
-  .date-input-wrapper .MuiPickersSectionList-root,
-  .date-input-wrapper .MuiPickersSectionList-section,
-  .date-input-wrapper .MuiPickersSectionList-sectionContent,
-  .date-input-wrapper .MuiPickersSectionList-sectionSeparator,
-  .date-input-wrapper .MuiInputBase-input {
-    font-family: inherit !important;
-    font-size: 0.875rem;
-    letter-spacing: normal;
-    line-height: 1.5;
-  }
-
-  /* Placeholder muting — sections always render text content (DD / MM / YYYY
-     when empty, digits when filled). Wrapper carries data-empty="true" when
-     no value is set, letting us mute the format mask so it reads as a normal
-     shadcn placeholder. */
-  .date-input-wrapper[data-empty="true"] .MuiPickersSectionList-sectionContent,
-  .date-input-wrapper[data-empty="true"] .MuiPickersSectionList-sectionSeparator {
-    color: #6b7280;
-  }
-
-  /* react-day-picker dropdown chevron indicator (captionLayout="dropdown"). */
-  .rdp-dropdown_root::after {
-    content: "";
-    margin-left: 0.25rem;
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 4px solid currentColor;
-    opacity: 0.6;
   }
 
   h1,
@@ -140,9 +139,10 @@
     font-family: var(--font-mono);
   }
 
+  /* Neutral scrollbars — slate thumbs; the brand color never advertises here. */
   * {
     scrollbar-width: thin;
-    scrollbar-color: #064e3b #fafafa;
+    scrollbar-color: hsl(var(--input)) hsl(var(--background));
   }
 
   *::-webkit-scrollbar {
@@ -151,22 +151,22 @@
   }
 
   *::-webkit-scrollbar-track {
-    background: #fafafa;
+    background: hsl(var(--background));
     border-radius: 3px;
   }
 
   *::-webkit-scrollbar-thumb {
-    background: #064e3b;
+    background: hsl(var(--input));
     border-radius: 3px;
     transition: background-color 0.2s ease;
   }
 
   *::-webkit-scrollbar-thumb:hover {
-    background: #047857;
+    background: hsl(var(--muted-foreground));
   }
 
   *::-webkit-scrollbar-corner {
-    background: #fafafa;
+    background: hsl(var(--background));
   }
 }
 
@@ -179,9 +179,9 @@
 .dp-theme .react-datepicker {
   font-family: inherit;
   font-size: 0.875rem;
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.75rem;
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
   overflow: hidden;
 }
@@ -191,8 +191,8 @@
 }
 
 .dp-theme .react-datepicker__header {
-  background-color: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  background-color: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border));
   padding: 0.75rem 0.75rem 0.5rem;
   border-radius: 0;
 }
@@ -212,14 +212,14 @@
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 0.375rem;
-  color: #064e3b;
+  color: hsl(var(--primary));
   opacity: 0.6;
   transition: opacity 0.15s, background-color 0.15s;
   flex-shrink: 0;
 }
 
 .dp-theme .dp-hdr-btn:hover:not(:disabled) {
-  background-color: #ecfdf5;
+  background-color: hsl(var(--accent));
   opacity: 1;
 }
 
@@ -237,13 +237,15 @@
 .dp-theme .dp-sel {
   appearance: none;
   -webkit-appearance: none;
-  background-color: #f0fdf4;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%23064e3b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-color: hsl(var(--accent));
+  /* Chevron stroke is hardcoded IPA navy (#04346e) — data: URIs cannot read
+     CSS vars. Keep in sync with --primary if the palette ever changes. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%2304346e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.35rem center;
-  border: 1px solid #d1fae5;
+  border: 1px solid hsl(var(--border));
   border-radius: 0.375rem;
-  color: #064e3b;
+  color: hsl(var(--primary));
   font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 600;
@@ -254,8 +256,8 @@
 }
 
 .dp-theme .dp-sel:focus {
-  border-color: #064e3b;
-  box-shadow: 0 0 0 2px rgb(6 78 59 / 0.15);
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.15);
 }
 
 /* Hide react-datepicker's own nav since renderCustomHeader replaces it */
@@ -269,7 +271,7 @@
 }
 
 .dp-theme .react-datepicker__day-name {
-  color: #6b7280;
+  color: hsl(var(--muted-foreground));
   font-size: 0.75rem;
   font-weight: 500;
   width: 2rem;
@@ -284,7 +286,7 @@
 }
 
 .dp-theme .react-datepicker__day {
-  color: #111827;
+  color: hsl(var(--foreground));
   width: 2rem;
   line-height: 2rem;
   margin: 0.1rem;
@@ -295,37 +297,37 @@
 }
 
 .dp-theme .react-datepicker__day:hover:not(.react-datepicker__day--selected):not(.react-datepicker__day--disabled) {
-  background-color: #ecfdf5;
-  color: #064e3b;
+  background-color: hsl(var(--accent));
+  color: hsl(var(--primary));
 }
 
 .dp-theme .react-datepicker__day--selected,
 .dp-theme .react-datepicker__day--selected:hover {
-  background-color: #064e3b;
-  color: #fafafa;
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
   border-radius: 0.375rem;
   font-weight: 500;
 }
 
 .dp-theme .react-datepicker__day--keyboard-selected {
-  background-color: #ecfdf5;
-  color: #064e3b;
+  background-color: hsl(var(--accent));
+  color: hsl(var(--primary));
 }
 
 .dp-theme .react-datepicker__day--today:not(.react-datepicker__day--selected) {
-  background-color: #ecfdf5;
-  color: #064e3b;
+  background-color: hsl(var(--accent));
+  color: hsl(var(--primary));
   font-weight: 600;
 }
 
 .dp-theme .react-datepicker__day--outside-month {
-  color: #9ca3af;
+  color: hsl(var(--muted-foreground));
   opacity: 0.5;
 }
 
 .dp-theme .react-datepicker__day--disabled,
 .dp-theme .react-datepicker__day--disabled:hover {
-  color: #9ca3af;
+  color: hsl(var(--muted-foreground));
   opacity: 0.35;
   cursor: not-allowed;
   background-color: transparent;

@@ -1,3 +1,5 @@
+import { formatRupees } from "@/lib/currency-utils";
+
 const _parsed = Number(process.env.NEXT_PUBLIC_GST_RATE);
 const GST_RATE = Number.isFinite(_parsed) && _parsed > 0 && _parsed < 1 ? _parsed : 0.18;
 export const GST_RATE_LABEL = `${Math.round(GST_RATE * 100)}% GST`;
@@ -31,13 +33,6 @@ export function getFranchiseFeePayable(
   return { base, gst, payable, inclusive: false };
 }
 
-function formatInr(value: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
 
 function roundPaise(value: number): number {
   return Math.round(value * 100) / 100;

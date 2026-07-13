@@ -42,14 +42,14 @@ interface RequestProgramsModalProps {
  *
  *   - "Pending"   awaiting admin decision
  *   - "Approved"  an agreement was spawned for the request — BUT if that
- *     agreement has since been Voided or Expired (`row.agreementStatus`),
+ *     agreement has since been voided or expired (`row.agreementStatus`),
  *     the program is re-requestable again and is excluded from the blocked
  *     set below (backend defers to the live agreement the same way).
  */
 const BLOCKED_STATUSES = new Set(["Pending", "Approved"]);
 
-/** Agreement lifecycle states that un-block an Approved request's program. */
-const REREQUESTABLE_AGREEMENT_STATUSES = new Set(["Void", "Expired"]);
+/** Agreement lifecycle states (UPPER_SNAKE) that un-block an Approved request's program. */
+const REREQUESTABLE_AGREEMENT_STATUSES = new Set(["VOID", "EXPIRED"]);
 
 function isActiveFranchiseStatus(status: string | undefined): boolean {
   // Operational franchises now carry the "Approved" review status; operational

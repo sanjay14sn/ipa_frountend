@@ -1,6 +1,6 @@
 import type { Notification } from "./notification.types";
 
-type NotificationUserType = "admin" | "franchisee";
+type NotificationUserType = "admin" | "franchisee" | "ci";
 
 function parseNotificationDate(
   value: unknown,
@@ -57,7 +57,11 @@ export function mapApiNotificationRow(row: Record<string, unknown>): Notificatio
       ? String(row.recipientType)
       : "";
   const userType: NotificationUserType =
-    recipientType === "admin" ? "admin" : "franchisee";
+    recipientType === "admin"
+      ? "admin"
+      : recipientType === "course-instructor" || recipientType === "ci"
+        ? "ci"
+        : "franchisee";
 
   const createdRaw = row.createdAt ?? row.created_at;
   const updatedRaw = row.updatedAt ?? row.updated_at;

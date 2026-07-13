@@ -3,22 +3,15 @@
 import type React from "react";
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { AlertCircle } from "lucide-react";
+
 import { CIAuthProvider, useCIAuth } from "@/context/ci-auth-context";
+import { NotificationProvider } from "@/context/notification-context";
 import { logoutCI } from "@/services/ci-auth.service";
-import { DynamicSidebar } from "@/components/dynamic-sidebar";
-import {
-  SidebarProvider,
-  SidebarInset,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-} from "@/components/ui/breadcrumb";
-import { PortalHeaderActions } from "@/components/layout/portal-header-actions";
+import { PortalShell } from "@/components/layout/portal-shell";
+import { PortalSidebarBanner } from "@/components/layout/portal-sidebar";
+import { CI_NAV, CI_ONBOARDING_NAV } from "@/lib/navigation/nav-config";
+import { PageSkeleton } from "@/components/shared/skeletons";
 
 const UNLOCKED_PATHS = ["/ci/login", "/ci/agreement"];
 
@@ -45,8 +38,8 @@ function CIShell({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-sm text-muted-foreground">Loading...</p>
+      <div className="min-h-screen bg-background p-4">
+        <PageSkeleton />
       </div>
     );
   }
@@ -54,10 +47,22 @@ function CIShell({ children }: { children: React.ReactNode }) {
   if (!user && pathname !== "/ci/login") return null;
 
   if (pathname === "/ci/login") {
-    return <div className="min-h-screen bg-background">{children}</div>;
+    return (
+      <PortalShell
+        variant="bare"
+        portal="ci"
+        homeHref="/ci/login"
+        brand={{ title: "CI Portal" }}
+        breadcrumbRoot={{ label: "CI Portal", href: "/ci/login" }}
+      >
+        {children}
+      </PortalShell>
+    );
   }
 
-  // Agreement page gets a minimal shell (header + logout) until both parties have signed.
+  // Agreement page gets a minimal shell (header + sign-out) until both
+  // parties have signed. No default actions cluster: the notification bell
+  // only mounts for signed-in CIs on the full shell below.
   if (pathname === "/ci/agreement" && agreementPhase !== "SIGNED") {
     const handleLogout = async () => {
       await logoutCI().catch(() => {});
@@ -65,11 +70,14 @@ function CIShell({ children }: { children: React.ReactNode }) {
       router.replace("/ci/login");
     };
     return (
-      <div className="min-h-screen bg-background">
-        <header className="flex h-14 items-center justify-between border-b border-border bg-card px-4 sm:px-6">
-          <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-            Abacus Academy — CI Portal
-          </span>
+      <PortalShell
+        variant="header-only"
+        portal="ci"
+        homeHref="/ci/agreement"
+        brand={{ title: "IPA Portal — CI" }}
+        breadcrumbRoot={{ label: "My Agreement", href: "/ci/agreement" }}
+        hideDefaultActions
+        headerEnd={
           <button
             type="button"
             onClick={() => void handleLogout()}
@@ -77,42 +85,51 @@ function CIShell({ children }: { children: React.ReactNode }) {
           >
             Sign out
           </button>
-        </header>
+        }
+      >
         {children}
-      </div>
+      </PortalShell>
     );
   }
 
-  const ciHomeHref =
-    agreementPhase === "SIGNED" ? "/ci/dashboard" : "/ci/agreement";
+  const signed = agreementPhase === "SIGNED";
+  const ciHomeHref = signed ? "/ci/dashboard" : "/ci/agreement";
 
-  return (
-    <SidebarProvider>
-      <DynamicSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-brand-white-200/50 px-4">
-          <SidebarTrigger className="-ml-1 text-primary hover:bg-accent hover:text-accent-foreground" />
-          <Separator orientation="vertical" className="mr-2 h-4 bg-border" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  href={ciHomeHref}
-                  className="text-primary hover:text-primary hover:underline"
-                >
-                  CI Portal
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          <PortalHeaderActions />
-        </header>
-        <div className="flex flex-1 flex-col gap-4 bg-background p-4">
-          {children}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+  const shell = (
+    <PortalShell
+      variant="full"
+      portal="ci"
+      homeHref={ciHomeHref}
+      brand={{ title: "CI Portal", subtitle: user?.instructorCode }}
+      nav={signed ? CI_NAV : CI_ONBOARDING_NAV}
+      breadcrumbRoot={{ label: "CI Portal", href: ciHomeHref }}
+      sidebarBanner={
+        !signed ? (
+          <PortalSidebarBanner
+            icon={<AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-white" />}
+            title="Signature Required"
+          >
+            Please sign your course instructor agreement to access the portal.
+          </PortalSidebarBanner>
+        ) : undefined
+      }
+    >
+      {children}
+    </PortalShell>
   );
+
+  // Signed-in CIs get a CI-scoped notification feed (GET /ci/notification +
+  // SSE stream). The nested provider shadows the app-level one, so the bell
+  // rendered by the shell header talks to the CI endpoints.
+  if (user && signed) {
+    return (
+      <NotificationProvider identity={{ userId: user.id, userType: "ci" }}>
+        {shell}
+      </NotificationProvider>
+    );
+  }
+
+  return shell;
 }
 
 export default function CILayout({ children }: { children: React.ReactNode }) {

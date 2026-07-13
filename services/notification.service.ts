@@ -11,9 +11,17 @@ import { validateSchema } from "@/lib/schemas/validate";
 import { NotificationRowSchema } from "@/lib/schemas/notification.schema";
 import { z } from "zod";
 
-// ipa-new: `GET /notification` (franchisee) and `GET /admin/notification` (admin)
+// `GET /notification` (franchisee), `GET /admin/notification` (admin),
+// `GET /ci/notification` (course instructor) — same sub-routes on each base.
 function getNotificationBasePath(userType: UserType): string {
-  return userType === "admin" ? "/admin/notification" : "/notification";
+  switch (userType) {
+    case "admin":
+      return "/admin/notification";
+    case "ci":
+      return "/ci/notification";
+    default:
+      return "/notification";
+  }
 }
 
 /** Backend may return a plain array (legacy) or paginated `{ rows, total, page, limit }`. */

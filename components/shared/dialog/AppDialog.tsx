@@ -23,6 +23,11 @@ export interface AppDialogProps {
   className?: string
   /** Pointer events on outside click — pass false to disable backdrop dismiss. */
   dismissable?: boolean
+  /**
+   * Radix modal flag — pass false when another overlay (e.g. the Razorpay
+   * checkout iframe) must stay interactive above this dialog.
+   */
+  modal?: boolean
   children: React.ReactNode
 }
 
@@ -39,11 +44,12 @@ export function AppDialog({
   maxHeight = "max-h-[92vh]",
   hideClose = false,
   dismissable = true,
+  modal = true,
   className,
   children,
 }: AppDialogProps) {
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange} modal={modal}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
           className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"

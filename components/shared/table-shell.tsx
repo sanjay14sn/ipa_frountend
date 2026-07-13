@@ -1,13 +1,16 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { Loader2, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/shared/empty-state";
+import { PageHeaderCard } from "@/components/shared/page-header-card";
+import { TableSkeleton } from "@/components/shared/skeletons";
 
 interface TablePageShellProps {
   children: ReactNode;
   className?: string;
   embed?: boolean;
+  eyebrow?: ReactNode;
   title?: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
@@ -17,6 +20,7 @@ export function TablePageShell({
   children,
   className,
   embed = false,
+  eyebrow,
   title,
   description,
   actions,
@@ -26,25 +30,12 @@ export function TablePageShell({
       className={cn("space-y-4", !embed && "min-h-full", className)}
     >
       {(title || description || actions) && (
-        <div className="rounded-2xl border bg-card px-4 py-4 shadow-sm sm:px-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              {title ? (
-                <h1 className="text-2xl text-card-foreground">{title}</h1>
-              ) : null}
-              {description ? (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {description}
-                </p>
-              ) : null}
-            </div>
-            {actions ? (
-              <div className="flex flex-wrap gap-2 sm:justify-end">
-                {actions}
-              </div>
-            ) : null}
-          </div>
-        </div>
+        <PageHeaderCard
+          eyebrow={eyebrow}
+          title={title}
+          description={description}
+          actions={actions}
+        />
       )}
 
       {children}
@@ -132,23 +123,27 @@ interface TableFeedbackProps {
   message: string;
 }
 
+/**
+ * @deprecated Render `TableSkeleton` (components/shared/skeletons) directly.
+ * Kept so existing call sites upgrade for free; `message` is announced to
+ * screen readers only.
+ */
 export function TableLoadingState({
   className,
   message,
 }: TableFeedbackProps) {
   return (
-    <div
-      className={cn(
-        "flex items-center justify-center gap-2 rounded-xl border border-border bg-card p-10 text-sm text-muted-foreground shadow-sm",
-        className,
-      )}
-    >
-      <Loader2 className="h-5 w-5 animate-spin" />
-      {message}
+    <div className={className}>
+      <span className="sr-only">{message}</span>
+      <TableSkeleton />
     </div>
   );
 }
 
+/**
+ * @deprecated Render `EmptyState` (components/shared/empty-state) directly —
+ * it supports icon/hint/action. Kept so existing call sites upgrade for free.
+ */
 export function TableEmptyState({
   className,
   message,
@@ -156,12 +151,11 @@ export function TableEmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-10 text-center text-sm text-muted-foreground shadow-sm",
+        "rounded-xl border border-border bg-card shadow-sm",
         className,
       )}
     >
-      <Inbox className="h-10 w-10 opacity-60" />
-      <p>{message}</p>
+      <EmptyState title={message} />
     </div>
   );
 }

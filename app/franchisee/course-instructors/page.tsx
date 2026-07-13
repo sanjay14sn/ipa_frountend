@@ -2,24 +2,22 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/shared/dialog";
 import { Plus } from "lucide-react";
 import { useUser } from "@/context/user-context";
-import { deleteCourseInstructorWithRevalidation, useCourseInstructors } from "@/hooks/api/course-instructor.hooks";
-import { TablePageShell } from "@/components/shared";
-import AddCourseInstructorModal from "./components/AddCourseInstructorModal";
-import CourseInstructorTabs from "./components/CourseInstructorTabs";
+import { useCourseInstructors } from "@/hooks/api/course-instructor.hooks";
+import { TablePageShell, PageSkeleton } from "@/components/shared";
+import AddCourseInstructorModal from "./_components/AddCourseInstructorModal";
+import CourseInstructorTabs from "./_components/CourseInstructorTabs";
 
 
 export default function FranchiseeCourseInstructorsPage() {
   const { user } = useUser();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [deleteCourseInstructorId, setDeleteCourseInstructorId] = useState<string | null>(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const {
     courseInstructors: allCourseInstructors,
     isLoading,
+    error,
     revalidate,
   } = useCourseInstructors();
 
@@ -42,8 +40,10 @@ export default function FranchiseeCourseInstructorsPage() {
   );
   const franchiseName = user?.profile?.franchise?.name || user?.franchiseName || "your franchise";
 
-  if (!user || !user.franchiseId || (isLoading && allCourseInstructors.length === 0)) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading...</div>;
+  // FR-16: loading is threaded into the table (skeleton rows) instead of
+  // blanking the whole page — the header and tabs paint immediately.
+  if (!user || !user.franchiseId) {
+    return <PageSkeleton />;
   }
 
   return (
@@ -60,30 +60,10 @@ export default function FranchiseeCourseInstructorsPage() {
       <CourseInstructorTabs
         courseInstructors={regularRows}
         approvalPendingCourseInstructors={approvalPendingRows}
+        loading={isLoading && allCourseInstructors.length === 0}
+        error={error}
+        onRetry={() => void revalidate()}
         onCourseInstructorUpdate={() => {
-          void revalidate();
-        }}
-        onCourseInstructorDelete={(courseInstructorId) => {
-          setDeleteCourseInstructorId(courseInstructorId);
-          setIsDeleteModalOpen(true);
-        }}
-        onCourseInstructorEdit={() => {}}
-      />
-
-      <ConfirmDialog
-        open={isDeleteModalOpen}
-        onOpenChange={setIsDeleteModalOpen}
-        variant="destructive"
-        title="Delete Course Instructor"
-        description="Are you sure you want to delete this course instructor? This action cannot be undone."
-        confirmLabel="Delete"
-        onConfirm={async () => {
-          if (!deleteCourseInstructorId) return;
-          await deleteCourseInstructorWithRevalidation(
-            Number(deleteCourseInstructorId),
-          );
-          setIsDeleteModalOpen(false);
-          setDeleteCourseInstructorId(null);
           void revalidate();
         }}
       />

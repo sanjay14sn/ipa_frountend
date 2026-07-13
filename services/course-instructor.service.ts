@@ -6,7 +6,7 @@ import {
   unwrapData,
 } from "@/lib/unwrap-api";
 import { withProgramScope } from "./_scope";
-import type { CITrainingReceivable } from "./ci-training.service";
+import type { CIAgreementRecord } from "./contracting.service";
 
 export interface Response {
   statusCode: number;
@@ -88,33 +88,27 @@ export interface CreateCourseInstructorRequest {
   additionalDetails?: string;
 }
 
-export interface ApproveCourseInstructorRequest {
-  tenure: number;
+/** One row of the training-fee plan sent with a single-call CI approval. */
+export interface ApproveCITrainingPlanRow {
+  order?: number;
+  label?: string;
+  levelFrom: number;
+  levelTo: number;
+  fee: number;
 }
 
-export interface AdminCourseInstructorAgreementRecord {
-  id: number;
-  title: string;
-  phase:
-    | "PENDING_CI_SIGNATURE"
-    | "PENDING_FRANCHISEE_SIGNATURE"
-    | "SIGNED"
-    | "EXPIRED";
-  tenure: number | null;
-  expiresAt: string | null;
-  dateOfSigning: string | null;
-  ciShare: number | null;
-  levelDurations: { l1: number; l2: number };
-  franchisee: {
-    name: string;
-    centreName: string;
-    centreAddress: string;
-    phone?: string | null;
-    mail?: string | null;
-  } | null;
-  instructor: { name: string; address: string | null; phone: string | null } | null;
-  receivables?: CITrainingReceivable[];
+/**
+ * PATCH /admin/course-instructor/:id/approve — single-call approval: the
+ * training-fee plan rides the approval and is snapshotted into the CI
+ * agreement's terms at issuance (no follow-up plan-create call).
+ */
+export interface ApproveCourseInstructorRequest {
+  tenure: number;
+  trainingPlan?: ApproveCITrainingPlanRow[];
 }
+
+/** Same detail view the CI portal receives (server-computed `phase` included). */
+export type AdminCourseInstructorAgreementRecord = CIAgreementRecord;
 
 /** Admin UI: grouped instructors for training monitor */
 export interface CompleteTrainingRequest {

@@ -3,16 +3,17 @@
 import { Suspense, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { UserPlus } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
-import { CiApprovalsSection } from "../course-instructor-approvals/ci-approvals-section";
+import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
+import { CiApprovalsSection } from "./_components/approvals/ci-approvals-section";
 import { CiTrainingSection } from "./ci-training-section";
-import ActiveCourseInstructorsTable from "../course-instructor-approvals/components/ActiveCourseInstructorsTable";
-import SetupExistingCIDialog from "../course-instructor-approvals/components/SetupExistingCIDialog";
-import { TablePageShell } from "@/components/shared";
+import { CiAgreementsSection } from "./_components/ci-agreements-section";
+import ActiveCourseInstructorsTable from "./_components/approvals/ActiveCourseInstructorsTable";
+import SetupExistingCIDialog from "./_components/approvals/SetupExistingCIDialog";
+import { PageSkeleton } from "@/components/shared";
 
-const TABS = ["applications", "active", "training"] as const;
+const TABS = ["applications", "active", "training", "agreements"] as const;
 
 function AdminCourseInstructorsHubInner() {
   const [tab, setTab] = useTabFromUrl("applications", TABS);
@@ -26,39 +27,49 @@ function AdminCourseInstructorsHubInner() {
   };
 
   return (
-    <TablePageShell
+    <PageTabs
       title="Course instructors"
       description="Applications, training sessions, and curriculum levels."
-      actions={
-        <Button onClick={() => setSetupOpen(true)} variant="outline" size="sm">
+      action={
+        <Button
+          onClick={() => setSetupOpen(true)}
+          variant="outline"
+          size="sm"
+          title="Record an instructor who already teaches — distinct from approving a new application"
+        >
           <UserPlus className="mr-2 h-4 w-4" />
-          Setup Existing CI
+          Onboard existing CI
         </Button>
       }
+      tabs={[
+        { value: "applications", label: "Applications" },
+        { value: "active", label: "Active CIs" },
+        { value: "training", label: "CI training" },
+        { value: "agreements", label: "Agreements" },
+      ]}
+      value={tab}
+      onValueChange={setTab}
     >
-      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-        <TabsList className="flex h-auto flex-wrap justify-start gap-1">
-          <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="active">Active CIs</TabsTrigger>
-          <TabsTrigger value="training">CI training</TabsTrigger>
-        </TabsList>
-        <TabsContent value="applications" className="mt-4">
-          <CiApprovalsSection />
-        </TabsContent>
-        <TabsContent value="active" className="mt-4">
-          <ActiveCourseInstructorsTable />
-        </TabsContent>
-        <TabsContent value="training" className="mt-4">
-          <CiTrainingSection />
-        </TabsContent>
-      </Tabs>
+      <TabsContent value="applications" className="mt-0">
+        <CiApprovalsSection />
+      </TabsContent>
+      <TabsContent value="active" className="mt-0">
+        <ActiveCourseInstructorsTable />
+      </TabsContent>
+      <TabsContent value="training" className="mt-0">
+        <CiTrainingSection />
+      </TabsContent>
+
+      <TabsContent value="agreements" className="mt-0">
+        <CiAgreementsSection />
+      </TabsContent>
 
       <SetupExistingCIDialog
         open={setupOpen}
         onOpenChange={setSetupOpen}
         onSuccess={handleSetupSuccess}
       />
-    </TablePageShell>
+    </PageTabs>
   );
 }
 
@@ -66,7 +77,7 @@ export default function AdminCourseInstructorsHubPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-6 text-sm text-muted-foreground">Loading...</div>
+        <PageSkeleton />
       }
     >
       <AdminCourseInstructorsHubInner />

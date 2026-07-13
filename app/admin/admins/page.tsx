@@ -1,6 +1,6 @@
 "use client";
 
-import { AdminManagementSection } from "./sections/admin-management-section";
+import { AdminManagementSection } from "./_components/admin-management-section";
 
 export default function AdminsPage() {
   return (

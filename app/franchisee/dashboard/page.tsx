@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
+import { LastUpdated, PageHeaderCard, StatCell } from "@/components/shared";
+import { formatDate } from "@/lib/date-utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,9 +15,8 @@ import {
   IndianRupee,
   Package,
   ShoppingCart,
-  TrendingDown,
-  TrendingUp,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/context/user-context";
@@ -37,71 +38,17 @@ import type {
   ReceivableInstallmentSummary,
 } from "@/services/agreement.service";
 
-interface StatCardProps {
+/**
+ * FR-01: stat cells carry NO trend props — R4 bans trend arrows and percent
+ * badges. Attention travels through chips instead (FR-02/FR-03).
+ */
+interface StatCellConfig {
   label: string;
   value: string;
   sub?: string;
-  icon: ElementType;
-  trend?: { value: number; up: boolean };
-  href?: string;
-}
-
-function StatCard({ label, value, sub, icon: Icon, trend, href }: StatCardProps) {
-  const content = (
-    <>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-            <Icon className="h-4 w-4" />
-          </span>
-          {label}
-        </div>
-        {trend ? (
-          <span
-            className={cn(
-              "inline-flex items-center gap-0.5 text-xs font-medium",
-              trend.up ? "text-emerald-600" : "text-amber-600",
-            )}
-          >
-            {trend.up ? (
-              <TrendingUp className="h-3 w-3" />
-            ) : (
-              <TrendingDown className="h-3 w-3" />
-            )}
-            {trend.value}%
-          </span>
-        ) : null}
-      </div>
-      <div>
-        <p className="text-4xl font-normal leading-none text-card-foreground">
-          {value}
-        </p>
-        {sub ? (
-          <p className="mt-1 max-w-44 text-xs leading-snug text-muted-foreground">
-            {sub}
-          </p>
-        ) : null}
-      </div>
-    </>
-  );
-
-  if (href) {
-    return (
-      <Link
-        href={href}
-        className="group block space-y-2 px-4 py-4 transition-colors hover:bg-accent sm:px-5"
-        aria-label={`${label}: open franchise fee payment details`}
-      >
-        {content}
-      </Link>
-    );
-  }
-
-  return (
-    <div className="space-y-2 px-4 py-4 sm:px-5">
-      {content}
-    </div>
-  );
+  icon: LucideIcon;
+  pendingChip?: { count: number; href: string };
+  alertChip?: { label: string; href?: string };
 }
 
 interface QuickLinkProps {
@@ -173,17 +120,6 @@ function DashboardPanel({
   );
 }
 
-function shortDate(value: string | null | undefined): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 function isFullInstallmentSummary(
   summary:
     | ReceivableInstallmentSummary
@@ -199,7 +135,7 @@ function resolveEmiAgreement(agreements: AgreementRecord[]) {
   return agreements
     .filter(
       (agreement) =>
-        agreement.type === "NEW_FRANCHISE" &&
+        agreement.kind === "FRANCHISE" &&
         Boolean(agreement.receivables?.installmentSummary),
     )
     .sort((left, right) => right.id - left.id)[0];
@@ -285,11 +221,11 @@ function buildFranchiseFeeCardDisplay({
   upcomingAmount: number | null;
   upcomingDueAt: string | null;
   hasSchedule: boolean;
-}): Pick<StatCardProps, "value" | "sub"> {
+}): Pick<StatCellConfig, "value" | "sub"> {
   const hasUpcoming = upcomingAmount != null && upcomingAmount > 0;
   const upcomingLabel = hasUpcoming
     ? `Next ${formatRupees(upcomingAmount)}${
-        upcomingDueAt ? ` due ${shortDate(upcomingDueAt)}` : ""
+        upcomingDueAt ? ` due ${formatDate(upcomingDueAt)}` : ""
       }`
     : undefined;
 
@@ -303,7 +239,7 @@ function buildFranchiseFeeCardDisplay({
   if (hasUpcoming) {
     return {
       value: formatRupees(upcomingAmount!),
-      sub: upcomingDueAt ? `Due ${shortDate(upcomingDueAt)}` : undefined,
+      sub: upcomingDueAt ? `Due ${formatDate(upcomingDueAt)}` : undefined,
     };
   }
 
@@ -314,85 +250,45 @@ function buildFranchiseFeeCardDisplay({
   return { value: formatRupees(paidAmount), sub: undefined };
 }
 
-function PayrollItem({ p, index }: { p: any; index: number }) {
-  return (
-    <div className={cn("rounded-xl border bg-accent/30 p-3", index > 0 && "mt-3")}>
-      {p?.program?.name && (
-        <p className="mb-2 text-xs text-muted-foreground">{p.program.name}</p>
-      )}
-      <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm">
-        {(
-          [
-            ["Fee", p?.franchiseFee],
-            ["Monthly", p?.monthlyFee],
-            ["Royalty", p?.royalty],
-          ] as [string, number | undefined][]
-        ).map(([label, val]) => (
-          <div key={label}>
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-              {label}
-            </p>
-            <p className="font-medium text-card-foreground">
-              {"₹"}
-              {Number(val ?? 0).toLocaleString()}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ProfileCard({ profile }: { profile: NonNullable<ReturnType<typeof import("@/context/user-context").useUser>["user"]>["profile"] }) {
-  if (!profile) return null;
-  const rows: ([string, string | undefined] | null)[] = [
-    ["Name", profile.name],
-    ["Phone", profile.phone],
-    ["Email", profile.mail],
-    ["City", profile.city],
-    ["Franchise", profile.franchise?.name],
-    ["Type", profile.franchise?.type],
-    ["Status", profile.franchise?.status],
-    profile.franchise?.approvedAt
-      ? ["Approved", new Date(profile.franchise.approvedAt).toLocaleDateString()]
-      : null,
-  ];
-  const filteredRows = rows.filter((row): row is [string, string | undefined] => row != null);
+/**
+ * FR-05: prime dashboard space belongs to work, not identity — the profile
+ * card moved to /franchisee/profile; this panel surfaces every non-zero
+ * pending item as a deep link (targets mirror the stat-cell chips).
+ */
+function PendingActionsCard({
+  items,
+}: {
+  items: { label: string; count: number; href: string }[];
+}) {
+  const actionable = items.filter((item) => item.count > 0);
   return (
     <Card className="rounded-2xl border-border bg-card shadow-sm">
       <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
         <CardTitle className="flex items-center gap-3 text-xl font-normal text-card-foreground">
-          <ModulePill label="Profile" />
-          Profile
+          <ModulePill label="Actions" />
+          Pending actions
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4 p-4 pt-2 sm:p-5 sm:pt-2">
-        <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-          {filteredRows.map(([label, value]) => (
-            <div
-              key={label}
-              className="col-span-1 flex justify-between gap-3 border-b border-border/60 pb-2 last:border-b-0"
+      <CardContent className="space-y-3 p-4 pt-2 sm:p-5 sm:pt-2">
+        {actionable.length === 0 ? (
+          <p className="rounded-xl border border-dashed bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+            You&apos;re all caught up.
+          </p>
+        ) : (
+          actionable.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="flex items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-sm transition-colors hover:border-primary/30 hover:bg-accent"
             >
-              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                {label}
+              <span className="text-sm font-medium text-card-foreground">
+                {item.label}
               </span>
-              <span className="text-right font-medium text-card-foreground">
-                {value ?? "-"}
+              <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-warning-soft px-2 text-xs font-medium text-warning-soft-foreground">
+                {item.count}
               </span>
-            </div>
-          ))}
-        </div>
-        {profile.franchise?.franchisePayroll && (
-          <div className="border-t border-border pt-3">
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-              Payroll
-            </p>
-            {[profile.franchise.franchisePayroll]
-              .filter(Boolean)
-              .map((p: any, i: number) => (
-                <PayrollItem key={i} p={p} index={i} />
-              ))}
-          </div>
+            </Link>
+          ))
         )}
       </CardContent>
     </Card>
@@ -405,13 +301,12 @@ function OrderRow({ order }: { order: import("@/services/order.service").OrderDa
       <div>
         <p className="text-sm font-medium text-card-foreground">{order.orderType}</p>
         <p className="text-xs text-muted-foreground">
-          {new Date(order.createdAt).toLocaleDateString()}
+          {formatDate(order.createdAt)}
         </p>
       </div>
       <div className="text-right">
         <p className="text-sm font-medium text-card-foreground">
-          {"₹"}
-          {Number(order.totalAmount).toLocaleString()}
+          {formatRupees(Number(order.totalAmount))}
         </p>
         <p
           className={cn(
@@ -534,8 +429,13 @@ export default function FranchiseeDashboard() {
 
   const loading = canFetch && (statsQuery.isLoading || ordersQuery.isLoading);
 
-  const pct = (part: number, whole: number) =>
-    whole > 0 ? Math.round((part / whole) * 100) : 0;
+  // FR-04 (R5): freshness + manual refetch across the dashboard queries.
+  const handleRefresh = () => {
+    void statsQuery.refetch();
+    void ordersQuery.revalidate();
+    void agreementsQuery.refetch();
+    void emiAgreementQuery.refetch();
+  };
 
   useEffect(() => {
     if (user?.role === "franchisee" && !isOperational) {
@@ -555,19 +455,17 @@ export default function FranchiseeDashboard() {
     );
   }
 
-  const statCards: StatCardProps[] = [
+  const statCards: StatCellConfig[] = [
     {
+      // FR-03: overdue EMIs show a red "Overdue" chip deep-linking to the
+      // agreements tab — never the old fake 100%-down trend.
       label: "Franchise Fee Paid",
       value: franchiseFeeCard.value,
       sub: franchiseFeeCard.sub,
       icon: IndianRupee,
-      href: emiAgreement ? "/franchisee/franchise?tab=agreements" : undefined,
-      trend:
+      alertChip:
         emiOverdue > 0
-          ? {
-              value: 100,
-              up: false,
-            }
+          ? { label: "Overdue", href: "/franchisee/franchise?tab=agreements" }
           : undefined,
     },
     {
@@ -578,67 +476,33 @@ export default function FranchiseeDashboard() {
           ? `${stats.students.active} active`
           : undefined,
       icon: Users,
-      trend:
-        stats.students.active > 0
-          ? {
-              value: pct(stats.students.active, stats.students.total),
-              up: true,
-            }
-          : undefined,
     },
     {
       label: "Course Instructors",
       value: stats.courseInstructors.total.toString(),
-      sub:
-        stats.courseInstructors.pending > 0
-          ? `${stats.courseInstructors.pending} pending`
-          : undefined,
       icon: GraduationCap,
-      trend:
-        stats.courseInstructors.pending > 0
-          ? {
-              value: pct(
-                stats.courseInstructors.pending,
-                stats.courseInstructors.total,
-              ),
-              up: false,
-            }
-          : undefined,
+      pendingChip: {
+        count: stats.courseInstructors.pending,
+        href: "/franchisee/course-instructors",
+      },
     },
     {
       label: "Total Orders",
       value: stats.orders.total.toString(),
-      sub:
-        stats.orders.pending > 0
-          ? `${stats.orders.pending} pending`
-          : undefined,
       icon: ShoppingCart,
-      trend:
-        stats.orders.pending > 0
-          ? {
-              value: pct(stats.orders.pending, stats.orders.total),
-              up: false,
-            }
-          : undefined,
+      pendingChip: {
+        count: stats.orders.pending,
+        href: "/franchisee/orders",
+      },
     },
     {
       label: "Certificates",
       value: stats.certificates.total.toString(),
-      sub:
-        stats.certificates.pending > 0
-          ? `${stats.certificates.pending} pending`
-          : undefined,
       icon: Award,
-      trend:
-        stats.certificates.pending > 0
-          ? {
-              value: pct(
-                stats.certificates.pending,
-                stats.certificates.total,
-              ),
-              up: false,
-            }
-          : undefined,
+      pendingChip: {
+        count: stats.certificates.pending,
+        href: "/franchisee/students?tab=certificates",
+      },
     },
   ];
 
@@ -681,38 +545,41 @@ export default function FranchiseeDashboard() {
       />
 
       <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-        <div className="flex flex-col gap-3 border-b px-4 py-5 sm:px-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="mb-2">
-              <ModulePill label="Franchise" />
-            </div>
-            <h1 className="text-2xl text-card-foreground">
-              {user.franchiseName ?? "Franchise Dashboard"}
-            </h1>
-            <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
-              Overview of your franchise activities.
-            </p>
-          </div>
-          {isOperational && (
-            <div className="flex shrink-0 flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRequestProgramsModalOpen(true)}
-              >
-                Request Programs
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRequestModalOpen(true)}
-              >
-                <Building2 className="h-4 w-4" />
-                Request New Franchise
-              </Button>
-            </div>
-          )}
-        </div>
+        <PageHeaderCard
+          embedded
+          className="border-b py-5"
+          eyebrow={<ModulePill label="Franchise" />}
+          title={user.franchiseName ?? "Franchise Dashboard"}
+          description="Overview of your franchise activities."
+          actions={
+            <>
+              <LastUpdated
+                updatedAt={statsQuery.dataUpdatedAt}
+                onRefresh={handleRefresh}
+                isRefreshing={statsQuery.isFetching}
+              />
+              {isOperational ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRequestProgramsModalOpen(true)}
+                  >
+                    Request Programs
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRequestModalOpen(true)}
+                  >
+                    <Building2 className="h-4 w-4" />
+                    Request New Franchise
+                  </Button>
+                </>
+              ) : null}
+            </>
+          }
+        />
 
         {loading ? (
           <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5">
@@ -727,7 +594,7 @@ export default function FranchiseeDashboard() {
         ) : (
           <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5">
             {statCards.map((s) => (
-              <StatCard key={s.label} {...s} />
+              <StatCell key={s.label} {...s} />
             ))}
           </div>
         )}
@@ -742,7 +609,30 @@ export default function FranchiseeDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {user.profile && <ProfileCard profile={user.profile} />}
+        <PendingActionsCard
+          items={[
+            {
+              label: "Course instructor approvals",
+              count: stats.courseInstructors.pending,
+              href: "/franchisee/course-instructors",
+            },
+            {
+              label: "Pending orders",
+              count: stats.orders.pending,
+              href: "/franchisee/orders",
+            },
+            {
+              label: "Certificate requests",
+              count: stats.certificates.pending,
+              href: "/franchisee/students?tab=certificates",
+            },
+            {
+              label: "Overdue EMI",
+              count: emiOverdue > 0 ? 1 : 0,
+              href: "/franchisee/franchise?tab=agreements",
+            },
+          ]}
+        />
         <RecentOrdersCard orders={recentOrders} />
       </div>
     </div>

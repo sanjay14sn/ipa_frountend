@@ -189,7 +189,7 @@ export function useSendReceivableReminderMutation(agreementId: number) {
   });
 }
 
-/** Admin: suspend a Valid agreement (optional reason). */
+/** Admin: suspend an ACTIVE agreement (optional reason). */
 export function useSuspendAgreementMutation(agreementId: number) {
   const client = useQueryClient();
   return useMutation({
@@ -209,7 +209,7 @@ export function useSuspendAgreementMutation(agreementId: number) {
   });
 }
 
-/** Admin: reactivate a Suspended agreement. */
+/** Admin: reactivate a SUSPENDED agreement. */
 export function useReactivateAgreementMutation(agreementId: number) {
   const client = useQueryClient();
   return useMutation({
@@ -229,11 +229,11 @@ export function useReactivateAgreementMutation(agreementId: number) {
   });
 }
 
-/** Admin: void an agreement — terminal (optional reason). */
+/** Admin: void an agreement — terminal (optional reason + unpaid-items policy). */
 export function useVoidAgreementMutation(agreementId: number) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (reason?: string) => voidAgreementAdmin(agreementId, reason),
+    mutationFn: (reason?: string) => voidAgreementAdmin(agreementId, { reason }),
     onSuccess: async () => {
       await Promise.all([
         client.invalidateQueries({

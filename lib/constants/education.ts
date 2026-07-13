@@ -70,7 +70,7 @@ const BLOOD_GROUPS: BloodGroup[] = [
  *
  * Used by `AddStudentModal` and `EditStudentModal`.
  */
-const STUDENT_FORM_STEPS: StepDef[] = [
+export const STUDENT_FORM_STEPS: StepDef[] = [
   { id: 1, title: "Basic Information" },
   { id: 2, title: "Parent Details" },
   { id: 3, title: "Contact & Address" },
@@ -82,7 +82,7 @@ const STUDENT_FORM_STEPS: StepDef[] = [
  *
  * Used by `AddCourseInstructorModal` and `SetupExistingCIDialog`.
  */
-const CI_FORM_STEPS: StepDef[] = [
+export const CI_FORM_STEPS: StepDef[] = [
   { id: 1, title: "Basic Information" },
   { id: 2, title: "Personal Details" },
   { id: 3, title: "Contact & Address" },
@@ -94,9 +94,58 @@ const CI_FORM_STEPS: StepDef[] = [
  *
  * Used by `CreateFranchiseDialog`.
  */
-const FRANCHISE_FORM_STEPS: StepDef[] = [
+export const FRANCHISE_FORM_STEPS: StepDef[] = [
   { id: 1, title: "Basic Information" },
   { id: 2, title: "Owner Details" },
   { id: 3, title: "Agreement" },
   { id: 4, title: "Review & Submit" },
+];
+
+/**
+ * Step definitions for the public franchise-application multi-step modal.
+ * Used by `components/franchise-application-modal.tsx`.
+ */
+export const FRANCHISE_APPLICATION_STEPS: StepDef[] = [
+  { id: 1, title: "Personal Information" },
+  { id: 2, title: "Location & Communication" },
+  { id: 3, title: "Contact & Professional" },
+  { id: 4, title: "Franchise Details" },
+];
+
+/**
+ * Step definitions for the admin Setup Existing Franchise dialog.
+ * Used by `CreateFranchiseDialog`.
+ */
+export const CREATE_FRANCHISE_STEPS: StepDef[] = [
+  { id: 1, title: "Personal Info" },
+  { id: 2, title: "Franchise Details" },
+  { id: 3, title: "Agreement Terms" },
+  { id: 4, title: "Security" },
+];
+
+/**
+ * Step definitions for the admin Setup Existing CI dialog.
+ */
+export const SETUP_EXISTING_CI_STEPS: StepDef[] = [
+  { id: 1, title: "Franchise & Program" },
+  { id: 2, title: "CI Personal Details" },
+  { id: 3, title: "Receivables & Validity" },
+];
+
+/**
+ * Step definitions for the admin Approve CI dialog.
+ */
+export const APPROVE_CI_STEPS: StepDef[] = [
+  { id: 1, title: "Tenure" },
+  { id: 2, title: "Receivables" },
+];
+
+/**
+ * Step labels for the CI agreement signing funnel (full-page stepper).
+ * Used by `app/ci/agreement/page.tsx`.
+ */
+export const CI_AGREEMENT_STEPS: StepDef[] = [
+  { id: 1, title: "Review" },
+  { id: 2, title: "Terms" },
+  { id: 3, title: "Sign" },
 ];

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ProgramManagement } from "../profile/components/ProgramManagement";
+import { ProgramManagement } from "../profile/_components/ProgramManagement";
 import { useUser } from "@/context/user-context";
 
 export default function AdminProgramsPage() {

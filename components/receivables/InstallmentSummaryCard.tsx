@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { format, parseISO } from "date-fns";
 import { ArrowRight, CalendarDays, CreditCard, IndianRupee } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,7 @@ import type {
   ReceivableSummaryItem,
 } from "@/services/agreement.service";
 import { GST_RATE_LABEL } from "@/lib/gst";
-import { fmtDate } from "@/lib/date-utils";
+import { formatDate } from "@/lib/date-utils";
 import { formatRupees } from "@/lib/currency-utils";
 
 function prettify(value: string | null | undefined): string {
@@ -118,14 +117,22 @@ export function ReceivableCompactLine({
     ? summary.totals.installmentCount
     : summary.installmentCount;
 
+  // Stacked + width-capped so table auto-layout can't inflate the column
+  // into a horizontal scroll (the old single line measured ~500px).
   return (
-    <span className="text-sm text-muted-foreground">
-      Paid {formatRupees(paid)}{" · "}Outstanding {formatRupees(outstanding)}
-      {paidCount != null && totalCount != null
-        ? ` · ${paidCount} of ${totalCount} EMIs paid`
-        : ""}
-      {nextDueAt ? ` · Next ${fmtDate(nextDueAt)}` : ""}
-    </span>
+    <div className="flex max-w-[230px] flex-col leading-snug">
+      <span className="whitespace-normal text-sm text-muted-foreground">
+        Paid {formatRupees(paid)}{" · "}Due {formatRupees(outstanding)}
+      </span>
+      <span className="whitespace-normal text-xs text-muted-foreground">
+        {paidCount != null && totalCount != null
+          ? `${paidCount}/${totalCount} EMIs`
+          : ""}
+        {nextDueAt
+          ? `${paidCount != null && totalCount != null ? " · " : ""}Next ${formatDate(nextDueAt)}`
+          : ""}
+      </span>
+    </div>
   );
 }
 
@@ -169,17 +176,23 @@ export function ReceivableCompactProgress({
     total > 0 ? Math.min(100, Math.max(0, (paid / total) * 100)) : 0;
 
   return (
-    <div className="flex min-w-[220px] flex-col gap-1.5">
+    <div className="flex min-w-[180px] max-w-[230px] flex-col gap-1.5">
       <div className="relative">
-        <Progress value={progressValue} className="h-3 bg-[#dceee6]" />
+        <Progress value={progressValue} className="h-3 bg-success-soft" />
       </div>
-      <span className="text-sm text-muted-foreground">
-        Paid {formatRupees(paid)}{" · "}Outstanding {formatRupees(outstanding)}
-        {paidCount != null && totalCount != null
-          ? ` · ${paidCount} of ${totalCount} EMIs paid`
-          : ""}
-        {nextDueAt ? ` · Next ${fmtDate(nextDueAt)}` : ""}
-      </span>
+      <div className="flex flex-col leading-snug">
+        <span className="whitespace-normal text-sm text-muted-foreground">
+          Paid {formatRupees(paid)}{" · "}Due {formatRupees(outstanding)}
+        </span>
+        <span className="whitespace-normal text-xs text-muted-foreground">
+          {paidCount != null && totalCount != null
+            ? `${paidCount}/${totalCount} EMIs`
+            : ""}
+          {nextDueAt
+            ? `${paidCount != null && totalCount != null ? " · " : ""}Next ${formatDate(nextDueAt)}`
+            : ""}
+        </span>
+      </div>
     </div>
   );
 }
@@ -230,8 +243,8 @@ function ItemRows({
                   {prettify(item.status)}
                 </Badge>
               </TableCell>
-              <TableCell>{fmtDate(item.dueAt)}</TableCell>
-              <TableCell>{fmtDate(item.paidAt)}</TableCell>
+              <TableCell>{formatDate(item.dueAt)}</TableCell>
+              <TableCell>{formatDate(item.paidAt)}</TableCell>
               <TableCell className="text-right font-medium">
                 <div className="flex flex-col items-end gap-0.5">
                   <span>{formatRupees(payable)}</span>
@@ -336,7 +349,7 @@ function InstallmentSummaryCard({
                 label="Next due"
                 value={
                   nextDueAt
-                    ? `${formatRupees(nextDueAmount)} on ${fmtDate(nextDueAt)}`
+                    ? `${formatRupees(nextDueAmount)} on ${formatDate(nextDueAt)}`
                     : "-"
                 }
               />
@@ -454,7 +467,7 @@ function InstallmentSummaryCard({
             label="Next due"
             value={
               summary.nextDueItem
-                ? `${formatRupees(summary.nextDueItem.payableAmount ?? summary.nextDueItem.amount)} on ${fmtDate(summary.nextDueItem.dueAt)}`
+                ? `${formatRupees(summary.nextDueItem.payableAmount ?? summary.nextDueItem.amount)} on ${formatDate(summary.nextDueItem.dueAt)}`
                 : "-"
             }
           />

@@ -16,7 +16,9 @@ function getStreamUrl(userType: UserType): string {
   const path =
     userType === "admin"
       ? "/admin/notification/stream"
-      : "/notification/stream";
+      : userType === "ci"
+        ? "/ci/notification/stream"
+        : "/notification/stream";
   return `${getApiBaseUrl()}${path}`;
 }
 

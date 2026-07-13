@@ -1,24 +1,21 @@
 "use client";
 
 import { Suspense } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { SummaryStatCard } from "@/components/shared";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { getFranchiseApplicationDetail } from "@/services/franchisee.service";
-import AdminOrdersTable from "@/app/admin/orders/components/AdminOrdersTable";
-import { FranchiseStudentsTable } from "./components/FranchiseStudentsTable";
-import { FranchiseCiListTable } from "./components/FranchiseCiListTable";
-import { FranchiseCiSummary } from "./components/FranchiseCiSummary";
-import { FranchiseStudentsSummary } from "./components/FranchiseStudentsSummary";
-import { FranchiseOrdersSummary } from "./components/FranchiseOrdersSummary";
-import { FranchisePaymentsTab } from "./components/FranchisePaymentsTab";
-import { AdminAgreementsSection } from "@/app/admin/franchise/components/admin-agreements-section";
+import AdminOrdersTable from "@/components/orders/AdminOrdersTable";
+import { FranchiseStudentsTable } from "./_components/FranchiseStudentsTable";
+import { FranchiseCiListTable } from "./_components/FranchiseCiListTable";
+import { FranchiseCiSummary } from "./_components/FranchiseCiSummary";
+import { FranchiseStudentsSummary } from "./_components/FranchiseStudentsSummary";
+import { FranchiseOrdersSummary } from "./_components/FranchiseOrdersSummary";
+import { FranchisePaymentsTab } from "./_components/FranchisePaymentsTab";
+import { AdminAgreementsSection } from "../_components/admin-agreements-section";
 import { formatDate } from "@/lib/date-utils";
 
 const TABS = ["students", "ci", "orders", "payments", "agreements"] as const;
@@ -63,62 +60,53 @@ function FranchiseDetailInner() {
   const agreementsCount =
     detail?.agreements?.length ?? franchise?.agreements?.length ?? 0;
 
+  // Respec (doc 05 open question, resolved 2026-07-10): the composite header
+  // now rides the standard PageTabs shape — badges live in the title node,
+  // the stat band in the headerExtras slot, and the old back-link is gone
+  // (the shell breadcrumbs already provide Admin / Franchise navigation).
   return (
-    <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-      <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-        <div className="border-b bg-accent/30 px-4 py-4 sm:px-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-2">
-              <Button variant="ghost" size="sm" className="-ml-2 w-fit" asChild>
-                <Link href="/admin/franchise?tab=franchises">
-                  <ArrowLeft className="mr-1 h-4 w-4" />
-                  All franchises
-                </Link>
-              </Button>
-              {isLoading ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading franchise...
-                </div>
-              ) : isError ? (
-                <p className="text-sm text-destructive">
-                  Could not load this franchise. Check the id or try again.
-                </p>
-              ) : (
-                <>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="text-2xl text-card-foreground">{title}</h1>
-                    {franchise?.status ? (
-                      <Badge variant="secondary">{franchise.status}</Badge>
-                    ) : null}
-                    {typeof franchise?.validAgreementsCount === "number" ? (
-                      <Badge
-                        variant={
-                          franchise.validAgreementsCount > 0
-                            ? "default"
-                            : "outline"
-                        }
-                      >
-                        {franchise.validAgreementsCount} valid agreement
-                        {franchise.validAgreementsCount === 1 ? "" : "s"}
-                      </Badge>
-                    ) : null}
-                    {franchise?.type ? (
-                      <Badge variant="outline">{franchise.type}</Badge>
-                    ) : null}
-                  </div>
-                  <p className="max-w-3xl text-sm text-muted-foreground">
-                    {subtitle || "Franchise hub"}
-                    {franchise?.code ? ` | ${franchise.code}` : null}
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {!isLoading && !isError ? (
-          <div className="grid divide-y md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
+    <PageTabs
+      title={
+        isLoading ? (
+          "Loading franchise…"
+        ) : isError ? (
+          "Franchise"
+        ) : (
+          <span className="flex flex-wrap items-center gap-2">
+            {title}
+            {franchise?.status ? (
+              <Badge variant="secondary">{franchise.status}</Badge>
+            ) : null}
+            {typeof franchise?.validAgreementsCount === "number" ? (
+              <Badge
+                variant={
+                  franchise.validAgreementsCount > 0 ? "default" : "outline"
+                }
+              >
+                {franchise.validAgreementsCount} valid agreement
+                {franchise.validAgreementsCount === 1 ? "" : "s"}
+              </Badge>
+            ) : null}
+            {franchise?.type ? (
+              <Badge variant="outline">{franchise.type}</Badge>
+            ) : null}
+          </span>
+        )
+      }
+      description={
+        isError ? (
+          <span className="text-destructive">
+            Could not load this franchise. Check the id or try again.
+          </span>
+        ) : isLoading ? (
+          "Fetching franchise details…"
+        ) : (
+          `${subtitle || "Franchise hub"}${franchise?.code ? ` | ${franchise.code}` : ""}`
+        )
+      }
+      headerExtras={
+        !isLoading && !isError ? (
+          <div className="grid divide-y rounded-xl border md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
             <SummaryStatCard
               label="Franchisee"
               value={compactText(franchisee?.name)}
@@ -148,19 +136,18 @@ function FranchiseDetailInner() {
               valueClassName="text-lg font-semibold leading-snug"
             />
           </div>
-        ) : null}
-
-        <div className="border-t px-4 py-3 sm:px-5">
-          <TabsList className="flex h-auto flex-wrap justify-start gap-1">
-            <TabsTrigger value="students">Students</TabsTrigger>
-            <TabsTrigger value="ci">CI</TabsTrigger>
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="payments">Payments</TabsTrigger>
-            <TabsTrigger value="agreements">Agreements</TabsTrigger>
-          </TabsList>
-        </div>
-      </div>
-
+        ) : null
+      }
+      tabs={[
+        { value: "students", label: "Students" },
+        { value: "ci", label: "CI" },
+        { value: "orders", label: "Orders" },
+        { value: "payments", label: "Payments" },
+        { value: "agreements", label: "Agreements" },
+      ]}
+      value={tab}
+      onValueChange={setTab}
+    >
       <TabsContent value="students" className="mt-0">
         <div className="space-y-4">
           <FranchiseStudentsSummary franchiseId={franchiseId} />
@@ -192,7 +179,7 @@ function FranchiseDetailInner() {
       <TabsContent value="agreements" className="mt-0">
         <AdminAgreementsSection fixedFranchiseId={franchiseId} embed />
       </TabsContent>
-    </Tabs>
+    </PageTabs>
   );
 }
 

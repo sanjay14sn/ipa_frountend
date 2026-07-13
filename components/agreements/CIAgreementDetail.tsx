@@ -2,7 +2,8 @@
 
 import { type ReactNode, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
+import { formatDate } from "@/lib/date-utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,51 +27,42 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ciAgreementContent } from "@/lib/ciAgreementContent";
-import type { CIAgreementRecord } from "@/services/ci-training.service";
-import { ciSignatureSrc } from "@/services/ci-training.service";
+import { ciSignatureSrc, type CIAgreementRecord } from "@/services/contracting.service";
 import { formatRupees } from "@/lib/currency-utils";
 import type { ESignatureResult, ESignaturePadProps } from "@/components/esignature/ESignaturePad";
+import { ContactPill, ContactPillGrid, FactCell, Timeline } from "@/components/shared";
+import { SignatureDisplay } from "@/components/esignature/SignatureDisplay";
 
 const ESignaturePad = dynamic<ESignaturePadProps>(
   () => import("@/components/esignature/ESignaturePad").then((m) => ({ default: m.ESignaturePad })),
   { ssr: false, loading: () => null },
 );
 
-function fmtDate(value?: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function fmtShortDate(value?: string | null): string {
-  if (!value) return "—";
-  try {
-    const d = typeof value === "string" ? parseISO(value) : new Date(value);
-    if (Number.isNaN(d.getTime())) return String(value);
-    return format(d, "PP");
-  } catch {
-    return String(value);
-  }
-}
-
 function fmtTime(value?: string | null): string {
   if (!value) return "";
-  try {
-    return format(parseISO(value), "p");
-  } catch {
-    return "";
-  }
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 
 type BadgeTone = "default" | "secondary" | "outline" | "destructive";
 
-function phaseBadge(phase: string): { label: string; tone: BadgeTone } {
+function phaseBadge(
+  agreement: Pick<CIAgreementRecord, "phase" | "status">,
+): { label: string; tone: BadgeTone } {
+  // Lifecycle status outranks the signing phase: a voided/suspended/superseded
+  // agreement keeps phase SIGNED server-side but is no longer in force.
+  if (agreement.status === "VOID") return { label: "Void", tone: "destructive" };
+  if (agreement.status === "SUSPENDED")
+    return { label: "Suspended", tone: "secondary" };
+  if (agreement.status === "SUPERSEDED")
+    return { label: "Superseded", tone: "secondary" };
+  const phase = agreement.phase;
   if (phase === "PENDING_FRANCHISEE_SIGNATURE")
     return { label: "Awaiting franchisee signature", tone: "secondary" };
   if (phase === "SIGNED") return { label: "Signed", tone: "default" };
@@ -111,7 +103,7 @@ export function CIAgreementDetail({
     [agreement.tenure],
   );
   const receivables = agreement.receivables ?? [];
-  const badge = phaseBadge(agreement.phase);
+  const badge = phaseBadge(agreement);
 
   const instructorName = agreement.instructor?.name ?? "—";
   const instructorInitials = (() => {
@@ -128,8 +120,9 @@ export function CIAgreementDetail({
   })();
 
   const ciSignedAt = agreement.ciSignedAt ?? agreement.dateOfSigning;
-  const ciSigned = !!ciSignedAt;
-  const franchiseeSigned = !!agreement.franchiseeSignedAt;
+  const ciSigned = agreement.ciSigned ?? !!ciSignedAt;
+  const franchiseeSigned =
+    agreement.franchiseeSigned ?? !!agreement.franchiseeSignedAt;
   const sigSrc = ciSignatureSrc(agreement.ciSignatureUrl);
 
   async function handleAdoptCISignature(result: ESignatureResult) {
@@ -201,7 +194,7 @@ export function CIAgreementDetail({
                       <Phone className="h-3 w-3 text-muted-foreground" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Phone</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Phone</p>
                       <p className="text-xs truncate">{agreement.franchisee?.phone ?? "—"}</p>
                     </div>
                   </div>
@@ -210,7 +203,7 @@ export function CIAgreementDetail({
                       <Mail className="h-3 w-3 text-muted-foreground" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Email</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Email</p>
                       <p className="text-xs truncate">{agreement.franchisee?.mail ?? "—"}</p>
                     </div>
                   </div>
@@ -234,74 +227,55 @@ export function CIAgreementDetail({
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-border bg-muted/50">
-                  <Phone className="h-3 w-3 text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Phone</p>
-                  <p className="text-xs truncate">{agreement.instructor?.phone ?? "—"}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-border bg-muted/50">
-                  <MapPin className="h-3 w-3 text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Address</p>
-                  <p className="text-xs truncate">{agreement.instructor?.address ?? "—"}</p>
-                </div>
-              </div>
-            </div>
+            <ContactPillGrid>
+              <ContactPill
+                icon={Phone}
+                label="Phone"
+                value={agreement.instructor?.phone ?? "—"}
+              />
+              <ContactPill
+                icon={MapPin}
+                label="Address"
+                value={agreement.instructor?.address ?? "—"}
+              />
+            </ContactPillGrid>
 
             {/* Signature */}
             <div className="border-t border-border pt-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <PenLine className="h-3.5 w-3.5 text-muted-foreground" />
-                  <p className="text-xs font-medium">CI signature</p>
-                </div>
-                {(sigSrc || ciSigned) && (
-                  <Badge variant="outline" className="text-[10px] gap-1 border-emerald-200 text-emerald-700 bg-emerald-50 py-0">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    On file
-                  </Badge>
-                )}
-              </div>
-              {sigSrc ? (
-                <div className="flex items-center justify-center rounded-lg border bg-muted/30 py-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={sigSrc} alt="CI signature" className="max-h-14 w-auto max-w-full object-contain" loading="lazy" />
-                </div>
-              ) : onCISign ? (
-                <div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-muted/30 py-3">
-                  <p className="text-xs text-muted-foreground">No signature on file</p>
-                  <Button size="sm" variant="outline" onClick={() => setESignatureOpen(true)} className="gap-1.5">
-                    <PenLine className="h-3.5 w-3.5" />
-                    Add Signature
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center rounded-lg border bg-muted/30 py-3">
-                  <p className="text-xs text-muted-foreground">
-                    {ciSigned ? "Stored on the CI profile" : "Not yet captured"}
-                  </p>
-                </div>
-              )}
+              <SignatureDisplay
+                src={sigSrc ?? undefined}
+                signerLabel="CI signature"
+                maxH="sm"
+                onFile={Boolean(sigSrc || ciSigned)}
+                emptyContent={
+                  onCISign ? (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        No signature on file
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setESignatureOpen(true)}
+                        className="gap-1.5"
+                      >
+                        <PenLine className="h-3.5 w-3.5" />
+                        Add Signature
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      {ciSigned ? "Stored on the CI profile" : "Not yet captured"}
+                    </p>
+                  )
+                }
+              />
               <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    CI signed at
-                  </p>
-                  <p className="text-xs mt-0.5">{fmtDate(ciSignedAt)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    Franchisee signed at
-                  </p>
-                  <p className="text-xs mt-0.5">{fmtDate(agreement.franchiseeSignedAt)}</p>
-                </div>
+                <FactCell label="CI signed at" value={formatDate(ciSignedAt)} />
+                <FactCell
+                  label="Franchisee signed at"
+                  value={formatDate(agreement.franchiseeSignedAt)}
+                />
               </div>
             </div>
           </CardContent>
@@ -348,30 +322,33 @@ export function CIAgreementDetail({
             </div>
 
             {/* Timeline */}
-            <div className="flex items-start">
-              <TimelineNode
-                label="CI Signed"
-                date={ciSignedAt}
-                complete={ciSigned}
-              />
-              <TimelineConnector complete={franchiseeSigned} />
-              <TimelineNode
-                label="Franchisee Signed"
-                date={agreement.franchiseeSignedAt}
-                complete={franchiseeSigned}
-              />
-              <TimelineConnector complete={false} />
-              <TimelineNode
-                label="Expires"
-                date={agreement.expiresAt}
-                complete={false}
-              />
-            </div>
+            <Timeline
+              stops={[
+                {
+                  label: "CI Signed",
+                  state: ciSigned ? "done" : "upcoming",
+                  sublabel: formatDate(ciSignedAt),
+                  meta: fmtTime(ciSignedAt),
+                },
+                {
+                  label: "Franchisee Signed",
+                  state: franchiseeSigned ? "done" : "upcoming",
+                  sublabel: formatDate(agreement.franchiseeSignedAt),
+                  meta: fmtTime(agreement.franchiseeSignedAt),
+                },
+                {
+                  label: "Expires",
+                  state: "upcoming",
+                  sublabel: formatDate(agreement.expiresAt),
+                  meta: fmtTime(agreement.expiresAt),
+                },
+              ]}
+            />
 
             <div className="flex-1" />
             <div className="grid grid-cols-2 gap-2 border-t border-border pt-4">
-              <SimpleFactRow label="Tenure" value={agreement.tenure != null ? `${agreement.tenure} months` : "—"} />
-              <SimpleFactRow label="Time remaining" value={timeLeft} />
+              <FactCell label="Tenure" value={agreement.tenure != null ? `${agreement.tenure} months` : "—"} />
+              <FactCell label="Time remaining" value={timeLeft} />
             </div>
           </CardContent>
         </Card>
@@ -534,47 +511,3 @@ function LevelEarningCard({
   );
 }
 
-function TimelineNode({
-  label,
-  date,
-  complete,
-}: {
-  label: string;
-  date?: string | null;
-  complete: boolean;
-}) {
-  return (
-    <div className="flex flex-col items-center">
-      <div
-        className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-full",
-          complete
-            ? "bg-primary text-primary-foreground"
-            : "border-2 border-border bg-background",
-        )}
-      >
-        {complete && <Check className="h-4 w-4" />}
-      </div>
-      <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-        {label}
-      </p>
-      <p className="text-xs font-medium text-center">{fmtShortDate(date)}</p>
-      <p className="text-[11px] text-muted-foreground text-center">{fmtTime(date)}</p>
-    </div>
-  );
-}
-
-function TimelineConnector({ complete }: { complete: boolean }) {
-  return <div className={cn("mt-4 flex-1 h-px", complete ? "bg-primary" : "bg-border")} />;
-}
-
-function SimpleFactRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 break-words text-sm font-medium text-card-foreground">{value}</p>
-    </div>
-  );
-}

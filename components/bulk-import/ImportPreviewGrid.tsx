@@ -175,7 +175,7 @@ export function ImportPreviewGrid({
                   )}
                 >
                   {group.section && (
-                    <h4 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <h4 className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                       {group.section}
                     </h4>
                   )}
@@ -253,7 +253,7 @@ export function ImportPreviewGrid({
                   <div key={c.key} className="flex flex-col gap-0.5">
                     <label
                       htmlFor={inputId}
-                      className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground leading-tight"
+                      className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground leading-tight"
                     >
                       {c.label}
                     </label>

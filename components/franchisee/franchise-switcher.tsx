@@ -81,7 +81,7 @@ export function FranchiseSwitcher({
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="start" className="w-64">
-        <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
           Your Franchises
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

@@ -71,13 +71,15 @@ export interface User {
         program?: { id?: number; name?: string } | null;
       }>;
       /**
-       * All non-terminal agreements (Valid + Approved) for this franchise.
-       * Post-refactor the agreement switcher is sourced from here instead
-       * of a dedicated endpoint — one round-trip via the profile fetch.
+       * All non-terminal agreements (ACTIVE + APPROVED) for this franchise.
+       * The agreement switcher is sourced from here instead of a dedicated
+       * endpoint — one round-trip via the profile fetch. Rows are flat
+       * AgreementRecords, so they carry `kind`/`origin` + UPPER_SNAKE status.
        */
       activePrograms?: Array<{
         id: number;
-        type: string;
+        kind: string;
+        origin?: string;
         status: string;
         signed: boolean;
         franchiseId: string;

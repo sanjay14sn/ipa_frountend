@@ -1,12 +1,13 @@
 "use client";
 
 import { Suspense } from "react";
+import { PageSkeleton } from "@/components/shared";
 import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
-import { FranchiseManagementSection } from "./components/franchise-management-section";
-import { PendingApprovalsSection } from "./components/pending-approvals-section";
-import { ProgramRequestsSection } from "./components/program-requests-section";
-import { AdminAgreementsSection } from "./components/admin-agreements-section";
+import { FranchiseManagementSection } from "./_components/franchise-management-section";
+import { PendingApprovalsSection } from "./_components/pending-approvals-section";
+import { ProgramRequestsSection } from "./_components/program-requests-section";
+import { AdminAgreementsSection } from "./_components/admin-agreements-section";
 
 const TABS = ["franchises", "applications", "programs", "agreements"] as const;
 
@@ -37,7 +38,7 @@ function AdminFranchiseHubInner() {
         <ProgramRequestsSection />
       </TabsContent>
       <TabsContent value="agreements" className="mt-0">
-        <AdminAgreementsSection />
+        <AdminAgreementsSection embed />
       </TabsContent>
     </PageTabs>
   );
@@ -45,7 +46,7 @@ function AdminFranchiseHubInner() {
 
 export default function AdminFranchiseHubPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<PageSkeleton />}>
       <AdminFranchiseHubInner />
     </Suspense>
   );

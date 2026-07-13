@@ -6,7 +6,6 @@ import {
   getAllCourseInstructors,
   createCourseInstructor,
   updateCourseInstructor,
-  deleteCourseInstructor,
   getAllAdminCourseInstructorsByStatus,
   getAdminCISummaries,
   getAdminCIDetails,
@@ -84,16 +83,6 @@ async function updateCourseInstructorWithRevalidation(
     /* ignore */
   }
   return updated;
-}
-
-export async function deleteCourseInstructorWithRevalidation(id: number) {
-  await deleteCourseInstructor(id);
-  try {
-    const qc = getQueryClientBridge();
-    void qc.invalidateQueries({ queryKey: CI_LIST_PREFIX });
-  } catch {
-    /* ignore */
-  }
 }
 
 function useAdminCourseInstructors() {

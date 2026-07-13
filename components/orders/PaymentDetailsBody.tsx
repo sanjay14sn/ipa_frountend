@@ -1,10 +1,10 @@
 "use client";
 
+import { formatCurrencyAmount } from "@/lib/currency-utils";
 import { Badge } from "@/components/ui/badge";
 import { LabeledValue, StatusBadge } from "@/components/shared";
 import {
   formatPaymentDateTime,
-  formatRsAmount,
   getMethodSpecificFields,
   methodBadgeClass,
   methodLabel,
@@ -111,18 +111,18 @@ export function PaymentDetailsBody({
       >
         <LabeledValue
           label="Amount"
-          value={formatRsAmount(payment.amount, currency)}
+          value={formatCurrencyAmount(payment.amount, currency)}
         />
         {payment.fee != null ? (
           <LabeledValue
             label="Fee"
-            value={formatRsAmount(payment.fee, currency)}
+            value={formatCurrencyAmount(payment.fee, currency)}
           />
         ) : null}
         {(payment.gatewayFeeTaxAmount ?? payment.tax) != null ? (
           <LabeledValue
             label="Gateway fee tax"
-            value={formatRsAmount(
+            value={formatCurrencyAmount(
               payment.gatewayFeeTaxAmount ?? payment.tax,
               currency,
             )}
@@ -131,7 +131,7 @@ export function PaymentDetailsBody({
         {effectiveGoodsGst != null && effectiveGoodsGst > 0 ? (
           <LabeledValue
             label="GST (18%)"
-            value={formatRsAmount(effectiveGoodsGst, currency)}
+            value={formatCurrencyAmount(effectiveGoodsGst, currency)}
           />
         ) : null}
       </div>

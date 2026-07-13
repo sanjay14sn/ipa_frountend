@@ -1,12 +1,10 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format } from "date-fns";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -28,21 +26,17 @@ import {
   updateCIAgreementSignature,
   type CIAgreementRecord,
   type CIESignaturePayload,
-} from "@/services/ci-training.service";
-import type { ESignaturePadProps, ESignatureResult } from "@/components/esignature/ESignaturePad";
+} from "@/services/contracting.service";
+import type { ESignatureResult } from "@/components/esignature/ESignaturePad";
 
-const ESignaturePad = dynamic<ESignaturePadProps>(
-  () =>
-    import("@/components/esignature/ESignaturePad").then((m) => ({
-      default: m.ESignaturePad,
-    })),
-  { ssr: false, loading: () => null },
-);
 import { ciAgreementContent } from "@/lib/ciAgreementContent";
-import AgreementTerms from "@/app/franchisee/agreement/components/AgreementTerms";
+import AgreementTerms from "@/components/agreements/AgreementTerms";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { CIAgreementDetail } from "@/components/agreements/CIAgreementDetail";
-import { fmtDate } from "@/lib/date-utils";
+import { formatDate } from "@/lib/date-utils";
+import { Stepper } from "@/components/shared/stepper";
+import { CI_AGREEMENT_STEPS } from "@/lib/constants/education";
+import { SignatureCapturePanel } from "@/components/esignature/SignatureCapturePanel";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,55 +53,6 @@ function queryToStep(q: string | null): CIStepIndex | null {
 }
 
 
-// ─── Stepper ──────────────────────────────────────────────────────────────────
-
-function CIAgreementStepper({ currentStep }: { currentStep: CIStepIndex }) {
-  return (
-    <div className="w-full">
-      <div className="flex items-center justify-between">
-        {CI_STEP_LABELS.map((label, index) => {
-          const id = (index + 1) as CIStepIndex;
-          const done = currentStep > id;
-          const active = currentStep === id;
-          return (
-            <div key={id} className="flex flex-1 items-center">
-              <div className="flex flex-1 flex-col items-center">
-                <div
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full border text-xs font-medium transition-all duration-200",
-                    (active || done) &&
-                      "border-primary bg-primary text-primary-foreground shadow-sm",
-                    !active && !done && "border-border bg-card text-muted-foreground",
-                  )}
-                >
-                  {done ? <Check className="h-4 w-4" strokeWidth={3} /> : id}
-                </div>
-                <p
-                  className={cn(
-                    "mt-2 text-[10px] font-medium leading-tight sm:text-xs",
-                    currentStep >= id ? "text-card-foreground" : "text-muted-foreground",
-                  )}
-                >
-                  {label}
-                </p>
-              </div>
-              {index < CI_STEP_LABELS.length - 1 && (
-                <div className="flex max-w-[40px] flex-1 items-center justify-center px-1 sm:max-w-[60px] sm:px-2">
-                  <div
-                    className={cn(
-                      "h-0.5 w-full transition-all duration-200",
-                      done ? "bg-primary" : "bg-border",
-                    )}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 // ─── Signature Step ───────────────────────────────────────────────────────────
 
@@ -125,7 +70,6 @@ function SignatureStep({
   onCISign?: (result: ESignatureResult) => Promise<void>;
 }) {
   const [signing, setSigning] = useState(false);
-  const [padOpen, setPadOpen] = useState(false);
 
   const existingSigSrc = ciSignatureSrc(agreement.ciSignatureUrl);
 
@@ -133,7 +77,6 @@ function SignatureStep({
     setSigning(true);
     try {
       await signCIAgreementWithESignature(agreement.id, payload);
-      setPadOpen(false);
       toast.success("Agreement signed successfully.");
       onSigned();
     } catch {
@@ -168,13 +111,13 @@ function SignatureStep({
         </p>
         {agreement.dateOfSigning && (
           <p className="mt-1 text-xs text-muted-foreground">
-            Signed on {fmtDate(agreement.dateOfSigning)}
+            Signed on {formatDate(agreement.dateOfSigning)}
           </p>
         )}
         {agreement.tenure != null && (
           <p className="mt-1 text-xs text-muted-foreground">
             {agreement.tenure}-month tenure
-            {agreement.expiresAt ? ` · Expires ${fmtDate(agreement.expiresAt)}` : ""}
+            {agreement.expiresAt ? ` · Expires ${formatDate(agreement.expiresAt)}` : ""}
           </p>
         )}
         <Button className="mt-5" onClick={onGoToPortal}>
@@ -198,39 +141,22 @@ function SignatureStep({
         </div>
         {!ciSignatureSrc(agreement.ciSignatureUrl) && onCISign && (
           <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary">
-                <PenLine className="h-4 w-4" />
-              </span>
-              <h3 className="text-base font-medium text-card-foreground">Your signature</h3>
-            </div>
-            <p className="mb-4 text-sm text-muted-foreground">
+            <p className="mb-3 text-sm text-muted-foreground">
               Your signature was not captured. Add it now using draw or type.
             </p>
-            <Button
-              type="button"
-              disabled={signing}
-              onClick={() => setPadOpen(true)}
-              variant="outline"
-              className="rounded-lg"
-            >
-              {signing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PenLine className="mr-2 h-4 w-4" />}
-              {signing ? "Saving…" : "Add Signature"}
-            </Button>
-            <ESignaturePad
-              open={padOpen}
-              onOpenChange={setPadOpen}
+            <SignatureCapturePanel
+              signerLabel="Your signature"
+              ctaLabel="Add Signature"
+              busy={signing}
               defaultName={defaultSignerName}
               onAdopt={async (r) => {
                 setSigning(true);
                 try {
                   await onCISign(r);
-                  setPadOpen(false);
                 } finally {
                   setSigning(false);
                 }
               }}
-              submitting={signing}
             />
           </div>
         )}
@@ -240,74 +166,14 @@ function SignatureStep({
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <div className="mb-3 flex items-center gap-2">
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary">
-          <PenLine className="h-4 w-4" />
-        </span>
-        <h3 className="text-base font-medium text-card-foreground">Your signature</h3>
-      </div>
-      {existingSigSrc ? (
-        <>
-          <p className="mb-3 text-sm text-muted-foreground">
-            Apply your on-file signature to this agreement, or use a different one.
-          </p>
-          <div className="mb-4 flex items-center justify-center rounded-lg border bg-muted/30 py-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={existingSigSrc} alt="Your on-file signature" className="max-h-14 w-auto max-w-full object-contain" loading="lazy" />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              disabled={signing}
-              onClick={() => void handleSignWithStored()}
-              className="rounded-lg"
-            >
-              {signing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <PenLine className="mr-2 h-4 w-4" />
-              )}
-              {signing ? "Saving…" : "Use existing signature"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={signing}
-              onClick={() => setPadOpen(true)}
-              className="rounded-lg"
-            >
-              Use different signature
-            </Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Draw your signature with your mouse, finger, or stylus — or type your
-            legal name and we&apos;ll render it in a signature script. You&apos;ll
-            confirm before it&apos;s applied to the agreement.
-          </p>
-          <Button
-            type="button"
-            disabled={signing}
-            onClick={() => setPadOpen(true)}
-            className="w-full rounded-lg sm:w-auto"
-          >
-            {signing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <PenLine className="mr-2 h-4 w-4" />
-            )}
-            {signing ? "Saving…" : "Sign agreement"}
-          </Button>
-        </>
-      )}
-      <ESignaturePad
-        open={padOpen}
-        onOpenChange={setPadOpen}
+      <SignatureCapturePanel
+        storedSignature={existingSigSrc ?? undefined}
+        signerLabel="Your signature"
+        ctaLabel="Sign agreement"
+        busy={signing}
         defaultName={defaultSignerName}
         onAdopt={handleAdoptESignature}
-        submitting={signing}
+        onUseStored={() => void handleSignWithStored()}
       />
     </div>
   );
@@ -437,6 +303,16 @@ function CIAgreementContent() {
     );
   }
 
+  // VOID is a lifecycle status, not a signing phase — the server keeps the
+  // phase at SIGNED/PENDING_* for voided rows, so check status first.
+  if (agreement.status === "VOID") {
+    return <CIAgreementVoidView />;
+  }
+
+  if (agreement.phase === "EXPIRED") {
+    return <CIAgreementExpiredView agreement={agreement} />;
+  }
+
   if (agreement.phase === "SIGNED") {
     return (
       <div className="space-y-4">
@@ -448,14 +324,6 @@ function CIAgreementContent() {
           onCISign={!ciSignatureSrc(agreement.ciSignatureUrl) ? handleCISign : undefined}
         />
       </div>
-    );
-  }
-
-  if (agreement.phase === "EXPIRED") {
-    return agreement.status === "Void" ? (
-      <CIAgreementVoidView />
-    ) : (
-      <CIAgreementExpiredView agreement={agreement} />
     );
   }
 
@@ -485,7 +353,7 @@ function CIAgreementContent() {
 
           {/* Stepper */}
           <div className="border-b border-border bg-accent/30 px-4 py-4 sm:px-5">
-            <CIAgreementStepper currentStep={currentStep} />
+            <Stepper steps={CI_AGREEMENT_STEPS} currentStep={currentStep} compact framed={false} />
           </div>
 
           {/* Body */}
@@ -509,6 +377,9 @@ function CIAgreementContent() {
                 <p className="text-sm text-muted-foreground">
                   Read the agreement sections and confirm acceptance below.
                 </p>
+                {/* CI-07: no onDownloadPDF — the old handler was a hardcoded
+                    failure toast (no CI agreement PDF endpoint exists), so
+                    the button is hidden until backend support lands. */}
                 <AgreementTerms
                   agreementContent={ciAgreementContent}
                   expandedSections={expandedSections}
@@ -516,7 +387,6 @@ function CIAgreementContent() {
                   onToggleSection={toggleSection}
                   onExpandAll={expandAll}
                   onCollapseAll={collapseAll}
-                  onDownloadPDF={() => toast.info("PDF download is not available yet.")}
                   onAgreementChange={(v) => setTermsAccepted(v === true)}
                 />
               </div>
@@ -585,7 +455,7 @@ function CIAgreementContent() {
  */
 function CIAgreementExpiredView({ agreement }: { agreement: CIAgreementRecord }) {
   const expiredOn = agreement.expiresAt
-    ? format(new Date(agreement.expiresAt), "d MMM yyyy")
+    ? formatDate(agreement.expiresAt)
     : null;
 
   return (

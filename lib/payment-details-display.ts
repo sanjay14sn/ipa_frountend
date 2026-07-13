@@ -1,3 +1,5 @@
+import { formatCurrencyAmount } from "@/lib/currency-utils";
+
 export type MethodSpecificField = {
   label: string;
   value: string;
@@ -76,30 +78,46 @@ export function typeBadgeClass(type?: string | null): string {
   }
 }
 
-export function agreementTypeLabel(type?: string | null): string {
-  switch ((type ?? "").trim().toUpperCase()) {
-    case "NEW_FRANCHISE":
-      return "New Franchise";
-    case "NEW_PROGRAM":
-      return "New Program";
-    case "RENEWAL":
-      return "Renewal";
-    case "TRANSFER":
-      return "Transfer";
-    default:
-      return type ? type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Agreement";
-  }
+/**
+ * Human label for an agreement's kind + origin ("FRANCHISE" + "RENEWAL" →
+ * "Franchise Renewal"). The old `type` column (NEW_FRANCHISE/…) is gone.
+ */
+export function agreementTypeLabel(
+  kind?: string | null,
+  origin?: string | null,
+): string {
+  const kindLabel = (() => {
+    switch ((kind ?? "").trim().toUpperCase()) {
+      case "FRANCHISE":
+        return "Franchise";
+      case "PROGRAM":
+        return "Program";
+      case "CI":
+        return "CI";
+      default:
+        return kind
+          ? kind.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+          : "Agreement";
+    }
+  })();
+  return (origin ?? "").trim().toUpperCase() === "RENEWAL"
+    ? `${kindLabel} Renewal`
+    : kindLabel;
 }
 
-export function agreementTypeBadgeClass(type?: string | null): string {
-  switch ((type ?? "").trim().toUpperCase()) {
-    case "NEW_FRANCHISE":
-      return "bg-blue-100 text-blue-800 border-blue-200";
-    case "NEW_PROGRAM":
-      return "bg-violet-100 text-violet-800 border-violet-200";
+export function agreementTypeBadgeClass(
+  kind?: string | null,
+  origin?: string | null,
+): string {
+  const isRenewal = (origin ?? "").trim().toUpperCase() === "RENEWAL";
+  switch (isRenewal ? "RENEWAL" : (kind ?? "").trim().toUpperCase()) {
     case "RENEWAL":
       return "bg-emerald-100 text-emerald-800 border-emerald-200";
-    case "TRANSFER":
+    case "FRANCHISE":
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    case "PROGRAM":
+      return "bg-violet-100 text-violet-800 border-violet-200";
+    case "CI":
       return "bg-amber-100 text-amber-800 border-amber-200";
     default:
       return "bg-gray-100 text-gray-600 border-gray-200";
@@ -149,22 +167,8 @@ export function formatPaymentDateTime(value?: string | null) {
   return date.toLocaleString("en-IN");
 }
 
-export function formatRsAmount(value?: number | null, currency = "INR") {
-  if (value == null || Number.isNaN(Number(value))) return "N/A";
-  try {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(Number(value));
-  } catch {
-    return `Rs. ${Number(value).toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  }
-}
+/** @deprecated Use formatRupees / formatCurrencyAmount from lib/currency-utils. */
+export const formatRsAmount = formatCurrencyAmount;
 
 function boolToYesNo(value?: boolean) {
   if (value == null) return "N/A";

@@ -1,6 +1,13 @@
 "use client";
 
-import { useMemo, type ElementType, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
+import {
+  LastUpdated,
+  PageHeaderCard,
+  QuickAccessCard,
+  StatCardSkeleton,
+  StatCell,
+} from "@/components/shared";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -8,37 +15,39 @@ import {
   BadgeCheck,
   BookOpen,
   Building2,
-  ChevronRight,
   ClipboardList,
   ClipboardSignature,
   CreditCard,
   Layers,
-  Loader2,
   Package,
   ShoppingCart,
   Truck,
   UserCheck,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminDashboardStats } from "@/hooks/api/dashboard.hooks";
 import { usePendingFranchiseApplications } from "@/hooks/api/franchisee.hooks";
 import { useAdminOrderRows } from "@/hooks/api/order.hooks";
+import { useRequestedIdCount } from "@/hooks/api/student.hooks";
 import { type DashboardStats } from "@/services/dashboard.service";
 import { type FranchiseData } from "@/services/franchisee.service";
 import { type OrderData } from "@/services/order.service";
 import { useUser } from "@/context/user-context";
-import { cn } from "@/lib/utils";
 
 type SummaryItem = {
   label: string;
   value: number;
   description: string;
+  /** R4 attention chip — StatCell renders it only when count > 0. */
+  pendingChip?: { count: number; href: string };
 };
 
 type QuickAccessItem = {
   href: string;
-  icon: ElementType;
+  icon: LucideIcon;
   label: string;
   description: string;
   count?: number;
@@ -60,21 +69,6 @@ const EMPTY_STATS: DashboardStats = {
   certificates: { total: 0, pending: 0, active: 0 },
 };
 
-function formatLastUpdated(updatedAt?: number) {
-  if (!updatedAt) return "just now";
-
-  const diffMs = Date.now() - updatedAt;
-  if (!Number.isFinite(diffMs) || diffMs < 60_000) return "just now";
-
-  const diffMinutes = Math.floor(diffMs / 60_000);
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-
-  return `${Math.floor(diffHours / 24)}d ago`;
-}
-
 function formatOrderId(order: OrderData) {
   return order.referenceId || `ORD-${String(order.id).padStart(4, "0")}`;
 }
@@ -91,23 +85,6 @@ function formatOrderSubtitle(order: OrderData) {
   return [franchise, status].filter(Boolean).join(" - ") || "Order activity";
 }
 
-function SummaryCell({ item }: { item: SummaryItem }) {
-  return (
-    <div className="space-y-2 px-4 py-4 sm:px-5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-sm text-muted-foreground">{item.label}</div>
-        <span className="h-2 w-2 rounded-full bg-primary" />
-      </div>
-      <div className="text-4xl font-normal leading-none text-card-foreground">
-        {item.value}
-      </div>
-      <div className="max-w-44 text-xs leading-snug text-muted-foreground">
-        {item.description}
-      </div>
-    </div>
-  );
-}
-
 function ModulePill({ label }: { label: string }) {
   return (
     <Badge
@@ -116,42 +93,6 @@ function ModulePill({ label }: { label: string }) {
     >
       {label}
     </Badge>
-  );
-}
-
-function QuickAccessCard({
-  item,
-  compact = false,
-}: {
-  item: QuickAccessItem;
-  compact?: boolean;
-}) {
-  const Icon = item.icon;
-
-  return (
-    <Link
-      href={item.href}
-      className={cn(
-        "group flex items-center gap-3 rounded-xl border bg-background p-3 shadow-sm transition-colors hover:border-primary/30 hover:bg-accent",
-        compact && "min-h-[4.75rem]",
-      )}
-    >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-base font-medium text-card-foreground">{item.label}</div>
-        <div className="truncate text-xs text-muted-foreground">
-          {item.description}
-        </div>
-      </div>
-      {typeof item.count === "number" && (
-        <span className="flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full border bg-muted/30 px-2 text-xs text-card-foreground">
-          {item.count}
-        </span>
-      )}
-      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
-    </Link>
   );
 }
 
@@ -237,13 +178,13 @@ function DashboardPanel({ label, title, href, viewLabel = "View all", children }
   );
 }
 
-function LoadingDashboard() {
+/** Row-card placeholders for the recent-activity panels (ADM-02). */
+function PanelRowsSkeleton({ count = 3 }: { count?: number }) {
   return (
-    <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-      <div className="flex items-center gap-3 border-b px-5 py-5 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Loading admin dashboard...
-      </div>
+    <div className="space-y-3">
+      {Array.from({ length: count }, (_, i) => (
+        <Skeleton key={i} className="h-16 rounded-xl" />
+      ))}
     </div>
   );
 }
@@ -257,6 +198,17 @@ export default function AdminDashboard() {
     limit: 5,
   });
   const ordersQuery = useAdminOrderRows({ page: 1, limit: 5 });
+  const idCountQuery = useRequestedIdCount();
+
+  // Counts render only once real data exists — never a fake 0 (ADM-04/R4).
+  const statsReady = statsQuery.data !== undefined;
+
+  const handleRefresh = () => {
+    void statsQuery.refetch();
+    void applicationsQuery.refetch();
+    void ordersQuery.refetch();
+    void idCountQuery.refetch();
+  };
 
   const stats: DashboardStats = useMemo(
     () => ({
@@ -293,8 +245,13 @@ export default function AdminDashboard() {
       label: "Total Franchises",
       value: stats.franchises.total,
       description: "Active networks",
+      pendingChip: {
+        count: stats.franchises.pending,
+        href: "/admin/franchise?tab=applications",
+      },
     },
     {
+      // No queue exists for students — no chip (R4: nothing to act on).
       label: "Total Students",
       value: stats.students.total,
       description: isSuperAdmin
@@ -307,16 +264,28 @@ export default function AdminDashboard() {
       description: isSuperAdmin
         ? "Active across all regions"
         : "Within your assigned franchises",
+      pendingChip: {
+        count: stats.courseInstructors.pending,
+        href: "/admin/course-instructors?tab=applications",
+      },
     },
     {
       label: "Total Orders",
       value: stats.orders.total,
       description: isSuperAdmin ? "All time" : "For your assigned franchises",
+      pendingChip: {
+        count: stats.orders.pending,
+        href: "/admin/operations?tab=orders",
+      },
     },
     {
       label: "Certificates",
       value: stats.certificates.total,
       description: isSuperAdmin ? "Issued to date" : "Issued in your region",
+      pendingChip: {
+        count: stats.certificates.pending,
+        href: "/admin/students?tab=certificates",
+      },
     },
   ];
 
@@ -326,14 +295,14 @@ export default function AdminDashboard() {
       icon: Building2,
       label: "Franchises",
       description: "View and manage all",
-      count: stats.franchises.total,
+      count: statsReady ? stats.franchises.total : undefined,
     },
     {
       href: "/admin/franchise?tab=applications",
       icon: Users,
       label: "Pending Approvals",
       description: "Franchise applications",
-      count: stats.franchises.pending,
+      count: statsReady ? stats.franchises.pending : undefined,
     },
     {
       href: "/admin/franchise?tab=agreements",
@@ -349,7 +318,7 @@ export default function AdminDashboard() {
       icon: UserCheck,
       label: "CI Approvals",
       description: "Instructor applications",
-      count: stats.courseInstructors.pending,
+      count: statsReady ? stats.courseInstructors.pending : undefined,
     },
     {
       href: "/admin/course-instructors?tab=training",
@@ -357,12 +326,22 @@ export default function AdminDashboard() {
       label: "CI Training",
       description: "Manage sessions",
     },
-    {
-      href: "/admin/course-instructors?tab=levels",
-      icon: Layers,
-      label: "Training Levels",
-      description: "Configure level settings",
-    },
+    // ADM-03: the old "?tab=levels" card pointed at a tab that doesn't
+    // exist. Levels live under /admin/programs (super-only), so staff get
+    // the CI-agreements queue in this slot instead.
+    isSuperAdmin
+      ? {
+          href: "/admin/programs",
+          icon: Layers,
+          label: "Programs & levels",
+          description: "Programs and level settings",
+        }
+      : {
+          href: "/admin/course-instructors?tab=agreements",
+          icon: ClipboardList,
+          label: "CI Agreements",
+          description: "Instructor agreements",
+        },
   ];
 
   if (isSuperAdmin) {
@@ -402,14 +381,16 @@ export default function AdminDashboard() {
       icon: Award,
       label: "Certificates",
       description: "Certificate requests",
-      count: stats.certificates.pending,
+      count: statsReady ? stats.certificates.pending : undefined,
     },
     {
+      // ADM-04: real count; undefined on error/loading hides the chip —
+      // never a fake 0.
       href: "/admin/students?tab=ids",
       icon: BadgeCheck,
       label: "ID Requests",
       description: "Student ID card requests",
-      count: 0,
+      count: idCountQuery.data,
     },
     {
       href: "/admin/operations?tab=inventory",
@@ -419,30 +400,43 @@ export default function AdminDashboard() {
     },
   ];
 
-  if (statsQuery.isLoading && !statsQuery.data) {
-    return <LoadingDashboard />;
-  }
-
   return (
     <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-      <div className="flex flex-col gap-3 border-b px-4 py-5 sm:px-5 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h1 className="text-2xl text-card-foreground">Admin Dashboard</h1>
-          <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
-            {isSuperAdmin
-              ? "Overview of all franchises and platform activity."
-              : "Overview of your assigned franchises and regional activity."}
-          </p>
-        </div>
-        <div className="text-xs text-muted-foreground">
-          Last updated: {formatLastUpdated(statsQuery.dataUpdatedAt)}
-        </div>
-      </div>
+      <PageHeaderCard
+        embedded
+        className="border-b py-5"
+        title="Admin Dashboard"
+        description={
+          isSuperAdmin
+            ? "Overview of all franchises and platform activity."
+            : "Overview of your assigned franchises and regional activity."
+        }
+        actions={
+          <LastUpdated
+            updatedAt={statsQuery.dataUpdatedAt}
+            onRefresh={handleRefresh}
+            isRefreshing={statsQuery.isFetching}
+          />
+        }
+      />
 
       <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5">
-        {summary.map((item) => (
-          <SummaryCell key={item.label} item={item} />
-        ))}
+        {!statsReady
+          ? summary.map((item) => (
+              <StatCardSkeleton
+                key={item.label}
+                className="rounded-none border-0 px-4 py-4 shadow-none sm:px-5"
+              />
+            ))
+          : summary.map((item) => (
+              <StatCell
+                key={item.label}
+                label={item.label}
+                value={item.value}
+                sub={item.description}
+                pendingChip={item.pendingChip}
+              />
+            ))}
       </div>
 
       <div className="grid xl:grid-cols-3">
@@ -454,7 +448,14 @@ export default function AdminDashboard() {
           >
             <div className="space-y-3">
               {franchiseQuickAccess.map((item) => (
-                <QuickAccessCard key={item.label} item={item} compact />
+                <QuickAccessCard
+                  key={item.label}
+                  title={item.label}
+                  description={item.description}
+                  href={item.href}
+                  icon={item.icon}
+                  count={item.count}
+                />
               ))}
             </div>
           </DashboardPanel>
@@ -468,7 +469,14 @@ export default function AdminDashboard() {
           >
             <div className="space-y-3">
               {trainingQuickAccess.map((item) => (
-                <QuickAccessCard key={item.label} item={item} compact />
+                <QuickAccessCard
+                  key={item.label}
+                  title={item.label}
+                  description={item.description}
+                  href={item.href}
+                  icon={item.icon}
+                  count={item.count}
+                />
               ))}
             </div>
           </DashboardPanel>
@@ -482,7 +490,14 @@ export default function AdminDashboard() {
           >
             <div className="space-y-3">
               {ordersQuickAccess.map((item) => (
-                <QuickAccessCard key={item.label} item={item} compact />
+                <QuickAccessCard
+                  key={item.label}
+                  title={item.label}
+                  description={item.description}
+                  href={item.href}
+                  icon={item.icon}
+                  count={item.count}
+                />
               ))}
             </div>
           </DashboardPanel>
@@ -496,10 +511,7 @@ export default function AdminDashboard() {
             viewLabel="See all"
           >
             {applicationsQuery.isLoading && !applicationsQuery.data ? (
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading applications...
-              </div>
+              <PanelRowsSkeleton />
             ) : recentApplications.length === 0 ? (
               <EmptyPanel message="No pending applications." />
             ) : (
@@ -522,10 +534,7 @@ export default function AdminDashboard() {
             href="/admin/operations?tab=orders"
           >
             {ordersQuery.isLoading && !ordersQuery.data ? (
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading orders...
-              </div>
+              <PanelRowsSkeleton />
             ) : recentOrders.length === 0 ? (
               <EmptyPanel message="No recent orders." />
             ) : (
@@ -546,7 +555,14 @@ export default function AdminDashboard() {
           >
             <div className="space-y-3">
               {operationsQuickAccess.map((item) => (
-                <QuickAccessCard key={item.label} item={item} compact />
+                <QuickAccessCard
+                  key={item.label}
+                  title={item.label}
+                  description={item.description}
+                  href={item.href}
+                  icon={item.icon}
+                  count={item.count}
+                />
               ))}
             </div>
           </DashboardPanel>

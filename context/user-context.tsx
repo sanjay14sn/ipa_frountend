@@ -100,7 +100,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           return;
         }
         const candidates = (u.profile?.franchise?.activePrograms ?? []).filter(
-          (row) => row.type !== "CI_AGREEMENT" && row.id != null,
+          (row) => row.kind !== "CI" && row.id != null,
         );
         if (candidates.length === 0) {
           useScopeStore.getState().setFranchise(u.franchiseId ?? null);
@@ -269,7 +269,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     if (!isFranchiseOperational(user)) return;
     const activePrograms = user.profile?.franchise?.activePrograms ?? [];
     const candidates = activePrograms.filter(
-      (row) => row.type !== "CI_AGREEMENT" && row.id != null,
+      (row) => row.kind !== "CI" && row.id != null,
     );
     if (candidates.length === 0) return;
     const stillValid =

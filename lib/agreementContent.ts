@@ -1,4 +1,8 @@
+/* eslint-disable no-restricted-syntax -- agreement LEGAL COPY: the ₹ glyph is
+   part of the contract language rendered to signees (byte-identical
+   constraint); formatRupees does not apply to statutory text templates. */
 import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
+import { formatDate } from "@/lib/date-utils";
 
 export interface AgreementPoint {
   id: string;
@@ -1779,7 +1783,7 @@ const replacePlaceholders = (text: string, data: any): string => {
 
     // Format dates
     if (key.toLowerCase().includes("date") && value instanceof Date) {
-      return value.toLocaleDateString();
+      return formatDate(value);
     }
 
     // Format currency

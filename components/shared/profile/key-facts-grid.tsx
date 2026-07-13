@@ -27,7 +27,8 @@ export function KeyFactCard({
           {label}
         </span>
       </div>
-      <p className="text-sm font-semibold text-card-foreground">{value ?? "—"}</p>
+      {/* div, not p: `value` is a ReactNode and may contain block content */}
+      <div className="text-sm font-semibold text-card-foreground">{value ?? "—"}</div>
     </div>
   );
 }

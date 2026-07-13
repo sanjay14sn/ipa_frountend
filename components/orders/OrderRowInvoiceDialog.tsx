@@ -1,18 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { AppDialog, AppDialogHeader } from "@/components/shared/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { InvoicePreview, OrderData } from "@/services/order.service";
-import UnifiedInvoiceGroupedSummary from "@/app/franchisee/orders/components/UnifiedInvoiceGroupedSummary";
-import CustomMaterialsList from "@/app/franchisee/orders/components/CustomMaterialsList";
-import { DispatchRecipientTable } from "@/app/admin/orders/components/DispatchRecipientTable";
+import UnifiedInvoiceGroupedSummary from "@/components/orders/UnifiedInvoiceGroupedSummary";
+import CustomMaterialsList from "@/components/orders/CustomMaterialsList";
+import { DispatchRecipientTable } from "@/components/orders/DispatchRecipientTable";
 import { isStandaloneDispatchOrderType } from "@/lib/dispatch-order-helpers";
 import { OrderPaymentDetailsPanel } from "@/components/orders/OrderPaymentDetailsPanel";
 import { formatRupees } from "@/lib/currency-utils";
@@ -344,18 +338,26 @@ export function OrderRowInvoiceDialog({
   }, [snapshot, materialSelection]);
 
   return (
-    <Dialog open={orderId != null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex h-[min(90vh,46rem)] max-w-4xl flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl sm:p-0">
-        <DialogHeader className="shrink-0 space-y-1 border-b border-border px-6 pb-3 pt-5 pr-14">
-          <DialogTitle className="text-left text-xl font-semibold text-card-foreground">
+    <AppDialog
+      open={orderId != null}
+      onOpenChange={(open) => !open && onClose()}
+      size="xl"
+      padding="flush"
+      maxHeight="max-h-[min(90vh,46rem)]"
+      className="flex h-[min(90vh,46rem)] flex-col gap-0 overflow-hidden"
+    >
+      <AppDialogHeader
+        title={
+          <>
             {standaloneDispatch ? labels.titleStandalone : labels.titleMaterial}{" "}
             <span className="font-medium text-muted-foreground">—</span>{" "}
             <span className="text-muted-foreground">Order #{orderId}</span>
-          </DialogTitle>
-          <DialogDescription className="text-left text-sm text-muted-foreground">
-            {standaloneDispatch ? labels.descStandalone : labels.descMaterial}
-          </DialogDescription>
-        </DialogHeader>
+          </>
+        }
+        description={
+          standaloneDispatch ? labels.descStandalone : labels.descMaterial
+        }
+      />
 
         {isError ? (
           <p className="px-6 py-4 text-sm text-destructive">
@@ -385,7 +387,6 @@ export function OrderRowInvoiceDialog({
             showFooter={showTabbedFooter}
           />
         )}
-      </DialogContent>
-    </Dialog>
+    </AppDialog>
   );
 }

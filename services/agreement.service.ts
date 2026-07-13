@@ -238,12 +238,12 @@ interface AgreementFranchisePayrollRow {
   status?: string;
 }
 
-/** Financial & program fields returned on each agreement (ipa-new — terms live on the agreement row). */
+/** Financial & program fields returned on each agreement (terms live on the agreement row, flattened by the backend mapper). */
 export interface AgreementTermsSnapshot {
   programId?: number | null;
-  /** Enriched on ipa-new franchise admin list rows */
+  /** Enriched on franchise admin/franchisee list rows */
   programName?: string | null;
-  status?: string;
+  status?: AgreementStatus;
   tenure?: number | null;
   expiresAt?: string | null;
   franchiseFee?: number | null;
@@ -257,47 +257,84 @@ export interface AgreementTermsSnapshot {
   gstRoyalty?: boolean | null;
   gstMaterialCost?: boolean | null;
   installment?: boolean | null;
+  /** Number of monthly installments (installment plans only). */
+  installmentMonths?: number | null;
+  /** Up-front down payment amount (installment plans only). */
+  downPayment?: number | null;
 }
 
 /**
- * Agreement lifecycle status (post-refactor).
+ * Agreement lifecycle status — UPPER_SNAKE on the wire (partner-flow revamp).
+ * The agreement is the SOLE determiner of UI state; there are no legacy
+ * aliases left ("Valid"→ACTIVE, "Signed"/"PendingSignature" died with the
+ * unification, "Void"→VOID).
  *
- * The agreement is the SOLE determiner of UI state. ProgramRequest.status is
- * historical record only.
- *
- * - `Draft`     — reserved (not used in standard request approval flow)
- * - `Approved`  — admin approved with all terms filled; awaiting signature + payment
- * - `Valid`     — agreement is fully in force (signed=true AND payment linked)
- * - `Suspended` — admin paused a Valid agreement
- * - `Void`      — permanently cancelled
- *
- * Legacy values still present in older data until migration runs:
- * - `Signed`    — equivalent to `Valid`
- * - `PendingSignature` — equivalent to `Approved`
- * - `Expired`   — collapsed into `Void`
+ * - `DRAFT`      — admin work-in-progress; terms editable
+ * - `APPROVED`   — terms locked and issued; awaiting signature(s) (+ initial
+ *                  payment for FRANCHISE/PROGRAM kinds)
+ * - `ACTIVE`     — in force (fully signed; FRANCHISE/PROGRAM also paid)
+ * - `SUSPENDED`  — admin paused an ACTIVE agreement (reversible)
+ * - `EXPIRED`    — tenure window lapsed without renewal
+ * - `VOID`       — permanently cancelled
+ * - `SUPERSEDED` — replaced by a successor row (`supersedesId` chain)
  */
-type AgreementStatus =
-  | "Draft"
-  | "Approved"
-  | "Valid"
-  | "Suspended"
-  | "Void"
-  // legacy values – treated identically to their new equivalents during the
-  // migration window; UI code should map these on read
-  | "Signed"
-  | "PendingSignature"
-  | "Expired";
+export type AgreementStatus =
+  | "DRAFT"
+  | "APPROVED"
+  | "ACTIVE"
+  | "SUSPENDED"
+  | "EXPIRED"
+  | "VOID"
+  | "SUPERSEDED";
+
+/** What the agreement covers. CI agreements live on the same table. */
+export type AgreementKind = "FRANCHISE" | "PROGRAM" | "CI";
+
+/** How the agreement came to be. Renewals supersede their predecessor. */
+export type AgreementOrigin = "NEW" | "RENEWAL";
+
+/** Parties on an agreement (`signatories[].role`). */
+export type AgreementSignatoryRole =
+  | "FRANCHISEE"
+  | "COURSE_INSTRUCTOR"
+  | "FRANCHISOR";
+
+/** One row of `agreement.signatories` (sorted by signOrder). */
+export interface AgreementSignatory {
+  role: AgreementSignatoryRole;
+  signerId: number | null;
+  signOrder: number;
+  signedAt: string | null;
+  signaturePath: string | null;
+  /** Set when a renewal carried this signature over from the predecessor. */
+  inheritedFromAgreementId: number | null;
+}
 
 export interface AgreementRecord extends AgreementTermsSnapshot {
   id: number;
-  type: string;
+  kind: AgreementKind;
+  origin: AgreementOrigin;
+  courseInstructorId?: number | null;
+  /** Predecessor row when this agreement superseded another (renewals). */
+  supersedesId?: number | null;
   /**
-   * True once the franchisee has applied a signature (either via the
-   * "Use existing signature" button or by uploading a new one). Independent
-   * of `status`: an agreement can be `signed=true, status=Approved` while
-   * awaiting payment, and only becomes `Valid` once payment is also linked.
+   * True once every required signatory has signed (mirror of `fullySigned`).
+   * Independent of `status`: an agreement can be `signed=true,
+   * status=APPROVED` while awaiting payment, and only becomes `ACTIVE` once
+   * payment lands (activation is signalled by status/activatedAt — the old
+   * `paymentId` column is gone).
    */
   signed?: boolean;
+  /** Same as `signed` — the backend emits both names. */
+  fullySigned?: boolean;
+  /** When the agreement entered force; null until activation. */
+  activatedAt?: string | null;
+  /** Raw structured terms (jsonb). Prefer the flattened legacy fields. */
+  terms?: Record<string, unknown> | null;
+  /** Parties + signature state, sorted by signOrder. */
+  signatories?: AgreementSignatory[];
+  /** Path of the archived fully-signed PDF (populated asynchronously). */
+  signedPdfPath?: string | null;
   /** Order id of the one-time free franchise kit dispatch; null = not yet dispatched. */
   franchiseKitOrderId?: number | null;
   /**
@@ -311,16 +348,14 @@ export interface AgreementRecord extends AgreementTermsSnapshot {
   dateOfSigning: string | null;
   franchiseId: string | null;
   franchiseeId: number | null;
-  paymentId: number | null;
-  franchiseeSignature: string | null;
   franchiseeSignedAt: string | null;
-  franchiseeSignatureUrl: string | null;
   title: string | null;
   notes: string | null;
   metadata: Record<string, unknown> | null;
   referenceCode: string | null;
   createdAt: string;
-  updatedAt: string;
+  /** Last-write timestamp surfaced by the backend (`updatedAt` alias). */
+  pendingSince?: string | null;
   franchise?: {
     id: string;
     code?: string | null;
@@ -361,21 +396,12 @@ export interface AgreementRecord extends AgreementTermsSnapshot {
   contentTemplateId?: number | null;
 }
 
-/** Admin: one-time free franchise kit dispatch for a Valid NEW_FRANCHISE agreement. */
+/** Admin: one-time free franchise kit dispatch for an ACTIVE FRANCHISE agreement. */
 export async function dispatchFranchiseKit(agreementId: number) {
   const response = await api.post(
     `/admin/order/agreement/${agreementId}/dispatch-franchise-kit`,
   );
   return unwrapData(response);
-}
-
-interface CreateAgreementAdminDto {
-  type: string;
-  franchiseId: string;
-  franchiseeId: number;
-  programId: number;
-  title: string;
-  notes?: string;
 }
 
 export interface AgreementListParams {
@@ -385,8 +411,9 @@ export interface AgreementListParams {
   search?: string;
   sortBy?: string;
   sortOrder?: string;
-  status?: string;
-  type?: string;
+  status?: AgreementStatus;
+  /** Filters on the agreement `kind` server-side (param name kept as `type`). */
+  type?: AgreementKind;
   programId?: number;
 }
 
@@ -413,20 +440,6 @@ export async function getAgreementsAdmin(
 
 export async function getAgreementAdmin(id: number): Promise<AgreementRecord> {
   const response = await api.get(`/admin/agreement/${id}`);
-  return unwrapData<AgreementRecord>(response);
-}
-
-async function createAgreementAdmin(
-  dto: CreateAgreementAdminDto,
-): Promise<AgreementRecord> {
-  const response = await api.post("/admin/agreement", dto);
-  return unwrapData<AgreementRecord>(response);
-}
-
-async function sendAgreementForSignature(
-  id: number,
-): Promise<AgreementRecord> {
-  const response = await api.patch(`/admin/agreement/${id}/send`);
   return unwrapData<AgreementRecord>(response);
 }
 
@@ -535,12 +548,15 @@ export async function updateFranchiseeSignatureOnly(
 }
 
 // -----------------------------------------------------------------------------
-// Admin agreement lifecycle endpoints (post-refactor):
-//   - POST /admin/agreement/:id/suspend     Valid → Suspended
-//   - POST /admin/agreement/:id/reactivate  Suspended → Valid
-//   - POST /admin/agreement/:id/void        any non-terminal → Void
+// Admin agreement lifecycle endpoints:
+//   - POST /admin/agreement/:id/suspend     ACTIVE → SUSPENDED
+//   - POST /admin/agreement/:id/reactivate  SUSPENDED → ACTIVE
+//   - POST /admin/agreement/:id/void        any non-terminal → VOID
 // All three return the updated `AgreementRecord`.
 // -----------------------------------------------------------------------------
+
+/** What receivables should do with the predecessor plan's unpaid items. */
+export type UnpaidItemsPolicy = "carry" | "cancel";
 
 export async function suspendAgreementAdmin(
   agreementId: number,
@@ -564,15 +580,26 @@ export async function reactivateAgreementAdmin(
 
 export async function voidAgreementAdmin(
   agreementId: number,
-  reason?: string,
+  input?: {
+    reason?: string;
+    unpaidItemsPolicy?: UnpaidItemsPolicy;
+    /** Required context when `unpaidItemsPolicy === "cancel"`. */
+    cancelReason?: string;
+  },
 ): Promise<AgreementRecord> {
-  const response = await api.post(`/admin/agreement/${agreementId}/void`, {
-    reason,
-  });
+  const response = await api.post(
+    `/admin/agreement/${agreementId}/void`,
+    input ?? {},
+  );
   return unwrapData<AgreementRecord>(response);
 }
 
-export interface RenewProgramAgreementInput {
+/**
+ * Renewal terms for an EXPIRED FRANCHISE or PROGRAM agreement (one endpoint
+ * serves both kinds). Creates a new APPROVED row superseding the predecessor;
+ * the franchisee signs + pays it through the standard flow.
+ */
+export interface RenewAgreementInput {
   franchiseFee: number;
   monthlyFee: number;
   royalty: number;
@@ -584,13 +611,20 @@ export interface RenewProgramAgreementInput {
   gstRoyalty: boolean;
   gstMaterialCost: boolean;
   installment: boolean;
+  /** Required when `installment` is true. */
+  installmentMonths?: number | null;
+  downPayment?: number | null;
   tenure: number;
+  /** REQUIRED — what happens to unpaid items on the predecessor's plan. */
+  unpaidItemsPolicy: UnpaidItemsPolicy;
+  /** Required context when cancelling leftovers. */
+  cancelReason?: string;
 }
 
-/** POST /admin/agreement/:id/renew — issue a program renewal for an expired agreement. */
-export async function renewProgramAgreementAdmin(
+/** POST /admin/agreement/:id/renew — issue a renewal for an expired agreement. */
+export async function renewAgreementAdmin(
   agreementId: number,
-  dto: RenewProgramAgreementInput,
+  dto: RenewAgreementInput,
 ): Promise<AgreementRecord> {
   const response = await api.post(`/admin/agreement/${agreementId}/renew`, dto);
   return unwrapData<AgreementRecord>(response);
@@ -623,7 +657,6 @@ export function franchiseeProfileSignatureSrc(
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-/** ipa-new: no schedule PDF endpoint yet — noop for type compatibility */
 function parseDownloadFilename(contentDisposition: string | undefined): string {
   if (!contentDisposition) return "schedule-b.pdf";
   const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
@@ -670,20 +703,12 @@ export async function downloadScheduleBPdfMine(
 }
 
 /**
- * Switcher row lifecycle status. Post-refactor, the agreement IS the
- * lifecycle, so this is mostly a pass-through over `AgreementStatus`. The
- * extra `"Pending"` value represents a Pending program request that doesn't
- * yet have an agreement attached (admin hasn't acted).
+ * Switcher row lifecycle status. The agreement IS the lifecycle, so this is a
+ * pass-through over `AgreementStatus`. The extra `"Pending"` value represents
+ * a Pending program request that doesn't yet have an agreement attached
+ * (admin hasn't acted) — a program-request status, deliberately NOT recased.
  */
-export type AgreementLifecycleStatus =
-  | "Pending"
-  | "Draft"
-  | "Approved"
-  | "Valid"
-  | "Suspended"
-  | "Void"
-  | "Rejected"
-  | "Expired";
+export type AgreementLifecycleStatus = "Pending" | AgreementStatus;
 
 export async function waiveReceivableItem(
   itemId: number,
@@ -719,7 +744,8 @@ export interface AgreementSwitcherItem {
   programId: number | null;
   programName: string | null;
   programCode: string | null;
-  agreementType: "NEW_FRANCHISE" | "NEW_PROGRAM" | "RENEWAL" | null;
+  /** Agreement `kind`; null when the row is request-backed (no agreement yet). */
+  agreementType: AgreementKind | null;
   lifecycleStatus: AgreementLifecycleStatus;
   /** True once franchisee has signed (independent of `lifecycleStatus`). */
   signed?: boolean;
@@ -747,28 +773,16 @@ async function getAgreementSwitcherAdmin(
 }
 
 export function agreementSignatureSrc(
-  record: Pick<
-    AgreementRecord,
-    "franchiseeSignatureUrl" | "franchiseeSignature" | "franchisee"
-  >,
+  record: Pick<AgreementRecord, "signatories" | "franchisee">,
 ): string | null {
-  const fromUrl = record.franchiseeSignatureUrl?.trim();
-  let path: string | null = null;
-  if (fromUrl) {
-    path = isAbsoluteUrl(fromUrl)
-      ? fromUrl
-      : fromUrl.startsWith("/")
-        ? fromUrl
-        : `/${fromUrl}`;
-  } else {
-    // Resolution order: legacy per-agreement path → joined franchisee.
-    // Post-refactor the signature lives on the franchisee row, so the
-    // franchisee join is the only populated source for newly-signed
-    // agreements.
-    path =
-      storedSignatureToPublicPath(record.franchiseeSignature) ??
-      storedSignatureToPublicPath(record.franchisee?.franchiseeSignature);
-  }
+  // Resolution order: the FRANCHISEE signatory's stored path (authoritative
+  // post-unification) → the joined franchisee profile's on-file signature.
+  const signatoryPath = record.signatories?.find(
+    (s) => s.role === "FRANCHISEE",
+  )?.signaturePath;
+  const path =
+    storedSignatureToPublicPath(signatoryPath) ??
+    storedSignatureToPublicPath(record.franchisee?.franchiseeSignature);
   if (!path) return null;
   if (isAbsoluteUrl(path)) return path;
   const base = API_BASE_URL.replace(/\/$/, "");

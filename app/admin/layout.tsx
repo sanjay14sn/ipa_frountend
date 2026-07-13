@@ -5,20 +5,9 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
 import { useUser } from "@/context/user-context";
-import { DynamicSidebar } from "@/components/dynamic-sidebar";
-import {
-  SidebarProvider,
-  SidebarInset,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-} from "@/components/ui/breadcrumb";
-import { PortalHeaderActions } from "@/components/layout/portal-header-actions";
+import { PortalShell } from "@/components/layout/portal-shell";
+import { getAdminNav } from "@/lib/navigation/nav-config";
+import { PageSkeleton } from "@/components/shared/skeletons";
 
 export default function AdminLayout({
   children,
@@ -51,8 +40,8 @@ export default function AdminLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-sm text-muted-foreground">Loading...</p>
+      <div className="min-h-screen bg-background p-4">
+        <PageSkeleton />
       </div>
     );
   }
@@ -64,41 +53,31 @@ export default function AdminLayout({
   if (isRegionalAdmin) {
     if (!pathname.startsWith("/admin/operations")) return null;
     return (
-      <div className="flex min-h-screen flex-col bg-background">
-        <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border bg-brand-white-200/50 px-4">
-          <span className="font-semibold text-primary">Abacus Operations</span>
-          <PortalHeaderActions />
-        </header>
-        <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
-      </div>
+      <PortalShell
+        variant="header-only"
+        portal="admin"
+        homeHref="/admin/operations"
+        brand={{ title: "IPA Operations" }}
+        breadcrumbRoot={{ label: "Operations", href: "/admin/operations" }}
+      >
+        {children}
+      </PortalShell>
     );
   }
 
   return (
-    <SidebarProvider>
-      <DynamicSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-brand-white-200/50 px-4">
-          <SidebarTrigger className="-ml-1 text-primary hover:bg-accent hover:text-accent-foreground" />
-          <Separator orientation="vertical" className="mr-2 h-4 bg-border" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  href="/admin/dashboard"
-                  className="text-primary hover:text-primary hover:underline"
-                >
-                  Admin Dashboard
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          <PortalHeaderActions />
-        </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 bg-background">
-          {children}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    <PortalShell
+      variant="full"
+      portal="admin"
+      homeHref="/admin/dashboard"
+      brand={{
+        title: "IPA Portal",
+        subtitle: user.adminRole === "super" ? "Super Admin" : "Admin",
+      }}
+      nav={getAdminNav(user.adminRole)}
+      breadcrumbRoot={{ label: "Dashboard", href: "/admin/dashboard" }}
+    >
+      {children}
+    </PortalShell>
   );
 }

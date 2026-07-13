@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
   agreementOutstandingEmi,
+  agreementStatusBadge,
   getAgreementActionVisibility,
-  normalizeStatus,
 } from "./agreement-utils";
 import type { AgreementRecord } from "@/services/agreement.service";
 
 type ActionAgreement = Pick<
   AgreementRecord,
-  "type" | "status" | "programId" | "franchiseId" | "materialsDispatched"
+  "kind" | "status" | "programId" | "franchiseId" | "materialsDispatched"
 >;
 
 function makeAgreement(overrides: Partial<ActionAgreement> = {}): ActionAgreement {
   return {
-    type: "NEW_PROGRAM",
-    status: "Valid",
+    kind: "PROGRAM",
+    status: "ACTIVE",
     programId: 1,
     franchiseId: "F-1",
     materialsDispatched: false,
@@ -22,28 +22,40 @@ function makeAgreement(overrides: Partial<ActionAgreement> = {}): ActionAgreemen
   };
 }
 
-describe("normalizeStatus", () => {
-  it("collapses legacy aliases", () => {
-    expect(normalizeStatus("Signed")).toBe("Valid");
-    expect(normalizeStatus("PendingSignature")).toBe("Approved");
+describe("agreementStatusBadge", () => {
+  it("prettifies UPPER_SNAKE statuses", () => {
+    expect(agreementStatusBadge("ACTIVE", true)).toEqual({
+      label: "Active",
+      tone: "default",
+    });
+    expect(agreementStatusBadge("SUSPENDED", true).label).toBe("Suspended");
+    expect(agreementStatusBadge("VOID", false)).toEqual({
+      label: "Void",
+      tone: "destructive",
+    });
+    expect(agreementStatusBadge("EXPIRED", true)).toEqual({
+      label: "Expired",
+      tone: "destructive",
+    });
+    expect(agreementStatusBadge("DRAFT", false).label).toBe("Draft");
   });
 
-  it("keeps Expired distinct from Void (still renewable)", () => {
-    expect(normalizeStatus("Expired")).toBe("Expired");
-    expect(normalizeStatus("Void")).toBe("Void");
+  it("splits APPROVED by the signed boolean", () => {
+    expect(agreementStatusBadge("APPROVED", true)).toEqual({
+      label: "Signed · awaiting payment",
+      tone: "default",
+    });
+    expect(agreementStatusBadge("APPROVED", false)).toEqual({
+      label: "Approved · awaiting signature",
+      tone: "secondary",
+    });
   });
 
-  it("passes canonical statuses through unchanged", () => {
-    for (const s of [
-      "Draft",
-      "Approved",
-      "Valid",
-      "Suspended",
-      "Void",
-      "Expired",
-    ] as const) {
-      expect(normalizeStatus(s)).toBe(s);
-    }
+  it("SUPERSEDED renders as a neutral/secondary historical badge", () => {
+    expect(agreementStatusBadge("SUPERSEDED", true)).toEqual({
+      label: "Superseded",
+      tone: "secondary",
+    });
   });
 });
 
@@ -73,9 +85,9 @@ describe("getAgreementActionVisibility", () => {
     ).toBe(false);
   });
 
-  it("Valid → suspend + void; no reactivate/renew", () => {
+  it("ACTIVE → suspend + void; no reactivate/renew", () => {
     const v = getAgreementActionVisibility(
-      makeAgreement({ status: "Valid" }),
+      makeAgreement({ status: "ACTIVE" }),
       "admin",
     );
     expect(v.suspend).toBe(true);
@@ -84,9 +96,9 @@ describe("getAgreementActionVisibility", () => {
     expect(v.renew).toBe(false);
   });
 
-  it("Suspended → reactivate + void; no suspend", () => {
+  it("SUSPENDED → reactivate + void; no suspend", () => {
     const v = getAgreementActionVisibility(
-      makeAgreement({ status: "Suspended" }),
+      makeAgreement({ status: "SUSPENDED" }),
       "admin",
     );
     expect(v.reactivate).toBe(true);
@@ -94,9 +106,9 @@ describe("getAgreementActionVisibility", () => {
     expect(v.void).toBe(true);
   });
 
-  it("Expired → renew only; no suspend/void", () => {
+  it("EXPIRED → renew only; no suspend/void", () => {
     const v = getAgreementActionVisibility(
-      makeAgreement({ status: "Expired" }),
+      makeAgreement({ status: "EXPIRED" }),
       "admin",
     );
     expect(v.renew).toBe(true);
@@ -104,9 +116,9 @@ describe("getAgreementActionVisibility", () => {
     expect(v.void).toBe(false);
   });
 
-  it("Void → terminal: no lifecycle actions and no kit-item management", () => {
+  it("VOID → terminal: no lifecycle actions and no kit-item management", () => {
     const v = getAgreementActionVisibility(
-      makeAgreement({ status: "Void" }),
+      makeAgreement({ status: "VOID" }),
       "admin",
     );
     expect(v.suspend).toBe(false);
@@ -116,11 +128,27 @@ describe("getAgreementActionVisibility", () => {
     expect(v.manageKitItems).toBe(false);
   });
 
-  it("NEW_FRANCHISE + Valid + undispatched → dispatch + kit editor", () => {
+  it("SUPERSEDED → download-only (historical row)", () => {
+    const v = getAgreementActionVisibility(
+      makeAgreement({ status: "SUPERSEDED", kind: "FRANCHISE" }),
+      "admin",
+    );
+    expect(v.download).toBe(true);
+    expect(v.suspend).toBe(false);
+    expect(v.reactivate).toBe(false);
+    expect(v.void).toBe(false);
+    expect(v.renew).toBe(false);
+    expect(v.manageKitItems).toBe(false);
+    expect(v.franchiseKitEditor).toBe(false);
+    expect(v.dispatchKit).toBe(false);
+    expect(v.kitDispatched).toBe(false);
+  });
+
+  it("FRANCHISE kind + ACTIVE + undispatched → dispatch + kit editor", () => {
     const v = getAgreementActionVisibility(
       makeAgreement({
-        type: "NEW_FRANCHISE",
-        status: "Valid",
+        kind: "FRANCHISE",
+        status: "ACTIVE",
         materialsDispatched: false,
       }),
       "admin",
@@ -130,11 +158,11 @@ describe("getAgreementActionVisibility", () => {
     expect(v.franchiseKitEditor).toBe(true);
   });
 
-  it("NEW_FRANCHISE + Valid + dispatched → dispatched pill, not dispatch", () => {
+  it("FRANCHISE kind + ACTIVE + dispatched → dispatched pill, not dispatch", () => {
     const v = getAgreementActionVisibility(
       makeAgreement({
-        type: "NEW_FRANCHISE",
-        status: "Valid",
+        kind: "FRANCHISE",
+        status: "ACTIVE",
         materialsDispatched: true,
       }),
       "admin",
@@ -143,9 +171,9 @@ describe("getAgreementActionVisibility", () => {
     expect(v.kitDispatched).toBe(true);
   });
 
-  it("non-NEW_FRANCHISE never exposes kit dispatch/editor", () => {
+  it("non-FRANCHISE kinds never expose kit dispatch/editor", () => {
     const v = getAgreementActionVisibility(
-      makeAgreement({ type: "NEW_PROGRAM", status: "Valid" }),
+      makeAgreement({ kind: "PROGRAM", status: "ACTIVE" }),
       "admin",
     );
     expect(v.dispatchKit).toBe(false);
@@ -153,14 +181,14 @@ describe("getAgreementActionVisibility", () => {
     expect(v.franchiseKitEditor).toBe(false);
   });
 
-  it("manage kit items requires a program and a non-Void status", () => {
+  it("manage kit items requires a program and a non-VOID status", () => {
     expect(
       getAgreementActionVisibility(makeAgreement({ programId: null }), "admin")
         .manageKitItems,
     ).toBe(false);
     expect(
       getAgreementActionVisibility(
-        makeAgreement({ programId: 5, status: "Valid" }),
+        makeAgreement({ programId: 5, status: "ACTIVE" }),
         "admin",
       ).manageKitItems,
     ).toBe(true);

@@ -11,22 +11,22 @@ import {
   AgreementContent,
   getProcessedAgreementContent,
 } from "@/lib/agreementContent";
-import FranchiseeInformation from "./components/FranchiseeInformation";
-import LocationDetails from "./components/LocationDetails";
-import FranchiseDetails from "./components/FranchiseDetails";
-import PaymentBreakdown from "./components/PaymentBreakdown";
-import AgreementTerms from "./components/AgreementTerms";
-import PaymentAction from "./components/PaymentAction";
-import { AgreementExpiredView } from "./components/AgreementExpiredView";
+import FranchiseeInformation from "./_components/FranchiseeInformation";
+import LocationDetails from "./_components/LocationDetails";
+import FranchiseDetails from "./_components/FranchiseDetails";
+import PaymentBreakdown from "@/components/agreements/PaymentBreakdown";
+import AgreementTerms from "@/components/agreements/AgreementTerms";
+import PaymentAction from "./_components/PaymentAction";
+import { AgreementExpiredView } from "./_components/AgreementExpiredView";
 import { EmiTimeline } from "@/components/receivables/EmiTimeline";
 import { getFranchiseFeePayable } from "@/lib/gst";
-import { FranchiseAgreementSignaturePanel } from "./components/FranchiseAgreementSignaturePanel";
+import { FranchiseAgreementSignaturePanel } from "./_components/FranchiseAgreementSignaturePanel";
 import {
   AgreementStepper,
   queryToStep,
   stepToQuery,
   type AgreementStepIndex,
-} from "./components/AgreementStepper";
+} from "./_components/AgreementStepper";
 import dynamic from "next/dynamic";
 import {
   type RazorpaySuccessResponse,
@@ -36,7 +36,6 @@ import {
   verifyFranchiseFeePayment,
 } from "@/services/franchisee.service";
 import {
-  agreementSignatureSrc,
   franchiseeProfileSignatureSrc,
   getFranchiseeAgreementContent,
   getReceivablePlanMine,
@@ -397,7 +396,7 @@ function AgreementStep3SignButton({
   onSignWithStored: () => void;
   onOpenESignature: () => void;
 }) {
-  if (isSigned || feeAgreement?.status !== "Approved") return null;
+  if (isSigned || feeAgreement?.status !== "APPROVED") return null;
   const hasStoredSig = Boolean(franchiseeProfileSignatureSrc(userProfile?.franchiseeSignature));
   return hasStoredSig ? (
     <Button
@@ -479,7 +478,7 @@ function FranchiseAgreementContent() {
     if (!effectiveFranchiseId) return undefined;
     const matches = (agreementsQuery.data ?? []).filter(
       (agreement) =>
-        agreement.type === "NEW_FRANCHISE" &&
+        agreement.kind === "FRANCHISE" &&
         agreement.franchiseId === effectiveFranchiseId,
     );
     if (matches.length === 0) return undefined;
@@ -491,10 +490,10 @@ function FranchiseAgreementContent() {
     explicitAgreementId,
   ]);
   const agreementDetailQuery = useAgreementMine(latestAgreementId);
-  // True when the loaded agreement is a program-level (NEW_PROGRAM) one —
+  // True when the loaded agreement is a program-level (PROGRAM kind) one —
   // completion semantics differ from franchise onboarding (no franchise
   // activation expected; we just close and refresh program-scope queries).
-  const isProgramAgreement = feeAgreement?.type === "NEW_PROGRAM";
+  const isProgramAgreement = feeAgreement?.kind === "PROGRAM";
   const installmentSummary =
     fullReceivablePlan ??
     feeAgreement?.receivables?.installmentSummary ??
@@ -549,38 +548,25 @@ function FranchiseAgreementContent() {
     installmentInitialPayable ?? nonInstallmentPayable;
 
   const renewalAgreementId = useMemo(() => {
-    if (!feeAgreement || feeAgreement.status !== "Expired") return null;
+    if (!feeAgreement || feeAgreement.status !== "EXPIRED") return null;
     const list = agreementsQuery.data ?? [];
     const match = list.find(
       (a) =>
-        a.type === "RENEWAL" &&
-        ((((a.metadata as Record<string, unknown> | null)?.renewalOfAgreementId) ===
-          feeAgreement.id) ||
-          (a.programId === feeAgreement.programId && a.status === "Approved")),
+        a.origin === "RENEWAL" &&
+        (a.supersedesId === feeAgreement.id ||
+          (a.programId === feeAgreement.programId && a.status === "APPROVED")),
     );
     return match?.id ?? null;
   }, [agreementsQuery.data, feeAgreement]);
 
-  // Step 4 (Payment) unlocks once `agreement.signed === true`. Post-refactor,
-  // signing flips the `signed` boolean while the agreement stays in `Approved`
-  // status until payment lands — so the legacy `agreementSignatureSrc(...)`
-  // check (which read the snapshotted signature URL on the agreement row)
-  // is no longer the right gate. Fall back to it for pre-refactor data that
-  // hasn't been migrated yet — but ONLY the per-agreement snapshot, never the
-  // franchisee-profile signature join. A renewing franchisee always has a
-  // profile signature on file from their original onboarding; resolving that
-  // here would mark a brand-new (still unsigned) renewal as signed, unlock
-  // payment, and the backend would then reject it with INVALID_STATE
-  // ("cannot make payment in current state") because the renewal's own
-  // `signed` flag is still false. Gate on the agreement's own signature only.
-  const isSigned = Boolean(
-    feeAgreement?.signed ||
-      (feeAgreement &&
-        agreementSignatureSrc({
-          franchiseeSignatureUrl: feeAgreement.franchiseeSignatureUrl,
-          franchiseeSignature: feeAgreement.franchiseeSignature,
-        })),
-  );
+  // Step 4 (Payment) unlocks once `agreement.signed === true` — the backend's
+  // fullySigned mirror over the signatories. Signing flips the boolean while
+  // the agreement stays APPROVED until payment lands. Never resolve the
+  // franchisee-profile signature here: a renewing franchisee always has one
+  // on file from their original onboarding, and treating it as "signed" would
+  // unlock payment on a still-unsigned renewal only for the backend to reject
+  // it with INVALID_STATE. The agreement's own flag is the only gate.
+  const isSigned = Boolean(feeAgreement?.signed);
 
   const getMaxReachableStep = useCallback((): AgreementStepIndex => {
     if (!agreementAccepted) return 2;
@@ -743,20 +729,20 @@ function FranchiseAgreementContent() {
   ]);
 
   // Bug 1 fix: when a specific agreementId is pinned and that agreement has
-  // already reached a terminal/active state (Valid, Suspended, Void) — or the
-  // legacy equivalent `Signed` from pre-refactor data — there's nothing for
-  // the franchisee to do here. Send them to the dashboard.
-  // Note: Expired is intentionally excluded — it renders a dedicated
+  // already reached a terminal/active state (ACTIVE, SUSPENDED, VOID,
+  // SUPERSEDED) there's nothing for the franchisee to do here. Send them to
+  // the dashboard.
+  // Note: EXPIRED is intentionally excluded — it renders a dedicated
   // expired/renew view (AgreementExpiredView) rather than redirecting.
   useEffect(() => {
     if (!hasExplicitAgreementId) return;
     if (feeAgreementLoading) return;
     if (!feeAgreement) return;
     const terminalOrActiveStatuses = new Set<string>([
-      "Valid",
-      "Signed", // legacy alias for Valid prior to status refactor
-      "Suspended",
-      "Void",
+      "ACTIVE",
+      "SUSPENDED",
+      "VOID",
+      "SUPERSEDED",
     ]);
     if (terminalOrActiveStatuses.has(feeAgreement.status ?? "")) {
       router.replace("/franchisee/dashboard");
@@ -1075,8 +1061,8 @@ function FranchiseAgreementContent() {
         queryClient.invalidateQueries({ queryKey: ["program-requests"] }),
         // The switcher reads agreements from `profile.franchise.activePrograms`,
         // so the profile MUST be refetched after payment — otherwise the
-        // freshly-activated program stays "Approved" in the switcher even
-        // though the backend flipped it to Valid.
+        // freshly-activated program stays "APPROVED" in the switcher even
+        // though the backend flipped it to ACTIVE.
         queryClient.invalidateQueries({
           queryKey: ["auth", "franchisee-profile"],
         }),
@@ -1172,7 +1158,7 @@ function FranchiseAgreementContent() {
     return <AgreementPageSpinner message="Loading your franchise agreement..." />;
   }
 
-  if (feeAgreement?.status === "Expired") {
+  if (feeAgreement?.status === "EXPIRED") {
     return (
       <AgreementExpiredView
         agreement={feeAgreement}
@@ -1392,7 +1378,7 @@ function PostPayStep({
 }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         {step}
       </span>
       <p className="mt-3 text-sm font-medium text-card-foreground">{title}</p>

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { formatDate } from "@/lib/date-utils";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { EditableDueDateCell } from "@/components/agreements/record-detail/EditableDueDateCell";
 import type { ReceivableSummaryItem } from "@/services/agreement.service";
@@ -24,7 +25,7 @@ describe("EditableDueDateCell", () => {
   it("shows the formatted due date inside an edit button", () => {
     render(<EditableDueDateCell item={item()} onConfirm={vi.fn()} />);
     const btn = screen.getByRole("button", { name: /edit due date/i });
-    expect(btn).toHaveTextContent("Jul 15, 2026");
+    expect(btn).toHaveTextContent(formatDate("2026-07-15"));
   });
 
   it("swaps to a date input pre-filled with the current due date when clicked", () => {

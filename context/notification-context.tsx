@@ -44,10 +44,23 @@ function isNotificationUserType(
   return role === "admin" || role === "franchisee";
 }
 
+/**
+ * Explicit recipient identity for portals that don't authenticate through
+ * `UserProvider` (the CI portal). When supplied, it overrides the derived
+ * admin/franchisee identity — mount a nested provider with it so the bell
+ * inside that subtree talks to the right notification endpoints.
+ */
+export interface NotificationIdentity {
+  userId: number | null;
+  userType: UserType | null;
+}
+
 export function NotificationProvider({
   children,
+  identity,
 }: {
   children: React.ReactNode;
+  identity?: NotificationIdentity;
 }) {
   const queryClient = useQueryClient();
   const { user } = useUser();
@@ -57,8 +70,16 @@ export function NotificationProvider({
   const userId = user?.id ? parseInt(user.id, 10) : null;
   const userType = isNotificationUserType(user?.role) ? user.role : null;
 
-  const effectiveUserId = isLoginPage ? null : userId;
-  const effectiveUserType = isLoginPage ? null : userType;
+  const effectiveUserId = identity
+    ? identity.userId
+    : isLoginPage
+      ? null
+      : userId;
+  const effectiveUserType = identity
+    ? identity.userType
+    : isLoginPage
+      ? null
+      : userType;
 
   const notificationsEnabled = Boolean(
     effectiveUserId && effectiveUserType,
@@ -68,14 +89,18 @@ export function NotificationProvider({
     if (!effectiveUserType) return null;
     return effectiveUserType === "admin"
       ? queryKeys.notifications.admin({ unreadOnly: false })
-      : queryKeys.notifications.franchisee({ unreadOnly: false });
+      : effectiveUserType === "ci"
+        ? queryKeys.notifications.ci({ unreadOnly: false })
+        : queryKeys.notifications.franchisee({ unreadOnly: false });
   }, [effectiveUserType]);
 
   const unreadKey = useMemo(() => {
     if (!effectiveUserType) return null;
     return effectiveUserType === "admin"
       ? queryKeys.notifications.unreadAdmin
-      : queryKeys.notifications.unreadFranchisee;
+      : effectiveUserType === "ci"
+        ? queryKeys.notifications.unreadCi
+        : queryKeys.notifications.unreadFranchisee;
   }, [effectiveUserType]);
 
   const notificationsQuery = useQuery({

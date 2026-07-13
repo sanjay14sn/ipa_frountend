@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { formatRupees, formatInr, fmtMoney, formatRsAmount } from "./currency-utils";
+import { formatRupees } from "./currency-utils";
 
 describe("formatRupees", () => {
   it("returns 'N/A' for null", () => {
@@ -34,12 +34,6 @@ describe("formatRupees", () => {
     const result = formatRupees(123456);
     // Indian number format: 1,23,456.00
     expect(result).toContain("23,456");
-  });
-
-  it("deprecated aliases return the same value", () => {
-    expect(formatInr(1000)).toBe(formatRupees(1000));
-    expect(fmtMoney(1000)).toBe(formatRupees(1000));
-    expect(formatRsAmount(1000)).toBe(formatRupees(1000));
   });
 
   it("handles negative numbers", () => {
