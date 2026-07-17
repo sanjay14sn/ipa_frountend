@@ -1,9 +1,11 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { PencilLine, UserPen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { SummaryStatCard } from "@/components/shared";
 import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
@@ -16,6 +18,8 @@ import { FranchiseStudentsSummary } from "./_components/FranchiseStudentsSummary
 import { FranchiseOrdersSummary } from "./_components/FranchiseOrdersSummary";
 import { FranchisePaymentsTab } from "./_components/FranchisePaymentsTab";
 import { AdminAgreementsSection } from "../_components/admin-agreements-section";
+import { EditFranchiseDialog } from "../_components/edit-franchise-dialog";
+import { EditFranchiseeDialog } from "../_components/edit-franchisee-dialog";
 import { formatDate } from "@/lib/date-utils";
 
 const TABS = ["students", "ci", "orders", "payments", "agreements"] as const;
@@ -39,6 +43,9 @@ function FranchiseDetailInner() {
     queryFn: () => getFranchiseApplicationDetail(franchiseId),
     enabled: franchiseId.length > 0,
   });
+
+  const [editFranchiseOpen, setEditFranchiseOpen] = useState(false);
+  const [editFranchiseeOpen, setEditFranchiseeOpen] = useState(false);
 
   if (!franchiseId) {
     return (
@@ -103,6 +110,30 @@ function FranchiseDetailInner() {
         ) : (
           `${subtitle || "Franchise hub"}${franchise?.code ? ` | ${franchise.code}` : ""}`
         )
+      }
+      action={
+        !isLoading && !isError && franchise ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditFranchiseOpen(true)}
+            >
+              <PencilLine className="h-4 w-4" />
+              Edit franchise
+            </Button>
+            {franchisee?.id ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditFranchiseeOpen(true)}
+              >
+                <UserPen className="h-4 w-4" />
+                Edit franchisee
+              </Button>
+            ) : null}
+          </div>
+        ) : null
       }
       headerExtras={
         !isLoading && !isError ? (
@@ -179,6 +210,17 @@ function FranchiseDetailInner() {
       <TabsContent value="agreements" className="mt-0">
         <AdminAgreementsSection fixedFranchiseId={franchiseId} embed />
       </TabsContent>
+
+      <EditFranchiseDialog
+        franchise={franchise ?? null}
+        open={editFranchiseOpen}
+        onOpenChange={setEditFranchiseOpen}
+      />
+      <EditFranchiseeDialog
+        franchisee={franchisee ?? null}
+        open={editFranchiseeOpen}
+        onOpenChange={setEditFranchiseeOpen}
+      />
     </PageTabs>
   );
 }

@@ -14,6 +14,8 @@ import {
 } from "@/services/franchisee.service";
 import { usePaginatedFranchisesAdmin } from "@/hooks/api/franchisee.hooks";
 import { FranchiseHubTable } from "./FranchiseHubTable";
+import { EditFranchiseDialog } from "./edit-franchise-dialog";
+import { EditFranchiseeDialog } from "./edit-franchisee-dialog";
 import { useListParams } from "@/hooks/use-list-params";
 
 interface FranchiseTableProps {
@@ -70,6 +72,10 @@ export default function FranchiseTable({
 
   const [resendTarget, setResendTarget] = useState<FranchiseData | null>(null);
   const [isResending, setIsResending] = useState(false);
+  const [editFranchiseTarget, setEditFranchiseTarget] =
+    useState<FranchiseData | null>(null);
+  const [editFranchiseeTarget, setEditFranchiseeTarget] =
+    useState<FranchiseData | null>(null);
 
   const handleConfirmResend = async () => {
     if (!resendTarget) return;
@@ -178,6 +184,22 @@ export default function FranchiseTable({
           return `Showing ${count} of ${totalCount} franchises${filtered}`;
         }}
         onResendCredentials={setResendTarget}
+        onEditFranchise={setEditFranchiseTarget}
+        onEditFranchisee={setEditFranchiseeTarget}
+      />
+      <EditFranchiseDialog
+        franchise={editFranchiseTarget}
+        open={editFranchiseTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditFranchiseTarget(null);
+        }}
+      />
+      <EditFranchiseeDialog
+        franchisee={editFranchiseeTarget?.franchisee ?? null}
+        open={editFranchiseeTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditFranchiseeTarget(null);
+        }}
       />
     </>
   );

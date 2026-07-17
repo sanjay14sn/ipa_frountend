@@ -21,7 +21,7 @@ import {
   TableMainCell,
 } from "@/components/shared";
 import type { FranchiseData } from "@/services/franchisee.service";
-import { Eye, KeyRound, Check, X } from "lucide-react";
+import { Eye, KeyRound, Check, X, PencilLine, UserPen } from "lucide-react";
 import { FranchiseTableExpanded } from "./FranchiseTableExpanded";
 import { ReceivableCompactLine } from "@/components/receivables/InstallmentSummaryCard";
 import { formatDate } from "@/lib/date-utils";
@@ -50,6 +50,8 @@ interface FranchiseHubTableProps {
   onApprove?: (application: FranchiseData) => void;
   onReject?: (application: FranchiseData) => void;
   onResendCredentials?: (franchise: FranchiseData) => void;
+  onEditFranchise?: (franchise: FranchiseData) => void;
+  onEditFranchisee?: (franchise: FranchiseData) => void;
   disableApproveActions?: boolean;
 }
 
@@ -178,6 +180,8 @@ export function FranchiseHubTable({
   onApprove,
   onReject,
   onResendCredentials,
+  onEditFranchise,
+  onEditFranchisee,
   disableApproveActions,
 }: FranchiseHubTableProps) {
   const columns: DataTableColumn<FranchiseData>[] =
@@ -256,6 +260,28 @@ export function FranchiseHubTable({
                     <Eye className="h-4 w-4" />
                   </Link>
                 </Button>
+                {onEditFranchise ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEditFranchise(item)}
+                    title="Edit franchise details"
+                    aria-label="Edit franchise details"
+                  >
+                    <PencilLine className="h-4 w-4" />
+                  </Button>
+                ) : null}
+                {onEditFranchisee && item.franchisee?.id ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEditFranchisee(item)}
+                    title="Edit franchisee details"
+                    aria-label="Edit franchisee details"
+                  >
+                    <UserPen className="h-4 w-4" />
+                  </Button>
+                ) : null}
                 {onResendCredentials ? (
                   <Button
                     variant="ghost"

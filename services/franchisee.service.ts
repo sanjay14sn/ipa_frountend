@@ -75,6 +75,9 @@ export interface FranchiseeResponse {
   dob: Date;
   bloodGroup: string;
   communicationAddress: string;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
   phone: string;
   mail: string;
   education: string;
@@ -761,6 +764,51 @@ export async function rejectFranchise(franchiseId: string, reason: string) {
 export async function resendFranchiseeCredentials(franchiseId: string) {
   const response = await api.post(
     `/admin/franchise/${franchiseId}/resend-credentials`,
+  );
+  return unwrapData(response);
+}
+
+/** Admin edit of descriptive franchise details. Codes are issued identity and never change. */
+export interface UpdateFranchiseAdminRequest {
+  name?: string;
+  type?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+}
+
+export async function updateFranchiseAdmin(
+  franchiseId: string,
+  payload: UpdateFranchiseAdminRequest,
+) {
+  const response = await api.patch(`/admin/franchise/${franchiseId}`, payload);
+  return unwrapData(response);
+}
+
+/** Admin edit of franchisee identity/contact details. Backend expects `email` (stored as `mail`). */
+export interface UpdateFranchiseeAdminRequest {
+  name?: string;
+  dob?: string;
+  bloodGroup?: string;
+  communicationAddress?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  phone?: string;
+  email?: string;
+  education?: string;
+  occupation?: string;
+  reference?: string;
+}
+
+export async function updateFranchiseeAdmin(
+  franchiseeId: number,
+  payload: UpdateFranchiseeAdminRequest,
+) {
+  const response = await api.patch(
+    `/admin/franchise/franchisee/${franchiseeId}`,
+    payload,
   );
   return unwrapData(response);
 }
