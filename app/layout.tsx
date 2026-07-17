@@ -31,15 +31,45 @@ const caveat = Caveat({
   display: "swap",
 });
 
+const SITE_NAME = "IPA Portal — Ideal Play Abacus";
+const SITE_DESCRIPTION =
+  "Franchise management portal for Abacus education centers";
+
 export const metadata: Metadata = {
+  // Absolute base for og:image/og:url — link scrapers (WhatsApp, iMessage,
+  // Slack) reject relative URLs.
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://app.playabacusindia.com",
+  ),
   title: {
-    default: "IPA Portal — Ideal Play Abacus",
+    default: SITE_NAME,
     template: "%s | IPA Portal",
   },
-  description: "Franchise management portal for Abacus education centers",
+  description: SITE_DESCRIPTION,
   generator: "Next.js",
   // Private portal — no search-engine indexing.
   robots: { index: false, follow: false },
+  openGraph: {
+    type: "website",
+    siteName: "IPA Portal",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    url: "/",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "IPA Portal — Ideal Play Abacus franchise management portal",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: ["/og.png"],
+  },
 };
 
 export default function RootLayout({
