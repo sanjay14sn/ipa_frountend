@@ -18,32 +18,48 @@ import type { NextRequest } from "next/server";
  * the cookie the existing client-side auth checks handle the redirect.
  * @see https://nextjs.org/docs/app/getting-started/proxy
  *
- * Cookie names (ipa-new): admin + franchisee + course-instructor use JWT pair
- * cookies (`*AccessToken` / `*RefreshToken`). Legacy `session` / `auth_token`
- * names are deliberately IGNORED here — the backend never validates them, so
- * their presence can never represent a session. Honoring them caused stale
- * legacy cookies to bounce visitors off /login in a loop (backend clears the
- * legacy names on login/logout as a separate workstream).
+ * Cookie names: one session cookie per realm (`adminSession` /
+ * `franchiseeSession` / `ciSession`). Legacy `session` / `auth_token` AND the
+ * retired dual-token names (`*AccessToken` / `*RefreshToken`) are deliberately
+ * IGNORED here — the backend never validates them, so their presence can never
+ * represent a session (honoring stale cookies caused login redirect loops;
+ * the backend purges the retired names on every login/logout).
+ *
+ * STALE SELF-HEAL: sessions have a sliding idle window server-side, so
+ * "cookie present, session dead" is a NORMAL state (idle-expired). When the
+ * app discovers it (a 401), it redirects here with ?stale=1 — the explicit
+ * marker to delete the dead cookie and render the login page. Without it, the
+ * presence check below would bounce the visitor straight back into the portal
+ * and the browser would loop until the user manually cleared site data (the
+ * blank-screen bug). The marker must stay EXPLICIT — deleting cookies on any
+ * bare login visit logs real users out on browser-back navigation.
  */
 
+const SESSION_COOKIES = {
+  admin: "adminSession",
+  franchisee: "franchiseeSession",
+  ci: "ciSession",
+} as const;
+
+type Realm = keyof typeof SESSION_COOKIES;
+
+/** Login page → the realm whose session it establishes. */
+const LOGIN_PAGE_REALM: Record<string, Realm> = {
+  "/login": "franchisee",
+  "/admin-login": "admin",
+  "/ci/login": "ci",
+};
+
 function hasAdminAuthCookie(req: NextRequest): boolean {
-  return (
-    req.cookies.has("adminAccessToken") || req.cookies.has("adminRefreshToken")
-  );
+  return req.cookies.has(SESSION_COOKIES.admin);
 }
 
 function hasFranchiseeAuthCookie(req: NextRequest): boolean {
-  return (
-    req.cookies.has("franchiseeAccessToken") ||
-    req.cookies.has("franchiseeRefreshToken")
-  );
+  return req.cookies.has(SESSION_COOKIES.franchisee);
 }
 
 function hasCiAuthCookie(req: NextRequest): boolean {
-  return (
-    req.cookies.has("courseInstructorAccessToken") ||
-    req.cookies.has("courseInstructorRefreshToken")
-  );
+  return req.cookies.has(SESSION_COOKIES.ci);
 }
 
 /** Coarse "may have a session" check for protected route prefixes. */
@@ -53,6 +69,13 @@ function hasAnyAuthCookie(req: NextRequest): boolean {
     hasFranchiseeAuthCookie(req) ||
     hasCiAuthCookie(req)
   );
+}
+
+function deleteSessionCookie(res: NextResponse, realm: Realm): void {
+  const name = SESSION_COOKIES[realm];
+  res.cookies.delete(name);
+  // Dev sets COOKIE_DOMAIN=localhost; that variant needs an explicit domain match.
+  res.cookies.delete({ name, path: "/", domain: "localhost" });
 }
 
 /**
@@ -92,10 +115,19 @@ export function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Stale self-heal: a 401 handler sent the visitor here because the session
+  // behind a present cookie is dead. Delete it and let the login page render.
+  const loginRealm = LOGIN_PAGE_REALM[pathname];
+  if (loginRealm && req.nextUrl.searchParams.get("stale") === "1") {
+    const res = NextResponse.next();
+    deleteSessionCookie(res, loginRealm);
+    return res;
+  }
+
   const authenticated = hasAnyAuthCookie(req);
 
   // Redirect only when the portal that owns the cookie matches this login page —
-  // so franchisee JWT does not bounce `/admin-login`, and admins can reach it.
+  // so a franchisee session does not bounce `/admin-login`, and admins can reach it.
   if (pathname === "/login") {
     if (hasFranchiseeAuthCookie(req)) {
       return NextResponse.redirect(new URL("/franchisee/dashboard", req.url));

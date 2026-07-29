@@ -66,15 +66,12 @@ function reportApiFailure(error: any): void {
   });
 }
 
-/** Avoid refresh loops: these calls must not trigger token refresh / queue. */
+/** Session teardown must not recurse: 401s from login/logout are terminal. */
 function isAuthFlowRequest(url: string | undefined): boolean {
   if (!url) return false;
   return (
     url.includes("/auth/login") ||
-    url.includes("/auth/refresh") ||
     url.includes("/auth/logout") ||
-    url === "/ci/me" ||
-    url === "/ci/refresh" ||
     url === "/ci/logout" ||
     url.startsWith("/ci/login")
   );
@@ -130,13 +127,68 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-let refreshPromise: Promise<void> | null = null;
-
-// Set to true while the user has explicitly initiated logout so the refresh
-// interceptor's hard-redirect doesn't fire mid-flight and cancel the call.
+// Set to true while the user has explicitly initiated logout so the dead-session
+// teardown doesn't fire mid-flight and cancel the deliberate logout flow.
 let userLogoutInProgress = false;
 export function markLogoutStart(): void { userLogoutInProgress = true; }
 export function markLogoutEnd(): void   { userLogoutInProgress = false; }
+
+// De-duplicates concurrent 401s (parallel queries all failing at once) into a
+// single teardown + redirect.
+let sessionTeardownInProgress = false;
+
+/**
+ * A 401 is terminal now — sessions are server-side records with a sliding idle
+ * window; there is no refresh token to retry with. The session is dead but the
+ * httpOnly cookies may still sit in the browser (JS cannot clear them), which
+ * used to strand users in a blank-screen redirect loop. Teardown:
+ *  1. POST the portal's logout — public + idempotent, clears cookies server-side;
+ *  2. clear client state (identity, scope store, query cache);
+ *  3. hard-navigate to the login page with ?stale=1 so proxy.ts deletes any
+ *     surviving cookie at the edge instead of bouncing back into the portal.
+ */
+async function teardownDeadSession(): Promise<void> {
+  const role = parseStoredRole();
+  const portal = getPortal(role);
+  const logoutUrl =
+    portal === "franchisee" ? "/franchisee/auth/logout" :
+    portal === "ci" ? "/ci/logout" :
+    "/admin/auth/logout";
+
+  try {
+    await api.post(logoutUrl);
+  } catch {
+    /* Even if this fails, the ?stale=1 edge self-heal clears the cookies. */
+  }
+
+  localStorage.removeItem("user");
+  // Lazy imports to avoid a load-time circular dep (axios → store → axios).
+  try {
+    const { useScopeStore } = await import("@/lib/stores/scope-store");
+    useScopeStore.getState().clear();
+  } catch {
+    /* ignore */
+  }
+  try {
+    const { getQueryClientBridge } = await import(
+      "@/hooks/api/query-client-bridge"
+    );
+    getQueryClientBridge().clear();
+  } catch {
+    /* bridge not mounted yet — nothing to clear */
+  }
+
+  const loginPath = loginPathForSession(role);
+  const already = window.location.pathname === loginPath;
+  if (!already && !userLogoutInProgress) {
+    const params = new URLSearchParams({ stale: "1" });
+    const next = window.location.pathname;
+    if (next && next !== "/" && next !== loginPath) params.set("next", next);
+    window.location.href = `${loginPath}?${params.toString()}`;
+  } else {
+    sessionTeardownInProgress = false;
+  }
+}
 
 api.interceptors.response.use(
   (response) => {
@@ -164,85 +216,14 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      // Logout is tearing down the session deliberately — don't try to
-      // refresh. The 401 is expected; starting a refresh cycle here would
-      // fire an inner logout that races with / can cancel the outer one.
-      if (userLogoutInProgress) {
-        return Promise.reject(error);
-      }
-
-      if (!refreshPromise) {
-        const role = parseStoredRole();
-        const portal = getPortal(role);
-        const refreshUrl =
-          portal === "franchisee" ? "/franchisee/auth/refresh" :
-          portal === "ci" ? "/ci/refresh" :
-          "/admin/auth/refresh";
-
-        refreshPromise = api.post(refreshUrl, {})
-          .then(() => { /* success — nothing to return */ })
-          .catch(async (refreshError) => {
-            const role = parseStoredRole();
-            const portal = getPortal(role);
-            const logoutUrl =
-              portal === "franchisee" ? "/franchisee/auth/logout" :
-              portal === "ci" ? "/ci/logout" :
-              "/admin/auth/logout";
-
-            try {
-              await api.post(logoutUrl);
-            } catch (logoutErr) {
-              // 401 is expected: the session is already invalid server-side (refresh
-              // also failed above), so there is nothing to revoke. Only surface others.
-              const status = (logoutErr as { response?: { status?: number } })?.response?.status;
-              if (status !== 401) {
-                console.error("Logout failed", logoutErr);
-              }
-            }
-
-            if (typeof window !== "undefined") {
-              localStorage.removeItem("user");
-              // Lazy import to avoid a load-time circular dep (axios → store → axios).
-              try {
-                const { useScopeStore } = await import("@/lib/stores/scope-store");
-                useScopeStore.getState().clear();
-              } catch {
-                /* ignore */
-              }
-              try {
-                const { getQueryClientBridge } = await import(
-                  "@/hooks/api/query-client-bridge"
-                );
-                getQueryClientBridge().clear();
-              } catch {
-                /* bridge not mounted yet — nothing to clear */
-              }
-              const loginPath = loginPathForSession(role);
-              const already =
-                window.location.pathname === loginPath ||
-                (loginPath === "/ci/login" && window.location.pathname.startsWith("/ci"));
-              if (!already && !userLogoutInProgress) {
-                window.location.href = loginPath;
-              }
-            }
-
-            reportApiFailure(refreshError);
-            throw refreshError; // re-throw so awaiting callers get the rejection
-          })
-          .finally(() => {
-            refreshPromise = null;
-          });
-      }
-
-      try {
-        await refreshPromise;
-        return api(originalRequest);
-      } catch (err) {
-        return Promise.reject(err);
-      }
+    if (
+      error.response?.status === 401 &&
+      typeof window !== "undefined" &&
+      !userLogoutInProgress &&
+      !sessionTeardownInProgress
+    ) {
+      sessionTeardownInProgress = true;
+      void teardownDeadSession();
     }
 
     reportApiFailure(error);

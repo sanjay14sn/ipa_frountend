@@ -23,10 +23,6 @@ export async function loginCI(email: string, password: string): Promise<CILoginR
   return res.data.result;
 }
 
-async function refreshCI(): Promise<void> {
-  await api.post("/ci/refresh");
-}
-
 export async function logoutCI(): Promise<void> {
   await api.post("/ci/logout");
 }
