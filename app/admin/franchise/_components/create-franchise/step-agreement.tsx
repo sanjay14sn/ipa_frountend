@@ -68,7 +68,10 @@ function PaidPaymentEditor({
   onRemove,
 }: PaidPaymentEditorProps) {
   return (
-    <div className="grid grid-cols-12 items-end gap-2 rounded-lg border border-border bg-card p-3">
+    // items-start (not -end): the Amount cell grows taller when its hint or
+    // error renders below the input — bottom-aligning made the other columns
+    // sink with it and the label/input rows go jagged.
+    <div className="grid grid-cols-12 items-start gap-2 rounded-lg border border-border bg-card p-3">
       <div className="col-span-3 space-y-1">
         <Label className="text-xs">Amount ({RUPEE_SYMBOL})</Label>
         <Input
@@ -136,13 +139,17 @@ function PaidPaymentEditor({
           placeholder="Optional"
         />
       </div>
-      <div className="col-span-1">
+      <div className="col-span-1 space-y-1">
+        {/* Invisible label keeps the button on the shared input row. */}
+        <Label className="invisible block text-xs" aria-hidden>
+          ×
+        </Label>
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={onRemove}
-          className="w-full text-destructive hover:text-destructive"
+          className="h-10 w-full text-destructive hover:text-destructive"
           aria-label="Remove payment"
         >
           ×
