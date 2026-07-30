@@ -181,6 +181,44 @@ describe("getAgreementActionVisibility", () => {
     expect(v.franchiseKitEditor).toBe(false);
   });
 
+  it("editTerms: allowed for DRAFT and unsigned APPROVED, locked once signed", () => {
+    expect(
+      getAgreementActionVisibility(makeAgreement({ status: "DRAFT" }), "admin")
+        .editTerms,
+    ).toBe(true);
+    expect(
+      getAgreementActionVisibility(
+        { ...makeAgreement({ status: "APPROVED" }), signed: false },
+        "admin",
+      ).editTerms,
+    ).toBe(true);
+    expect(
+      getAgreementActionVisibility(
+        { ...makeAgreement({ status: "APPROVED" }), signed: true },
+        "admin",
+      ).editTerms,
+    ).toBe(false);
+    expect(
+      getAgreementActionVisibility(makeAgreement({ status: "ACTIVE" }), "admin")
+        .editTerms,
+    ).toBe(false);
+  });
+
+  it("editTerms: CI agreements and franchisees never edit terms here", () => {
+    expect(
+      getAgreementActionVisibility(
+        makeAgreement({ kind: "CI", status: "DRAFT" }),
+        "admin",
+      ).editTerms,
+    ).toBe(false);
+    expect(
+      getAgreementActionVisibility(
+        makeAgreement({ status: "DRAFT" }),
+        "franchisee",
+      ).editTerms,
+    ).toBe(false);
+  });
+
   it("manage kit items requires a program and a non-VOID status", () => {
     expect(
       getAgreementActionVisibility(makeAgreement({ programId: null }), "admin")

@@ -144,6 +144,8 @@ export interface AgreementActionVisibility {
   reactivate: boolean;
   void: boolean;
   renew: boolean;
+  /** Details/terms are editable only before any signature lands (DRAFT, or APPROVED unsigned). */
+  editTerms: boolean;
 }
 
 /**
@@ -160,6 +162,8 @@ export function getAgreementActionVisibility(
     | "franchiseId"
     | "materialsDispatched"
     | "receivables"
+    | "signed"
+    | "fullySigned"
   >,
   role: "admin" | "franchisee",
 ): AgreementActionVisibility {
@@ -174,6 +178,7 @@ export function getAgreementActionVisibility(
       reactivate: false,
       void: false,
       renew: false,
+      editTerms: false,
     };
   }
 
@@ -193,8 +198,11 @@ export function getAgreementActionVisibility(
       reactivate: false,
       void: false,
       renew: false,
+      editTerms: false,
     };
   }
+
+  const signed = Boolean(agreement.signed ?? agreement.fullySigned);
 
   return {
     download: true,
@@ -211,6 +219,10 @@ export function getAgreementActionVisibility(
       status === "ACTIVE" ||
       status === "SUSPENDED",
     renew: status === "EXPIRED",
+    // CI terms carry the training plan and are managed from the CI flows.
+    editTerms:
+      agreement.kind !== "CI" &&
+      (status === "DRAFT" || (status === "APPROVED" && !signed)),
   };
 }
 

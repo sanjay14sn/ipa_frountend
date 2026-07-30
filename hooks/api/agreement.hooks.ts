@@ -15,8 +15,10 @@ import {
   suspendAgreementAdmin,
   reactivateAgreementAdmin,
   voidAgreementAdmin,
+  updateAgreementDetailsAdmin,
   type AgreementRecord,
   type AgreementListParams,
+  type UpdateAgreementDetailsInput,
 } from "@/services/agreement.service";
 import { queryKeys } from "./query-keys";
 import { getQueryClientBridge } from "./query-client-bridge";
@@ -185,6 +187,43 @@ export function useSendReceivableReminderMutation(agreementId: number) {
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error, "Failed to send reminder"));
+    },
+  });
+}
+
+/**
+ * Admin: edit details/terms of an UNSIGNED agreement (DRAFT, or APPROVED
+ * before any signature). Error toast lives here; the calling dialog owns the
+ * success toast (edit-dialog convention). Admin franchise views embed
+ * agreement rows, so those list keys are invalidated alongside the agreement
+ * keys.
+ */
+export function useUpdateAgreementDetailsAdmin() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      agreementId,
+      payload,
+    }: {
+      agreementId: number;
+      payload: UpdateAgreementDetailsInput;
+    }) => updateAgreementDetailsAdmin(agreementId, payload),
+    onSuccess: async (_data, { agreementId }) => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: queryKeys.agreements.detail(agreementId),
+        }),
+        client.invalidateQueries({ queryKey: ["agreements", "list"] }),
+        client.invalidateQueries({ queryKey: ["franchises-admin", "list"] }),
+        client.invalidateQueries({ queryKey: ["franchises-grouped", "list"] }),
+        client.invalidateQueries({
+          queryKey: ["franchise-applications", "list"],
+        }),
+        client.invalidateQueries({ queryKey: ["admin-franchise-detail"] }),
+      ]);
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error, "Failed to update agreement"));
     },
   });
 }

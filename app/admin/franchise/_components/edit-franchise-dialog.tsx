@@ -13,6 +13,15 @@ import {
 import { DialogFormField, FormDialog } from "@/components/shared/dialog";
 import { StateCitySelect } from "@/components/StateCitySelect";
 import { useUpdateFranchiseAdmin } from "@/hooks/api/franchisee.hooks";
+import { useUpdateAgreementDetailsAdmin } from "@/hooks/api/agreement.hooks";
+import type { AgreementRecord } from "@/services/agreement.service";
+import {
+  EditAgreementTermsSection,
+  agreementTermsFormFromRecord,
+  buildAgreementDetailsPatch,
+  editableAgreementsFrom,
+  type AgreementTermsFormState,
+} from "./edit-agreement-terms-section";
 
 // Backend FranchiseType — the FE enum in services/franchise.enums.ts predates
 // "Regular", so mirror the filter options in FranchiseTable instead.
@@ -31,6 +40,12 @@ export interface EditableFranchiseDetails {
 
 interface EditFranchiseDialogProps {
   franchise: EditableFranchiseDetails | null;
+  /**
+   * The franchise's agreements (list rows and the detail payload both carry
+   * them). Feeds the "Agreement terms" section — terms stay editable only
+   * while an agreement is unsigned.
+   */
+  agreements?: AgreementRecord[] | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -55,15 +70,27 @@ const emptyForm: FranchiseFormState = {
 
 export function EditFranchiseDialog({
   franchise,
+  agreements,
   open,
   onOpenChange,
 }: EditFranchiseDialogProps) {
   const [form, setForm] = useState<FranchiseFormState>(emptyForm);
+  const [selectedAgreementId, setSelectedAgreementId] = useState<number | null>(
+    null,
+  );
+  const [agreementForm, setAgreementForm] =
+    useState<AgreementTermsFormState | null>(null);
+  const [agreementInitial, setAgreementInitial] =
+    useState<AgreementTermsFormState | null>(null);
   const updateFranchise = useUpdateFranchiseAdmin();
+  const updateAgreement = useUpdateAgreementDetailsAdmin();
 
   useEffect(() => {
     if (!franchise) {
       setForm(emptyForm);
+      setSelectedAgreementId(null);
+      setAgreementForm(null);
+      setAgreementInitial(null);
       return;
     }
     setForm({
@@ -74,7 +101,24 @@ export function EditFranchiseDialog({
       state: franchise.state ?? "",
       pincode: franchise.pincode ?? "",
     });
-  }, [franchise]);
+    const editable = editableAgreementsFrom(agreements);
+    const first = editable[0] ?? null;
+    setSelectedAgreementId(first?.id ?? null);
+    const seeded = first ? agreementTermsFormFromRecord(first) : null;
+    setAgreementForm(seeded);
+    setAgreementInitial(seeded);
+  }, [franchise, agreements]);
+
+  const selectAgreement = (agreementId: number) => {
+    const target = editableAgreementsFrom(agreements).find(
+      (agreement) => agreement.id === agreementId,
+    );
+    if (!target) return;
+    setSelectedAgreementId(agreementId);
+    const seeded = agreementTermsFormFromRecord(target);
+    setAgreementForm(seeded);
+    setAgreementInitial(seeded);
+  };
 
   const submit = async () => {
     if (!franchise) return;
@@ -84,6 +128,26 @@ export function EditFranchiseDialog({
     if (!name || !city || !state) {
       toast.error("Name, state, and city are required");
       return;
+    }
+
+    const agreementPatch =
+      agreementForm && agreementInitial && selectedAgreementId !== null
+        ? buildAgreementDetailsPatch(agreementInitial, agreementForm)
+        : null;
+    const agreementDirty =
+      agreementPatch !== null && Object.keys(agreementPatch).length > 0;
+
+    if (agreementDirty && agreementForm) {
+      if (agreementForm.tenure < 1) {
+        toast.error("Agreement tenure must be at least 1 month");
+        return;
+      }
+      if (agreementForm.installment && agreementForm.installmentMonths < 1) {
+        toast.error(
+          "Enter a positive Installment Months value for the installment plan",
+        );
+        return;
+      }
     }
 
     try {
@@ -98,18 +162,28 @@ export function EditFranchiseDialog({
           pincode: form.pincode.trim(),
         },
       });
-      toast.success("Franchise updated");
+      if (agreementDirty && agreementPatch && selectedAgreementId !== null) {
+        await updateAgreement.mutateAsync({
+          agreementId: selectedAgreementId,
+          payload: agreementPatch,
+        });
+      }
+      toast.success(
+        agreementDirty ? "Franchise and agreement updated" : "Franchise updated",
+      );
       onOpenChange(false);
     } catch {
-      // useUpdateFranchiseAdmin already surfaces the error toast.
+      // The mutation hooks already surface the error toast.
     }
   };
+
+  const isSubmitting = updateFranchise.isPending || updateAgreement.isPending;
 
   return (
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      size="md"
+      size="lg"
       title="Edit franchise"
       description="Update the franchise's descriptive details. The franchise code is issued once and never changes."
       formId="edit-franchise-form"
@@ -117,8 +191,8 @@ export function EditFranchiseDialog({
         e.preventDefault();
         void submit();
       }}
-      isSubmitting={updateFranchise.isPending}
-      submitLabel={updateFranchise.isPending ? "Saving..." : "Save changes"}
+      isSubmitting={isSubmitting}
+      submitLabel={isSubmitting ? "Saving..." : "Save changes"}
       cancelLabel="Cancel"
     >
       <div className="space-y-4">
@@ -187,6 +261,16 @@ export function EditFranchiseDialog({
             placeholder="6-digit pincode"
           />
         </DialogFormField>
+
+        <EditAgreementTermsSection
+          agreements={agreements}
+          selectedId={selectedAgreementId}
+          onSelect={selectAgreement}
+          value={agreementForm}
+          onChange={(patch) =>
+            setAgreementForm((prev) => (prev ? { ...prev, ...patch } : prev))
+          }
+        />
       </div>
     </FormDialog>
   );

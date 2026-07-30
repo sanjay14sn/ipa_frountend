@@ -213,6 +213,7 @@ function FranchiseDetailInner() {
 
       <EditFranchiseDialog
         franchise={franchise ?? null}
+        agreements={detail?.agreements ?? franchise?.agreements ?? null}
         open={editFranchiseOpen}
         onOpenChange={setEditFranchiseOpen}
       />

@@ -189,6 +189,7 @@ export default function FranchiseTable({
       />
       <EditFranchiseDialog
         franchise={editFranchiseTarget}
+        agreements={editFranchiseTarget?.agreements ?? null}
         open={editFranchiseTarget !== null}
         onOpenChange={(open) => {
           if (!open) setEditFranchiseTarget(null);

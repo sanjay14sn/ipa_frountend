@@ -630,6 +630,41 @@ export async function renewAgreementAdmin(
   return unwrapData<AgreementRecord>(response);
 }
 
+/**
+ * Sparse PATCH of an agreement that has not been signed yet (DRAFT, or
+ * APPROVED before any signature). Absent fields keep their current value;
+ * the backend refuses once a signature (or activation) exists.
+ */
+export interface UpdateAgreementDetailsInput {
+  title?: string;
+  /** Blankable — an empty string clears the notes. */
+  notes?: string;
+  tenure?: number;
+  franchiseFee?: number;
+  monthlyFee?: number;
+  royalty?: number;
+  materialCost?: number;
+  kitCost?: number;
+  ciShare?: number;
+  franchiseShare?: number;
+  gstFranchiseFee?: boolean;
+  gstRoyalty?: boolean;
+  gstMaterialCost?: boolean;
+  installment?: boolean;
+  /** Required when `installment` is true. */
+  installmentMonths?: number;
+  downPayment?: number;
+}
+
+/** PATCH /admin/agreement/:id — edit details/terms of an unsigned agreement. */
+export async function updateAgreementDetailsAdmin(
+  agreementId: number,
+  dto: UpdateAgreementDetailsInput,
+): Promise<AgreementRecord> {
+  const response = await api.patch(`/admin/agreement/${agreementId}`, dto);
+  return unwrapData<AgreementRecord>(response);
+}
+
 
 function storedSignatureToPublicPath(
   stored: string | null | undefined,
