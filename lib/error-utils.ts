@@ -75,6 +75,7 @@ const FALLBACK_MESSAGES: Record<string, string> = {
   INVALID_ORDER_STATUS: 'This order cannot be moved to the requested status.',
   INVALID_STATE: 'This item cannot be changed from its current state.',
   CONFLICT: 'This action conflicts with an existing record.',
+  DUPLICATE_VALUE: 'This value is already in use. Please review the highlighted fields.',
   PROGRAM_REQUEST_EXISTS:
     'You already have a pending or active request for this program. Please wait for it to be reviewed.',
   PROGRAM_AGREEMENT_EXISTS:
@@ -94,28 +95,10 @@ const FALLBACK_MESSAGES: Record<string, string> = {
 };
 
 /**
- * Field-specific copy keyed by a dedicated backend error code. Used when the
- * backend returns a specific code for a duplicate/invalid field. `field` is a
- * canonical name that forms map to their own input names.
- */
-const CODE_FIELD_RULES: Record<string, { field: string; message: string }> = {
-  EMAIL_ALREADY_EXISTS: { field: 'email', message: 'This email address is already registered. Please use a different email.' },
-  EMAIL_EXISTS: { field: 'email', message: 'This email address is already registered. Please use a different email.' },
-  DUPLICATE_EMAIL: { field: 'email', message: 'This email address is already registered. Please use a different email.' },
-  PHONE_ALREADY_EXISTS: { field: 'phone', message: 'This phone number is already registered. Please use a different number.' },
-  PHONE_EXISTS: { field: 'phone', message: 'This phone number is already registered. Please use a different number.' },
-  DUPLICATE_PHONE: { field: 'phone', message: 'This phone number is already registered. Please use a different number.' },
-  FRANCHISE_ALREADY_EXISTS: { field: 'franchiseName', message: 'A franchise with this name already exists. Please choose a different name.' },
-  DUPLICATE_FRANCHISE: { field: 'franchiseName', message: 'A franchise with this name already exists. Please choose a different name.' },
-  DUPLICATE_ROLL_NUMBER: { field: 'rollNo', message: 'This roll number is already in use. Please enter a different one.' },
-};
-
-/**
- * Pattern rules matched against the backend MESSAGE text. The backend currently
- * raises duplicate email/phone/franchise-name as a generic `BAD_REQUEST` with a
- * descriptive message, so the message text is the only signal we have to (a)
- * identify which field is at fault and (b) normalise the wording into something
- * the user can act on. Order matters — first match wins.
+ * Pattern rules matched against the backend MESSAGE text. Duplicates now
+ * arrive as `DUPLICATE_VALUE` + `details.fields`, which `fieldErrorsFromParsed`
+ * consumes directly — these rules remain as a fallback for older prose-only
+ * `BAD_REQUEST` responses. Order matters — first match wins.
  */
 interface SemanticRule {
   test: (lowerMsg: string) => boolean;
@@ -287,10 +270,8 @@ function parseError(error: unknown): ParsedError {
 
 /** Resolve which field (if any) an error relates to, with normalised copy. */
 function detectField(
-  code: string | undefined,
   message: string | undefined,
 ): { field: string; message: string } | undefined {
-  if (code && CODE_FIELD_RULES[code]) return CODE_FIELD_RULES[code];
   if (message) {
     const lower = message.toLowerCase();
     for (const rule of SEMANTIC_RULES) {
@@ -302,7 +283,7 @@ function detectField(
 
 function fieldErrorsFromParsed(parsed: ParsedError): ApiFieldErrors {
   const out: ApiFieldErrors = {};
-  const detected = detectField(parsed.code, parsed.message);
+  const detected = detectField(parsed.message);
   if (detected) out[detected.field] = detected.message;
 
   if (parsed.fields) {
@@ -333,7 +314,7 @@ function resolveMessage(parsed: ParsedError, fallback: string): string {
   }
 
   // 2. Field-specific normalisation (duplicate email/phone/name, etc.).
-  const detected = detectField(parsed.code, parsed.message);
+  const detected = detectField(parsed.message);
   if (detected) return detected.message;
 
   // 3. Never leak a raw ORM/DB error string to the user.
@@ -383,7 +364,7 @@ function resolveMessage(parsed: ParsedError, fallback: string): string {
 function maybeLogUnmappedCode(parsed: ParsedError): void {
   const code = parsed.code;
   if (!code) return;
-  if (OVERRIDE_MESSAGES[code] || FALLBACK_MESSAGES[code] || CODE_FIELD_RULES[code]) {
+  if (OVERRIDE_MESSAGES[code] || FALLBACK_MESSAGES[code]) {
     return;
   }
   sendClientLog({

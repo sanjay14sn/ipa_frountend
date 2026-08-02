@@ -37,7 +37,11 @@ import {
 import { ShieldPlus, RefreshCw, PencilLine } from "lucide-react";
 import { toast } from "sonner";
 import statesCities from "@/data/indian-states-cities.json";
+import { cn } from "@/lib/utils";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
+import { handleFormApiError } from "@/lib/form-errors";
+import { useUniquenessCheck } from "@/hooks/api/uniqueness.hooks";
+import { checkAdminAvailability } from "@/services/uniqueness.service";
 import { sendClientLog } from "@/lib/client-telemetry";
 import { formatDate } from "@/lib/date-utils";
 
@@ -69,6 +73,8 @@ const emptyForm: AdminFormState = {
   isActive: true,
 };
 
+const errorClass = "border-destructive focus-visible:ring-destructive";
+
 export function AdminManagementSection() {
   const router = useRouter();
   const { user } = useUser();
@@ -78,6 +84,35 @@ export function AdminManagementSection() {
   const [formMode, setFormMode] = useState<AdminFormMode>("create");
   const [editingAdmin, setEditingAdmin] = useState<AdminRecord | null>(null);
   const [form, setForm] = useState<AdminFormState>(emptyForm);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Eager uniqueness checks — advisory red highlight while typing; the
+  // submit path re-checks and reports field-level 409s on races.
+  const uniquenessExcludeId =
+    formMode === "edit" ? editingAdmin?.id : undefined;
+  const emailUniq = useUniquenessCheck({
+    keyParts: ["admin", "emailId"],
+    value: form.emailId,
+    enabled: /\S+@\S+\.\S+/.test(form.emailId),
+    excludeId: uniquenessExcludeId,
+    fetcher: (value, opts) => checkAdminAvailability("emailId", value, opts),
+    takenMessage: "An admin with this email already exists.",
+  });
+  const nameUniq = useUniquenessCheck({
+    keyParts: ["admin", "name"],
+    value: form.name,
+    enabled: form.name.trim().length > 0,
+    excludeId: uniquenessExcludeId,
+    fetcher: (value, opts) => checkAdminAvailability("name", value, opts),
+    takenMessage: "An admin with this name already exists.",
+  });
+
+  // Merged view for rendering: base errors + live "taken" results.
+  const displayErrors: Record<string, string> = { ...errors };
+  if (nameUniq.error && !errors.name) displayErrors.name = nameUniq.error;
+  if (emailUniq.error && !errors.emailId) {
+    displayErrors.emailId = emailUniq.error;
+  }
 
   const isSuperAdmin = user?.role === "admin" && user.adminRole === "super";
   const adminListQuery = usePaginatedAdmins(
@@ -140,6 +175,7 @@ export function AdminManagementSection() {
     setDialogOpen(false);
     setEditingAdmin(null);
     setForm(emptyForm);
+    setErrors({});
   };
 
   const submit = async () => {
@@ -157,6 +193,15 @@ export function AdminManagementSection() {
 
     if (formMode === "create" && (!state || !password || !warehouseName)) {
       toast.error("State, password, and warehouse name are required");
+      return;
+    }
+
+    if (nameUniq.isTaken || emailUniq.isTaken) {
+      setErrors((prev) => ({
+        ...prev,
+        ...(nameUniq.isTaken ? { name: nameUniq.error! } : {}),
+        ...(emailUniq.isTaken ? { emailId: emailUniq.error! } : {}),
+      }));
       return;
     }
 
@@ -190,7 +235,11 @@ export function AdminManagementSection() {
       resetDialog();
     } catch (error) {
       sendClientLog({ level: "error", event: "admin-save-error", message: "Failed to save admin", context: { error } });
-      toast.error(getUserFriendlyMessage(error, "Failed to save admin"));
+      handleFormApiError(error, {
+        setErrors,
+        fieldMap: { emailId: "emailId", name: "name" },
+        fallback: "Failed to save admin",
+      });
     }
   };
 
@@ -363,10 +412,19 @@ export function AdminManagementSection() {
               <Input
                 id="admin-name"
                 value={form.name}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, name: event.target.value }))
-                }
+                onChange={(event) => {
+                  setForm((prev) => ({ ...prev, name: event.target.value }));
+                  if (errors.name) {
+                    setErrors((prev) => ({ ...prev, name: "" }));
+                  }
+                }}
+                className={cn(displayErrors.name && errorClass)}
               />
+              {displayErrors.name ? (
+                <p className="text-xs text-destructive">
+                  {displayErrors.name}
+                </p>
+              ) : null}
             </div>
 
             <div className="grid gap-2">
@@ -375,10 +433,22 @@ export function AdminManagementSection() {
                 id="admin-email"
                 type="email"
                 value={form.emailId}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, emailId: event.target.value }))
-                }
+                onChange={(event) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    emailId: event.target.value,
+                  }));
+                  if (errors.emailId) {
+                    setErrors((prev) => ({ ...prev, emailId: "" }));
+                  }
+                }}
+                className={cn(displayErrors.emailId && errorClass)}
               />
+              {displayErrors.emailId ? (
+                <p className="text-xs text-destructive">
+                  {displayErrors.emailId}
+                </p>
+              ) : null}
             </div>
 
             <div className="grid gap-2">

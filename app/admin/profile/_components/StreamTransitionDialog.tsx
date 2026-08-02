@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { GitBranch } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   ConfirmDialog,
   DialogFormField,
@@ -17,6 +18,8 @@ import {
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 import type { Stream } from "@/services/stream.service";
 import type { StreamTransition } from "@/services/stream-transition.service";
+
+const errorClass = "border-destructive focus-visible:ring-destructive";
 
 // ── Transition form state ────────────────────────────────────────────────────
 
@@ -34,6 +37,7 @@ interface StreamTransitionDialogProps {
   editingTransition: StreamTransition | null;
   transitionForm: TransitionFormData;
   onTransitionFormChange: (data: TransitionFormData) => void;
+  fromStreamError?: string;
   streams: Stream[];
   onSubmit: () => void;
 }
@@ -44,6 +48,7 @@ export function StreamTransitionDialog({
   editingTransition,
   transitionForm,
   onTransitionFormChange,
+  fromStreamError,
   streams,
   onSubmit,
 }: StreamTransitionDialogProps) {
@@ -61,14 +66,14 @@ export function StreamTransitionDialog({
       }}
       submitLabel="Save"
     >
-      <DialogFormField label="From stream">
+      <DialogFormField label="From stream" error={fromStreamError}>
         <Select
           value={transitionForm.fromStreamId}
           onValueChange={(v) =>
             onTransitionFormChange({ ...transitionForm, fromStreamId: v })
           }
         >
-          <SelectTrigger>
+          <SelectTrigger className={cn(fromStreamError && errorClass)}>
             <SelectValue placeholder="Source" />
           </SelectTrigger>
           <SelectContent>

@@ -41,7 +41,11 @@ import { TrainingLevelMaterialsPicker } from "./TrainingLevelMaterialsPicker";
 import { useLevelsByProgram } from "@/hooks/api/level.hooks";
 import { useStreamsByProgram } from "@/hooks/api/stream.hooks";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
+import { handleFormApiError } from "@/lib/form-errors";
+import { useUniquenessCheck } from "@/hooks/api/uniqueness.hooks";
+import { checkCiTrainingLevel } from "@/services/uniqueness.service";
 import {
   invalidateTrainingLevelsForProgram,
   useTrainingLevelsForProgram,
@@ -81,6 +85,8 @@ const emptyForm: FormState = {
   displayOrder: 1,
   isActive: true,
 };
+
+const errorClass = "border-destructive focus-visible:ring-destructive";
 
 function toFormState(level?: TrainingLevel | null): FormState {
   if (!level) return { ...emptyForm };
@@ -391,12 +397,38 @@ export function CITrainingLevelManagement({
   const [editingLevel, setEditingLevel] = useState<TrainingLevel | null>(null);
   const [deletingLevel, setDeletingLevel] = useState<TrainingLevel | null>(null);
   const [form, setForm] = useState<FormState>({ ...emptyForm });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const trainingLevelsQuery = useTrainingLevelsForProgram(programId);
   const trainingLevels = [...(trainingLevelsQuery.data ?? [])].sort((a, b) =>
     a.displayOrder === b.displayOrder
       ? a.id - b.id
       : a.displayOrder - b.displayOrder,
   );
+
+  // Eager uniqueness checks — advisory red highlight while typing; the
+  // submit path re-checks and reports field-level 409s on races.
+  const codeUniq = useUniquenessCheck({
+    keyParts: ["ci-training-level", "code"],
+    value: form.code,
+    enabled: isDialogOpen && programId > 0,
+    excludeId: editingLevel?.id,
+    scope: { programId },
+    fetcher: (value, opts) =>
+      checkCiTrainingLevel(programId, "code", value, opts),
+    takenMessage: "This code already exists for this program.",
+  });
+  const orderUniq = useUniquenessCheck({
+    keyParts: ["ci-training-level", "displayOrder"],
+    value: form.displayOrder > 0 ? String(form.displayOrder) : "",
+    enabled: isDialogOpen && programId > 0 && form.displayOrder > 0,
+    excludeId: editingLevel?.id,
+    scope: { programId },
+    fetcher: (value, opts) =>
+      checkCiTrainingLevel(programId, "displayOrder", String(value), opts),
+    takenMessage: "This display order already exists for this program.",
+  });
+  const codeError = errors.code || codeUniq.error;
+  const displayOrderError = errors.displayOrder || orderUniq.error;
 
   const openCreateDialog = () => {
     const nextOrder =
@@ -405,18 +437,21 @@ export function CITrainingLevelManagement({
         : 1;
     setEditingLevel(null);
     setForm({ ...emptyForm, displayOrder: nextOrder });
+    setErrors({});
     setIsDialogOpen(true);
   };
 
   const openEditDialog = (level: TrainingLevel) => {
     setEditingLevel(level);
     setForm(toFormState(level));
+    setErrors({});
     setIsDialogOpen(true);
   };
 
   const closeDialog = () => {
     setEditingLevel(null);
     setForm({ ...emptyForm });
+    setErrors({});
     setIsDialogOpen(false);
   };
 
@@ -454,6 +489,14 @@ export function CITrainingLevelManagement({
         return;
       }
     }
+    if (codeUniq.isTaken || orderUniq.isTaken) {
+      setErrors((prev) => ({
+        ...prev,
+        ...(codeUniq.isTaken ? { code: codeUniq.error! } : {}),
+        ...(orderUniq.isTaken ? { displayOrder: orderUniq.error! } : {}),
+      }));
+      return;
+    }
     try {
       const payload = buildPayload(form);
       if (editingLevel) {
@@ -469,7 +512,13 @@ export function CITrainingLevelManagement({
       closeDialog();
       toast.success(editingLevel ? "CI training level updated" : "CI training level created");
     } catch (e) {
-      toast.error(getUserFriendlyMessage(e));
+      handleFormApiError(e, {
+        setErrors,
+        fieldMap: { code: "code", displayOrder: "displayOrder" },
+        fallback: editingLevel
+          ? "Failed to update CI training level"
+          : "Failed to create CI training level",
+      });
     }
   };
 
@@ -672,16 +721,21 @@ export function CITrainingLevelManagement({
               }
             />
           </DialogFormField>
-          <DialogFormField label="Code" required>
+          <DialogFormField label="Code" required error={codeError}>
             <Input
               value={form.code}
               placeholder="e.g., CL1"
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, code: e.target.value }))
-              }
+              className={cn(codeError && errorClass)}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, code: e.target.value }));
+                if (errors.code) setErrors((prev) => ({ ...prev, code: "" }));
+              }}
             />
           </DialogFormField>
         </DialogFormGrid>
+        {displayOrderError ? (
+          <p className="text-xs text-destructive">{displayOrderError}</p>
+        ) : null}
         <DialogFormField label="Description">
           <Textarea
             rows={3}

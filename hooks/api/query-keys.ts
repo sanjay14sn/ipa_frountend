@@ -267,4 +267,9 @@ export const queryKeys = {
   regionTracking: {
     regions: ["region-tracking", "regions"] as const,
   },
+  /** Eager form-field availability probes (`useUniquenessCheck`). */
+  uniqueness: {
+    check: (keyParts: readonly unknown[], params: Record<string, unknown>) =>
+      ["uniqueness", ...keyParts, params] as const,
+  },
 } as const;

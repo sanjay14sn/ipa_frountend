@@ -21,7 +21,10 @@ import {
 } from "@/services/franchise.service";
 import { getAllPrograms, Program } from "@/services/program.service";
 import { StateCitySelect } from "@/components/StateCitySelect";
-import { getErrorMessage } from "@/lib/error-utils";
+import { cn } from "@/lib/utils";
+import { handleFormApiError } from "@/lib/form-errors";
+import { useUniquenessCheck } from "@/hooks/api/uniqueness.hooks";
+import { checkFranchiseNameAvailability } from "@/services/uniqueness.service";
 import { toast } from "sonner";
 import { useUser } from "@/context/user-context";
 import {
@@ -34,6 +37,8 @@ import {
   AppDialogFooter,
   AppDialogBody,
 } from "@/components/shared/dialog";
+
+const errorClass = "border-destructive focus-visible:ring-destructive";
 
 interface RequestFranchiseModalProps {
   open: boolean;
@@ -56,12 +61,29 @@ export function RequestFranchiseModal({
   });
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [programs, setPrograms] = useState<Program[]>([]);
   const [isLoadingPrograms, setIsLoadingPrograms] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [pendingCheck, setPendingCheck] = useState<
     "loading" | "pending" | "ok"
   >("loading");
+
+  // Eager uniqueness check — advisory red highlight while typing; the
+  // submit path re-checks and reports a field-level 409 on races.
+  const franchiseNameUniq = useUniquenessCheck({
+    keyParts: ["franchise", "name"],
+    value: formData.name,
+    fetcher: (value, opts) => checkFranchiseNameAvailability(value, opts),
+    takenMessage:
+      "A franchise with this name already exists. Please choose a different name.",
+  });
+
+  // Merged view for rendering: base errors + live "taken" result.
+  const displayErrors: Record<string, string> = { ...errors };
+  if (franchiseNameUniq.error && !errors.name) {
+    displayErrors.name = franchiseNameUniq.error;
+  }
 
   const loadModalData = () => {
     setIsLoadingPrograms(true);
@@ -101,6 +123,10 @@ export function RequestFranchiseModal({
     e.preventDefault();
     if (!formData.name?.trim()) {
       toast.error("Franchise name is required");
+      return;
+    }
+    if (franchiseNameUniq.isTaken) {
+      toast.error(franchiseNameUniq.error!);
       return;
     }
     if (!formData.address?.trim()) {
@@ -156,7 +182,11 @@ export function RequestFranchiseModal({
         });
       }
     } catch (error) {
-      toast.error(getErrorMessage(error, "Failed to submit franchise request"));
+      handleFormApiError(error, {
+        setErrors,
+        fieldMap: { franchiseName: "name" },
+        fallback: "Failed to submit franchise request",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -173,6 +203,7 @@ export function RequestFranchiseModal({
         pincode: "",
         programIds: [],
       });
+      setErrors({});
       setSubmitted(false);
     }
     onOpenChange(false);
@@ -238,15 +269,21 @@ export function RequestFranchiseModal({
       isSubmitting={isLoading}
       submitLabel="Submit Request"
     >
-      <DialogFormField id="franchiseName" label="Franchise Name" required>
+      <DialogFormField
+        id="franchiseName"
+        label="Franchise Name"
+        required
+        error={displayErrors.name}
+      >
         <Input
           id="franchiseName"
           value={formData.name}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, name: e.target.value }))
-          }
+          onChange={(e) => {
+            setFormData((prev) => ({ ...prev, name: e.target.value }));
+            if (errors.name) setErrors((prev) => ({ ...prev, name: "" }));
+          }}
           placeholder="Enter franchise center name"
-          className="rounded-lg"
+          className={cn("rounded-lg", displayErrors.name && errorClass)}
           required
         />
       </DialogFormField>

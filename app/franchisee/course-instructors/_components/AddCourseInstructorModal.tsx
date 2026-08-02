@@ -29,7 +29,9 @@ import {
 } from "@/components/shared/dialog";
 import { cn } from "@/lib/utils";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
-import { makeFieldChangeHandler } from "@/lib/form-utils";
+import { makeFieldChangeHandler, replaceStepErrors } from "@/lib/form-utils";
+import { useUniquenessCheck } from "@/hooks/api/uniqueness.hooks";
+import { checkCourseInstructorEmail } from "@/services/uniqueness.service";
 import { useFormSteps } from "@/hooks/use-form-steps";
 import { useDirtyCloseGuard } from "@/hooks/use-dirty-close-guard";
 import { sendClientLog } from "@/lib/client-telemetry";
@@ -87,6 +89,14 @@ const INITIAL_FORM_DATA: CourseInstructorFormData = {
 
 const errorClass = "border-destructive focus-visible:ring-destructive";
 
+/** Fields each wizard step owns, for scoped error replacement on validate. */
+const STEP_FIELDS: Record<number, readonly string[]> = {
+  1: ["name", "programId", "dob", "bloodGroup", "city"],
+  2: ["address", "phone", "mail"],
+  3: ["education", "occupation", "reference"],
+  4: [],
+};
+
 export default function AddCourseInstructorModal({
   open,
   onOpenChange,
@@ -123,6 +133,21 @@ export default function AddCourseInstructorModal({
     INITIAL_FORM_DATA,
   );
 
+  // Eager uniqueness check — advisory red highlight while typing; the
+  // submit path re-checks and reports field-level 409s on races.
+  const mailUniq = useUniquenessCheck({
+    keyParts: ["ci", "email"],
+    value: formData.mail,
+    enabled: /\S+@\S+\.\S+/.test(formData.mail),
+    fetcher: (value, opts) => checkCourseInstructorEmail("franchisee", value, opts),
+    takenMessage:
+      "An account with this email already exists. Please use a different email.",
+  });
+
+  // Merged view for rendering: base errors + live "taken" result.
+  const displayErrors: Record<string, string> = { ...errors };
+  if (mailUniq.error && !errors.mail) displayErrors.mail = mailUniq.error;
+
   const validateCurrentStep = () => {
     const newErrors: Record<string, string> = {};
 
@@ -145,6 +170,8 @@ export default function AddCourseInstructorModal({
         if (!formData.mail.trim()) newErrors.mail = "Email is required";
         else if (!/\S+@\S+\.\S+/.test(formData.mail))
           newErrors.mail = "Please enter a valid email address";
+        if (!newErrors.mail && mailUniq.isTaken)
+          newErrors.mail = mailUniq.error!;
         break;
       case 3:
         if (!formData.education.trim())
@@ -158,7 +185,11 @@ export default function AddCourseInstructorModal({
         break;
     }
 
-    setErrors(newErrors);
+    // Replace only this step's errors so API/async errors reported on other
+    // steps survive navigation (the old full-replace wiped them on Next).
+    setErrors((prev) =>
+      replaceStepErrors(prev, STEP_FIELDS[currentStep] ?? [], newErrors),
+    );
     return Object.keys(newErrors).length === 0;
   };
 
@@ -451,14 +482,14 @@ export default function AddCourseInstructorModal({
               id="mail"
               label="Email Address"
               required
-              error={errors.mail}
+              error={displayErrors.mail}
             >
               <Input
                 id="mail"
                 type="email"
                 value={formData.mail}
                 onChange={(e) => handleInputChange("mail", e.target.value)}
-                className={cn(errors.mail && errorClass)}
+                className={cn(displayErrors.mail && errorClass)}
                 placeholder="Enter email address"
               />
             </DialogFormField>

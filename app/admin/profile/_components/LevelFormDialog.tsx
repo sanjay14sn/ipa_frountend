@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ToggleField } from "@/components/shared/toggle-field";
+import { cn } from "@/lib/utils";
 import { Plus, Edit2 } from "lucide-react";
 import {
   Select,
@@ -20,6 +21,8 @@ import {
 import type { Stream } from "@/services/stream.service";
 import type { CreateLevelDto, UpdateLevelDto, Level } from "@/services/level.service";
 
+const errorClass = "border-destructive focus-visible:ring-destructive";
+
 // ── Add-level form state ─────────────────────────────────────────────────────
 
 export type AddLevelFormData = Omit<CreateLevelDto, "programId">;
@@ -31,6 +34,7 @@ interface AddLevelDialogProps {
   streams: Stream[];
   formData: AddLevelFormData;
   onFormDataChange: (data: AddLevelFormData) => void;
+  displayOrderError?: string;
   onSubmit: () => void;
 }
 
@@ -41,6 +45,7 @@ export function AddLevelDialog({
   streams,
   formData,
   onFormDataChange,
+  displayOrderError,
   onSubmit,
 }: AddLevelDialogProps) {
   return (
@@ -147,10 +152,18 @@ export function AddLevelDialog({
           { value: "inactive", label: "Inactive" },
         ]}
       />
-      <div className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+      <div
+        className={cn(
+          "rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground",
+          displayOrderError && "border-destructive",
+        )}
+      >
         This will be added as position #{formData.displayOrder} in the
         selected stream.
       </div>
+      {displayOrderError ? (
+        <p className="text-xs text-destructive">{displayOrderError}</p>
+      ) : null}
     </FormDialog>
   );
 }
@@ -163,6 +176,7 @@ interface EditLevelDialogProps {
   streams: Stream[];
   editFormData: UpdateLevelDto;
   onEditFormDataChange: (data: UpdateLevelDto) => void;
+  displayOrderError?: string;
   onSubmit: () => void;
 }
 
@@ -172,6 +186,7 @@ export function EditLevelDialog({
   streams,
   editFormData,
   onEditFormDataChange,
+  displayOrderError,
   onSubmit,
 }: EditLevelDialogProps) {
   return (
@@ -270,9 +285,10 @@ export function EditLevelDialog({
         </DialogFormField>
       </DialogFormGrid>
       <DialogFormGrid cols={2}>
-        <DialogFormField label="Display order">
+        <DialogFormField label="Display order" error={displayOrderError}>
           <Input
             type="number"
+            className={cn(displayOrderError && errorClass)}
             value={
               editFormData.displayOrder === 0 ||
               editFormData.displayOrder === undefined

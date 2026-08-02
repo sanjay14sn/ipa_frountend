@@ -112,10 +112,30 @@ describe("duplicate field detection (message-pattern based)", () => {
     });
   });
 
-  it("maps a dedicated backend code to its field", () => {
-    expect(getApiFieldErrors(apiError({ code: "EMAIL_ALREADY_EXISTS" }))).toEqual({
+  it("promotes DUPLICATE_VALUE details.fields to per-field errors", () => {
+    const err = apiError(
+      {
+        code: "DUPLICATE_VALUE",
+        message: "An account with this email already exists; An account with this phone already exists",
+        details: {
+          fields: {
+            email: "An account with this email already exists",
+            phone: "An account with this phone already exists",
+          },
+        },
+      },
+      409,
+    );
+    expect(getApiFieldErrors(err)).toEqual({
       email: "This email address is already registered. Please use a different email.",
+      phone: "An account with this phone already exists",
     });
+  });
+
+  it("falls back to friendly copy for DUPLICATE_VALUE without a message", () => {
+    expect(getUserFriendlyMessage(apiError({ code: "DUPLICATE_VALUE" }, 409))).toBe(
+      "This value is already in use. Please review the highlighted fields.",
+    );
   });
 });
 

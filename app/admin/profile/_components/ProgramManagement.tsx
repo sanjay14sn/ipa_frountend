@@ -9,6 +9,9 @@ import {
   type Program,
 } from "@/services/program.service";
 import { usePrograms, invalidatePrograms } from "@/hooks/api/program.hooks";
+import { useUniquenessCheck } from "@/hooks/api/uniqueness.hooks";
+import { checkProgramName } from "@/services/uniqueness.service";
+import { handleFormApiError } from "@/lib/form-errors";
 import {
   AddProgramDialog,
   EditProgramDialog,
@@ -28,6 +31,7 @@ export function ProgramManagement() {
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [editProgramName, setEditProgramName] = useState("");
   const [deletingProgram, setDeletingProgram] = useState<Program | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [catalogTick, setCatalogTick] = useState(0);
   const [kitCounts, setKitCounts] = useState<Record<number, number>>({});
   const [openLevelModes, setOpenLevelModes] = useState<
@@ -36,6 +40,24 @@ export function ProgramManagement() {
   const [activeProgramId, setActiveProgramId] = useState<string>("");
 
   const { programs, isLoading } = usePrograms();
+
+  // Eager uniqueness checks — advisory red highlight while typing; the
+  // submit path re-checks and reports field-level 409s on races.
+  const addNameUniq = useUniquenessCheck({
+    keyParts: ["program", "name"],
+    value: newProgramName,
+    enabled: isAddDialogOpen,
+    fetcher: (value, opts) => checkProgramName(value, opts),
+    takenMessage: "A program with this name already exists.",
+  });
+  const editNameUniq = useUniquenessCheck({
+    keyParts: ["program", "name"],
+    value: editProgramName,
+    enabled: isEditDialogOpen && editingProgram != null,
+    excludeId: editingProgram?.id,
+    fetcher: (value, opts) => checkProgramName(value, opts),
+    takenMessage: "A program with this name already exists.",
+  });
 
   useEffect(() => {
     setOpenLevelModes((prev) =>
@@ -62,6 +84,10 @@ export function ProgramManagement() {
       toast.error("Program name cannot be empty");
       return;
     }
+    if (addNameUniq.isTaken) {
+      setErrors((prev) => ({ ...prev, name: addNameUniq.error! }));
+      return;
+    }
     try {
       await createProgram({
         name: newProgramName.trim(),
@@ -72,14 +98,22 @@ export function ProgramManagement() {
       setNewProgramCode("");
       setIsAddDialogOpen(false);
       void invalidatePrograms();
-    } catch {
-      toast.error("Failed to create program");
+    } catch (error) {
+      handleFormApiError(error, {
+        setErrors,
+        fieldMap: { name: "name" },
+        fallback: "Failed to create program",
+      });
     }
   };
 
   const handleEditProgram = async () => {
     if (!editingProgram || !editProgramName.trim()) {
       toast.error("Program name cannot be empty");
+      return;
+    }
+    if (editNameUniq.isTaken) {
+      setErrors((prev) => ({ ...prev, name: editNameUniq.error! }));
       return;
     }
     try {
@@ -89,8 +123,12 @@ export function ProgramManagement() {
       setEditingProgram(null);
       setEditProgramName("");
       void invalidatePrograms();
-    } catch {
-      toast.error("Failed to update program");
+    } catch (error) {
+      handleFormApiError(error, {
+        setErrors,
+        fieldMap: { name: "name" },
+        fallback: "Failed to update program",
+      });
     }
   };
 
@@ -122,10 +160,14 @@ export function ProgramManagement() {
         }
         catalogTick={catalogTick}
         onCatalogChange={() => setCatalogTick((t) => t + 1)}
-        onAddProgram={() => setIsAddDialogOpen(true)}
+        onAddProgram={() => {
+          setErrors({});
+          setIsAddDialogOpen(true);
+        }}
         onEditProgram={(program) => {
           setEditingProgram(program);
           setEditProgramName(program.name);
+          setErrors({});
           setIsEditDialogOpen(true);
         }}
         onDeleteProgram={(program) => {
@@ -143,7 +185,11 @@ export function ProgramManagement() {
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         programName={newProgramName}
-        onProgramNameChange={setNewProgramName}
+        onProgramNameChange={(name) => {
+          setNewProgramName(name);
+          if (errors.name) setErrors((prev) => ({ ...prev, name: "" }));
+        }}
+        nameError={errors.name || addNameUniq.error}
         programCode={newProgramCode}
         onProgramCodeChange={setNewProgramCode}
         onSubmit={() => void handleAddProgram()}
@@ -152,7 +198,11 @@ export function ProgramManagement() {
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         editProgramName={editProgramName}
-        onEditProgramNameChange={setEditProgramName}
+        onEditProgramNameChange={(name) => {
+          setEditProgramName(name);
+          if (errors.name) setErrors((prev) => ({ ...prev, name: "" }));
+        }}
+        nameError={errors.name || editNameUniq.error}
         onSubmit={() => void handleEditProgram()}
       />
       <DeleteProgramDialog

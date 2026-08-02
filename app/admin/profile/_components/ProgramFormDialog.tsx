@@ -2,12 +2,15 @@
 
 import { Input } from "@/components/ui/input";
 import { Plus, Edit2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   ConfirmDialog,
   DialogFormField,
   FormDialog,
 } from "@/components/shared/dialog";
 import type { Program } from "@/services/program.service";
+
+const errorClass = "border-destructive focus-visible:ring-destructive";
 
 // ── Add-program dialog ───────────────────────────────────────────────────────
 
@@ -16,6 +19,7 @@ interface AddProgramDialogProps {
   onOpenChange: (open: boolean) => void;
   programName: string;
   onProgramNameChange: (name: string) => void;
+  nameError?: string;
   programCode: string;
   onProgramCodeChange: (code: string) => void;
   onSubmit: () => void;
@@ -26,6 +30,7 @@ export function AddProgramDialog({
   onOpenChange,
   programName,
   onProgramNameChange,
+  nameError,
   programCode,
   onProgramCodeChange,
   onSubmit,
@@ -44,11 +49,12 @@ export function AddProgramDialog({
       }}
       submitLabel="Create Program"
     >
-      <DialogFormField id="programName" label="Program Name" required>
+      <DialogFormField id="programName" label="Program Name" required error={nameError}>
         <Input
           id="programName"
           placeholder="e.g., Reading Literacy"
           value={programName}
+          className={cn(nameError && errorClass)}
           onChange={(e) => onProgramNameChange(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && onSubmit()}
         />
@@ -73,6 +79,7 @@ interface EditProgramDialogProps {
   onOpenChange: (open: boolean) => void;
   editProgramName: string;
   onEditProgramNameChange: (name: string) => void;
+  nameError?: string;
   onSubmit: () => void;
 }
 
@@ -81,6 +88,7 @@ export function EditProgramDialog({
   onOpenChange,
   editProgramName,
   onEditProgramNameChange,
+  nameError,
   onSubmit,
 }: EditProgramDialogProps) {
   return (
@@ -97,10 +105,11 @@ export function EditProgramDialog({
       }}
       submitLabel="Save Changes"
     >
-      <DialogFormField id="editProgramName" label="Program Name" required>
+      <DialogFormField id="editProgramName" label="Program Name" required error={nameError}>
         <Input
           id="editProgramName"
           value={editProgramName}
+          className={cn(nameError && errorClass)}
           onChange={(e) => onEditProgramNameChange(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && onSubmit()}
         />

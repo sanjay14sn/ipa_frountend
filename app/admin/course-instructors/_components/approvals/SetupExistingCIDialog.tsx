@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,7 +33,10 @@ import {
   setupExistingCourseInstructor,
   BloodGroup,
 } from "@/services/course-instructor.service";
-import { getUserFriendlyMessage } from "@/lib/error-utils";
+import { handleFormApiError } from "@/lib/form-errors";
+import { replaceStepErrors } from "@/lib/form-utils";
+import { useUniquenessCheck } from "@/hooks/api/uniqueness.hooks";
+import { checkCourseInstructorEmail } from "@/services/uniqueness.service";
 import { SETUP_EXISTING_CI_STEPS as FORM_STEPS } from "@/lib/constants/education";
 import {
   ReceivablePlanBuilder,
@@ -55,6 +57,24 @@ const BLOOD_GROUPS = [
 ];
 
 const errorClass = "border-destructive focus-visible:ring-destructive";
+
+/** Fields each wizard step owns, for scoped error replacement on validate. */
+const STEP_FIELDS: Record<number, readonly string[]> = {
+  1: ["franchiseId", "programId"],
+  2: [
+    "name",
+    "email",
+    "phone",
+    "dob",
+    "bloodGroup",
+    "city",
+    "address",
+    "education",
+    "occupation",
+    "reference",
+  ],
+  3: ["tenure", "agreementSignedAt", "receivables"],
+};
 
 interface SetupExistingCIDialogProps {
   open: boolean;
@@ -110,6 +130,21 @@ export default function SetupExistingCIDialog({
   const [franchiseId, setFranchiseId] = useState<string>("");
   const [programId, setProgramId] = useState<number | null>(null);
   const [ciData, setCiData] = useState<CIPersonal>(emptyCI);
+
+  // Eager uniqueness check — advisory red highlight while typing; the
+  // submit path re-checks and reports a field-level 409 on races.
+  const emailUniq = useUniquenessCheck({
+    keyParts: ["ci", "email"],
+    value: ciData.email,
+    enabled: /\S+@\S+\.\S+/.test(ciData.email),
+    fetcher: (value, opts) => checkCourseInstructorEmail("admin", value, opts),
+    takenMessage:
+      "An account with this email already exists. Please use a different email.",
+  });
+
+  // Merged view for rendering: base errors + live "taken" result.
+  const displayErrors: Record<string, string> = { ...errors };
+  if (emailUniq.error && !errors.email) displayErrors.email = emailUniq.error;
 
   const today = new Date().toISOString().slice(0, 10);
   const [tenure, setTenure] = useState(12);
@@ -216,6 +251,7 @@ export default function SetupExistingCIDialog({
       if (!ciData.name.trim()) e.name = "Name is required";
       if (!ciData.email.trim()) e.email = "Email is required";
       else if (!/\S+@\S+\.\S+/.test(ciData.email)) e.email = "Enter a valid email";
+      if (!e.email && emailUniq.isTaken) e.email = emailUniq.error!;
       if (!/^\d{10}$/.test(ciData.phone)) e.phone = "10-digit phone required";
       if (!ciData.dob) e.dob = "DOB required";
       if (!ciData.bloodGroup) e.bloodGroup = "Blood group required";
@@ -231,7 +267,9 @@ export default function SetupExistingCIDialog({
       const planErr = validateReceivablePlan(receivables, sortedLevels);
       if (planErr) e.receivables = planErr;
     }
-    setErrors(e);
+    // Replace only this step's errors so API/async errors reported on other
+    // steps survive navigation (a full-replace wiped them).
+    setErrors((prev) => replaceStepErrors(prev, STEP_FIELDS[step] ?? [], e));
     return Object.keys(e).length === 0;
   };
 
@@ -294,7 +332,13 @@ export default function SetupExistingCIDialog({
       setSubmitted(true);
       onSuccess();
     } catch (err) {
-      toast.error(getUserFriendlyMessage(err, "Failed to set up course instructor"));
+      handleFormApiError(err, {
+        setErrors,
+        fieldMap: { email: "email" },
+        fieldToStep: { email: 2 },
+        goToStep: setCurrentStep,
+        fallback: "Failed to set up course instructor",
+      });
     } finally {
       setLoading(false);
     }
@@ -406,12 +450,12 @@ export default function SetupExistingCIDialog({
               className={cn(errors.name && errorClass)}
             />
           </DialogFormField>
-          <DialogFormField id="email" label="Email" required error={errors.email}>
+          <DialogFormField id="email" label="Email" required error={displayErrors.email}>
             <Input
               type="email"
               value={ciData.email}
               onChange={(e) => updateCi({ email: e.target.value })}
-              className={cn(errors.email && errorClass)}
+              className={cn(displayErrors.email && errorClass)}
             />
           </DialogFormField>
           <DialogFormField id="phone" label="Phone (10 digits)" required error={errors.phone}>

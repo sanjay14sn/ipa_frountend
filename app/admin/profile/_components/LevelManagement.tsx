@@ -21,6 +21,9 @@ import {
 } from "@/services/stream.service";
 import { getQueryClientBridge } from "@/hooks/api/query-client-bridge";
 import { queryKeys } from "@/hooks/api/query-keys";
+import { useUniquenessCheck } from "@/hooks/api/uniqueness.hooks";
+import { checkLevelDisplayOrder } from "@/services/uniqueness.service";
+import { handleFormApiError } from "@/lib/form-errors";
 import {
   AddLevelDialog,
   EditLevelDialog,
@@ -82,6 +85,37 @@ export function LevelManagement({
     isActive: true,
   });
   const [editFormData, setEditFormData] = useState<UpdateLevelDto>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Eager uniqueness checks — advisory red highlight while editing; the
+  // submit path re-checks and reports field-level 409s on races.
+  const addOrderUniq = useUniquenessCheck({
+    keyParts: ["level", "displayOrder"],
+    value: formData.displayOrder > 0 ? String(formData.displayOrder) : "",
+    enabled:
+      isAddDialogOpen && formData.streamId > 0 && formData.displayOrder > 0,
+    scope: { streamId: formData.streamId },
+    fetcher: (value, opts) =>
+      checkLevelDisplayOrder(formData.streamId, Number(value), opts),
+    takenMessage: "This display order is already used in this stream.",
+  });
+  const editOrderUniq = useUniquenessCheck({
+    keyParts: ["level", "displayOrder"],
+    value:
+      (editFormData.displayOrder ?? 0) > 0
+        ? String(editFormData.displayOrder)
+        : "",
+    enabled:
+      isEditDialogOpen &&
+      editingLevel != null &&
+      (editFormData.streamId ?? 0) > 0 &&
+      (editFormData.displayOrder ?? 0) > 0,
+    excludeId: editingLevel?.id,
+    scope: { streamId: editFormData.streamId },
+    fetcher: (value, opts) =>
+      checkLevelDisplayOrder(Number(editFormData.streamId), Number(value), opts),
+    takenMessage: "This display order is already used in this stream.",
+  });
 
   // ── Catalog loading ─────────────────────────────────────────────────────
 
@@ -210,6 +244,7 @@ export function LevelManagement({
       durationInMonths: 3,
       isActive: true,
     });
+    setErrors({});
     setIsAddDialogOpen(true);
   };
 
@@ -238,6 +273,10 @@ export function LevelManagement({
       toast.error("Duration must be at least 1 month");
       return;
     }
+    if (addOrderUniq.isTaken) {
+      setErrors((prev) => ({ ...prev, displayOrder: addOrderUniq.error! }));
+      return;
+    }
     try {
       const created = await createLevel({ ...formData, programId });
       await getQueryClientBridge().invalidateQueries({
@@ -246,13 +285,21 @@ export function LevelManagement({
       await loadLevelsForStream(created.streamId, true);
       toast.success("Level created");
       setIsAddDialogOpen(false);
-    } catch {
-      toast.error("Failed to create level");
+    } catch (error) {
+      handleFormApiError(error, {
+        setErrors,
+        fieldMap: { displayOrder: "displayOrder" },
+        fallback: "Failed to create level",
+      });
     }
   };
 
   const handleEditLevel = async () => {
     if (!editingLevel) return;
+    if (editOrderUniq.isTaken) {
+      setErrors((prev) => ({ ...prev, displayOrder: editOrderUniq.error! }));
+      return;
+    }
     try {
       const previousStreamId = editingLevel.streamId;
       const updated = await updateLevel(editingLevel.id, editFormData);
@@ -276,8 +323,12 @@ export function LevelManagement({
       setIsEditDialogOpen(false);
       setEditingLevel(null);
       setEditFormData({});
-    } catch {
-      toast.error("Failed to update level");
+    } catch (error) {
+      handleFormApiError(error, {
+        setErrors,
+        fieldMap: { displayOrder: "displayOrder" },
+        fallback: "Failed to update level",
+      });
     }
   };
 
@@ -349,6 +400,7 @@ export function LevelManagement({
           onEditLevel={(level, data) => {
             setEditingLevel(level);
             setEditFormData(data);
+            setErrors({});
             setIsEditDialogOpen(true);
           }}
           onDeleteLevel={(level) => {
@@ -368,6 +420,7 @@ export function LevelManagement({
         streams={streams}
         formData={formData}
         onFormDataChange={setFormData}
+        displayOrderError={errors.displayOrder || addOrderUniq.error}
         onSubmit={() => void handleAddLevel()}
       />
       <EditLevelDialog
@@ -375,7 +428,17 @@ export function LevelManagement({
         onOpenChange={setIsEditDialogOpen}
         streams={streams}
         editFormData={editFormData}
-        onEditFormDataChange={setEditFormData}
+        onEditFormDataChange={(data) => {
+          if (
+            errors.displayOrder &&
+            (data.displayOrder !== editFormData.displayOrder ||
+              data.streamId !== editFormData.streamId)
+          ) {
+            setErrors((prev) => ({ ...prev, displayOrder: "" }));
+          }
+          setEditFormData(data);
+        }}
+        displayOrderError={errors.displayOrder || editOrderUniq.error}
         onSubmit={() => void handleEditLevel()}
       />
       <DeleteLevelDialog

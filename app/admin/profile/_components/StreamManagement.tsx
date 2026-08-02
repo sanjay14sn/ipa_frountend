@@ -22,6 +22,9 @@ import {
 } from "@/services/stream-transition.service";
 import { invalidateStreamsByProgram } from "@/hooks/api/stream.hooks";
 import { invalidateStreamTransitionsByProgram } from "@/hooks/api/stream-transition.hooks";
+import { useUniquenessCheck } from "@/hooks/api/uniqueness.hooks";
+import { checkStreamTransition } from "@/services/uniqueness.service";
+import { handleFormApiError } from "@/lib/form-errors";
 import {
   AddStreamDialog,
   EditStreamDialog,
@@ -93,6 +96,23 @@ export function StreamManagement({
   });
   const [deletingTransition, setDeletingTransition] =
     useState<StreamTransition | null>(null);
+  const [transitionErrors, setTransitionErrors] = useState<
+    Record<string, string>
+  >({});
+
+  // Eager uniqueness check on the (programId, fromStreamId) pair — advisory
+  // red highlight on the select; the submit path re-checks 409 races.
+  const transitionUniq = useUniquenessCheck({
+    keyParts: ["stream-transition"],
+    value: String(transitionForm.fromStreamId ?? ""),
+    enabled: isTransitionDialogOpen && transitionForm.fromStreamId !== "",
+    excludeId: editingTransition?.id,
+    scope: { programId },
+    fetcher: (value, opts) =>
+      checkStreamTransition(programId, Number(value), opts),
+    takenMessage:
+      "A transition for this stream already exists; update or delete it first.",
+  });
 
   // ── Data loading ─────────────────────────────────────────────────────────
 
@@ -206,6 +226,7 @@ export function StreamManagement({
         streams[1]?.id?.toString() ?? streams[0]?.id?.toString() ?? "",
       toLevelDisplayOrder: "1",
     });
+    setTransitionErrors({});
     setIsTransitionDialogOpen(true);
   };
 
@@ -216,6 +237,7 @@ export function StreamManagement({
       toStreamId: String(t.toStreamId),
       toLevelDisplayOrder: String(t.toLevelDisplayOrder),
     });
+    setTransitionErrors({});
     setIsTransitionDialogOpen(true);
   };
 
@@ -225,6 +247,13 @@ export function StreamManagement({
     const ord = Number(transitionForm.toLevelDisplayOrder);
     if (!fromId || !toId || !Number.isFinite(ord) || ord < 1) {
       toast.error("Select streams and a valid target level order");
+      return;
+    }
+    if (transitionUniq.isTaken) {
+      setTransitionErrors((prev) => ({
+        ...prev,
+        fromStreamId: transitionUniq.error!,
+      }));
       return;
     }
     try {
@@ -251,8 +280,12 @@ export function StreamManagement({
       setEditingTransition(null);
       await loadAll();
       notifyParent();
-    } catch {
-      toast.error("Failed to save transition (check target level exists)");
+    } catch (error) {
+      handleFormApiError(error, {
+        setErrors: setTransitionErrors,
+        fieldMap: { fromStreamId: "fromStreamId" },
+        fallback: "Failed to save transition (check target level exists)",
+      });
     }
   };
 
@@ -364,7 +397,16 @@ export function StreamManagement({
         onOpenChange={setIsTransitionDialogOpen}
         editingTransition={editingTransition}
         transitionForm={transitionForm}
-        onTransitionFormChange={setTransitionForm}
+        onTransitionFormChange={(data) => {
+          if (
+            transitionErrors.fromStreamId &&
+            data.fromStreamId !== transitionForm.fromStreamId
+          ) {
+            setTransitionErrors((prev) => ({ ...prev, fromStreamId: "" }));
+          }
+          setTransitionForm(data);
+        }}
+        fromStreamError={transitionErrors.fromStreamId || transitionUniq.error}
         streams={streams}
         onSubmit={saveTransition}
       />

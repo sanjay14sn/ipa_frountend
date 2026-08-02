@@ -11,6 +11,12 @@ import { useDirtyCloseGuard } from "@/hooks/use-dirty-close-guard";
 import { FranchiseType, BloodGroup } from "@/services/franchise.enums";
 import { UserPlus } from "lucide-react";
 import { handleFormApiError } from "@/lib/form-errors";
+import { replaceStepErrors } from "@/lib/form-utils";
+import { useUniquenessCheck } from "@/hooks/api/uniqueness.hooks";
+import {
+  checkFranchiseeAvailability,
+  checkFranchiseNameAvailability,
+} from "@/services/uniqueness.service";
 import {
   setupExistingFranchise,
   listAllFranchisees,
@@ -37,6 +43,33 @@ import {
 // Constants
 // ---------------------------------------------------------------------------
 
+
+/** Fields each wizard step owns, for scoped error replacement on validate. */
+const stepFieldsFor = (
+  step: number,
+  prev: Record<string, string>,
+): readonly string[] => {
+  switch (step) {
+    case 1:
+      return ["existingFranchiseeId", "name", "email", "phone", "city", "pincode"];
+    case 2:
+      return [
+        "franchiseName",
+        "franchiseAddress",
+        "franchiseState",
+        "franchiseCity",
+        "franchisePincode",
+        "selectedPrograms",
+      ];
+    case 3:
+      // Step 3 keys are per-program dynamic (`signedAt-<id>`, `paid-<id>`…).
+      return Object.keys(prev).filter((k) =>
+        /^(signedAt|paid|split|unpaidDueDate)-/.test(k),
+      );
+    default:
+      return [];
+  }
+};
 
 const INITIAL_FORM_DATA: FormData = {
   name: "",
@@ -97,6 +130,42 @@ export function CreateFranchiseDialog({
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
   const [programPayrolls, setProgramPayrolls] = useState<Record<number, ProgramPayroll>>({});
 
+  // Eager uniqueness checks — advisory red highlight while typing; the
+  // submit path re-checks and reports field-level 409s on races.
+  const emailUniq = useUniquenessCheck({
+    keyParts: ["franchisee", "email"],
+    value: formData.email,
+    enabled: franchiseeMode === "new" && /\S+@\S+\.\S+/.test(formData.email),
+    fetcher: (value, opts) => checkFranchiseeAvailability("email", value, opts),
+    takenMessage:
+      "This email address is already registered. Please use a different email.",
+  });
+  const phoneUniq = useUniquenessCheck({
+    keyParts: ["franchisee", "phone"],
+    value: formData.phone,
+    enabled: franchiseeMode === "new" && formData.phone.trim().length >= 10,
+    fetcher: (value, opts) => checkFranchiseeAvailability("phone", value, opts),
+    takenMessage:
+      "This phone number is already registered. Please use a different number.",
+  });
+  const franchiseNameUniq = useUniquenessCheck({
+    keyParts: ["franchise", "name"],
+    value: formData.franchiseName,
+    // anyStatus mirrors the backend wizard's stricter any-status pre-check.
+    fetcher: (value, opts) =>
+      checkFranchiseNameAvailability(value, { ...opts, anyStatus: true }),
+    takenMessage:
+      "A franchise with this name already exists. Please choose a different name.",
+  });
+
+  // Merged view for the step components: base errors + live "taken" results.
+  const displayErrors: Record<string, string> = { ...errors };
+  if (emailUniq.error && !errors.email) displayErrors.email = emailUniq.error;
+  if (phoneUniq.error && !errors.phone) displayErrors.phone = phoneUniq.error;
+  if (franchiseNameUniq.error && !errors.franchiseName) {
+    displayErrors.franchiseName = franchiseNameUniq.error;
+  }
+
   // Load franchisees for the picker the first time the user switches to "existing" mode.
   useEffect(() => {
     if (franchiseeMode !== "existing" || franchiseeOptions.length > 0) return;
@@ -138,6 +207,12 @@ export function CreateFranchiseDialog({
         else if (!/^\d{6}$/.test(formData.pincode.trim())) {
           newErrors.pincode = "Enter a valid 6-digit pincode";
         }
+        if (!newErrors.email && emailUniq.isTaken) {
+          newErrors.email = emailUniq.error!;
+        }
+        if (!newErrors.phone && phoneUniq.isTaken) {
+          newErrors.phone = phoneUniq.error!;
+        }
         break;
 
       case 2: // Franchise Details
@@ -158,6 +233,9 @@ export function CreateFranchiseDialog({
         }
         if (formData.selectedPrograms.length === 0) {
           newErrors.selectedPrograms = "At least one program must be selected";
+        }
+        if (!newErrors.franchiseName && franchiseNameUniq.isTaken) {
+          newErrors.franchiseName = franchiseNameUniq.error!;
         }
         break;
 
@@ -210,7 +288,11 @@ export function CreateFranchiseDialog({
         break;
     }
 
-    setErrors(newErrors);
+    // Replace only this step's errors so API/async errors reported on other
+    // steps survive navigation (the old full-replace wiped them on Next).
+    setErrors((prev) =>
+      replaceStepErrors(prev, stepFieldsFor(currentStep, prev), newErrors),
+    );
     return Object.keys(newErrors).length === 0;
   };
 
@@ -459,7 +541,7 @@ export function CreateFranchiseDialog({
           <StepBasicInfo
             formData={formData}
             setFormData={setFormData}
-            errors={errors}
+            errors={displayErrors}
             setErrors={setErrors}
             franchiseeMode={franchiseeMode}
             setFranchiseeMode={setFranchiseeMode}
@@ -474,7 +556,7 @@ export function CreateFranchiseDialog({
           <StepFranchiseDetails
             formData={formData}
             setFormData={setFormData}
-            errors={errors}
+            errors={displayErrors}
             setErrors={setErrors}
             programs={programs}
             onProgramToggle={handleProgramToggle}
@@ -487,7 +569,7 @@ export function CreateFranchiseDialog({
             programs={programs}
             programPayrolls={programPayrolls}
             onUpdatePayroll={updateProgramPayroll}
-            errors={errors}
+            errors={displayErrors}
           />
         );
       case 4:
@@ -495,7 +577,7 @@ export function CreateFranchiseDialog({
           <StepSecurity
             formData={formData}
             setFormData={setFormData}
-            errors={errors}
+            errors={displayErrors}
             setErrors={setErrors}
             franchiseeMode={franchiseeMode}
           />
