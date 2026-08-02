@@ -59,7 +59,12 @@ export function agreementTermsFormFromRecord(
   return {
     title: agreement.title ?? "",
     notes: agreement.notes ?? "",
-    tenure: agreement.tenure ?? 12,
+    // D9: no `?? 12` fallback. A DRAFT has tenure null, and showing 12 made the
+    // field look stored — the diff then compared 12 to 12, never sent it, and
+    // the agreement kept null while the admin believed they had kept 12 months.
+    // 0 renders as an empty field (see `value.tenure || ""`) and the pre-submit
+    // guard forces a real value.
+    tenure: agreement.tenure ?? 0,
     franchiseFee: agreement.franchiseFee ?? 0,
     monthlyFee: agreement.monthlyFee ?? 0,
     royalty: agreement.royalty ?? 0,
@@ -130,6 +135,38 @@ export function buildAgreementDetailsPatch(
   return patch;
 }
 
+/**
+ * Pre-submit guards mirroring the backend's own invariants, so the admin gets a
+ * specific message instead of a 400. That matters more than usual here: a
+ * rejected agreement patch is the failure half of D2, and every rejection the
+ * client can pre-empt is a partial save that never happens.
+ *
+ * Returns an error message, or null when the terms are submittable.
+ */
+export function validateAgreementTermsForm(
+  form: AgreementTermsFormState,
+  agreement: AgreementRecord | null,
+): string | null {
+  if (form.tenure < 1) {
+    return "Enter the agreement tenure in months";
+  }
+  // The backend keeps an APPROVED agreement payable (InvalidAgreementTermsError).
+  if (agreement?.status === "APPROVED" && form.franchiseFee <= 0) {
+    return "Franchise fee must be greater than zero while the agreement is approved";
+  }
+  if (form.installment) {
+    if (form.installmentMonths < 1) {
+      return "Enter a positive Installment Months value for the installment plan";
+    }
+    // A7: the plan builder splits (franchiseFee - downPayment) into monthly
+    // parts, so a down payment at or above the fee yields negative installments.
+    if (form.downPayment > 0 && form.downPayment >= form.franchiseFee) {
+      return "Down payment must be less than the franchise fee";
+    }
+  }
+  return null;
+}
+
 interface RupeeInputProps {
   id: string;
   value: number;
@@ -145,9 +182,14 @@ function RupeeInput({ id, value, onChange }: RupeeInputProps) {
         type="number"
         min={0}
         value={value || ""}
-        onChange={(event) =>
-          onChange(event.target.value === "" ? 0 : Number(event.target.value))
-        }
+        // D10: `min` is only an attribute — type="number" still yields "-5", and
+        // the old handler passed it straight through. Clamp at the source so no
+        // negative amount can reach the sparse patch. NaN (a stray "e", "-")
+        // collapses to 0 rather than poisoning the diff.
+        onChange={(event) => {
+          const raw = event.target.value;
+          onChange(raw === "" ? 0 : Math.max(0, Number(raw) || 0));
+        }}
         onFocus={selectInputValueOnFocus}
         className="h-10 pl-10"
         placeholder="0"

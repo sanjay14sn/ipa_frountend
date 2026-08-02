@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,6 +20,7 @@ import {
   agreementTermsFormFromRecord,
   buildAgreementDetailsPatch,
   editableAgreementsFrom,
+  validateAgreementTermsForm,
   type AgreementTermsFormState,
 } from "./edit-agreement-terms-section";
 
@@ -85,14 +86,29 @@ export function EditFranchiseDialog({
   const updateFranchise = useUpdateFranchiseAdmin();
   const updateAgreement = useUpdateAgreementDetailsAdmin();
 
+  // D1: seed once per open, not on data identity. On the franchise detail page
+  // this dialog stays mounted with a stable React Query `franchise` reference,
+  // so keying the effect on the data meant closing never reset anything —
+  // money fields the admin had typed and then cancelled survived the close and
+  // were diffed into the next save. Latching on `open` also stops a background
+  // refetch from overwriting edits that are in progress.
+  const seededForOpen = useRef(false);
+
   useEffect(() => {
+    if (!open) {
+      seededForOpen.current = false;
+      return;
+    }
+    if (seededForOpen.current) return;
     if (!franchise) {
+      // Data not in yet — reset but don't latch, so the real seed still runs.
       setForm(emptyForm);
       setSelectedAgreementId(null);
       setAgreementForm(null);
       setAgreementInitial(null);
       return;
     }
+    seededForOpen.current = true;
     setForm({
       name: franchise.name ?? "",
       type: franchise.type ?? "",
@@ -107,7 +123,7 @@ export function EditFranchiseDialog({
     const seeded = first ? agreementTermsFormFromRecord(first) : null;
     setAgreementForm(seeded);
     setAgreementInitial(seeded);
-  }, [franchise, agreements]);
+  }, [open, franchise, agreements]);
 
   const selectAgreement = (agreementId: number) => {
     const target = editableAgreementsFrom(agreements).find(
@@ -119,6 +135,13 @@ export function EditFranchiseDialog({
     setAgreementForm(seeded);
     setAgreementInitial(seeded);
   };
+
+  const selectedAgreement =
+    selectedAgreementId !== null
+      ? (editableAgreementsFrom(agreements).find(
+          (agreement) => agreement.id === selectedAgreementId,
+        ) ?? null)
+      : null;
 
   const submit = async () => {
     if (!franchise) return;
@@ -138,19 +161,31 @@ export function EditFranchiseDialog({
       agreementPatch !== null && Object.keys(agreementPatch).length > 0;
 
     if (agreementDirty && agreementForm) {
-      if (agreementForm.tenure < 1) {
-        toast.error("Agreement tenure must be at least 1 month");
-        return;
-      }
-      if (agreementForm.installment && agreementForm.installmentMonths < 1) {
-        toast.error(
-          "Enter a positive Installment Months value for the installment plan",
-        );
+      const termsError = validateAgreementTermsForm(
+        agreementForm,
+        selectedAgreement,
+      );
+      if (termsError) {
+        toast.error(termsError);
         return;
       }
     }
 
+    // D2: these are two non-atomic PATCHes, so ordering decides what a failure
+    // leaves behind. The agreement patch carries every hard rejection on this
+    // path (already-signed, non-payable fee, plan already settled), while the
+    // franchise patch almost never fails — so send the rejectable one first.
+    // A rejection now leaves nothing written instead of silently committing the
+    // franchise half.
+    let agreementSaved = false;
     try {
+      if (agreementDirty && agreementPatch && selectedAgreementId !== null) {
+        await updateAgreement.mutateAsync({
+          agreementId: selectedAgreementId,
+          payload: agreementPatch,
+        });
+        agreementSaved = true;
+      }
       await updateFranchise.mutateAsync({
         franchiseId: franchise.id,
         payload: {
@@ -162,18 +197,18 @@ export function EditFranchiseDialog({
           pincode: form.pincode.trim(),
         },
       });
-      if (agreementDirty && agreementPatch && selectedAgreementId !== null) {
-        await updateAgreement.mutateAsync({
-          agreementId: selectedAgreementId,
-          payload: agreementPatch,
-        });
-      }
       toast.success(
         agreementDirty ? "Franchise and agreement updated" : "Franchise updated",
       );
       onOpenChange(false);
     } catch {
-      // The mutation hooks already surface the error toast.
+      // The mutation hooks surface the failure itself; name the half that did
+      // land, so the admin isn't left guessing what a retry will re-apply.
+      if (agreementSaved) {
+        toast.warning(
+          "Agreement terms were saved, but the franchise details were not. Re-save to finish.",
+        );
+      }
     }
   };
 
