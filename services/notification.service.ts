@@ -93,7 +93,11 @@ export async function markAllAsRead(
   const response = await api.patch<NotificationResponse>(
     `${basePath}/read-all`,
   );
-  return (response.data.result as { count: number }).count;
+  // Backend returns 200 with a void body, so `result` may be absent entirely.
+  const r = response.data.result as number | { count?: number } | undefined;
+  if (r == null) return 0;
+  if (typeof r === "number") return r;
+  return r.count ?? 0;
 }
 
 async function deleteNotification(
