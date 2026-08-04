@@ -30,6 +30,9 @@ export interface PaymentData {
   };
   razorpayOrderId?: string;
   razorpayPaymentId?: string | null;
+  orderId?: number | null;
+  /** Human-readable order reference (ORD-...), from the joined order. */
+  orderReferenceId?: string | null;
   type?: string;
   currency?: string;
   subscription?: { id?: number; status?: string; plan?: string };
@@ -66,19 +69,62 @@ export interface FranchisePaymentSummary {
   totalAmount: number;
 }
 
-/** @alias Legacy grouped payments table */
-export type GroupedPaymentData = Record<string, PaymentData[]>;
-
 interface VerifyPaymentDto {
   paymentId: string;
   orderId: string;
   signature: string;
 }
 
+function mapAdminPaymentRow(row: Record<string, unknown>): PaymentData {
+  const franchise = (row.franchise ?? null) as
+    | { id?: string; name?: string }
+    | null;
+  const franchisee = (row.franchisee ?? null) as
+    | { id?: number; name?: string; email?: string; mail?: string; phone?: string }
+    | null;
+  const order = (row.order ?? null) as
+    | { id?: number; referenceId?: string }
+    | null;
+  return {
+    id: Number(row.id),
+    amount: Number(row.amount ?? 0),
+    status: String(row.status ?? PaymentStatus.PENDING),
+    franchiseName: franchise?.name ?? "Unassigned Franchise",
+    franchiseId: franchise?.id ?? (row.franchiseId as string | null | undefined) ?? null,
+    createdAt: (row.createdAt as string | undefined) ?? undefined,
+    agreementId: (row.agreementId as number | null | undefined) ?? null,
+    receivableItemId: (row.receivableItemId as number | null | undefined) ?? null,
+    acquirerData: (row.acquirerData as Record<string, unknown> | null | undefined) ?? null,
+    franchisee: franchisee
+      ? {
+          id: franchisee.id,
+          name: franchisee.name,
+          mail: franchisee.mail ?? franchisee.email,
+          phone: franchisee.phone,
+        }
+      : undefined,
+    razorpayOrderId: (row.razorpayOrderId as string | undefined) ?? undefined,
+    razorpayPaymentId: (row.razorpayPaymentId as string | null | undefined) ?? null,
+    orderId: order?.id ?? (row.orderId as number | null | undefined) ?? null,
+    orderReferenceId: order?.referenceId ?? null,
+    type: (row.type as string | undefined) ?? undefined,
+    currency: (row.currency as string | undefined) ?? "INR",
+    subscription: undefined,
+    method: (row.method as string | null | undefined) ?? null,
+    bank: (row.bank as string | null | undefined) ?? null,
+    wallet: (row.wallet as string | null | undefined) ?? null,
+    vpa: (row.vpa as string | null | undefined) ?? null,
+    email: (row.email as string | null | undefined) ?? null,
+    contact: (row.contact as string | null | undefined) ?? null,
+    fee: row.fee != null ? Number(row.fee) : null,
+    tax: row.tax != null ? Number(row.tax) : null,
+  } satisfies PaymentData;
+}
+
 export async function getPaginatedAdminPayments(
   params: Record<string, unknown>,
 ): Promise<{
-  data: GroupedPaymentData;
+  data: PaymentData[];
   meta: { total: number; totalPages: number };
 }> {
   const response = await api.get("/admin/billing/payment", {
@@ -88,61 +134,10 @@ export async function getPaginatedAdminPayments(
   });
   const result = unwrapData<unknown>(response);
   const normalized = normalizePaginatedResult<Record<string, unknown>>(result);
-  const rows = normalized.rows.map((row) => {
-    const franchise = (row.franchise ?? null) as
-      | { id?: string; name?: string }
-      | null;
-    const franchisee = (row.franchisee ?? null) as
-      | { id?: number; name?: string; email?: string; mail?: string; phone?: string }
-      | null;
-    return {
-      id: Number(row.id),
-      amount: Number(row.amount ?? 0),
-      status: String(row.status ?? PaymentStatus.PENDING),
-      franchiseName: franchise?.name ?? "Unassigned Franchise",
-      franchiseId: franchise?.id ?? (row.franchiseId as string | null | undefined) ?? null,
-      createdAt: (row.createdAt as string | undefined) ?? undefined,
-      agreementId: (row.agreementId as number | null | undefined) ?? null,
-      receivableItemId:
-        (row.receivableItemId as number | null | undefined) ?? null,
-      acquirerData:
-        (row.acquirerData as Record<string, unknown> | null | undefined) ?? null,
-      franchisee: franchisee
-        ? {
-            id: franchisee.id,
-            name: franchisee.name,
-            mail: franchisee.mail ?? franchisee.email,
-            phone: franchisee.phone,
-          }
-        : undefined,
-      razorpayOrderId:
-        (row.razorpayOrderId as string | undefined) ?? undefined,
-      razorpayPaymentId:
-        (row.razorpayPaymentId as string | null | undefined) ?? null,
-      type: (row.type as string | undefined) ?? undefined,
-      currency: (row.currency as string | undefined) ?? "INR",
-      subscription: undefined,
-      method: (row.method as string | null | undefined) ?? null,
-      bank: (row.bank as string | null | undefined) ?? null,
-      wallet: (row.wallet as string | null | undefined) ?? null,
-      vpa: (row.vpa as string | null | undefined) ?? null,
-      email: (row.email as string | null | undefined) ?? null,
-      contact: (row.contact as string | null | undefined) ?? null,
-      fee: row.fee != null ? Number(row.fee) : null,
-      tax: row.tax != null ? Number(row.tax) : null,
-    } satisfies PaymentData;
-  });
+  const rows = normalized.rows.map(mapAdminPaymentRow);
   const { total, limit } = normalized;
-
-  const grouped = rows.reduce<GroupedPaymentData>((acc, row) => {
-    const franchiseName = row.franchiseName?.trim() || "Unassigned Franchise";
-    if (!acc[franchiseName]) acc[franchiseName] = [];
-    acc[franchiseName].push(row);
-    return acc;
-  }, {});
-
   const totalPages = Math.max(1, Math.ceil(total / Math.max(1, limit || 20)));
-  return { data: grouped, meta: { total, totalPages } };
+  return { data: rows, meta: { total, totalPages } };
 }
 
 export async function getAdminFranchisePaymentSummaries(
@@ -189,46 +184,7 @@ export async function getAdminFranchisePayments(
   });
   const result = unwrapData<unknown>(response);
   const normalized = normalizePaginatedResult<Record<string, unknown>>(result);
-  const rows = normalized.rows.map((row) => {
-    const franchise = (row.franchise ?? null) as
-      | { id?: string; name?: string }
-      | null;
-    const franchisee = (row.franchisee ?? null) as
-      | { id?: number; name?: string; email?: string; mail?: string; phone?: string }
-      | null;
-    return {
-      id: Number(row.id),
-      amount: Number(row.amount ?? 0),
-      status: String(row.status ?? PaymentStatus.PENDING),
-      franchiseName: franchise?.name ?? "Unassigned Franchise",
-      franchiseId: franchise?.id ?? (row.franchiseId as string | null | undefined) ?? null,
-      createdAt: (row.createdAt as string | undefined) ?? undefined,
-      agreementId: (row.agreementId as number | null | undefined) ?? null,
-      receivableItemId: (row.receivableItemId as number | null | undefined) ?? null,
-      acquirerData: (row.acquirerData as Record<string, unknown> | null | undefined) ?? null,
-      franchisee: franchisee
-        ? {
-            id: franchisee.id,
-            name: franchisee.name,
-            mail: franchisee.mail ?? franchisee.email,
-            phone: franchisee.phone,
-          }
-        : undefined,
-      razorpayOrderId: (row.razorpayOrderId as string | undefined) ?? undefined,
-      razorpayPaymentId: (row.razorpayPaymentId as string | null | undefined) ?? null,
-      type: (row.type as string | undefined) ?? undefined,
-      currency: (row.currency as string | undefined) ?? "INR",
-      subscription: undefined,
-      method: (row.method as string | null | undefined) ?? null,
-      bank: (row.bank as string | null | undefined) ?? null,
-      wallet: (row.wallet as string | null | undefined) ?? null,
-      vpa: (row.vpa as string | null | undefined) ?? null,
-      email: (row.email as string | null | undefined) ?? null,
-      contact: (row.contact as string | null | undefined) ?? null,
-      fee: row.fee != null ? Number(row.fee) : null,
-      tax: row.tax != null ? Number(row.tax) : null,
-    } satisfies PaymentData;
-  });
+  const rows = normalized.rows.map(mapAdminPaymentRow);
   const { total, limit } = normalized;
   const totalPages = Math.max(1, Math.ceil(total / Math.max(1, limit || 10)));
   return { data: rows, meta: { total, totalPages } };

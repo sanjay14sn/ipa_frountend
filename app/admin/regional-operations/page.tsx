@@ -142,7 +142,7 @@ function RegionalOperationsInner() {
             <div>
               <h2 className="text-2xl font-semibold tracking-tight">Payments</h2>
               <p className="text-muted-foreground">
-                Billing summaries across all regions (not region-filtered).
+                All payments across regions (not region-filtered).
               </p>
             </div>
             {hasVisited("payments") && <PaymentsTable />}

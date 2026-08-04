@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { Eye } from "lucide-react";
+import { formatDate } from "@/lib/date-utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -11,181 +14,245 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DataTable, StatusBadge, MoneyCell, TableMainCell } from "@/components/shared";
-import type { DataTableColumn } from "@/components/shared";
-import type { FranchisePaymentSummary } from "@/services/payment.service";
-import { useAdminFranchisePaymentSummaries } from "@/hooks/api/payment.hooks";
-import { usePaginatedListState } from "@/hooks/use-paginated-list-state";
-import FranchisePaymentsDetails from "./FranchisePaymentsDetails";
+import type {
+  DataTableColumn,
+  DataTableFilter,
+  DataTableSortOption,
+} from "@/components/shared";
+import type { PaymentData } from "@/services/payment.service";
+import { useAdminPaymentsPaginated } from "@/hooks/api/payment.hooks";
+import { useListParams } from "@/hooks/use-list-params";
+import { methodBadgeClass, methodLabel, typeBadgeClass, typeLabel } from "@/lib/payment-details-display";
+import { PaymentDetailDialog } from "./PaymentDetailDialog";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 
-interface PaymentsTableProps {
-  franchiseId?: string;
-}
+const SORT_OPTIONS: DataTableSortOption[] = [
+  { value: "createdAt", label: "Date" },
+  { value: "amount", label: "Amount" },
+];
 
-export default function PaymentsTable({
-  franchiseId,
-}: PaymentsTableProps = {}) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
+const STATUS_OPTIONS = [
+  { value: "all", label: "All statuses" },
+  { value: "completed", label: "Completed" },
+  { value: "pending", label: "Pending" },
+  { value: "failed", label: "Failed" },
+  { value: "refunded", label: "Refunded" },
+];
+
+const TYPE_OPTIONS = [
+  { value: "all", label: "All types" },
+  { value: "franchise_fee", label: "Franchise Fee" },
+  { value: "renewal_fee", label: "Renewal Fee" },
+  { value: "ci_training_fee", label: "CI Training Fee" },
+  { value: "order_payment", label: "Order Payment" },
+];
+
+const METHOD_OPTIONS = [
+  { value: "all", label: "All methods" },
+  { value: "card", label: "Card" },
+  { value: "upi", label: "UPI" },
+  { value: "netbanking", label: "Netbanking" },
+  { value: "wallet", label: "Wallet" },
+];
+
+export default function PaymentsTable() {
+  const listParams = useListParams({
+    filterDefaults: { status: "all", type: "all", method: "all" },
+    defaultSortBy: "createdAt",
+    defaultSortOrder: "desc",
+    // Orders/shipping tables on the same hub URL own the unprefixed ?q=/?page=
+    prefix: "pay",
+  });
   const [limit, setLimit] = useState<number>(10);
-  const [dateFrom, setDateFrom] = useState<string>("");
-  const [dateTo, setDateTo] = useState<string>("");
+  const [selectedPayment, setSelectedPayment] = useState<PaymentData | null>(null);
+
+  const sortBy = listParams.sortBy ?? "createdAt";
+  const sortOrder: "ASC" | "DESC" = listParams.sortOrder === "asc" ? "ASC" : "DESC";
+  const { status, type, method } = listParams.filters;
 
   const queryParams = useMemo(
     () => ({
-      page: currentPage,
+      page: listParams.page,
       limit,
-      search: searchTerm || undefined,
-      dateFrom: dateFrom || undefined,
-      dateTo: dateTo || undefined,
-      ...(franchiseId?.trim() ? { franchiseId: franchiseId.trim() } : {}),
+      search: listParams.search || undefined,
+      status: status === "all" ? undefined : status,
+      type: type === "all" ? undefined : type,
+      method: method === "all" ? undefined : method,
+      sortBy,
+      sortOrder,
     }),
-    [currentPage, limit, searchTerm, dateFrom, dateTo, franchiseId],
+    [listParams.page, limit, listParams.search, status, type, method, sortBy, sortOrder],
   );
 
-  const summariesQuery = useAdminFranchisePaymentSummaries(queryParams);
-  const {
-    rows: summaries,
-    total,
-    totalPages,
-    loading,
-  } = usePaginatedListState(summariesQuery);
+  const paymentsQuery = useAdminPaymentsPaginated(queryParams);
+  const payments = paymentsQuery.data?.data ?? [];
+  const total = paymentsQuery.data?.meta.total ?? 0;
+  const totalPages = paymentsQuery.data?.meta.totalPages ?? 1;
+  const loading = paymentsQuery.isLoading && !paymentsQuery.data;
 
-  const columns: DataTableColumn<FranchisePaymentSummary>[] = [
+  // defaultValue seeds DataTable's uncontrolled selects from the URL on mount
+  const filters: DataTableFilter[] = [
+    { key: "status", label: "Status", options: STATUS_OPTIONS, defaultValue: status },
+    { key: "type", label: "Type", options: TYPE_OPTIONS, defaultValue: type },
+    { key: "method", label: "Method", options: METHOD_OPTIONS, defaultValue: method },
+  ];
+
+  const columns: DataTableColumn<PaymentData>[] = [
+    { key: "payment", header: "Payment" },
     {
       key: "franchise",
       header: "Franchise",
-      className: "w-[280px]",
+      render: (payment) => (
+        <div className="min-w-0">
+          <div className="truncate text-sm">{payment.franchiseName}</div>
+          {payment.franchisee?.name ? (
+            <div className="truncate text-xs text-muted-foreground">
+              {payment.franchisee.name}
+            </div>
+          ) : null}
+        </div>
+      ),
     },
     {
-      key: "totalPayments",
-      header: "Payments",
-      className: "text-center",
-      render: (s) => (
-        <Badge variant="secondary">
-          {s.totalPayments}
+      key: "order",
+      header: "Order",
+      render: (payment) =>
+        payment.orderReferenceId ? (
+          <span className="text-sm">{payment.orderReferenceId}</span>
+        ) : (
+          <span className="text-sm text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: "type",
+      header: "Type",
+      render: (payment) => (
+        <Badge variant="outline" className={typeBadgeClass(payment.type)}>
+          {typeLabel(payment.type)}
         </Badge>
       ),
     },
     {
-      key: "totalPending",
-      header: "Pending",
-      className: "text-center",
-      render: (s) => (
-        <StatusBadge tone="warning" label={String(s.totalPending)} />
-      ),
+      key: "method",
+      header: "Method",
+      render: (payment) =>
+        payment.method ? (
+          <Badge variant="outline" className={methodBadgeClass(payment.method)}>
+            {methodLabel(payment.method)}
+          </Badge>
+        ) : (
+          <span className="text-sm text-muted-foreground">-</span>
+        ),
     },
     {
-      key: "totalAmount",
-      header: "Collected",
+      key: "status",
+      header: "Status",
+      render: (payment) => <StatusBadge label={payment.status ?? "Unknown"} />,
+    },
+    {
+      key: "date",
+      header: "Date",
+      render: (payment) =>
+        payment.createdAt ? formatDate(payment.createdAt) : "N/A",
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      className: "text-right",
+      render: (payment) => <MoneyCell amount={payment.amount} className="font-medium" />,
+    },
+    {
+      key: "actions",
+      header: "Actions",
       className: "text-center",
-      render: (s) => (
-        <MoneyCell amount={s.totalAmount} className="font-medium" />
+      render: (payment) => (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          title="View payment"
+          aria-label="View payment"
+          onClick={() => setSelectedPayment(payment)}
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
       ),
     },
   ];
 
   return (
-    <div className="space-y-3">
-      {/* Date range filter row */}
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="payments-date-from" className="text-xs text-muted-foreground">
-            From
-          </Label>
-          <input
-            id="payments-date-from"
-            type="date"
-            value={dateFrom}
-            max={dateTo || undefined}
-            onChange={(e) => {
-              setDateFrom(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="payments-date-to" className="text-xs text-muted-foreground">
-            To
-          </Label>
-          <input
-            id="payments-date-to"
-            type="date"
-            value={dateTo}
-            min={dateFrom || undefined}
-            onChange={(e) => {
-              setDateTo(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          />
-        </div>
-        {(dateFrom || dateTo) && (
-          <button
-            type="button"
-            onClick={() => {
-              setDateFrom("");
-              setDateTo("");
-              setCurrentPage(1);
-            }}
-            className="h-9 self-end rounded-md px-3 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-          >
-            Clear dates
-          </button>
-        )}
-        <div className="ml-auto flex items-end gap-2">
-          <Label className="text-xs text-muted-foreground">Rows</Label>
-          <Select
-            value={String(limit)}
-            onValueChange={(v) => {
-              setLimit(Number(v));
-              setCurrentPage(1);
-            }}
-          >
-            <SelectTrigger className="h-9 w-20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZE_OPTIONS.map((n) => (
-                <SelectItem key={n} value={String(n)}>
-                  {n}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
+    <>
       <DataTable
-        data={summaries}
+        data={payments}
         loading={loading}
         columns={columns}
-        getRowId={(s) => s.franchiseId ?? s.franchiseName}
-        renderMainCell={(s) => <TableMainCell title={s.franchiseName} />}
-        renderExpandedContent={(s) => (
-          <FranchisePaymentsDetails
-            franchiseId={s.franchiseId ?? ""}
-            franchiseName={s.franchiseName}
+        getRowId={(payment) => String(payment.id)}
+        renderMainCell={(payment) => (
+          <TableMainCell
+            title={
+              payment.razorpayPaymentId ||
+              payment.razorpayOrderId ||
+              `#${payment.id}`
+            }
           />
         )}
-        searchPlaceholder="Search by franchise or franchisee..."
-        onSearchChange={(value) => {
-          setSearchTerm(value);
-          setCurrentPage(1);
+        initialSearchValue={listParams.search}
+        searchPlaceholder="Search by franchise, order, or payment ID..."
+        onSearchChange={listParams.setSearch}
+        filters={filters}
+        onFilterChange={(key, value) => {
+          const v = Array.isArray(value) ? value[0] : value;
+          listParams.setFilter(key as "status" | "type" | "method", v || "all");
         }}
+        sortOptions={SORT_OPTIONS}
+        defaultSortBy={sortBy}
+        defaultSortOrder={sortOrder}
+        onSortChange={(by, order) =>
+          listParams.setSort(by, order === "ASC" ? "asc" : "desc")
+        }
         pagination={{ total, totalPages }}
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
+        currentPage={listParams.page}
+        onPageChange={listParams.setPage}
         itemsPerPage={limit}
-        emptyMessage="No franchise payment data found"
-        resultsText={(_, total) =>
-          franchiseId?.trim()
-            ? `Showing payments summary for this franchise`
-            : `${total} franchise${total !== 1 ? "s" : ""} with payments`
+        toolbarActions={
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground">Rows</Label>
+            <Select
+              value={String(limit)}
+              onValueChange={(v) => {
+                setLimit(Number(v));
+                listParams.setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        }
+        error={paymentsQuery.error}
+        onRetry={() => void paymentsQuery.refetch()}
+        errorMessage="Couldn't load payments."
+        emptyMessage="No payments match the current filters"
+        resultsText={(count, tot) =>
+          `Showing ${count} of ${tot} payment${tot !== 1 ? "s" : ""}`
         }
       />
-    </div>
+
+      <PaymentDetailDialog
+        payment={selectedPayment}
+        franchiseName={selectedPayment?.franchiseName ?? ""}
+        onClose={() => setSelectedPayment(null)}
+      />
+    </>
   );
 }

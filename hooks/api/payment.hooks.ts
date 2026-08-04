@@ -22,11 +22,9 @@ export interface PaymentListParams {
   sortBy?: string;
   sortOrder?: "ASC" | "DESC";
   franchiseId?: string | null;
-  dateFrom?: string;
-  dateTo?: string;
 }
 
-function useAdminPaymentsPaginated(params: PaymentListParams) {
+export function useAdminPaymentsPaginated(params: PaymentListParams) {
   const p = params as Record<string, unknown>;
   return useQuery({
     queryKey: queryKeys.payments.adminPaginated(p),
