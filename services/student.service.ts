@@ -521,20 +521,6 @@ export async function getFranchiseeCertificates(
   return { result: list };
 }
 
-function getCertificatePdfUrl(certificatePdfPath: string): string {
-  if (!certificatePdfPath) return "";
-  const baseUrl = api.defaults.baseURL || getApiBaseUrl();
-  const normalized = certificatePdfPath.replace(/\\/g, "/").trim();
-  if (/^https?:\/\//i.test(normalized)) return normalized;
-  const uploadsIndex = normalized.toLowerCase().indexOf("/uploads/");
-  if (uploadsIndex >= 0) {
-    return `${baseUrl}${normalized.slice(uploadsIndex)}`;
-  }
-  if (normalized.startsWith("/uploads/")) return `${baseUrl}${normalized}`;
-  if (normalized.startsWith("uploads/")) return `${baseUrl}/${normalized}`;
-  return `${baseUrl}/uploads/${normalized.replace(/^\/+/, "")}`;
-}
-
 export function getAdminCertificatePdfUrl(certificateId: number): string {
   const baseUrl = api.defaults.baseURL || getApiBaseUrl();
   return `${baseUrl}/admin/certification/certificate/${certificateId}/pdf`;

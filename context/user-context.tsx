@@ -143,7 +143,11 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     [],
   );
 
-  const switchFranchise = async (franchiseId: string) => {
+  // Memoised like its siblings. Declared as a plain function it got a new
+  // identity on every render, which defeated the contextValue memo below and
+  // re-rendered every useUser() consumer — all three portal layouts, both
+  // switchers and dozens of pages — on any UserProvider render.
+  const switchFranchise = useCallback(async (franchiseId: string) => {
     if (!user) return;
     // Backend session switch — throws on genuine failure (5xx, network error).
     const data = await apiSwitchFranchise(franchiseId);
@@ -197,7 +201,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     // Query doesn't hand stale data back to the new scope on the first
     // render — replaces the per-key invalidation that used to live here.
     queryClient.clear();
-  };
+  }, [user, setUserWithStorage, queryClient]);
 
   /**
    * Program-scope switch — pure client-side state change (no backend session

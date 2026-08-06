@@ -5,6 +5,7 @@ export {
   RawTableSurface,
   TableLoadingState,
   TableEmptyState,
+  TableErrorState,
 } from "./table-shell";
 
 /** Global list/table: toolbar, filters, sort, pagination, expandable rows. */

@@ -1,7 +1,9 @@
 "use client";
 
 import { type ReactNode } from "react";
+import { TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeaderCard } from "@/components/shared/page-header-card";
 import { TableSkeleton } from "@/components/shared/skeletons";
@@ -136,6 +138,41 @@ export function TableLoadingState({
     <div className={className}>
       <span className="sr-only">{message}</span>
       <TableSkeleton />
+    </div>
+  );
+}
+
+/**
+ * Section-level fetch-failure state (R7): a failed fetch must never render as
+ * an empty state, which reads as "you have no data" and hides the outage.
+ *
+ * The DataTable has this branch built in; this is the standalone equivalent for
+ * sections that render their own views instead of a DataTable.
+ */
+export function TableErrorState({
+  className,
+  message = "Couldn't load data",
+  onRetry,
+}: {
+  className?: string;
+  message?: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div
+      data-testid="table-error-state"
+      className={cn(
+        "flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card py-10 text-center shadow-sm",
+        className,
+      )}
+    >
+      <TriangleAlert className="h-8 w-8 text-destructive" />
+      <p className="text-sm text-destructive-soft-foreground">{message}</p>
+      {onRetry ? (
+        <Button variant="outline" size="sm" className="mt-1" onClick={onRetry}>
+          Retry
+        </Button>
+      ) : null}
     </div>
   );
 }

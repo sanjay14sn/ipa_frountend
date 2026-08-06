@@ -979,15 +979,6 @@ export async function refreshOrderAllocationAdmin(
   return unwrapData<RefreshOrderAllocationResult>(response);
 }
 
-function getDcPdfUrl(dcPdfPath: string): string {
-  if (!dcPdfPath) return "";
-  const baseUrl = api.defaults.baseURL || getApiBaseUrl();
-  return `${baseUrl}/uploads/${dcPdfPath}`;
-}
-
-async function regenerateDcPdf(orderId: number): Promise<OrderData> {
-  return getOrderByIdAdmin(orderId);
-}
 
 async function verifyOrderAdmin(
   orderId: number,

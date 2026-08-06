@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  TableErrorState,
   TableLoadingState,
   TablePageShell,
 } from "@/components/shared";
@@ -19,11 +20,19 @@ export function FranchiseeCertificateRequestsSection() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSingleMode, setIsSingleMode] = useState(false);
 
-  const { eligibleStudents, isLoading: isLoadingEligible } =
-    useEligibleStudents();
+  const {
+    eligibleStudents,
+    isLoading: isLoadingEligible,
+    // Both hooks expose `error`; dropping it rendered a failed fetch as "no
+    // eligible students", which reads as a business answer rather than an
+    // outage (R7).
+    error: eligibleError,
+    revalidate: revalidateEligible,
+  } = useEligibleStudents();
   const {
     certificates,
     isLoading: isLoadingCertificates,
+    error: certificatesError,
     revalidate,
   } = useFranchiseeCertificates();
   const handleRequestCertificate = (student: EligibleStudent) => {
@@ -65,6 +74,11 @@ export function FranchiseeCertificateRequestsSection() {
         <TabsContent value="request" className="space-y-4">
           {isLoadingEligible ? (
             <TableLoadingState message="Loading eligible students..." />
+          ) : eligibleError ? (
+            <TableErrorState
+              message="Couldn't load eligible students"
+              onRetry={revalidateEligible}
+            />
           ) : (
             <EligibleStudentsGroupedView
               students={eligibleStudents}
@@ -87,6 +101,11 @@ export function FranchiseeCertificateRequestsSection() {
         <TabsContent value="history" className="space-y-4">
           {isLoadingCertificates ? (
             <TableLoadingState message="Loading certificate history..." />
+          ) : certificatesError ? (
+            <TableErrorState
+              message="Couldn't load certificate history"
+              onRetry={revalidate}
+            />
           ) : (
             <FranchiseeCertificatesGroupedView
               certificates={certificates}

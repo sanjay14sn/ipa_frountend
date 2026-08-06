@@ -433,19 +433,31 @@ export default function BulkRequestCertificateModal({
       const succeededCount = result.succeeded.length;
       const failedCount = result.failed.length;
 
+      // The API carries a per-student reason; marks are only one of them (a
+      // level with no certificate template configured is another). Show the
+      // distinct reasons rather than assuming.
+      const failureReasons = Array.from(
+        new Set(result.failed.map((f) => f.error).filter(Boolean))
+      );
+      const reasonSuffix = failureReasons.length
+        ? ` (${failureReasons.join("; ")})`
+        : "";
+
       if (succeededCount > 0 && failedCount > 0) {
         toast.success(
           `Certificate requests created for ${succeededCount} student(s). ${failedCount} student(s) were not eligible.`
         );
         toast.error(
-          `${failedCount} student(s) not eligible for certificate request (marks below pass mark).`
+          `${failedCount} student(s) could not be requested${reasonSuffix}.`
         );
       } else if (succeededCount > 0) {
         toast.success(
           `Certificate requests created for ${succeededCount} student(s) across ${groups.length} group(s)`
         );
       } else {
-        toast.error("No certificate requests were created. All selected students are not eligible.");
+        toast.error(
+          `No certificate requests were created${reasonSuffix || ". All selected students are not eligible"}.`
+        );
         return;
       }
       // reset
