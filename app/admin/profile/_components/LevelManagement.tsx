@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -43,6 +44,50 @@ interface LevelManagementProps {
   skipCatalogLoad?: boolean;
   catalogVersion?: number;
 }
+
+/**
+ * Add-level rules, declared once.
+ *
+ * Only the FIRST failure is surfaced (the original returned after each check),
+ * so the caller reads issues[0] and the order below is the order the user
+ * sees. The pass-mark rule is cross-field — it depends on totalMarks — which
+ * is exactly the kind of rule that rots when it lives inline in a handler.
+ */
+export const addLevelSchema = z
+  .object({
+    name: z.string(),
+    code: z.string(),
+    streamId: z.number(),
+    totalMarks: z.number().nullish(),
+    passMark: z.number().nullish(),
+    durationInMonths: z.number().nullish(),
+  })
+  .superRefine((v, ctx) => {
+    const add = (message: string) =>
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+
+    if (!v.name.trim() || !v.code.trim()) {
+      add("Name and code are required");
+      return;
+    }
+    if (!v.streamId) {
+      add("Select a stream (create one in Streams & transitions first)");
+      return;
+    }
+    const totalMarks = v.totalMarks ?? 0;
+    const passMark = v.passMark ?? 0;
+    if (totalMarks <= 0) {
+      add("Total marks must be greater than 0");
+      return;
+    }
+    if (passMark <= 0 || passMark > totalMarks) {
+      add("Pass mark must be between 1 and total marks");
+      return;
+    }
+    if (!v.durationInMonths || v.durationInMonths <= 0) {
+      add("Duration must be at least 1 month");
+    }
+  });
 
 export function LevelManagement({
   programId,
@@ -251,26 +296,9 @@ export function LevelManagement({
   // ── CRUD handlers ───────────────────────────────────────────────────────
 
   const handleAddLevel = async () => {
-    if (!formData.name.trim() || !formData.code.trim()) {
-      toast.error("Name and code are required");
-      return;
-    }
-    if (!formData.streamId || formData.streamId === 0) {
-      toast.error("Select a stream (create one in Streams & transitions first)");
-      return;
-    }
-    const totalMarks = formData.totalMarks ?? 0;
-    const passMark = formData.passMark ?? 0;
-    if (totalMarks <= 0) {
-      toast.error("Total marks must be greater than 0");
-      return;
-    }
-    if (passMark <= 0 || passMark > totalMarks) {
-      toast.error("Pass mark must be between 1 and total marks");
-      return;
-    }
-    if (!formData.durationInMonths || formData.durationInMonths <= 0) {
-      toast.error("Duration must be at least 1 month");
+    const validation = addLevelSchema.safeParse(formData);
+    if (!validation.success) {
+      toast.error(validation.error.issues[0].message);
       return;
     }
     if (addOrderUniq.isTaken) {
