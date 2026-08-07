@@ -67,6 +67,10 @@ export interface FranchisePaymentSummary {
   totalCompleted: number;
   totalPending: number;
   totalAmount: number;
+  /** `totalAmount` split by what was collected for. Buckets are disjoint. */
+  franchiseFeeAmount: number;
+  ciTrainingAmount: number;
+  orderAmount: number;
 }
 
 interface VerifyPaymentDto {
@@ -163,6 +167,9 @@ export async function getAdminFranchisePaymentSummaries(
     totalCompleted: Number(row.totalCompleted ?? 0),
     totalPending: Number(row.totalPending ?? 0),
     totalAmount: Number(row.totalAmount ?? 0),
+    franchiseFeeAmount: Number(row.franchiseFeeAmount ?? 0),
+    ciTrainingAmount: Number(row.ciTrainingAmount ?? 0),
+    orderAmount: Number(row.orderAmount ?? 0),
   } satisfies FranchisePaymentSummary));
   const { total, limit } = normalized;
   const totalPages = Math.max(1, Math.ceil(total / Math.max(1, limit || 20)));
