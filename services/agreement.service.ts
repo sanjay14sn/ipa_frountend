@@ -425,7 +425,7 @@ export async function getAgreementsAdmin(
     typeof opts === "string" ? { franchiseId: opts || undefined } : opts ?? {};
   const params: AgreementListParams = {
     page: raw.page ?? 1,
-    limit: raw.limit ?? 5000,
+    limit: raw.limit ?? 100,
     ...raw,
   };
   const response = await api.get("/admin/agreement", {
@@ -450,7 +450,7 @@ export async function getAgreementsMine(
     typeof opts === "string" ? { franchiseId: opts || undefined } : opts ?? {};
   const params: AgreementListParams = {
     page: raw.page ?? 1,
-    limit: raw.limit ?? 5000,
+    limit: raw.limit ?? 100,
     ...raw,
   };
   const response = await api.get("/agreement", {

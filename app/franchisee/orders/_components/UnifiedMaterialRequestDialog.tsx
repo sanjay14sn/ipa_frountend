@@ -83,7 +83,7 @@ export default function UnifiedMaterialRequestDialog({
   studentsLoading = false,
 }: UnifiedMaterialRequestDialogProps) {
   const { courseInstructors, isLoading: ciListLoading } = useCourseInstructors(
-    { page: 1, limit: 10_000 },
+    { page: 1, limit: 100 },
     { enabled: open },
   );
 

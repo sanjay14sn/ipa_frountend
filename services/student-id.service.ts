@@ -168,11 +168,11 @@ export async function requestStudentIds(studentIds: number[]): Promise<Response>
 }
 
 export async function getAllRequestedIdDetails(): Promise<RequestedIdDetailsByFranchise> {
-  return (await getPaginatedRequestedIdDetails({ page: 1, limit: 5000 })).data;
+  return (await getPaginatedRequestedIdDetails({ page: 1, limit: 100 })).data;
 }
 
 export async function getIssuedIdDetails(): Promise<RequestedIdDetailsByFranchise> {
-  return (await getPaginatedIssuedIds({ page: 1, limit: 5000 })).data;
+  return (await getPaginatedIssuedIds({ page: 1, limit: 100 })).data;
 }
 
 /** Count of open ID-card requests — `meta.total` of a limit-1 page. */

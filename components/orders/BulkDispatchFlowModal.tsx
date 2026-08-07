@@ -180,7 +180,7 @@ export function BulkDispatchFlowModal({
   const downloadedKeyRef = useRef<string | null>(null);
 
   const eligibleQuery = useApproveAndDispatchEligibleCertificates(
-    { franchiseId, page: 1, limit: 500 },
+    { franchiseId, page: 1, limit: 100 },
     open,
   );
   const previewMutation = usePreviewBulkDispatch();

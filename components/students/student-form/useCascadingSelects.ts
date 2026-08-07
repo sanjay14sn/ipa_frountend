@@ -219,7 +219,7 @@ export function useCascadingSelects(
         const paginated = await getAllCourseInstructors({
           franchiseId: franchiseId != null ? String(franchiseId) : undefined,
           programId,
-          limit: 200,
+          limit: 100,
         });
         if (!cancelled) setInstructors(paginated.result ?? []);
       } catch (error) {

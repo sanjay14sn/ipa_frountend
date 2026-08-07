@@ -116,7 +116,7 @@ function usePaginatedFranchiseeCourseInstructors(
     queryFn: async () =>
       (await getAllCourseInstructors({
         page: 1,
-        limit: 10_000,
+        limit: 100,
         search: params.search,
       })).result ?? [],
     placeholderData: (prev) => prev,

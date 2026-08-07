@@ -305,7 +305,7 @@ export async function getAllAdminCertificateRequests(
 ): Promise<AdminCertificateRequestsResponse> {
   const merged = {
     page: params?.page ?? 1,
-    limit: params?.limit ?? 5000,
+    limit: params?.limit ?? 100,
     search: params?.search,
     sortBy: params?.sortBy,
     sortOrder: params?.sortOrder,
