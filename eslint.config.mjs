@@ -25,9 +25,14 @@ export default defineConfig([
   // Flat-config caveat: later objects REPLACE same-rule entries for matching
   // files, so each rule id appears once here with its full option set.
   {
+    // `features/**` is listed here rather than in a new config object on
+    // purpose: in flat config a later object REPLACES a same-rule entry for
+    // matching files, so a separate features block would silently drop every
+    // no-restricted-imports path below for exactly the files being moved.
     files: [
       "app/**/*.{ts,tsx}",
       "components/**/*.{ts,tsx}",
+      "features/**/*.{ts,tsx}",
       "hooks/**/*.{ts,tsx}",
       "lib/**/*.{ts,tsx}",
     ],

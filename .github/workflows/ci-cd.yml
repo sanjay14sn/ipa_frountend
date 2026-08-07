@@ -27,6 +27,13 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Catches the UI-consistency rules eslint cannot express (raw <table>,
+      # palette residue, hex-in-className). The allowlist has been in the repo
+      # since the UI overhaul but nothing ever ran it, so it could only ever
+      # have grown.
+      - name: UI consistency
+        run: npm run check:ui
+
       - name: Type check
         run: npx tsc --noEmit
 

@@ -8,10 +8,19 @@ const config: Config = {
   /* Light-only UI: do not set `dark` on <html>; `dark:` variants never apply. */
   darkMode: "class",
   presets: [preset as Config],
+  // Every directory that can contain a class STRING must be listed, not just
+  // the ones containing JSX: `lib/payment-details-display.ts` returns Tailwind
+  // classes for the payment/agreement/order badges, and while `lib` was missing
+  // here those classes were purged from the production bundle — the badges
+  // rendered unstyled and nothing failed. Adding a directory later is the same
+  // trap, which is why `features` is listed before it exists.
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./features/**/*.{js,ts,jsx,tsx,mdx}",
+    "./hooks/**/*.{js,ts,jsx,tsx,mdx}",
+    "./lib/**/*.{js,ts,jsx,tsx,mdx}",
     "*.{js,ts,jsx,tsx,mdx}",
   ],
   plugins: [

@@ -14,15 +14,31 @@
  *  4. hex-in-className [#xxxxxx] and brand-* scale classes (color hygiene)
  */
 import { execSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 const ALLOWLIST_PATH = new URL("./ui-consistency-allowlist.json", import.meta.url);
 const update = process.argv.includes("--update");
 
+/**
+ * Roots are filtered to those that exist, because grep exits 2 on a missing
+ * directory and the catch below cannot tell that apart from "no matches" — so
+ * naming a directory before it exists would silently return zero hits for
+ * EVERY check and report a clean tree. `features` is listed here so the
+ * vertical-slice migration is covered the moment the directory appears.
+ */
+const ROOTS = ["app", "components", "features", "hooks", "lib"].filter((d) =>
+  existsSync(new URL(`../${d}`, import.meta.url)),
+);
+
+if (ROOTS.length === 0) {
+  console.error("check:ui — no source roots found; refusing to report a pass.");
+  process.exit(1);
+}
+
 function grep(pattern, { extra = "" } = {}) {
   try {
     const out = execSync(
-      `grep -rn --include='*.tsx' --include='*.ts' -E ${JSON.stringify(pattern)} app components hooks lib ${extra}`,
+      `grep -rn --include='*.tsx' --include='*.ts' -E ${JSON.stringify(pattern)} ${ROOTS.join(" ")} ${extra}`,
       { encoding: "utf8" },
     );
     return out.trim().split("\n").filter(Boolean);
