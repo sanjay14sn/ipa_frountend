@@ -128,9 +128,16 @@ export default function PaymentsTable() {
       key: "type",
       header: "Type",
       render: (payment) => (
-        <Badge variant="outline" className={typeBadgeClass(payment.type)}>
-          {typeLabel(payment.type)}
-        </Badge>
+        <div className="min-w-0">
+          <Badge variant="outline" className={typeBadgeClass(payment.type)}>
+            {typeLabel(payment.type)}
+          </Badge>
+          {payment.courseInstructor?.name ? (
+            <div className="mt-1 truncate text-xs text-muted-foreground">
+              {payment.courseInstructor.name}
+            </div>
+          ) : null}
+        </div>
       ),
     },
     {

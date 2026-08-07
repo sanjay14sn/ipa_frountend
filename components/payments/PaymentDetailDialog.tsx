@@ -46,6 +46,7 @@ export function PaymentDetailDialog({
             payment={body}
             franchiseName={franchiseName}
             franchiseeName={payment.franchisee?.name}
+            courseInstructorName={payment.courseInstructor?.name}
             paymentType={payment.type}
           />
         </div>

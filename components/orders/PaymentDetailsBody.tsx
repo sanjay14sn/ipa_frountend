@@ -37,6 +37,8 @@ interface PaymentDetailsBodyProps {
   /** When provided, renders a Franchise / Franchisee / Type row above amounts. */
   franchiseName?: string;
   franchiseeName?: string;
+  /** The CI a training-fee payment was for. */
+  courseInstructorName?: string;
   paymentType?: string;
   /**
    * Fallback for `payment.goodsGstAmount` on legacy rows created before the
@@ -50,6 +52,7 @@ export function PaymentDetailsBody({
   payment,
   franchiseName,
   franchiseeName,
+  courseInstructorName,
   paymentType,
   fallbackGoodsGstAmount = null,
 }: PaymentDetailsBodyProps) {
@@ -61,7 +64,12 @@ export function PaymentDetailsBody({
       : fallbackGoodsGstAmount != null
         ? Number(fallbackGoodsGstAmount)
         : null;
-  const hasContext = !!(franchiseName || franchiseeName || paymentType);
+  const hasContext = !!(
+    franchiseName ||
+    franchiseeName ||
+    courseInstructorName ||
+    paymentType
+  );
 
   return (
     <div className="space-y-5">
@@ -91,6 +99,12 @@ export function PaymentDetailsBody({
           ) : null}
           {franchiseeName ? (
             <LabeledValue label="Franchisee" value={franchiseeName} />
+          ) : null}
+          {courseInstructorName ? (
+            <LabeledValue
+              label="Course Instructor"
+              value={courseInstructorName}
+            />
           ) : null}
           {paymentType ? (
             <LabeledValue

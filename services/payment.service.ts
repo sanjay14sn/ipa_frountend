@@ -28,6 +28,11 @@ export interface PaymentData {
     mail?: string;
     phone?: string;
   };
+  /** Set on CI-payer rows (e.g. CI training fee) — the CI the fee was for. */
+  courseInstructor?: {
+    id?: number;
+    name?: string;
+  };
   razorpayOrderId?: string;
   razorpayPaymentId?: string | null;
   orderId?: number | null;
@@ -89,6 +94,9 @@ function mapAdminPaymentRow(row: Record<string, unknown>): PaymentData {
   const order = (row.order ?? null) as
     | { id?: number; referenceId?: string }
     | null;
+  const courseInstructor = (row.courseInstructor ?? null) as
+    | { id?: number; name?: string }
+    | null;
   return {
     id: Number(row.id),
     amount: Number(row.amount ?? 0),
@@ -106,6 +114,9 @@ function mapAdminPaymentRow(row: Record<string, unknown>): PaymentData {
           mail: franchisee.mail ?? franchisee.email,
           phone: franchisee.phone,
         }
+      : undefined,
+    courseInstructor: courseInstructor
+      ? { id: courseInstructor.id, name: courseInstructor.name }
       : undefined,
     razorpayOrderId: (row.razorpayOrderId as string | undefined) ?? undefined,
     razorpayPaymentId: (row.razorpayPaymentId as string | null | undefined) ?? null,
