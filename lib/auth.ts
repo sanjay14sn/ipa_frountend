@@ -43,8 +43,6 @@ export interface User {
     education: string;
     occupation: string;
     reference: string;
-    /** True while the account still uses an issued temporary password. */
-    mustChangePassword?: boolean;
     /** Raw stored signature path on the franchisee row (relative to /uploads). */
     franchiseeSignature?: string | null;
     franchise?: {

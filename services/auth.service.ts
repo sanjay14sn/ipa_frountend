@@ -17,8 +17,6 @@ interface FranchiseeProfileResponse {
     education: string;
     occupation: string;
     reference: string;
-    /** True while the account still uses an issued temporary password. */
-    mustChangePassword?: boolean;
     createdAt: string;
     updatedAt: string;
     franchise: {
@@ -115,16 +113,6 @@ export async function franchiseeLogout(): Promise<void> {
 export async function getFranchiseeProfile(): Promise<FranchiseeProfileResponse> {
   const response = await api.get("/franchisee/auth/me");
   return response.data;
-}
-
-export async function changeFranchiseePassword(
-  currentPassword: string,
-  newPassword: string,
-): Promise<void> {
-  await api.post("/franchisee/auth/change-password", {
-    currentPassword,
-    newPassword,
-  });
 }
 
 export async function switchFranchise(franchiseId: string): Promise<{
