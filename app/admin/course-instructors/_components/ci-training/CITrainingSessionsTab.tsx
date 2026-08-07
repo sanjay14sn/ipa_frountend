@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +44,49 @@ import {
 
 const EMPTY_ASSIGNMENTS: CITrainingAssignment[] = [];
 
+/**
+ * Marks come off a number input, so they arrive as strings and may be blank.
+ *
+ * Theory was previously guarded only by the browser (`required`, `min=0`) and
+ * then passed through Number() — which yields NaN for a blank or non-numeric
+ * value, and NaN is what would have been sent if native validation was ever
+ * bypassed. Practical stays optional: blank means "not recorded".
+ */
+const marksNumber = (label: string) =>
+  z
+    .string()
+    .trim()
+    .refine((v) => v !== "" && Number.isFinite(Number(v)), {
+      message: `${label} must be a number`,
+    })
+    .refine((v) => Number(v) >= 0, {
+      message: `${label} cannot be negative`,
+    });
+
+export const marksSchema = z.object({
+  theoryMarks: marksNumber("Theory marks"),
+  practicalMarks: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || Number.isFinite(Number(v)), {
+      message: "Practical marks must be a number",
+    })
+    .refine((v) => v === "" || Number(v) >= 0, {
+      message: "Practical marks cannot be negative",
+    }),
+});
+type MarksFormValues = z.infer<typeof marksSchema>;
+
+const createSessionSchema = z.object({
+  programId: z.string().min(1, "Select a program."),
+  trainingLevelId: z.string().min(1, "Select a training level."),
+  region: z.string(),
+  sessionDate: z.string(),
+  notes: z.string(),
+});
+type CreateSessionFormValues = z.infer<typeof createSessionSchema>;
+
+
 // ---------------------------------------------------------------------------
 // CreateSessionModal
 // ---------------------------------------------------------------------------
@@ -56,11 +102,22 @@ function CreateSessionModal({
 }) {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [region, setRegion] = useState("");
-  const [programId, setProgramId] = useState("");
-  const [trainingLevelId, setTrainingLevelId] = useState("");
-  const [sessionDate, setSessionDate] = useState("");
-  const [notes, setNotes] = useState("");
+  const form = useForm<CreateSessionFormValues>({
+    resolver: zodResolver(createSessionSchema),
+    defaultValues: {
+      programId: "",
+      trainingLevelId: "",
+      region: "",
+      sessionDate: "",
+      notes: "",
+    },
+  });
+  const programId = useWatch({ control: form.control, name: "programId" });
+  const trainingLevelId = useWatch({
+    control: form.control,
+    name: "trainingLevelId",
+  });
+  const region = useWatch({ control: form.control, name: "region" });
   const [loadingPrograms, setLoadingPrograms] = useState(false);
   const [loadingLevels, setLoadingLevels] = useState(false);
   const [trainingLevels, setTrainingLevels] = useState<TrainingLevel[]>([]);
@@ -103,40 +160,36 @@ function CreateSessionModal({
   const programs =
     queryClient.getQueryData<Program[]>(["ci-training-programs"]) ?? [];
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!programId) {
-      toast.error("Select a program.");
-      return;
-    }
-    if (!trainingLevelId) {
-      toast.error("Select a training level.");
-      return;
-    }
-    setLoading(true);
-    try {
-      await createSession({
-        programId: Number(programId),
-        region: region.trim().toLowerCase(),
-        trainingLevelId: Number(trainingLevelId),
-        sessionDate,
-        notes: notes || undefined,
-      });
-      toast.success("Session created");
-      onSuccess();
-      onClose();
-      setRegion("");
-      setProgramId("");
-      setTrainingLevelId("");
-      setSessionDate("");
-      setNotes("");
-      setTrainingLevels([]);
-    } catch {
-      toast.error("Failed to create session.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleSubmit = form.handleSubmit(
+    async (values) => {
+      setLoading(true);
+      try {
+        await createSession({
+          programId: Number(values.programId),
+          region: values.region.trim().toLowerCase(),
+          trainingLevelId: Number(values.trainingLevelId),
+          sessionDate: values.sessionDate,
+          notes: values.notes || undefined,
+        });
+        toast.success("Session created");
+        onSuccess();
+        onClose();
+        form.reset();
+        setTrainingLevels([]);
+      } catch {
+        toast.error("Failed to create session.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    // The two required selects had no inline error slot, so their messages
+    // stay toasts — same text, same order as before.
+    (fieldErrors) => {
+      const message =
+        fieldErrors.programId?.message ?? fieldErrors.trainingLevelId?.message;
+      if (message) toast.error(message);
+    },
+  );
 
   return (
     <FormDialog
@@ -160,8 +213,8 @@ function CreateSessionModal({
               <Select
                 value={programId}
                 onValueChange={(value) => {
-                  setProgramId(value);
-                  setTrainingLevelId("");
+                  form.setValue("programId", value, { shouldValidate: true });
+                  form.setValue("trainingLevelId", "");
                   setTrainingLevels([]);
                 }}
                 onOpenChange={(open) => {
@@ -186,7 +239,10 @@ function CreateSessionModal({
             </div>
             <div className="space-y-2">
               <Label htmlFor="region">Region</Label>
-              <Select value={region} onValueChange={setRegion}>
+              <Select
+                value={region}
+                onValueChange={(v) => form.setValue("region", v)}
+              >
                 <SelectTrigger id="region">
                   <SelectValue placeholder="Select state" />
                 </SelectTrigger>
@@ -203,7 +259,9 @@ function CreateSessionModal({
               <Label htmlFor="levelId">Training Level</Label>
               <Select
                 value={trainingLevelId}
-                onValueChange={setTrainingLevelId}
+                onValueChange={(v) =>
+                  form.setValue("trainingLevelId", v, { shouldValidate: true })
+                }
                 onOpenChange={(open) => {
                   if (open && programId) {
                     void loadLevelsForProgram(Number(programId));
@@ -233,19 +291,24 @@ function CreateSessionModal({
           </div>
           <div className="space-y-2">
             <Label htmlFor="sessionDate">Session Date</Label>
-            <DateInput
-              id="sessionDate"
-              value={sessionDate}
-              onChange={(v) => setSessionDate(v)}
-              required
+            <Controller
+              control={form.control}
+              name="sessionDate"
+              render={({ field }) => (
+                <DateInput
+                  id="sessionDate"
+                  value={field.value}
+                  onChange={field.onChange}
+                  required
+                />
+              )}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (optional)</Label>
             <Input
               id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              {...form.register("notes")}
               placeholder="Session notes"
             />
           </div>
@@ -268,30 +331,32 @@ function RecordMarksModal({
   onSuccess: () => void;
 }) {
   const [loading, setLoading] = useState(false);
-  const [theoryMarks, setTheoryMarks] = useState("");
-  const [practicalMarks, setPracticalMarks] = useState("");
+  const form = useForm<MarksFormValues>({
+    resolver: zodResolver(marksSchema),
+    defaultValues: { theoryMarks: "", practicalMarks: "" },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = form.handleSubmit(async (values) => {
     if (!assignment) return;
     setLoading(true);
     try {
       await completeAssignment(assignment.id, {
-        theoryMarks: Number(theoryMarks),
+        theoryMarks: Number(values.theoryMarks),
         practicalMarks:
-          practicalMarks.trim() === "" ? undefined : Number(practicalMarks),
+          values.practicalMarks.trim() === ""
+            ? undefined
+            : Number(values.practicalMarks),
       });
       toast.success("Marks recorded");
       onSuccess();
       onClose();
-      setTheoryMarks("");
-      setPracticalMarks("");
+      form.reset();
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, "Failed to record marks."));
     } finally {
       setLoading(false);
     }
-  };
+  });
 
   return (
     <FormDialog
@@ -315,10 +380,13 @@ function RecordMarksModal({
               id="theoryMarks"
               type="number"
               min="0"
-              value={theoryMarks}
-              onChange={(e) => setTheoryMarks(e.target.value)}
-              required
+              {...form.register("theoryMarks")}
             />
+            {form.formState.errors.theoryMarks && (
+              <p className="text-sm text-destructive">
+                {form.formState.errors.theoryMarks.message}
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="practicalMarks">Practical Marks</Label>
@@ -326,9 +394,13 @@ function RecordMarksModal({
               id="practicalMarks"
               type="number"
               min="0"
-              value={practicalMarks}
-              onChange={(e) => setPracticalMarks(e.target.value)}
+              {...form.register("practicalMarks")}
             />
+            {form.formState.errors.practicalMarks && (
+              <p className="text-sm text-destructive">
+                {form.formState.errors.practicalMarks.message}
+              </p>
+            )}
           </div>
       </div>
     </FormDialog>
