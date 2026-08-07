@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   AppDialog,
   AppDialogHeader,
@@ -33,7 +36,6 @@ import {
 } from "@/hooks/api/student.hooks";
 import { getLevelsByProgram } from "@/services/level.service";
 import { sendClientLog } from "@/lib/client-telemetry";
-import { makeFieldChangeHandler } from "@/lib/form-utils";
 import { handleFormApiError } from "@/lib/form-errors";
 import { useDirtyCloseGuard } from "@/hooks/use-dirty-close-guard";
 import {
@@ -58,6 +60,66 @@ interface EditStudentModalProps {
   onSuccess: () => void;
   mode?: "franchise" | "admin";
 }
+
+/**
+ * The tab validators this replaces lived in a 60-line switch keyed by tab id.
+ * The rules are unchanged, field for field; what changes is that they are
+ * declared once here instead of being re-run imperatively on every submit.
+ */
+const TEN_DIGITS = /^\d{10}$/;
+const schema = z.object({
+  studentName: z.string().trim().min(1, "Student name is required"),
+  dob: z.string().min(1, "Date of birth is required"),
+  dateOfJoining: z.string(),
+  sex: z.string().min(1, "Gender is required"),
+  standard: z.string().min(1, "Standard is required"),
+
+  programId: z.number().min(1, "Program selection is required"),
+  streamId: z.number().min(1, "Stream selection is required"),
+  levelId: z.number().min(1, "Level is required"),
+  status: z.string(),
+
+  fatherName: z.string().trim().min(1, "Father's name is required"),
+  fatherQualification: z.string(),
+  fatherOccupation: z.string(),
+  fatherContactNo: z
+    .string()
+    .trim()
+    .min(1, "Father's contact number is required")
+    .regex(TEN_DIGITS, "Please enter a valid 10-digit contact number"),
+  motherName: z.string().trim().min(1, "Mother's name is required"),
+  motherQualification: z.string(),
+  motherOccupation: z.string(),
+  motherContactNo: z
+    .string()
+    .trim()
+    .min(1, "Mother's contact number is required")
+    .regex(TEN_DIGITS, "Please enter a valid 10-digit contact number"),
+
+  residentialAddress: z.string().trim().min(1, "Residential address is required"),
+  mailId: z
+    .string()
+    .trim()
+    .min(1, "Email is required")
+    .regex(/\S+@\S+\.\S+/, "Please enter a valid email address"),
+});
+
+/**
+ * Which tab each field lives on. The submit saves ALL tabs (diff-based), so a
+ * validation failure has to jump to the first offending tab — previously the
+ * tab switch did double duty as this map.
+ */
+const FIELD_TAB: Record<string, number> = {
+  studentName: 1, dob: 1, sex: 1, standard: 1, dateOfJoining: 1,
+  fatherName: 2, motherName: 2, fatherContactNo: 2, motherContactNo: 2,
+  fatherQualification: 2, fatherOccupation: 2,
+  motherQualification: 2, motherOccupation: 2,
+  residentialAddress: 3, mailId: 3,
+  programId: 4, streamId: 4, levelId: 4, status: 4,
+};
+
+/** Fields the shared field components hand back as strings but that are numeric. */
+const NUMERIC_FIELDS = ["programId", "streamId", "levelId"] as const;
 
 interface StudentFormData {
   // Basic Information
@@ -120,8 +182,39 @@ export default function EditStudentModal({
   const [activeTab, setActiveTab] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [formData, setFormData] = useState<StudentFormData>(EMPTY_FORM_DATA);
+  const form = useForm<StudentFormData>({
+    resolver: zodResolver(schema),
+    defaultValues: EMPTY_FORM_DATA,
+  });
+  /**
+   * The shared field components (PersonalInfoFields et al.) are also used by
+   * AddStudentModal, which is not on react-hook-form. Rather than change their
+   * contract — and drag an unrelated modal into this commit — they keep taking
+   * `formData` / `errors` / `onFieldChange`, adapted here.
+   */
+  const formData = useWatch({ control: form.control }) as StudentFormData;
+  const errors = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(form.formState.errors).map(([field, err]) => [
+          field,
+          (err as { message?: string })?.message ?? "",
+        ]),
+      ),
+    [form.formState.errors],
+  );
+  const setErrors = (
+    updater: (prev: Record<string, string>) => Record<string, string>,
+  ) => {
+    for (const [field, message] of Object.entries(updater({}))) {
+      if (message) {
+        form.setError(field as keyof StudentFormData, {
+          type: "server",
+          message,
+        });
+      }
+    }
+  };
   // Snapshot of the form as seeded from the student prop — the submit payload
   // is the DIFF of formData against this, and it anchors the dirty-close guard.
   const [seedData, setSeedData] = useState<StudentFormData>(EMPTY_FORM_DATA);
@@ -134,7 +227,7 @@ export default function EditStudentModal({
       autoSelectFirstLevel: false,
       levelId: formData.levelId,
       onLevelIdChange: (id) =>
-        setFormData((prev) => ({ ...prev, levelId: id })),
+        form.setValue("levelId", id, { shouldValidate: true }),
     });
 
   // Load student data when modal opens
@@ -189,7 +282,7 @@ export default function EditStudentModal({
             residentialAddress: student.residentialAddress || "",
             mailId: student.mail || "",
           };
-          setFormData(loaded);
+          form.reset(loaded);
           setSeedData(loaded);
         } catch (error) {
           sendClientLog({
@@ -223,115 +316,35 @@ export default function EditStudentModal({
             residentialAddress: student.residentialAddress || "",
             mailId: student.mail || "",
           };
-          setFormData(loaded);
+          form.reset(loaded);
           setSeedData(loaded);
         }
         setActiveTab(1);
         setSubmitted(false);
-        setErrors({});
       };
       loadStudentData();
     }
+    // `form` is a stable react-hook-form instance; re-running on it would
+    // re-seed the modal mid-edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, student]);
 
-  const handleInputChange = makeFieldChangeHandler(setFormData, errors, setErrors, [
-    "programId",
-    "streamId",
-    "levelId",
-  ]);
-
-  const collectTabErrors = (tab: number): Record<string, string> => {
-    const newErrors: Record<string, string> = {};
-
-    switch (tab) {
-      case 1:
-        if (!formData.studentName.trim()) {
-          newErrors.studentName = "Student name is required";
-        }
-        if (!formData.dob) {
-          newErrors.dob = "Date of birth is required";
-        }
-        if (!formData.sex) {
-          newErrors.sex = "Gender is required";
-        }
-        if (!formData.standard) {
-          newErrors.standard = "Standard is required";
-        }
-        break;
-
-      case 2:
-        if (!formData.fatherName.trim()) {
-          newErrors.fatherName = "Father's name is required";
-        }
-        if (!formData.motherName.trim()) {
-          newErrors.motherName = "Mother's name is required";
-        }
-        if (!formData.fatherContactNo.trim()) {
-          newErrors.fatherContactNo = "Father's contact number is required";
-        } else if (!/^\d{10}$/.test(formData.fatherContactNo)) {
-          newErrors.fatherContactNo =
-            "Please enter a valid 10-digit contact number";
-        }
-        if (!formData.motherContactNo.trim()) {
-          newErrors.motherContactNo = "Mother's contact number is required";
-        } else if (!/^\d{10}$/.test(formData.motherContactNo)) {
-          newErrors.motherContactNo =
-            "Please enter a valid 10-digit contact number";
-        }
-        break;
-
-      case 3:
-        if (!formData.residentialAddress.trim()) {
-          newErrors.residentialAddress = "Residential address is required";
-        }
-        if (!formData.mailId.trim()) {
-          newErrors.mailId = "Email is required";
-        } else if (!/\S+@\S+\.\S+/.test(formData.mailId)) {
-          newErrors.mailId = "Please enter a valid email address";
-        }
-        break;
-
-      case 4:
-        if (!formData.programId || formData.programId === 0) {
-          newErrors.programId = "Program selection is required";
-        }
-        if (!formData.streamId || formData.streamId === 0) {
-          newErrors.streamId = "Stream selection is required";
-        }
-        if (!formData.levelId || formData.levelId === 0) {
-          newErrors.levelId = "Level is required";
-        }
-        break;
-    }
-
-    return newErrors;
+  const handleInputChange = (
+    field: string,
+    value: string | boolean | number,
+  ) => {
+    const next =
+      NUMERIC_FIELDS.includes(field as (typeof NUMERIC_FIELDS)[number]) &&
+      typeof value === "string"
+        ? parseInt(value, 10) || 0
+        : value;
+    form.setValue(field as keyof StudentFormData, next as never, {
+      shouldValidate: true,
+    });
   };
 
-  // The submit saves ALL tabs (diff-based), so validation covers every tab —
-  // on failure jump to the first offending tab and show its errors.
-  const validateAllTabs = (): boolean => {
-    const allErrors: Record<string, string> = {};
-    let firstBadTab: number | null = null;
-    for (const tab of TABS) {
-      const tabErrors = collectTabErrors(tab.id);
-      if (Object.keys(tabErrors).length > 0 && firstBadTab === null) {
-        firstBadTab = tab.id;
-      }
-      Object.assign(allErrors, tabErrors);
-    }
-    setErrors(allErrors);
-    if (firstBadTab !== null) {
-      setActiveTab(firstBadTab);
-      return false;
-    }
-    return true;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateAllTabs()) return;
-
+  const handleSubmit = form.handleSubmit(
+    async (formData) => {
     if (!student) {
       toast.error("Student not found. Please try again.");
       return;
@@ -426,18 +439,34 @@ export default function EditStudentModal({
     } finally {
       setIsLoading(false);
     }
-  };
+    },
+    /**
+     * The submit saves every tab, so a failure anywhere must surface where the
+     * user can see it — jump to the first offending tab, exactly as the old
+     * validateAllTabs() did.
+     */
+    (fieldErrors) => {
+      const tabs = Object.keys(fieldErrors)
+        .map((field) => FIELD_TAB[field])
+        .filter((tab): tab is number => tab != null);
+      if (tabs.length > 0) setActiveTab(Math.min(...tabs));
+    },
+  );
 
   const handleClose = () => {
     setActiveTab(1);
     setSubmitted(false);
-    setErrors({});
+    form.clearErrors();
     setIsLoading(false);
     onOpenChange(false);
   };
 
-  const isDirty =
-    !submitted && JSON.stringify(formData) !== JSON.stringify(seedData);
+  // react-hook-form tracks this against defaultValues, which `form.reset(loaded)`
+  // sets to the seeded student — the same baseline the old JSON.stringify
+  // comparison used, minus its dependence on key order (getValues does not
+  // promise the key order of the object passed to reset, which would have made
+  // the guard fire on every close).
+  const isDirty = !submitted && form.formState.isDirty;
 
   const { requestClose, confirmOpen, setConfirmOpen, confirmAndDiscard } =
     useDirtyCloseGuard({ isDirty, onDiscard: handleClose });
@@ -482,11 +511,12 @@ export default function EditStudentModal({
               onFieldChange={handleInputChange}
               onProgramChange={(value) => {
                 handleInputChange("programId", value);
-                setFormData((prev) => ({ ...prev, streamId: 0, levelId: 0 }));
+                form.setValue("streamId", 0);
+                form.setValue("levelId", 0);
               }}
               onStreamChange={(value) => {
                 handleInputChange("streamId", value);
-                setFormData((prev) => ({ ...prev, levelId: 0 }));
+                form.setValue("levelId", 0);
               }}
               programs={programs}
               streams={streams}
