@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
@@ -127,6 +128,81 @@ function readStoredDraft(): {
   }
 }
 
+/**
+ * Per-step validation rules, declared once.
+ *
+ * These stay zod-only rather than moving to react-hook-form like the other
+ * application modals, for two reasons specific to this form:
+ *  - the payload is NESTED (franchisee / franchise) and is persisted verbatim
+ *    to sessionStorage as an in-progress draft, so the raw object is the unit
+ *    of work, not a flat field map;
+ *  - the error keys deliberately do not match field paths — `franchiseeCity`
+ *    carries either the state or the city message, `centerCity` likewise —
+ *    which is what lets one slot show one message at a time.
+ * Moving to RHF would mean renaming every key and rewriting the draft
+ * persistence for no behavioural gain.
+ *
+ * `else if` chains are preserved exactly: within a group only the first
+ * failure is reported, in the original priority order.
+ */
+const issue = (
+  ctx: z.RefinementCtx,
+  path: string,
+  message: string,
+): void => {
+  ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+};
+
+export const STEP_SCHEMAS: Record<
+  number,
+  z.ZodType<FranchiseeApplication> | undefined
+> = {
+  1: z.custom<FranchiseeApplication>().superRefine((v, ctx) => {
+    if (!v.franchisee.name.trim()) issue(ctx, "name", "Name is required");
+    if (!v.franchisee.dob) issue(ctx, "dob", "Date of birth is required");
+  }),
+  2: z.custom<FranchiseeApplication>().superRefine((v, ctx) => {
+    if (!v.franchisee.state?.trim()) {
+      issue(ctx, "franchiseeCity", "State is required");
+    } else if (!v.franchisee.city.trim()) {
+      issue(ctx, "franchiseeCity", "City is required");
+    } else if (!v.franchisee.pincode?.trim()) {
+      issue(ctx, "franchiseePincode", "Pincode is required");
+    }
+  }),
+  3: z.custom<FranchiseeApplication>().superRefine((v, ctx) => {
+    if (!v.franchisee.phone.trim()) {
+      issue(ctx, "phone", "Phone number is required");
+    }
+    if (!v.franchisee.mail.trim()) {
+      issue(ctx, "mail", "Email is required");
+    } else if (!/\S+@\S+\.\S+/.test(v.franchisee.mail)) {
+      issue(ctx, "mail", "Please enter a valid email address");
+    }
+  }),
+  4: z.custom<FranchiseeApplication>().superRefine((v, ctx) => {
+    if (!v.franchise.name.trim()) {
+      issue(ctx, "franchiseName", "Franchise name is required");
+    }
+    if (!v.franchise.type.trim()) {
+      issue(ctx, "franchiseType", "Franchise type is required");
+    }
+    if (!v.franchise.programIds || v.franchise.programIds.length !== 1) {
+      issue(ctx, "programIds", "Select exactly one program");
+    }
+    if (!v.franchise.address.trim()) {
+      issue(ctx, "address", "Centre address is required");
+    }
+    if (!v.franchise.state?.trim()) {
+      issue(ctx, "centerCity", "State is required");
+    } else if (!v.franchise.city.trim()) {
+      issue(ctx, "centerCity", "City is required");
+    } else if (!v.franchise.pincode?.trim()) {
+      issue(ctx, "centerPincode", "Pincode is required");
+    }
+  }),
+};
+
 interface FranchiseApplicationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -177,67 +253,24 @@ export function FranchiseApplicationModal({
   }, [formData, currentStep, open, submitted, isDirty]);
 
   const validateCurrentStep = () => {
-    const newErrors: Record<string, string> = {};
-
-    switch (currentStep) {
-      case 1:
-        if (!formData.franchisee.name.trim()) {
-          newErrors.name = "Name is required";
-        }
-        if (!formData.franchisee.dob) {
-          newErrors.dob = "Date of birth is required";
-        }
-        break;
-
-      case 2:
-        if (!formData.franchisee.state?.trim()) {
-          newErrors.franchiseeCity = "State is required";
-        } else if (!formData.franchisee.city.trim()) {
-          newErrors.franchiseeCity = "City is required";
-        } else if (!formData.franchisee.pincode?.trim()) {
-          newErrors.franchiseePincode = "Pincode is required";
-        }
-        break;
-
-      case 3:
-        if (!formData.franchisee.phone.trim()) {
-          newErrors.phone = "Phone number is required";
-        }
-        if (!formData.franchisee.mail.trim()) {
-          newErrors.mail = "Email is required";
-        } else if (!/\S+@\S+\.\S+/.test(formData.franchisee.mail)) {
-          newErrors.mail = "Please enter a valid email address";
-        }
-        break;
-
-      case 4:
-        if (!formData.franchise.name.trim()) {
-          newErrors.franchiseName = "Franchise name is required";
-        }
-        if (!formData.franchise.type.trim()) {
-          newErrors.franchiseType = "Franchise type is required";
-        }
-        if (
-          !formData.franchise.programIds ||
-          formData.franchise.programIds.length !== 1
-        ) {
-          newErrors.programIds = "Select exactly one program";
-        }
-        if (!formData.franchise.address.trim()) {
-          newErrors.address = "Centre address is required";
-        }
-        if (!formData.franchise.state?.trim()) {
-          newErrors.centerCity = "State is required";
-        } else if (!formData.franchise.city.trim()) {
-          newErrors.centerCity = "City is required";
-        } else if (!formData.franchise.pincode?.trim()) {
-          newErrors.centerPincode = "Pincode is required";
-        }
-        break;
+    const schema = STEP_SCHEMAS[currentStep];
+    if (!schema) {
+      setErrors({});
+      return true;
     }
-
+    const result = schema.safeParse(formData);
+    if (result.success) {
+      setErrors({});
+      return true;
+    }
+    // First issue per key wins, matching the `else if` priority above.
+    const newErrors: Record<string, string> = {};
+    for (const problem of result.error.issues) {
+      const key = String(problem.path[0]);
+      if (!(key in newErrors)) newErrors[key] = problem.message;
+    }
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return false;
   };
 
   const handleNext = () => {
