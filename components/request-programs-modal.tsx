@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +31,12 @@ import {
   FormDialog,
   SuccessDialog,
 } from "@/components/shared/dialog";
+
+const schema = z.object({
+  franchiseId: z.string().min(1, "Select a franchise"),
+  programId: z.string().min(1, "Select a program"),
+});
+type FormValues = z.infer<typeof schema>;
 
 interface RequestProgramsModalProps {
   open: boolean;
@@ -88,8 +97,15 @@ export function RequestProgramsModal({
 }: RequestProgramsModalProps) {
   const { user } = useUser();
 
-  const [franchiseId, setFranchiseId] = useState("");
-  const [programId, setProgramId] = useState<string>("");
+  const form = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { franchiseId: "", programId: "" },
+    mode: "onChange",
+  });
+  // useWatch, not form.watch(): watch() returns a fresh function each render,
+  // which opts the whole component out of React Compiler memoization.
+  const franchiseId = useWatch({ control: form.control, name: "franchiseId" });
+
   const [isLoading, setIsLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -161,28 +177,21 @@ export function RequestProgramsModal({
     [programs, blockedProgramIds],
   );
 
+  // Changing franchise invalidates the program choice — the blocked set is
+  // franchise-specific.
   useEffect(() => {
-    setProgramId("");
-  }, [franchiseId]);
+    form.setValue("programId", "", { shouldValidate: false });
+  }, [franchiseId, form]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = form.handleSubmit(async (values) => {
     if (loadError) {
       toast.error("Couldn't load programs — retry above");
       return;
     }
-    if (!franchiseId) {
-      toast.error("Select a franchise");
-      return;
-    }
-    if (!programId) {
-      toast.error("Select a program");
-      return;
-    }
 
     const dto: RequestProgramDto = {
-      franchiseId,
-      programIds: [Number(programId)],
+      franchiseId: values.franchiseId,
+      programIds: [Number(values.programId)],
     };
 
     setIsLoading(true);
@@ -195,12 +204,11 @@ export function RequestProgramsModal({
     } finally {
       setIsLoading(false);
     }
-  };
+  });
 
   const handleClose = () => {
     if (submitted) {
-      setFranchiseId("");
-      setProgramId("");
+      form.reset();
       setSubmitted(false);
     }
     onOpenChange(false);
@@ -230,10 +238,7 @@ export function RequestProgramsModal({
     );
   }
 
-  const canSubmit =
-    Boolean(franchiseId) &&
-    Boolean(programId) &&
-    availablePrograms.length > 0;
+  const canSubmit = form.formState.isValid && availablePrograms.length > 0;
 
   return (
     <FormDialog
@@ -272,22 +277,28 @@ export function RequestProgramsModal({
             : undefined
         }
       >
-        <Select
-          value={franchiseId}
-          onValueChange={setFranchiseId}
-          disabled={franchiseOptions.length === 0}
-        >
-          <SelectTrigger id="franchise" className="rounded-lg">
-            <SelectValue placeholder="Select franchise" />
-          </SelectTrigger>
-          <SelectContent>
-            {franchiseOptions.map((f) => (
-              <SelectItem key={f.id} value={f.id}>
-                {f.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Controller
+          control={form.control}
+          name="franchiseId"
+          render={({ field }) => (
+            <Select
+              value={field.value}
+              onValueChange={field.onChange}
+              disabled={franchiseOptions.length === 0}
+            >
+              <SelectTrigger id="franchise" className="rounded-lg">
+                <SelectValue placeholder="Select franchise" />
+              </SelectTrigger>
+              <SelectContent>
+                {franchiseOptions.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
       </DialogFormField>
 
       <DialogFormField
@@ -316,18 +327,24 @@ export function RequestProgramsModal({
             franchise.
           </p>
         ) : (
-          <Select value={programId} onValueChange={setProgramId}>
-            <SelectTrigger id="program" className="rounded-lg">
-              <SelectValue placeholder="Select program" />
-            </SelectTrigger>
-            <SelectContent>
-              {availablePrograms.map((p) => (
-                <SelectItem key={p.id} value={String(p.id)}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Controller
+            control={form.control}
+            name="programId"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="program" className="rounded-lg">
+                  <SelectValue placeholder="Select program" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availablePrograms.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
         )}
       </DialogFormField>
     </FormDialog>
