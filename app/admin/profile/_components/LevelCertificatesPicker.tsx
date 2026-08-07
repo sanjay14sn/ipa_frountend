@@ -13,6 +13,7 @@ import {
   bulkAssignCertificateTemplatesToLevel,
   unassignCertificateTemplateFromLevel,
 } from "@/services/certificate-template-level.service";
+import { CertificateCheckboxLinkPanel } from "@/components/certification/CertificateCheckboxLinkPanel";
 import { EntityLinkPicker } from "@/components/shared/dialog/entity-link-picker";
 
 export function LevelCertificatesPicker({
@@ -24,9 +25,26 @@ export function LevelCertificatesPicker({
   programId: number;
   disabled?: boolean;
 }) {
+  const assign = async (templateIds: number[]) => {
+    const { assigned: count, failed } =
+      await bulkAssignCertificateTemplatesToLevel(
+        levelId,
+        templateIds.map((certificateTemplateId) => ({
+          certificateTemplateId,
+        })),
+      );
+    await invalidateLevelCertificates(levelId);
+    if (failed.length > 0) {
+      toast.error(`${count} linked, ${failed.length} failed`);
+    } else {
+      toast.success(
+        `${templateIds.length} template${templateIds.length !== 1 ? "s" : ""} linked to level`,
+      );
+    }
+  };
+
   return (
     <EntityLinkPicker
-      panel="certificate"
       triggerLabel="Manage certificates"
       triggerIcon={Award}
       dialogTitle="Level Certificates"
@@ -40,23 +58,6 @@ export function LevelCertificatesPicker({
         // eslint-disable-next-line react-hooks/rules-of-hooks -- invoked during EntityLinkPicker render (hook-injection API, CMP-09)
         useCertificateTemplatesForLevel(levelId, enabled)
       }
-      assign={async (templateIds) => {
-        const { assigned: count, failed } =
-          await bulkAssignCertificateTemplatesToLevel(
-            levelId,
-            templateIds.map((certificateTemplateId) => ({
-              certificateTemplateId,
-            })),
-          );
-        await invalidateLevelCertificates(levelId);
-        if (failed.length > 0) {
-          toast.error(`${count} linked, ${failed.length} failed`);
-        } else {
-          toast.success(
-            `${templateIds.length} template${templateIds.length !== 1 ? "s" : ""} linked to level`,
-          );
-        }
-      }}
       unassign={async (templateId) => {
         try {
           await unassignCertificateTemplateFromLevel(levelId, templateId);
@@ -65,6 +66,28 @@ export function LevelCertificatesPicker({
           toast.error(getUserFriendlyMessage(e));
         }
       }}
+      renderPanel={({
+        catalog,
+        isCatalogLoading,
+        assigned,
+        assignedIds,
+        onUnlink,
+        refetchAssigned,
+      }) => (
+        <CertificateCheckboxLinkPanel
+          linkedItems={assigned as never}
+          linkedTemplateIds={assignedIds}
+          catalogItems={catalog as never}
+          isCatalogLoading={isCatalogLoading}
+          onUnlink={(item) => {
+            if (typeof item.id === "number") onUnlink(item.id);
+          }}
+          onSave={async (ids) => {
+            await assign(ids);
+            await refetchAssigned();
+          }}
+        />
+      )}
     />
   );
 }

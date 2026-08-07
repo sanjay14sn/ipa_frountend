@@ -8,7 +8,7 @@
     "app/admin/course-instructors/_components/approvals/CourseInstructorDetails.tsx:                    className=\"h-7 shrink-0 gap-1 border-amber-300 bg-amber-50 px-2.5 text-xs font-medium text-amber-700 hover:border-amber-400 hover:bg-amber-100 hover:text-amber-800\"",
     "app/admin/course-instructors/_components/ci-agreements-section.tsx:            CI {row.ciSigned ? <Check className=\"inline h-3 w-3 text-emerald-600\" /> : <X className=\"inline h-3 w-3 text-red-400\" />}",
     "app/admin/course-instructors/_components/ci-agreements-section.tsx:            Fr {row.franchiseeSigned ? <Check className=\"inline h-3 w-3 text-emerald-600\" /> : <X className=\"inline h-3 w-3 text-red-400\" />}",
-    "app/admin/course-instructors/ci-training/CITrainingSessionsTab.tsx:                      <p className=\"mt-2 text-xs text-emerald-700\">",
+    "app/admin/course-instructors/_components/ci-training/CITrainingSessionsTab.tsx:                      <p className=\"mt-2 text-xs text-emerald-700\">",
     "app/admin/franchise/_components/ProgramRequestsTable.tsx:                className=\"h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50\"",
     "app/admin/franchise/_components/ProgramRequestsTable.tsx:                className=\"h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50\"",
     "app/admin/franchise/_components/create-franchise/step-basic-info.tsx:                  errors.existingFranchiseeId ? \"border-red-500\" : \"\"",

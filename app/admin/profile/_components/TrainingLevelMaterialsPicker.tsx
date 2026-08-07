@@ -12,6 +12,7 @@ import {
   bulkAssignInventoryToTrainingLevel,
   unassignInventoryFromTrainingLevel,
 } from "@/services/inventory.service";
+import { InventoryCheckboxLinkPanel } from "@/components/inventory/InventoryCheckboxLinkPanel";
 import { EntityLinkPicker } from "@/components/shared/dialog/entity-link-picker";
 
 export function TrainingLevelMaterialsPicker({
@@ -21,9 +22,23 @@ export function TrainingLevelMaterialsPicker({
   trainingLevelId: number;
   disabled?: boolean;
 }) {
+  const assign = async (
+    items: Array<{ inventoryId: number; quantity: number }>,
+  ) => {
+    const { assigned: count, failed } =
+      await bulkAssignInventoryToTrainingLevel(trainingLevelId, items);
+    await invalidateTrainingLevelItems(trainingLevelId);
+    if (failed.length > 0) {
+      toast.error(`${count} linked, ${failed.length} failed`);
+    } else {
+      toast.success(
+        `${items.length} item${items.length !== 1 ? "s" : ""} linked to training level`,
+      );
+    }
+  };
+
   return (
     <EntityLinkPicker
-      panel="inventory"
       counter="badge"
       triggerLabel="Manage materials"
       dialogTitle="Level Materials"
@@ -37,18 +52,6 @@ export function TrainingLevelMaterialsPicker({
         // eslint-disable-next-line react-hooks/rules-of-hooks -- invoked during EntityLinkPicker render (hook-injection API, CMP-09)
         useInventoryItemsForTrainingLevel(trainingLevelId, enabled)
       }
-      assign={async (items) => {
-        const { assigned: count, failed } =
-          await bulkAssignInventoryToTrainingLevel(trainingLevelId, items);
-        await invalidateTrainingLevelItems(trainingLevelId);
-        if (failed.length > 0) {
-          toast.error(`${count} linked, ${failed.length} failed`);
-        } else {
-          toast.success(
-            `${items.length} item${items.length !== 1 ? "s" : ""} linked to training level`,
-          );
-        }
-      }}
       unassign={async (inventoryId) => {
         try {
           await unassignInventoryFromTrainingLevel(
@@ -60,6 +63,28 @@ export function TrainingLevelMaterialsPicker({
           toast.error(getUserFriendlyMessage(e));
         }
       }}
+      renderPanel={({
+        catalog,
+        isCatalogLoading,
+        assigned,
+        assignedIds,
+        onUnlink,
+        refetchAssigned,
+      }) => (
+        <InventoryCheckboxLinkPanel
+          linkedItems={assigned as never}
+          linkedInventoryIds={assignedIds}
+          catalogItems={catalog as never}
+          isCatalogLoading={isCatalogLoading}
+          onUnlink={(item) => {
+            if (typeof item.id === "number") onUnlink(item.id);
+          }}
+          onSave={async (items) => {
+            await assign(items);
+            await refetchAssigned();
+          }}
+        />
+      )}
     />
   );
 }

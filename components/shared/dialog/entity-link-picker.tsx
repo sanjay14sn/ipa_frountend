@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Package as PackageIcon, Plus } from "lucide-react";
 
@@ -11,8 +12,6 @@ import {
   AppDialogBody,
   AppDialogHeader,
 } from "@/components/shared/dialog";
-import { InventoryCheckboxLinkPanel } from "@/components/inventory/InventoryCheckboxLinkPanel";
-import { CertificateCheckboxLinkPanel } from "@/components/certification/CertificateCheckboxLinkPanel";
 
 /**
  * One generic "link entities to a level" dialog (CMP-09) — the three former
@@ -45,24 +44,38 @@ export interface EntityLinkPickerCommonProps<
   /** Linked-count display next to the trigger. @default "text" */
   counter?: "text" | "badge";
   counterNoun?: string;
+  /**
+   * The dialog body. A SLOT, not a `panel: "inventory" | "certificate"` switch:
+   * this component lives in the shared kit, and switching on a domain name
+   * meant importing the inventory and certification panels here — the kit
+   * reaching down into the domain code that is supposed to consume it. The
+   * caller already knows which panel it wants and already owns the assign call,
+   * so it passes both.
+   */
+  renderPanel: (
+    args: EntityLinkPickerPanelArgs<TCatalog, TAssigned>,
+  ) => ReactNode;
+}
+
+export interface EntityLinkPickerPanelArgs<
+  TCatalog extends { id?: number | null },
+  TAssigned extends { id?: number | null },
+> {
+  catalog: TCatalog[];
+  isCatalogLoading: boolean;
+  assigned: TAssigned[];
+  /** Ids currently linked — for the panel's checked state. */
+  assignedIds: Set<number>;
+  /** Unlink by id, then refresh the assigned list. */
+  onUnlink: (id: number) => void;
+  /** Call after a successful assign so the linked list refreshes. */
+  refetchAssigned: () => Promise<unknown>;
 }
 
 export type EntityLinkPickerProps<
   TCatalog extends { id?: number | null },
   TAssigned extends { id?: number | null },
-> = EntityLinkPickerCommonProps<TCatalog, TAssigned> &
-    (
-      | {
-          panel: "inventory";
-          assign: (
-            items: Array<{ inventoryId: number; quantity: number }>,
-          ) => Promise<unknown>;
-        }
-      | {
-          panel: "certificate";
-          assign: (ids: number[]) => Promise<unknown>;
-        }
-    );
+> = EntityLinkPickerCommonProps<TCatalog, TAssigned>;
 
 export function EntityLinkPicker<
   TCatalog extends { id?: number | null },
@@ -79,6 +92,7 @@ export function EntityLinkPicker<
     unassign,
     counter = "text",
     counterNoun = "item",
+    renderPanel,
   } = props;
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -107,36 +121,14 @@ export function EntityLinkPicker<
     await refetchAssigned();
   };
 
-  const panelBody =
-    props.panel === "inventory" ? (
-      <InventoryCheckboxLinkPanel
-        linkedItems={assigned as never}
-        linkedInventoryIds={assignedIds}
-        catalogItems={catalog as never}
-        isCatalogLoading={isLoadingCatalog}
-        onUnlink={(item) => {
-          if (typeof item.id === "number") void handleRemove(item.id);
-        }}
-        onSave={async (items) => {
-          await props.assign(items);
-          await refetchAssigned();
-        }}
-      />
-    ) : (
-      <CertificateCheckboxLinkPanel
-        linkedItems={assigned as never}
-        linkedTemplateIds={assignedIds}
-        catalogItems={catalog as never}
-        isCatalogLoading={isLoadingCatalog}
-        onUnlink={(item) => {
-          if (typeof item.id === "number") void handleRemove(item.id);
-        }}
-        onSave={async (ids) => {
-          await props.assign(ids);
-          await refetchAssigned();
-        }}
-      />
-    );
+  const panelBody = renderPanel({
+    catalog,
+    isCatalogLoading: isLoadingCatalog,
+    assigned,
+    assignedIds,
+    onUnlink: (id) => void handleRemove(id),
+    refetchAssigned,
+  });
 
   return (
     <div
