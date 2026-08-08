@@ -174,12 +174,6 @@ export interface CILevelGraduation {
   };
 }
 
-export interface RequestAdditionalTrainingRequest {
-  trainingLevelId?: number;
-  notes?: string;
-  scope?: "half" | "all";
-}
-
 export interface AvailableNextTrainingLevelCounts {
   totalNextLevels: number;
   halfOfAvailableCount: number;
@@ -365,10 +359,12 @@ export async function deleteCourseInstructor(_id: number): Promise<void> {
 export async function getAllAdminCourseInstructors(
   params?: CourseInstructorListParams,
 ): Promise<CourseInstructorsResponse> {
+  // agreementId is a franchisee-list-only filter; the admin route rejects it
+  const { agreementId: _agreementId, ...rest } = params ?? {};
   const merged: CourseInstructorListParams = {
     page: params?.page ?? 1,
     limit: params?.limit ?? 100,
-    ...params,
+    ...rest,
   };
   const { rows } = await getPaginated("/admin/course-instructor", merged);
   const list = rows.map((r) => mapRow(r as Record<string, unknown>));
@@ -379,10 +375,12 @@ export async function getAllAdminCourseInstructors(
 export async function getPaginatedAdminCourseInstructors(
   params?: CourseInstructorListParams,
 ): Promise<PaginatedCourseInstructorsResponse> {
+  // agreementId is a franchisee-list-only filter; the admin route rejects it
+  const { agreementId: _agreementId, ...rest } = params ?? {};
   const merged: CourseInstructorListParams = {
     page: params?.page ?? 1,
     limit: params?.limit ?? 20,
-    ...params,
+    ...rest,
   };
   const { rows: raw, total, page, limit } = await getPaginated(
     "/admin/course-instructor",
@@ -445,26 +443,6 @@ export async function getAllCITraining(): Promise<CITrainingByFranchise> {
   return grouped;
 }
 
-async function getNextCompletableTrainingId(
-  instructorId: number,
-): Promise<number | null> {
-  const response = await api.get(
-    `/admin/course-instructor/${instructorId}/next-completable-training`,
-  );
-  return unwrapData<number | null>(response);
-}
-
-export async function completeTrainingForInstructor(
-  instructorId: number,
-  data?: { marksObtained?: number },
-) {
-  const tid = await getNextCompletableTrainingId(instructorId);
-  if (tid == null) {
-    throw new Error("No paid training step is ready to complete");
-  }
-  return completeTraining(tid, data);
-}
-
 export async function approveCourseInstructor(
   courseInstructorId: number,
   body: ApproveCourseInstructorRequest,
@@ -491,28 +469,6 @@ async function resendCourseInstructorCredentialsEmail(
   );
 }
 
-
-export async function completeTraining(
-  trainingId: number,
-  data?: { marksObtained?: number },
-) {
-  const response = await api.patch(
-    `/admin/course-instructor/training/${trainingId}/complete`,
-    { marks: data?.marksObtained },
-  );
-  return unwrapData(response);
-}
-
-export async function approveTraining(
-  courseInstructorId: number,
-  data: ApproveTrainingRequest,
-) {
-  const response = await api.post(
-    `/admin/course-instructor/approve-training/${courseInstructorId}`,
-    data,
-  );
-  return unwrapData(response);
-}
 
 export async function getTrainingCourseInstructors(): Promise<{
   result: TrainingCourseInstructorData[];
@@ -715,25 +671,6 @@ async function getAvailableTrainingLevelsForCI(
   };
 }
 
-async function requestAdditionalTraining(
-  instructorId: number,
-  requestData: RequestAdditionalTrainingRequest,
-): Promise<void> {
-  const response = await api.post(
-    `/franchisee/course-instructor/${instructorId}/request-training`,
-    requestData,
-  );
-  return unwrapData(response);
-}
-
-
-async function scheduleTrainingAdmin(ciId: number) {
-  const response = await api.post(
-    `/admin/course-instructor/${ciId}/schedule-training`,
-  );
-  return unwrapData(response);
-}
-
 async function getActiveTrainingLevelForCi(ciId: number) {
   const response = await api.get(
     `/course-instructor/${ciId}/active-training-level`,
@@ -764,15 +701,6 @@ export async function getEligibleCourseInstructorsForCertificate(
     ? result
     : normalizePaginatedResult<unknown>(result).rows;
   return rows.map((row) => mapRow(row as Record<string, unknown>));
-}
-
-export interface ApproveTrainingRequest {
-  trainingLevelId?: number;
-  marksObtained?: number;
-  dateOfTraining?: string;
-  amount?: number;
-  installmentCount?: number;
-  installmentAmount?: number;
 }
 
 export interface CIFranchiseSummary {

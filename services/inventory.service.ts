@@ -99,8 +99,8 @@ function normalizeInventoryRow(raw: any): InventoryItemSummary {
   return {
     id: Number(raw?.id ?? 0),
     sku: String(raw?.sku ?? ""),
-    legacyItemCode: raw?.legacyItemCode ?? null,
-    legacyIsoCode: raw?.legacyIsoCode ?? null,
+    legacyItemCode: raw?.itemCode ?? null,
+    legacyIsoCode: raw?.isoCode ?? null,
     name: String(raw?.name ?? ""),
     description: raw?.description ?? null,
     category:
@@ -210,10 +210,24 @@ export async function getPaginatedInventory(params: {
   return normalizeInventoryPaginated(unwrapData<unknown>(response));
 }
 
+/** The API names the legacy codes `itemCode`/`isoCode`; the FE keeps the
+ *  `legacy*` names internally. Map at the wire boundary in both directions. */
+function toInventoryWireBody({
+  legacyItemCode,
+  legacyIsoCode,
+  ...rest
+}: UpdateInventoryDto): Record<string, unknown> {
+  return {
+    ...rest,
+    itemCode: legacyItemCode,
+    isoCode: legacyIsoCode,
+  };
+}
+
 export async function createInventory(
   body: CreateInventoryDto,
 ): Promise<InventoryItemSummary> {
-  const response = await api.post("/inventory", body);
+  const response = await api.post("/inventory", toInventoryWireBody(body));
   return normalizeInventoryRow(unwrapData(response));
 }
 
@@ -221,7 +235,12 @@ export async function updateInventory(
   id: number,
   body: UpdateInventoryDto,
 ): Promise<InventoryItemSummary> {
-  const response = await api.patch(`/inventory/update/${id}`, body);
+  // UpdateInventoryItemDto (unlike the create DTO) does not declare sku
+  const { sku: _sku, ...rest } = body;
+  const response = await api.patch(
+    `/inventory/update/${id}`,
+    toInventoryWireBody(rest),
+  );
   return normalizeInventoryRow(unwrapData(response));
 }
 

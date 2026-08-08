@@ -67,10 +67,10 @@ export async function updateProgram(
   id: number,
   nameOrData: string | { name: string; code?: string | null },
 ): Promise<Program> {
-  const response = await api.patch(
-    `/catalog/program/update/${id}`,
-    programPayload(nameOrData),
-  );
+  // UpdateProgramDto is rename-only; sending `code` is rejected by the whitelist
+  const name =
+    typeof nameOrData === "string" ? nameOrData : nameOrData.name;
+  const response = await api.patch(`/catalog/program/update/${id}`, { name });
   return unwrapData<Program>(response);
 }
 

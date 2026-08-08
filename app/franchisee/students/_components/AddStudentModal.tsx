@@ -58,7 +58,6 @@ interface StudentFormData {
 
   // Basic Information
   studentName: string;
-  rollNo: string;
   dob: string;
   dateOfJoining: string;
   sex: string;
@@ -99,7 +98,6 @@ interface StudentFormData {
 const INITIAL_FORM_DATA: StudentFormData = {
   existing: false,
   studentName: "",
-  rollNo: "",
   dob: "",
   dateOfJoining: new Date().toISOString().split("T")[0],
   sex: "",
@@ -338,7 +336,6 @@ export default function AddStudentModal({
         franchiseId: user.franchiseId,
         programId: Number(formData.programId),
         name: formData.studentName,
-        rollNo: formData.rollNo || "",
         dateOfBirth: new Date(formData.dob),
         dateOfJoining: new Date(formData.dateOfJoining),
         sex: formData.sex,

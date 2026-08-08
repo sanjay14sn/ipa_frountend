@@ -184,7 +184,6 @@ export interface PaginationParams {
   search?: string;
   status?: string;
   type?: string;
-  program?: string;
   sortBy?: string;
   sortOrder?: string;
 }
@@ -633,7 +632,6 @@ export async function getPaginatedFranchises(
       sortOrder: params.sortOrder,
       status,
       type: params.type,
-      program: params.program,
     } as Record<string, string | number | boolean | undefined | null>),
   });
   const result = unwrapData<unknown>(response);
@@ -673,7 +671,6 @@ export async function getPaginatedFranchiseApplications(
       sortOrder: params.sortOrder,
       status,
       type: params.type,
-      program: params.program,
     } as Record<string, string | number | boolean | undefined | null>),
   });
   const result = unwrapData<unknown>(response);

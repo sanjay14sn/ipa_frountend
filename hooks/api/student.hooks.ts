@@ -22,7 +22,6 @@ import {
   approveCertificateRequest,
   rejectCertificateRequest,
   getFranchiseeCertificates,
-  requestCertificateForStudent,
   bulkRequestCertificates,
   getPaginatedStudents,
   getAdminIdCardSummaries,
@@ -492,17 +491,6 @@ export function useReactivateStudentLifecycle() {
   return useMutation({
     mutationFn: reactivateStudentLifecycle,
     onSuccess: () => invalidateStudentLifecycleDomains(qc),
-    onError: (error) => {
-      toast.error(extractErrorMessage(error));
-    },
-  });
-}
-
-function useRequestCertificateForStudent() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: requestCertificateForStudent,
-    onSuccess: () => invalidateCertificateRequestDomains(qc),
     onError: (error) => {
       toast.error(extractErrorMessage(error));
     },

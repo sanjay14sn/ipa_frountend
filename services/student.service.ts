@@ -538,19 +538,6 @@ export async function bulkRequestCertificates(
   return unwrapData<BulkCertificateRequestResult>(response);
 }
 
-export async function requestCertificateForStudent(body: {
-  studentId: number;
-  programId: number;
-  levelId: number;
-  marksObtained?: number;
-  totalMarks?: number;
-  courseInstructorId?: number;
-  completionDate: string;
-}) {
-  const response = await api.post("/certification/request", body);
-  return unwrapData(response);
-}
-
 export async function getStudentCertificates(
   studentId: number,
 ): Promise<StudentCertificatesResponse> {

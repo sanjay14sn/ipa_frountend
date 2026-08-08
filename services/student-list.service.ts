@@ -80,7 +80,8 @@ export interface PreviousLevelProgressionInput {
 
 export type CreateStudentInput = Omit<
   StudentData,
-  "id" | "createdAt" | "updatedAt" | "createdBy" | "updatedBy"
+  // rollNo is server-generated on enrollment; sending it is rejected by the DTO whitelist
+  "id" | "rollNo" | "createdAt" | "updatedAt" | "createdBy" | "updatedBy"
 > & {
   existing?: boolean;
   idIssueDate?: string;
@@ -222,24 +223,51 @@ export function mapStudentRow(row: Record<string, unknown>): StudentData {
   };
 }
 
-function mapStudentDataToUpdateBody(data: Partial<StudentData>): Record<string, unknown> {
-  const drop = new Set(["id", "franchiseId", "rollNo", "createdAt", "updatedAt", "createdBy", "updatedBy", "materialsOrdered"]);
+// Keys declared on the backend DTOs (update-student.dto.ts). The global
+// ValidationPipe runs with forbidNonWhitelisted, so anything outside these
+// allowlists 400s the whole request — send only what each DTO declares.
+const FRANCHISEE_UPDATE_KEYS = [
+  "sex",
+  "fatherName",
+  "fatherOccupation",
+  "fatherQualification",
+  "motherName",
+  "motherOccupation",
+  "motherQualification",
+  "residentialAddress",
+  "fatherContactNo",
+  "motherContactNo",
+  "email",
+  "standard",
+] as const;
+
+const ADMIN_UPDATE_KEYS = [
+  ...FRANCHISEE_UPDATE_KEYS,
+  "programId",
+  "levelId",
+  "name",
+  "dateOfBirth",
+  "dateOfJoining",
+  "status",
+] as const;
+
+function mapStudentDataToUpdateBody(
+  data: Partial<StudentData>,
+  allowedKeys: readonly string[],
+): Record<string, unknown> {
+  const allowed = new Set(allowedKeys);
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
-    if (drop.has(key) || value === undefined) continue;
-    if (key === "level" && typeof value === "object" && value !== null) continue; // drop nested level object
-    if (key === "stream") continue; // always drop; backend derives stream from levelId
-    if (key === "mail") {
-      out["email"] = value; // alias mail → email
-      continue;
-    }
-    if ((key === "dateOfBirth" || key === "dateOfJoining") && value != null) {
+    if (value === undefined) continue;
+    const targetKey = key === "mail" ? "email" : key; // alias mail → email
+    if (!allowed.has(targetKey)) continue;
+    if ((targetKey === "dateOfBirth" || targetKey === "dateOfJoining") && value != null) {
       // format as YYYY-MM-DD
       const d = value instanceof Date ? value : new Date(String(value));
-      out[key] = isNaN(d.getTime()) ? String(value).slice(0, 10) : d.toISOString().slice(0, 10);
+      out[targetKey] = isNaN(d.getTime()) ? String(value).slice(0, 10) : d.toISOString().slice(0, 10);
       continue;
     }
-    out[key] = value;
+    out[targetKey] = value;
   }
   return out;
 }
@@ -278,7 +306,6 @@ export async function createStudent(
     programId: Number(studentData.programId),
     levelId: Number(studentData.levelId),
     name: studentData.name,
-    rollNo: studentData.rollNo,
     sex: studentData.sex,
     dateOfBirth: dob,
     fatherName: studentData.fatherName,
@@ -311,7 +338,7 @@ export async function updateStudent(
   studentId: number,
   studentData: Partial<StudentData>,
 ): Promise<StudentData> {
-  const body = mapStudentDataToUpdateBody(studentData);
+  const body = mapStudentDataToUpdateBody(studentData, FRANCHISEE_UPDATE_KEYS);
   const response = await api.patch(`/student/${studentId}`, body);
   return mapStudentRow(unwrapData<Record<string, unknown>>(response));
 }
@@ -389,7 +416,7 @@ export async function updateStudentAdmin(
   studentId: number,
   studentData: Partial<StudentData>,
 ): Promise<StudentData> {
-  const body = mapStudentDataToUpdateBody(studentData);
+  const body = mapStudentDataToUpdateBody(studentData, ADMIN_UPDATE_KEYS);
   const response = await api.patch(`/admin/student/${studentId}`, body);
   return mapStudentRow(unwrapData<Record<string, unknown>>(response));
 }

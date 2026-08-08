@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -20,7 +20,6 @@ import { Building2, Clock } from "lucide-react";
 import {
   requestNewFranchise,
   hasPendingRequest,
-  RequestFranchiseDto,
 } from "@/services/franchise.service";
 import { getAllPrograms, Program } from "@/services/program.service";
 import { StateCitySelect } from "@/components/StateCitySelect";
@@ -50,7 +49,7 @@ const schema = z.object({
   city: z.string().trim().min(1, "City is required"),
   state: z.string(),
   pincode: z.string().optional(),
-  programIds: z.array(z.number()).min(1, "Select at least one program"),
+  programId: z.number().min(1, "Select a program"),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -61,7 +60,7 @@ const EMPTY_FORM: FormValues = {
   city: "",
   state: "",
   pincode: "",
-  programIds: [],
+  programId: 0,
 };
 
 interface RequestFranchiseModalProps {
@@ -79,7 +78,7 @@ export function RequestFranchiseModal({
     defaultValues: EMPTY_FORM,
   });
   const name = useWatch({ control: form.control, name: "name" });
-  const programIds = useWatch({ control: form.control, name: "programIds" });
+  const programId = useWatch({ control: form.control, name: "programId" });
   // Watched, not getValues(): StateCitySelect renders the state dropdown from
   // this, so it has to re-render when the state changes.
   const stateValue = useWatch({ control: form.control, name: "state" });
@@ -143,15 +142,8 @@ export function RequestFranchiseModal({
     loadModalData();
   }, [open]);
 
-  const handleProgramToggle = (programId: number) => {
-    const ids = form.getValues("programIds") ?? [];
-    form.setValue(
-      "programIds",
-      ids.includes(programId)
-        ? ids.filter((id) => id !== programId)
-        : [...ids, programId],
-      { shouldValidate: true },
-    );
+  const handleProgramSelect = (id: number) => {
+    form.setValue("programId", id, { shouldValidate: true });
   };
 
   const submitValid = form.handleSubmit(async (values) => {
@@ -162,9 +154,13 @@ export function RequestFranchiseModal({
     setIsLoading(true);
     try {
       const res = await requestNewFranchise({
-        ...(values as RequestFranchiseDto),
-        programIds: values.programIds,
-        programId: values.programIds[0],
+        name: values.name,
+        type: values.type,
+        city: values.city,
+        state: values.state,
+        address: values.address,
+        pincode: values.pincode,
+        programId: values.programId,
       });
       const payload = res as unknown as {
         franchise?: { id: string | number; name: string };
@@ -206,13 +202,13 @@ export function RequestFranchiseModal({
   });
 
   /**
-   * The programs list can fail to load, in which case programIds is
-   * unavoidably empty and "Select at least one program" would be misleading.
+   * The programs list can fail to load, in which case programId is
+   * unavoidably unset and "Select a program" would be misleading.
    * That case is checked before the resolver runs, exactly as before.
    */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (loadError && (programIds ?? []).length === 0) {
+    if (loadError && !programId) {
       toast.error("Couldn't load programs — retry above");
       return;
     }
@@ -350,9 +346,9 @@ export function RequestFranchiseModal({
       </DialogFormGrid>
 
       <DialogFormField
-        label="Programs (Select at least one)"
+        label="Program"
         required
-        error={form.formState.errors.programIds?.message}
+        error={form.formState.errors.programId?.message}
       >
         {loadError && !isLoadingPrograms ? (
           <Alert variant="destructive">
@@ -375,21 +371,23 @@ export function RequestFranchiseModal({
           ) : programs.length === 0 ? (
             <p className="text-sm text-muted-foreground">No programs</p>
           ) : (
-            programs.map((p) => (
-              <div key={p.id} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`p-${p.id}`}
-                  checked={(programIds ?? []).includes(p.id)}
-                  onCheckedChange={() => handleProgramToggle(p.id)}
-                />
-                <label
-                  htmlFor={`p-${p.id}`}
-                  className="cursor-pointer text-sm text-card-foreground"
-                >
-                  {p.name}
-                </label>
-              </div>
-            ))
+            <RadioGroup
+              value={programId ? String(programId) : ""}
+              onValueChange={(value) => handleProgramSelect(Number(value))}
+              className="space-y-2"
+            >
+              {programs.map((p) => (
+                <div key={p.id} className="flex items-center space-x-2">
+                  <RadioGroupItem id={`p-${p.id}`} value={String(p.id)} />
+                  <label
+                    htmlFor={`p-${p.id}`}
+                    className="cursor-pointer text-sm text-card-foreground"
+                  >
+                    {p.name}
+                  </label>
+                </div>
+              ))}
+            </RadioGroup>
           )}
         </div>
         )}

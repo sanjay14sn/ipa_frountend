@@ -39,7 +39,7 @@ export async function updateStreamTransition(
   id: number,
   data: UpdateStreamTransitionDto,
 ): Promise<StreamTransition> {
-  const response = await api.patch(`/stream-transition/${id}`, data);
+  const response = await api.patch(`/catalog/stream-transition/${id}`, data);
   return unwrapData<StreamTransition>(response);
 }
 

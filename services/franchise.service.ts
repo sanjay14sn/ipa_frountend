@@ -10,10 +10,7 @@ export interface ApplyForFranchisePayload {
   state: string;
   address?: string;
   pincode?: string;
-  /** Single program id when the API expects one */
-  programId?: number;
-  /** Multi-select UI — submit with {@link programId} set to the first id if needed */
-  programIds?: number[];
+  programId: number;
 }
 
 export type RequestFranchiseDto = ApplyForFranchisePayload;
@@ -47,7 +44,15 @@ export async function hasPendingRequest(): Promise<boolean> {
 }
 
 export async function requestNewFranchise(body: ApplyForFranchisePayload) {
-  const response = await api.post("/franchise/apply", body);
+  const response = await api.post("/franchise/apply", {
+    name: body.name,
+    type: body.type,
+    city: body.city,
+    state: body.state,
+    address: body.address,
+    pincode: body.pincode,
+    programId: body.programId,
+  });
   return unwrapData(response);
 }
 

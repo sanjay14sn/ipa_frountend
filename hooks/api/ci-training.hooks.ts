@@ -3,13 +3,9 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   getAllCITraining,
-  approveTraining,
-  completeTrainingForInstructor,
   getTrainingCourseInstructors,
   type CITrainingByFranchise,
-  type ApproveTrainingRequest,
   type TrainingCourseInstructorData,
-  completeTraining,
 } from "@/services/course-instructor.service";
 import { queryKeys } from "@/hooks/api/query-keys";
 import { getQueryClientBridge } from "@/hooks/api/query-client-bridge";
@@ -24,7 +20,6 @@ import {
   type SessionAssignedCI,
 } from "@/services/ci-training-franchisee.service";
 
-const CI_LIST_PREFIX = ["course-instructors", "list"] as const;
 const CI_TRAINING_KEY = queryKeys.courseInstructors.ciTraining;
 const TRAINING_COURSE_INSTRUCTORS_KEY = queryKeys.courseInstructors.trainingList;
 
@@ -39,35 +34,6 @@ function useCITrainingData() {
     error: q.error,
     revalidate: q.refetch,
   };
-}
-
-async function approveTrainingWithRevalidation(
-  instructorId: string,
-  trainingData?: ApproveTrainingRequest,
-) {
-  if (trainingData) {
-    await approveTraining(Number(instructorId), trainingData);
-  }
-  try {
-    const qc = getQueryClientBridge();
-    void qc.invalidateQueries({ queryKey: CI_TRAINING_KEY });
-  } catch {
-    /* ignore */
-  }
-}
-
-async function completeTrainingWithRevalidation(
-  instructorId: number,
-  data?: Parameters<typeof completeTraining>[1],
-) {
-  await completeTrainingForInstructor(instructorId, data);
-  try {
-    const qc = getQueryClientBridge();
-    void qc.invalidateQueries({ queryKey: CI_TRAINING_KEY });
-    void qc.invalidateQueries({ queryKey: CI_LIST_PREFIX });
-  } catch {
-    /* ignore */
-  }
 }
 
 function useTrainingCourseInstructors() {
