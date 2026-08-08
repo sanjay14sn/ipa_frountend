@@ -23,6 +23,22 @@ export type CIAgreementPhase =
   | "EXPIRED";
 
 /**
+ * One agreement in the CI's own chain (GET /ci/agreement `history`), oldest
+ * first — feeds the lifecycle summary cards on the CI portal.
+ */
+export interface CIAgreementHistoryEntry {
+  id: number;
+  kind: "CI";
+  origin: "NEW" | "RENEWAL";
+  status: AgreementStatus;
+  dateOfSigning: string | null;
+  activatedAt: string | null;
+  createdAt: string | null;
+  expiresAt: string | null;
+  tenure: number | null;
+}
+
+/**
  * CI agreement detail view (GET /ci/agreement, GET /admin/ci-agreement/:id,
  * GET /contracting/ci-agreements/:id). Mirrors the backend
  * `CIAgreementDetailView`.
@@ -55,6 +71,8 @@ export interface CIAgreementRecord {
   franchiseeSignatureUrl?: string | null;
   receivables?: CITrainingReceivable[];
   metadata?: Record<string, unknown> | null;
+  /** Instructor's own read only: full agreement chain, oldest first. */
+  history?: CIAgreementHistoryEntry[];
 }
 
 /** Franchisee countersign list row (GET /contracting/ci-agreements). */

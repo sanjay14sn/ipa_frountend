@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AgreementRecordDetail } from "@/components/agreements/AgreementRecordDetail";
+import { AgreementSummaryCards } from "@/components/agreements/agreement-summary-cards";
 import {
   DataTable,
   type DataTableColumn,
@@ -260,68 +261,71 @@ export function MyAgreementsSection() {
   ];
 
   return (
-    <TablePageShell
-      title="My agreements"
-      description="Signed records for your franchises: programs, payment links, and signatures."
-    >
-      {loading && rows.length === 0 ? (
-        <TableLoadingState message="Loading agreements..." />
-      ) : (
-        <DataTable<AgreementRecord>
-          data={rows}
-          loading={loading}
-          columns={columns}
-          getRowId={(record) => String(record.id)}
-          renderMainCell={(record) => (
-            <span className="font-medium">
-              {record.franchise?.name ?? record.franchiseId ?? "—"}
-              <span className="mx-1 text-muted-foreground">-</span>
-              {record.program?.name ?? record.programName ?? "—"}
-            </span>
-          )}
-          emptyMessage="No agreements on file yet."
-          resultsText={(_count, total) =>
-            `${total} agreement${total === 1 ? "" : "s"}`
-          }
-        />
-      )}
-
-      <FranchiseeAgreementViewDialog
-        agreementId={viewAgreementId}
-        open={viewAgreementId != null}
-        paymentOpen={paymentDetails != null}
-        onInitiatePayment={handleInitiatePayment}
-        isInitiatingReceivablePayment={isInitiatingReceivablePayment}
-        onOpenChange={(open) => {
-          if (!open) setViewAgreementId(null);
-        }}
-      />
-
-      {paymentDetails && user?.profile ? (
-        <ComponentErrorBoundary componentName="RazorpayPayment">
-          <RazorpayPayment
-            key={paymentDetails.orderId}
-            orderId={paymentDetails.orderId}
-            amount={paymentDetails.amount}
-            currency={paymentDetails.currency}
-            franchiseName={paymentDetails.franchiseName || "Franchise"}
-            razorpayKey={paymentDetails.key}
-            onSuccess={handlePaymentSuccess}
-            onFailure={handlePaymentFailure}
-            onAbandon={async ({ orderId, reason }) => {
-              await abandonOrderPayment({
-                razorpayOrderId: orderId,
-                note: reason,
-              });
-            }}
-            userDetails={{
-              name: user.profile.name,
-              email: user.profile.mail,
-              phone: user.profile.phone,
-            }}
+    <div className="space-y-4">
+      <AgreementSummaryCards agreements={rows} />
+      <TablePageShell
+        title="My agreements"
+        description="Signed records for your franchises: programs, payment links, and signatures."
+      >
+        {loading && rows.length === 0 ? (
+          <TableLoadingState message="Loading agreements..." />
+        ) : (
+          <DataTable<AgreementRecord>
+            data={rows}
+            loading={loading}
+            columns={columns}
+            getRowId={(record) => String(record.id)}
+            renderMainCell={(record) => (
+              <span className="font-medium">
+                {record.franchise?.name ?? record.franchiseId ?? "—"}
+                <span className="mx-1 text-muted-foreground">-</span>
+                {record.program?.name ?? record.programName ?? "—"}
+              </span>
+            )}
+            emptyMessage="No agreements on file yet."
+            resultsText={(_count, total) =>
+              `${total} agreement${total === 1 ? "" : "s"}`
+            }
           />
-        </ComponentErrorBoundary>
-      ) : null}
-    </TablePageShell>
+        )}
+
+        <FranchiseeAgreementViewDialog
+          agreementId={viewAgreementId}
+          open={viewAgreementId != null}
+          paymentOpen={paymentDetails != null}
+          onInitiatePayment={handleInitiatePayment}
+          isInitiatingReceivablePayment={isInitiatingReceivablePayment}
+          onOpenChange={(open) => {
+            if (!open) setViewAgreementId(null);
+          }}
+        />
+
+        {paymentDetails && user?.profile ? (
+          <ComponentErrorBoundary componentName="RazorpayPayment">
+            <RazorpayPayment
+              key={paymentDetails.orderId}
+              orderId={paymentDetails.orderId}
+              amount={paymentDetails.amount}
+              currency={paymentDetails.currency}
+              franchiseName={paymentDetails.franchiseName || "Franchise"}
+              razorpayKey={paymentDetails.key}
+              onSuccess={handlePaymentSuccess}
+              onFailure={handlePaymentFailure}
+              onAbandon={async ({ orderId, reason }) => {
+                await abandonOrderPayment({
+                  razorpayOrderId: orderId,
+                  note: reason,
+                });
+              }}
+              userDetails={{
+                name: user.profile.name,
+                email: user.profile.mail,
+                phone: user.profile.phone,
+              }}
+            />
+          </ComponentErrorBoundary>
+        ) : null}
+      </TablePageShell>
+    </div>
   );
 }

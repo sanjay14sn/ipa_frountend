@@ -11,6 +11,7 @@ import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { useTabFromUrl } from "@/hooks/use-tab-from-url";
 import { getFranchiseApplicationDetail } from "@/services/franchisee.service";
 import AdminOrdersTable from "@/components/orders/AdminOrdersTable";
+import { AgreementSummaryCards } from "@/components/agreements/agreement-summary-cards";
 import { FranchiseStudentsTable } from "./_components/FranchiseStudentsTable";
 import { FranchiseCiListTable } from "./_components/FranchiseCiListTable";
 import { FranchiseCiSummary } from "./_components/FranchiseCiSummary";
@@ -208,7 +209,12 @@ function FranchiseDetailInner() {
       </TabsContent>
 
       <TabsContent value="agreements" className="mt-0">
-        <AdminAgreementsSection fixedFranchiseId={franchiseId} embed />
+        <div className="space-y-4">
+          <AgreementSummaryCards
+            agreements={detail?.agreements ?? franchise?.agreements}
+          />
+          <AdminAgreementsSection fixedFranchiseId={franchiseId} embed />
+        </div>
       </TabsContent>
 
       <EditFranchiseDialog

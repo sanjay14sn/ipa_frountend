@@ -31,6 +31,7 @@ import type { ESignatureResult } from "@/components/esignature/ESignaturePad";
 
 import { ciAgreementContent } from "@/lib/ciAgreementContent";
 import AgreementTerms from "@/components/agreements/AgreementTerms";
+import { AgreementSummaryCards } from "@/components/agreements/agreement-summary-cards";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { CIAgreementDetail } from "@/components/agreements/CIAgreementDetail";
 import { formatDate } from "@/lib/date-utils";
@@ -319,6 +320,9 @@ function CIAgreementContent() {
         <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
           Your Course Instructor Agreement is fully signed and active.
         </div>
+        {agreement.history ? (
+          <AgreementSummaryCards agreements={agreement.history} />
+        ) : null}
         <CIAgreementDetail
           agreement={agreement}
           onCISign={!ciSignatureSrc(agreement.ciSignatureUrl) ? handleCISign : undefined}
