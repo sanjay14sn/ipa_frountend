@@ -50,7 +50,6 @@ interface InstructorProgress {
 }
 
 export interface CreateSessionInput {
-  programId?: number;
   region: string;
   trainingLevelId: number;
   sessionDate: string;
@@ -113,7 +112,6 @@ export async function listSessions(params?: {
 
 export async function createSession(input: CreateSessionInput): Promise<CITrainingSession> {
   const res = await api.post("/admin/ci-training/session", {
-    programId: input.programId,
     region: input.region,
     trainingLevelId: input.trainingLevelId,
     sessionDate: input.sessionDate,

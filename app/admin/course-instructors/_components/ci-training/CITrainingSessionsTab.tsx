@@ -165,7 +165,6 @@ function CreateSessionModal({
       setLoading(true);
       try {
         await createSession({
-          programId: Number(values.programId),
           region: values.region.trim().toLowerCase(),
           trainingLevelId: Number(values.trainingLevelId),
           sessionDate: values.sessionDate,
