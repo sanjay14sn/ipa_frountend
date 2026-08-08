@@ -218,7 +218,11 @@ export function getAgreementActionVisibility(
       status === "APPROVED" ||
       status === "ACTIVE" ||
       status === "SUSPENDED",
-    renew: status === "EXPIRED",
+    // EXPIRED renews immediately; ACTIVE/SUSPENDED schedules the renewal, which
+    // parks in DRAFT and is promoted the day the current term ends. Admins need
+    // to prepare a renewal BEFORE expiry — waiting for the window to close
+    // meant the franchisee lost access in the gap.
+    renew: status === "EXPIRED" || status === "ACTIVE" || status === "SUSPENDED",
     // CI terms carry the training plan and are managed from the CI flows.
     editTerms:
       agreement.kind !== "CI" &&

@@ -85,7 +85,7 @@ describe("getAgreementActionVisibility", () => {
     ).toBe(false);
   });
 
-  it("ACTIVE → suspend + void; no reactivate/renew", () => {
+  it("ACTIVE → suspend + void + renew; no reactivate", () => {
     const v = getAgreementActionVisibility(
       makeAgreement({ status: "ACTIVE" }),
       "admin",
@@ -93,8 +93,27 @@ describe("getAgreementActionVisibility", () => {
     expect(v.suspend).toBe(true);
     expect(v.reactivate).toBe(false);
     expect(v.void).toBe(true);
-    expect(v.renew).toBe(false);
+    // Renewable while live: the renewal is scheduled and takes over at expiry.
+    expect(v.renew).toBe(true);
   });
+
+  it.each(["ACTIVE", "SUSPENDED", "EXPIRED"] as const)(
+    "%s is renewable so a renewal can be prepared before the term ends",
+    (status) => {
+      expect(
+        getAgreementActionVisibility(makeAgreement({ status }), "admin").renew,
+      ).toBe(true);
+    },
+  );
+
+  it.each(["DRAFT", "APPROVED", "VOID", "SUPERSEDED"] as const)(
+    "%s is not renewable",
+    (status) => {
+      expect(
+        getAgreementActionVisibility(makeAgreement({ status }), "admin").renew,
+      ).toBe(false);
+    },
+  );
 
   it("SUSPENDED → reactivate + void; no suspend", () => {
     const v = getAgreementActionVisibility(

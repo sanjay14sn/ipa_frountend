@@ -30,6 +30,7 @@ import {
   type UnpaidItemsPolicy,
 } from "@/services/agreement.service";
 import { getErrorMessage } from "@/lib/error-utils";
+import { formatDate } from "@/lib/date-utils";
 
 const schema = z
   .object({
@@ -84,6 +85,15 @@ export function IssueRenewalDialog({
   const [unpaidItemsPolicy, setUnpaidItemsPolicy] =
     useState<UnpaidItemsPolicy>("carry");
 
+  /**
+   * Renewing an agreement that is still running schedules it: the backend parks
+   * the renewal in DRAFT and promotes it the day this one expires. Renewing an
+   * already-EXPIRED agreement issues it straight away.
+   */
+  const scheduled =
+    agreement.status === "ACTIVE" || agreement.status === "SUSPENDED";
+  const expiresOn = agreement.expiresAt ? formatDate(agreement.expiresAt) : null;
+
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
       const installment = agreement.installment ?? false;
@@ -114,7 +124,11 @@ export function IssueRenewalDialog({
       return renewAgreementAdmin(agreement.id, dto);
     },
     onSuccess: async () => {
-      toast.success("Renewal issued — the franchisee can now sign and pay.");
+      toast.success(
+        scheduled
+          ? "Renewal scheduled — it is issued to the franchisee automatically when this agreement expires."
+          : "Renewal issued — the franchisee can now sign and pay.",
+      );
       onOpenChange(false);
       await queryClient.invalidateQueries({ queryKey: ["agreements", "list"] });
       await queryClient.invalidateQueries({ queryKey: ["agreements"] });
@@ -125,8 +139,12 @@ export function IssueRenewalDialog({
   return (
     <AppDialog open={open} onOpenChange={onOpenChange}>
       <AppDialogHeader
-        title="Issue renewal"
-        description="Set the renewal terms. The franchisee will sign and pay to reactivate."
+        title={scheduled ? "Schedule renewal" : "Issue renewal"}
+        description={
+          scheduled
+            ? `Set the renewal terms now. The renewal is held until this agreement expires${expiresOn ? ` on ${expiresOn}` : ""}, then issued to the franchisee automatically to sign and pay — so there is no gap in access.`
+            : "Set the renewal terms. The franchisee will sign and pay to reactivate."
+        }
       />
       <AppDialogBody>
         <form
@@ -183,7 +201,7 @@ export function IssueRenewalDialog({
       <AppDialogFooter
         secondary={{ label: "Cancel", onClick: () => onOpenChange(false) }}
         primary={{
-          label: "Issue",
+          label: scheduled ? "Schedule" : "Issue",
           form: "issue-renewal-form",
           type: "submit",
           loading: mutation.isPending,
@@ -196,13 +214,18 @@ export function IssueRenewalDialog({
 export function IssueRenewalButton({ agreement }: IssueRenewalButtonProps) {
   const [open, setOpen] = useState(false);
 
-  if (agreement.status !== "EXPIRED") return null;
+  // Live agreements are renewable too — that renewal is scheduled rather than
+  // issued immediately. Gating on EXPIRED alone meant an admin could not
+  // prepare a renewal for an agreement they knew lapsed tomorrow.
+  const scheduled =
+    agreement.status === "ACTIVE" || agreement.status === "SUSPENDED";
+  if (agreement.status !== "EXPIRED" && !scheduled) return null;
 
   return (
     <>
       <Button variant="outline" size="sm" className="rounded-lg" onClick={() => setOpen(true)}>
         <RefreshCw className="mr-2 h-4 w-4" />
-        Issue renewal
+        {scheduled ? "Schedule renewal" : "Issue renewal"}
       </Button>
       <IssueRenewalDialog agreement={agreement} open={open} onOpenChange={setOpen} />
     </>

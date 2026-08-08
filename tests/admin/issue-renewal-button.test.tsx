@@ -37,10 +37,24 @@ describe("IssueRenewalButton", () => {
     expect(screen.getByRole("button", { name: /issue renewal/i })).toBeInTheDocument();
   });
 
-  it("renders nothing for a non-expired agreement", () => {
-    const { container } = wrap(<IssueRenewalButton agreement={agreement({ status: "ACTIVE" })} />);
-    expect(container).toBeEmptyDOMElement();
+  it("offers a SCHEDULED renewal on a live agreement", () => {
+    // The whole point: an admin who knows the term ends tomorrow can prepare
+    // the renewal today. It is held in DRAFT and issued automatically at expiry.
+    wrap(<IssueRenewalButton agreement={agreement({ status: "ACTIVE" })} />);
+    expect(
+      screen.getByRole("button", { name: /schedule renewal/i }),
+    ).toBeInTheDocument();
   });
+
+  it.each(["DRAFT", "APPROVED", "VOID", "SUPERSEDED"] as const)(
+    "renders nothing for a %s agreement",
+    (status) => {
+      const { container } = wrap(
+        <IssueRenewalButton agreement={agreement({ status })} />,
+      );
+      expect(container).toBeEmptyDOMElement();
+    },
+  );
 
   it("submits the renewal with the entered fee", async () => {
     const { default: userEvent } = await import("@testing-library/user-event");
