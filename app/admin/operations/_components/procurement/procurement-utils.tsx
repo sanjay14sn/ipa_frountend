@@ -69,7 +69,7 @@ export const INITIAL_SUPPLIER_FORM: SupplierFormState = {
 };
 
 export const ITEMS_PER_PAGE = 10;
-export const ALL_SUPPLIERS_LIMIT = 10_000;
+export const ALL_SUPPLIERS_LIMIT = 100;
 
 export function createPurchaseOrderForm(): PurchaseOrderFormState {
   return {

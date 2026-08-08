@@ -35,7 +35,7 @@ export function useCourseInstructors(
   const programId = useProgramId();
   const scopedParams = {
     page: listParams?.page ?? 1,
-    limit: listParams?.limit ?? 10_000,
+    limit: listParams?.limit ?? 100,
     search: listParams?.search,
     sortBy: listParams?.sortBy,
     sortOrder: listParams?.sortOrder,

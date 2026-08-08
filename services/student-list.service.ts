@@ -253,7 +253,7 @@ export async function getAllStudents(
 ): Promise<StudentsResponse> {
   const merged: StudentPaginationParams = withProgramScope({
     page: params?.page ?? 1,
-    limit: params?.limit ?? 10_000,
+    limit: params?.limit ?? 100,
     ...params,
   });
   const { rows } = await getPaginated("/student", merged);

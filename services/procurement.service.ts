@@ -350,7 +350,7 @@ async function getAllSuppliers(
 ): Promise<Supplier[]> {
   const page = await getPaginatedSuppliers({
     page: params?.page ?? 1,
-    limit: params?.limit ?? 10_000,
+    limit: params?.limit ?? 100,
     search: params?.search,
     status: params?.status,
   });
@@ -388,8 +388,8 @@ async function getSupplierTerms(
 ): Promise<SupplierItemTerm[]> {
   const page = await getPaginatedSupplierTerms(
     typeof params === "number"
-      ? { inventoryItemId: params, page: 1, limit: 10_000 }
-      : { page: params?.page ?? 1, limit: params?.limit ?? 10_000, ...params },
+      ? { inventoryItemId: params, page: 1, limit: 100 }
+      : { page: params?.page ?? 1, limit: params?.limit ?? 100, ...params },
   );
   return page.rows;
 }
@@ -443,8 +443,8 @@ async function getPurchaseOrders(
 ): Promise<PurchaseOrderSummary[]> {
   const page = await getPaginatedPurchaseOrders(
     typeof params === "string"
-      ? { status: params, page: 1, limit: 10_000 }
-      : { page: params?.page ?? 1, limit: params?.limit ?? 10_000, ...params },
+      ? { status: params, page: 1, limit: 100 }
+      : { page: params?.page ?? 1, limit: params?.limit ?? 100, ...params },
   );
   return page.rows;
 }
@@ -518,7 +518,7 @@ async function getReplenishmentDrafts(
 ): Promise<PurchaseOrderSummary[]> {
   const page = await getPaginatedReplenishmentDrafts({
     page: params?.page ?? 1,
-    limit: params?.limit ?? 10_000,
+    limit: params?.limit ?? 100,
     ...params,
   });
   return page.rows;

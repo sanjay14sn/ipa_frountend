@@ -223,7 +223,7 @@ export async function getFranchiseeOrders(
 ): Promise<OrderData[]> {
   const merged: FranchiseeOrderListParams = withProgramScope({
     page: params?.page ?? 1,
-    limit: params?.limit ?? 10_000,
+    limit: params?.limit ?? 100,
     ...params,
   });
   const response = await api.get("/order", {

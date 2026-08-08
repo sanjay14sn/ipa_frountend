@@ -472,7 +472,7 @@ export async function getPendingFranchise(
 ): Promise<FranchisesResponse> {
   const merged: PaginationParams = {
     page: params?.page ?? 1,
-    limit: params?.limit ?? 10_000,
+    limit: params?.limit ?? 100,
     ...params,
     status: params?.status ?? 'Pending',
   };
@@ -499,7 +499,7 @@ export async function getAllFranchise(
 ): Promise<FranchisesResponse> {
   const merged: PaginationParams = {
     page: params?.page ?? 1,
-    limit: params?.limit ?? 10_000,
+    limit: params?.limit ?? 100,
     ...params,
   };
   const response = await api.get("/admin/franchise/all", {

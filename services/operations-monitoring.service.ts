@@ -14,7 +14,7 @@ import {
   type PurchaseOrderSummary,
 } from "@/services/procurement.service";
 
-const MAX_MONITORING_ROWS = 10_000;
+const MAX_MONITORING_ROWS = 100;
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 export type MonitoringItemTone =

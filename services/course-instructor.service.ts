@@ -291,7 +291,7 @@ export async function getAllCourseInstructors(
 ): Promise<CourseInstructorsResponse> {
   const merged: CourseInstructorListParams = withProgramScope({
     page: params?.page ?? 1,
-    limit: params?.limit ?? 10_000,
+    limit: params?.limit ?? 100,
     ...params,
   });
   const { rows } = await getPaginated("/course-instructor", merged);
@@ -367,7 +367,7 @@ export async function getAllAdminCourseInstructors(
 ): Promise<CourseInstructorsResponse> {
   const merged: CourseInstructorListParams = {
     page: params?.page ?? 1,
-    limit: params?.limit ?? 10_000,
+    limit: params?.limit ?? 100,
     ...params,
   };
   const { rows } = await getPaginated("/admin/course-instructor", merged);
