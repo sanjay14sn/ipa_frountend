@@ -10,7 +10,6 @@ import {
   LayoutDashboard,
   ShieldCheck,
   ShoppingCart,
-  Store,
   Upload,
   Users,
 } from "lucide-react";
@@ -140,7 +139,6 @@ export const FRANCHISEE_NAV = freezeNav([
   {
     title: "My business",
     items: [
-      { title: "My Franchise", href: "/franchisee/franchise", icon: Store },
       { title: "Students", href: "/franchisee/students", icon: Users },
       {
         title: "Course Instructors",

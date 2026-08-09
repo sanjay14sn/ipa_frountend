@@ -216,12 +216,19 @@ const nextConfig = {
       },
       {
         source: "/franchisee/agreements",
-        destination: "/franchisee/franchise?tab=agreements",
+        destination: "/franchisee/dashboard",
         permanent: false,
       },
       {
         source: "/franchisee/program-agreements",
-        destination: "/franchisee/franchise?tab=programs",
+        destination: "/franchisee/dashboard",
+        permanent: false,
+      },
+      {
+        // Franchise hub retired 2026-08-09 — its content lives in the
+        // dashboard's franchise rail now.
+        source: "/franchisee/franchise",
+        destination: "/franchisee/dashboard",
         permanent: false,
       },
       {

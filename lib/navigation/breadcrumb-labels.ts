@@ -61,11 +61,6 @@ export const TAB_LABELS: Record<string, Record<string, string>> = {
     inventory: "Inventory",
     monitoring: "Monitoring",
   },
-  "/franchisee/franchise": {
-    programs: "Programs",
-    agreements: "Agreements",
-    "ci-agreements": "CI Agreements",
-  },
   "/franchisee/students": {
     manage: "Manage",
     certificates: "Certificates",

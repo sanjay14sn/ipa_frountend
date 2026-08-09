@@ -22,6 +22,9 @@ import { Button } from "@/components/ui/button";
 import { useUser } from "@/context/user-context";
 import { RequestFranchiseModal } from "@/components/request-franchise-modal";
 import { RequestProgramsModal } from "@/components/request-programs-modal";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/hooks/api/query-keys";
+import { FranchiseRail } from "./_components/franchise-rail";
 import { type FranchiseeDashboardStats } from "@/services/dashboard.service";
 import { type OrderData } from "@/services/order.service";
 import { useFranchiseeDashboardStats } from "@/hooks/api/dashboard.hooks";
@@ -365,6 +368,7 @@ const EMPTY_STATS: FranchiseeDashboardStats = {
 
 export default function FranchiseeDashboard() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user } = useUser();
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [requestProgramsModalOpen, setRequestProgramsModalOpen] =
@@ -465,7 +469,7 @@ export default function FranchiseeDashboard() {
       icon: IndianRupee,
       alertChip:
         emiOverdue > 0
-          ? { label: "Overdue", href: "/franchisee/franchise?tab=agreements" }
+          ? { label: "Overdue", href: "/franchisee/dashboard?open=agreement" }
           : undefined,
     },
     {
@@ -541,7 +545,17 @@ export default function FranchiseeDashboard() {
       />
       <RequestProgramsModal
         open={requestProgramsModalOpen}
-        onOpenChange={setRequestProgramsModalOpen}
+        onOpenChange={(open) => {
+          setRequestProgramsModalOpen(open);
+          if (!open) {
+            // Refresh the rail's Programs card after a request round-trip.
+            void queryClient.invalidateQueries({
+              queryKey: queryKeys.programRequests.franchisee({
+                franchiseId: user?.franchiseId,
+              }),
+            });
+          }
+        }}
       />
 
       <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
@@ -608,7 +622,8 @@ export default function FranchiseeDashboard() {
         </DashboardPanel>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 content-start gap-4 lg:grid-cols-2 xl:grid-cols-1">
         <PendingActionsCard
           items={[
             {
@@ -629,11 +644,15 @@ export default function FranchiseeDashboard() {
             {
               label: "Overdue EMI",
               count: emiOverdue > 0 ? 1 : 0,
-              href: "/franchisee/franchise?tab=agreements",
+              href: "/franchisee/dashboard?open=agreement",
             },
           ]}
         />
         <RecentOrdersCard orders={recentOrders} />
+        </div>
+        <FranchiseRail
+          onRequestProgram={() => setRequestProgramsModalOpen(true)}
+        />
       </div>
     </div>
   );

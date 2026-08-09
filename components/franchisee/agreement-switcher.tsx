@@ -86,7 +86,7 @@ export function AgreementSwitcher() {
       if (isSignNeeded) {
         router.push(`/franchisee/agreement?agreementId=${agreementId}`);
       } else if (isPendingRequest) {
-        router.push(`/franchisee/franchise?tab=programs`);
+        router.push(`/franchisee/dashboard`);
       } else if (isExpired) {
         router.push(`/franchisee/agreement?agreementId=${agreementId}`);
       } else if (isOnAgreementPage) {
