@@ -237,9 +237,11 @@ export function PurchaseOrdersTab({
             getRowId={(order) => String(order.id)}
             renderMainCell={(order) => (
               <div className="flex flex-col">
-                <span className="font-medium">PO #{order.id}</span>
+                <span className="font-medium">
+                  {order.referenceNo || "Purchase order"}
+                </span>
                 <span className="text-sm text-muted-foreground">
-                  {order.referenceNo || "No reference"}
+                  {order.supplier?.name ?? "No supplier"}
                 </span>
               </div>
             )}
@@ -391,7 +393,7 @@ export function PurchaseOrdersTab({
         title="Cancel purchase order?"
         description={
           cancelPoTarget
-            ? `PO #${cancelPoTarget.id} will be cancelled. This cannot be undone.`
+            ? `${cancelPoTarget.referenceNo || "This purchase order"} will be cancelled. This cannot be undone.`
             : undefined
         }
         confirmLabel="Cancel purchase order"

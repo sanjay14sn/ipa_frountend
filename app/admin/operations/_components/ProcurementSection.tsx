@@ -301,7 +301,10 @@ export function ProcurementSection({
       receipts.map((receipt) => {
         const preview = receipt.lines
           .map(
-            (line) => line.inventoryItem?.name ?? `Item #${line.inventoryItemId}`,
+            (line) =>
+              line.inventoryItem?.name ??
+              line.inventoryItem?.sku ??
+              "Unnamed item",
           )
           .slice(0, 3)
           .join(", ");
@@ -310,6 +313,9 @@ export function ProcurementSection({
           id: String(receipt.id),
           receiptId: receipt.id,
           purchaseOrderId: receipt.purchaseOrderId,
+          poReferenceNo:
+            purchaseOrders?.find((po) => po.id === receipt.purchaseOrderId)
+              ?.referenceNo ?? null,
           supplierId: receipt.supplierId,
           supplierName: receipt.supplier?.name ?? "Unknown supplier",
           createdAt: receipt.createdAt,
@@ -325,7 +331,7 @@ export function ProcurementSection({
           linePreview: preview,
         };
       }),
-    [receipts],
+    [receipts, purchaseOrders],
   );
 
   useEffect(() => {

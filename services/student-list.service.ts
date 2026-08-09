@@ -156,8 +156,8 @@ function normalizeStudentLevel(
   if (row.levelName || row.levelCode || levelId > 0) {
     return {
       id: levelId,
-      name: String(row.levelName ?? row.levelCode ?? `Level ${levelId}`),
-      code: String(row.levelCode ?? row.levelName ?? `Level ${levelId}`),
+      name: String(row.levelName ?? row.levelCode ?? "N/A"),
+      code: String(row.levelCode ?? row.levelName ?? "N/A"),
       streamId: Number(row.streamId ?? 0),
     };
   }

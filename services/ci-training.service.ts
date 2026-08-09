@@ -164,7 +164,9 @@ export function normalizeCIProgressResponse(payload: unknown): CIProgressItem[] 
       id: asNumber(training.id),
       trainingLevelId,
       trainingLevelName:
-        asNullableString(level.name) ?? `Level ${trainingLevelId}`,
+        asNullableString(level.name) ??
+        asNullableString(level.code) ??
+        "Training level",
       trainingLevelCode: asNullableString(level.code),
       displayOrder:
         asNullableNumber(training.displayOrder) ??

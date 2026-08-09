@@ -262,7 +262,7 @@ export function EditAgreementTermsSection({
                     <SelectItem key={agreement.id} value={String(agreement.id)}>
                       {agreement.programName ??
                         agreement.title ??
-                        `Agreement #${agreement.id}`}
+                        "Agreement"}
                     </SelectItem>
                   ))}
                 </SelectContent>

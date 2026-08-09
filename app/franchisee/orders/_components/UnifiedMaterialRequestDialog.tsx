@@ -1022,7 +1022,7 @@ export default function UnifiedMaterialRequestDialog({
                         >
                           <div className="flex items-center justify-between gap-2">
                             <h5 className="truncate text-sm font-semibold text-card-foreground">
-                              {student?.name ?? avail?.studentName ?? `#${sid}`}
+                              {student?.name ?? avail?.studentName ?? "Student"}
                             </h5>
                             {studentTotal > 0 ? (
                               <span className="text-sm font-semibold tabular-nums text-card-foreground">
@@ -1041,7 +1041,7 @@ export default function UnifiedMaterialRequestDialog({
                                     className="grid grid-cols-[1fr_auto_auto] items-center gap-2"
                                   >
                                     <span className="min-w-0 truncate text-xs text-card-foreground">
-                                      {it?.name ?? `Item ${l.inventoryItemId}`}
+                                      {it?.name ?? "Unnamed item"}
                                       {it ? (
                                         <span className="text-muted-foreground">
                                           {" · "}

@@ -191,9 +191,9 @@ function CIStudentLevelsPicker({
 
   function levelDisplay(levelId: number) {
     const level = levels.find((entry) => entry.id === levelId);
-    if (!level) return `L${levelId}`;
-    const streamLabel = streamNameById.get(level.streamId) ?? `stream ${level.streamId}`;
-    return `${level.code} (${streamLabel})`;
+    if (!level) return "Unknown level";
+    const streamLabel = streamNameById.get(level.streamId);
+    return streamLabel ? `${level.code} (${streamLabel})` : level.code;
   }
 
   function togglePending(id: number) {
@@ -301,7 +301,7 @@ function CIStudentLevelsPicker({
                   getLabel: (item) =>
                     levelDisplay(item.levelId) ||
                     item.levelName ||
-                    `L${item.levelId}`,
+                    "Unknown level",
                   title: "Linked levels",
                   onUnlink: disabled
                     ? undefined

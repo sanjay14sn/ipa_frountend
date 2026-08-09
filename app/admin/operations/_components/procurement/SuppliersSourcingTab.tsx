@@ -178,7 +178,7 @@ export function SuppliersSourcingTab({
     {
       key: "supplier",
       header: "Supplier",
-      render: (term) => term.supplier?.name ?? `Supplier #${term.supplierId}`,
+      render: (term) => term.supplier?.name ?? term.supplier?.code ?? "—",
     },
     {
       key: "supplierSku",
@@ -287,7 +287,7 @@ export function SuppliersSourcingTab({
             renderMainCell={(term) => (
               <div className="flex flex-col">
                 <span className="font-medium">
-                  {term.inventoryItem?.name ?? `Item #${term.inventoryItemId}`}
+                  {term.inventoryItem?.name ?? term.inventoryItem?.sku ?? "Unnamed item"}
                 </span>
                 <span className="text-sm text-muted-foreground">
                   {term.inventoryItem?.sku ?? "No SKU"}
@@ -443,7 +443,7 @@ export function SuppliersSourcingTab({
                           variant="secondary"
                           className="h-6 gap-1 rounded-full px-2 py-0 text-[11px] font-normal"
                         >
-                          {term.inventoryItem?.name ?? `Item #${term.inventoryItemId}`}
+                          {term.inventoryItem?.name ?? term.inventoryItem?.sku ?? "Unnamed item"}
                         </Badge>
                       ))}
                   </div>

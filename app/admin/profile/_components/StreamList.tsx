@@ -142,7 +142,7 @@ export function TransitionList({
   onAddTransition,
 }: TransitionListProps) {
   const streamName = (id: number) =>
-    streams.find((s) => s.id === id)?.name ?? `#${id}`;
+    streams.find((s) => s.id === id)?.name ?? "Unknown stream";
 
   return (
     <section className="flex flex-col">

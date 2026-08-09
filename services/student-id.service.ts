@@ -71,9 +71,7 @@ function mapRequestedIdDetail(row: Record<string, unknown>): RequestedIdDetail {
     row.franchiseId ?? franchiseRaw?.id ?? row.franchiseID ?? "",
   );
   const franchiseName = String(
-    row.franchiseName ??
-      franchiseRaw?.name ??
-      (franchiseId ? `Franchise ${franchiseId}` : "Franchise"),
+    row.franchiseName ?? franchiseRaw?.name ?? "Franchise",
   );
   const franchiseAddress = String(
     row.franchiseeAddress ?? row.franchiseAddress ?? franchiseRaw?.address ?? "",

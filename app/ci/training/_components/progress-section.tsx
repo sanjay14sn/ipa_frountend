@@ -83,7 +83,9 @@ export function ProgressSection() {
           renderMainCell={(item) => (
             <div className="flex flex-col">
               <span className="font-medium text-card-foreground">{item.trainingLevelName}</span>
-              <span className="text-sm text-muted-foreground">Level {item.trainingLevelId}</span>
+              {item.trainingLevelCode ? (
+                <span className="text-sm text-muted-foreground">{item.trainingLevelCode}</span>
+              ) : null}
             </div>
           )}
           emptyMessage="No training progress yet. Purchase a package to get started."

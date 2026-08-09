@@ -177,7 +177,7 @@ export default function SetupExistingCIDialog({
       const pname =
         a.programName ??
         (a as { program?: { name?: string } }).program?.name ??
-        `Program #${pid}`;
+        "Program";
       seen.set(pid, pname);
     }
     return [...seen.entries()].map(([id, name]) => ({ id, name }));

@@ -44,7 +44,6 @@ export default function StudentDetails({ student }: StudentDetailsProps) {
 
       <ExpandedDetailSection title="Academic">
         <DetailFieldsGrid columns={3}>
-          <DetailField label="Program" value={student.programId || "—"} />
           <DetailField label="Level" value={getStudentLevelName(student)} />
           <DetailField label="Standard" value={student.standard || "—"} />
           <DetailField label="Stream" value={stream} />

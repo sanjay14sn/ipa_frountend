@@ -96,9 +96,11 @@ export function ReplenishmentTab({
           getRowId={(draft) => String(draft.id)}
           renderMainCell={(draft) => (
             <div className="flex flex-col">
-              <span className="font-medium">Draft #{draft.id}</span>
+              <span className="font-medium">
+                {draft.referenceNo || "Draft"}
+              </span>
               <span className="text-sm text-muted-foreground">
-                {draft.referenceNo || "No reference"}
+                {draft.supplier?.name ?? "No supplier"}
               </span>
             </div>
           )}

@@ -18,7 +18,7 @@ import type { Program } from "@/services/program.service";
 function levelFilterLabel(level: Level, streams: Stream[]) {
   const stream = streams.find((entry) => entry.id === level.streamId);
   const streamLabel = stream?.name?.trim();
-  const suffix = streamLabel ? ` (${streamLabel})` : ` (stream ${level.streamId})`;
+  const suffix = streamLabel ? ` (${streamLabel})` : "";
   return `${level.name}${suffix}`;
 }
 

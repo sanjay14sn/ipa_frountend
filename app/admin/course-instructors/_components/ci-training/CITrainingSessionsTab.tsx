@@ -44,6 +44,13 @@ import {
 
 const EMPTY_ASSIGNMENTS: CITrainingAssignment[] = [];
 
+/** Human-facing session label — never the raw session id. */
+function sessionLevelLabel(
+  s: Pick<CITrainingSession, "trainingLevelName" | "trainingLevelCode"> | null | undefined,
+) {
+  return s?.trainingLevelName ?? s?.trainingLevelCode ?? "Training level";
+}
+
 /**
  * Marks come off a number input, so they arrive as strings and may be blank.
  *
@@ -365,7 +372,7 @@ function RecordMarksModal({
       }}
       size="sm"
       title="Record Marks"
-      description={assignment?.instructorName ?? `Assignment #${assignment?.id}`}
+      description={assignment?.instructorName ?? assignment?.instructorCode ?? "Course instructor"}
       formId="record-marks-form"
       onSubmit={handleSubmit}
       isSubmitting={loading}
@@ -422,6 +429,16 @@ function ReassignModal({
   const [loading, setLoading] = useState(false);
   const [targetSessionId, setTargetSessionId] = useState("");
 
+  const { data: sessionOptions = [] } = useQuery({
+    queryKey: ["ci-training", "sessions", "reassign-options"],
+    queryFn: () => listSessions(),
+    enabled: !!assignment,
+    staleTime: 30_000,
+  });
+  const openSessions = sessionOptions.filter(
+    (s) => s.status === "OPEN" && s.id !== assignment?.sessionId,
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!assignment) return;
@@ -458,15 +475,25 @@ function ReassignModal({
     >
       <div className="space-y-4 pt-2">
           <div className="space-y-2">
-            <Label htmlFor="targetSession">Target Session ID</Label>
-            <Input
-              id="targetSession"
-              type="number"
-              min="1"
-              value={targetSessionId}
-              onChange={(e) => setTargetSessionId(e.target.value)}
-              required
-            />
+            <Label htmlFor="targetSession">Target session</Label>
+            <Select value={targetSessionId} onValueChange={setTargetSessionId}>
+              <SelectTrigger id="targetSession">
+                <SelectValue placeholder="Select a session" />
+              </SelectTrigger>
+              <SelectContent>
+                {openSessions.map((s) => (
+                  <SelectItem key={s.id} value={String(s.id)}>
+                    {formatStateLabel(s.region)} · {sessionLevelLabel(s)} ·{" "}
+                    {s.sessionDate}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {openSessions.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                No other open sessions available.
+              </p>
+            )}
           </div>
       </div>
     </FormDialog>
@@ -623,9 +650,7 @@ function CompleteSessionModal({
       title="Complete Session"
       description={
         session
-          ? `${formatStateLabel(session.region)} - ${
-              session.trainingLevelName ?? `Level ${session.trainingLevelId}`
-            } - ${session.sessionDate}`
+          ? `${formatStateLabel(session.region)} - ${sessionLevelLabel(session)} - ${session.sessionDate}`
           : "Record marks for assigned CIs"
       }
       formId="complete-session-form"
@@ -660,7 +685,8 @@ function CompleteSessionModal({
                       <div>
                         <div className="font-medium text-card-foreground">
                           {row.assignment.instructorName ??
-                            `CI-${row.assignment.instructorId}`}
+                            row.assignment.instructorCode ??
+                            "Course instructor"}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {row.assignment.instructorCode ?? "Code unavailable"}
@@ -803,7 +829,7 @@ function SessionAssignmentsPanel({
         getRowId={(a) => String(a.id)}
         renderMainCell={(a) => (
           <TableMainCell
-            title={a.instructorName ?? `CI-${a.instructorId}`}
+            title={a.instructorName ?? a.instructorCode ?? "Course instructor"}
             subtitle={a.instructorCode ?? "—"}
           />
         )}
@@ -858,9 +884,8 @@ function RescheduleSessionModal({
       title="Reschedule Session"
       description={
         <>
-          Session #{session?.id} &mdash;{" "}
           {formatStateLabel(session?.region)} /{" "}
-          {session?.trainingLevelName ?? `Level ${session?.trainingLevelId}`}
+          {sessionLevelLabel(session)} &mdash; {session?.sessionDate}
         </>
       }
       formId="reschedule-session-form"
@@ -916,7 +941,6 @@ export function SessionsTab() {
 
   const columns = useMemo<DataTableColumn<CITrainingSession>[]>(
     () => [
-      { key: "id", header: "ID", render: (s) => `#${s.id}` },
       {
         key: "region",
         header: "State",
@@ -925,7 +949,7 @@ export function SessionsTab() {
       {
         key: "trainingLevel",
         header: "Training Level",
-        render: (s) => s.trainingLevelName ?? `Level ${s.trainingLevelId}`,
+        render: (s) => sessionLevelLabel(s),
       },
       {
         key: "sessionDate",
@@ -1009,7 +1033,7 @@ export function SessionsTab() {
         renderMainCell={(s) => (
           <TableMainCell
             title={formatStateLabel(s.region)}
-            subtitle={`#${s.id} - ${s.trainingLevelName ?? `Level ${s.trainingLevelId}`}`}
+            subtitle={`${sessionLevelLabel(s)} - ${s.sessionDate}`}
           />
         )}
         renderExpandedContent={(session) => (
@@ -1019,7 +1043,7 @@ export function SessionsTab() {
             onOpenReassign={setReassignTarget}
           />
         )}
-        searchPlaceholder="Search by session ID, state, level or date..."
+        searchPlaceholder="Search by state or date..."
         onSearchChange={setSearch}
         emptyMessage="No sessions found"
       />

@@ -7,6 +7,7 @@ export interface CITrainingSession {
   region: string;
   trainingLevelId: number;
   trainingLevelName?: string;
+  trainingLevelCode?: string | null;
   sessionDate: string;
   venue?: string;
   maxCapacity?: number;
@@ -35,6 +36,8 @@ export interface WaitingInstructor {
   franchiseName?: string;
   region: string;
   trainingLevelId: number;
+  trainingLevelName?: string | null;
+  trainingLevelCode?: string | null;
 }
 
 interface InstructorProgress {
@@ -107,7 +110,21 @@ export async function listSessions(params?: {
     params: buildCiTrainingQueryParams(params),
   });
   const payload = res.data.result;
-  return Array.isArray(payload) ? payload : [];
+  if (!Array.isArray(payload)) return [];
+  // Flatten the joined training level so rows always carry a display label.
+  return payload.map((row: Record<string, unknown>) => {
+    const level = row.trainingLevel as
+      | { name?: string | null; code?: string | null }
+      | null
+      | undefined;
+    return {
+      ...(row as unknown as CITrainingSession),
+      trainingLevelName:
+        (row.trainingLevelName as string | undefined) ?? level?.name ?? undefined,
+      trainingLevelCode:
+        (row.trainingLevelCode as string | null | undefined) ?? level?.code ?? null,
+    };
+  });
 }
 
 export async function createSession(input: CreateSessionInput): Promise<CITrainingSession> {

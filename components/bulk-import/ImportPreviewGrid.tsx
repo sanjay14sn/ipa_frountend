@@ -203,7 +203,7 @@ export function ImportPreviewGrid({
                   cellValue = String((rawValue as { id?: unknown }).id ?? "");
                 } else if (isArrayRef) {
                   cellValue = (rawValue as Array<Record<string, unknown>>)
-                    .map((it) => String(it.name ?? it.code ?? it.id ?? ""))
+                    .map((it) => String(it.name ?? it.code ?? ""))
                     .join(", ");
                 } else {
                   cellValue = String(rawValue);
@@ -235,7 +235,7 @@ export function ImportPreviewGrid({
                     ? String(
                         (rawValue as { name?: unknown; code?: unknown }).name ??
                           (rawValue as { code?: unknown }).code ??
-                          cellValue,
+                          "Unmatched",
                       )
                     : cellValue;
                   const suffix = optionList.length > 0 ? " (unknown)" : "";
@@ -273,7 +273,7 @@ export function ImportPreviewGrid({
                           display =
                             code && name
                               ? `${code} — ${name}`
-                              : String(name || code || cellValue);
+                              : String(name || code || "—");
                         } else if (isArrayRef) {
                           display = cellValue;
                         }

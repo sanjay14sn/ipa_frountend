@@ -320,7 +320,7 @@ export default function AdminShippingTable({
                           render: (line) => (
                             <>
                               <div className="font-medium">
-                                {line.inventory?.name ?? `Item #${line.id}`}
+                                {line.inventory?.name ?? line.inventory?.sku ?? "Unnamed item"}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 {line.inventory?.sku || "No SKU"}

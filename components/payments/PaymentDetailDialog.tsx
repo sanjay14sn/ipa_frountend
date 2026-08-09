@@ -30,11 +30,9 @@ export function PaymentDetailDialog({
       }}
       size="2xl"
       title={
-        payment
+        payment && (payment.razorpayPaymentId || payment.razorpayOrderId)
           ? `Payment details: ${
-              payment.razorpayPaymentId ||
-              payment.razorpayOrderId ||
-              `#${payment.id}`
+              payment.razorpayPaymentId || payment.razorpayOrderId
             }`
           : "Payment details"
       }

@@ -100,7 +100,7 @@ export function WaitingTab() {
       {
         key: "trainingLevel",
         header: "Training Level",
-        render: (w) => `Level ${w.trainingLevelId}`,
+        render: (w) => w.trainingLevelName ?? w.trainingLevelCode ?? "—",
       },
     ],
     [],
@@ -196,7 +196,7 @@ export function WaitingTab() {
         getRowId={(w) => `${w.instructorId}-${w.trainingLevelId}-${w.region}`}
         renderMainCell={(w) => (
           <TableMainCell
-            title={w.instructorName ?? `CI-${w.instructorId}`}
+            title={w.instructorName ?? w.instructorCode ?? "Course instructor"}
             subtitle={`${w.instructorCode ?? "—"} - ${formatStateLabel(w.region)}`}
           />
         )}

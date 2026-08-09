@@ -94,7 +94,7 @@ function normalizeEligibleRows(payload: unknown): DispatchEligibleCertRow[] {
     return {
       id: Number(raw.id),
       studentName: String(
-        raw.studentName ?? student.name ?? `Student #${raw.studentId ?? ""}`,
+        raw.studentName ?? student.name ?? raw.studentRollNo ?? student.rollNo ?? "Student",
       ),
       studentRollNo: String(raw.studentRollNo ?? student.rollNo ?? ""),
       requestDate: String(raw.requestDate ?? ""),

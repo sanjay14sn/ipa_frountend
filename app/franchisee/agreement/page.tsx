@@ -249,7 +249,6 @@ function AgreementStep1Review({
         summary={installmentSummary}
         gstFranchiseFee={feeAgreement?.gstFranchiseFee ?? null}
         title="Your franchise fee EMI plan"
-        agreementRef={feeAgreement?.id ? `Agreement #${feeAgreement.id}` : null}
       />
     </div>
   );
@@ -354,7 +353,6 @@ function AgreementStep4Payment({
         summary={installmentSummary}
         gstFranchiseFee={feeAgreement?.gstFranchiseFee ?? null}
         title="Your payment plan"
-        agreementRef={feeAgreement?.id ? `Agreement #${feeAgreement.id}` : null}
       />
       <PaymentAction
         agreementAccepted={agreementAccepted}

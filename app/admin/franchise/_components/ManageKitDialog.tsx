@@ -50,7 +50,7 @@ export function ManageKitDialog({
       size="lg"
       scrollBody
       hideFooter
-      title={`Manage kit - Agreement #${agreement.id}`}
+      title={`Manage kit${agreement.programName ? ` - ${agreement.programName}` : ""}`}
       description="Manage kit items, the franchise kit, and the one-time kit dispatch for this agreement."
     >
 
@@ -89,14 +89,12 @@ export function ManageKitDialog({
                   <>
                     <p className="text-sm text-muted-foreground">
                       {agreement.franchiseKitOrderId != null
-                        ? `The free franchise kit order has already been created (Order #${agreement.franchiseKitOrderId}).`
+                        ? "The free franchise kit order has already been created."
                         : "The franchise kit is already marked as dispatched."}
                     </p>
                     <Button type="button" variant="outline" size="sm" disabled>
                       <Truck className="mr-2 h-4 w-4" />
-                      {agreement.franchiseKitOrderId != null
-                        ? `Kit dispatched (Order #${agreement.franchiseKitOrderId})`
-                        : "Kit dispatched"}
+                      Kit dispatched
                     </Button>
                   </>
                 ) : (

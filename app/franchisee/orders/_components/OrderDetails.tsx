@@ -28,7 +28,7 @@ function clubLineItems(lines: OrderItemData[]) {
     } else {
       map.set(id, {
         inventoryId: id,
-        name: line.inventory?.name ?? `Item #${line.id}`,
+        name: line.inventory?.name ?? line.inventory?.sku ?? "Unnamed item",
         sku: line.inventory?.sku ?? null,
         quantity: line.quantity,
       });

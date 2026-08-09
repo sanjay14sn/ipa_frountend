@@ -75,7 +75,7 @@ function clubOrderItems(lines: OrderItemData[]) {
     } else {
       map.set(id, {
         inventoryId: id,
-        name: line.inventory?.name ?? `Item #${line.id}`,
+        name: line.inventory?.name ?? line.inventory?.sku ?? "Unnamed item",
         sku: line.inventory?.sku ?? null,
         quantity: line.quantity,
         reservedQty: line.reservedQty ?? 0,
@@ -432,7 +432,7 @@ export default function AdminOrdersTable({
       columns={columns}
       getRowId={(order) => String(order.id)}
       renderMainCell={(order) => (
-        <TableMainCell title={order.referenceId || `Order #${order.id}`} />
+        <TableMainCell title={order.referenceId || "Order"} />
       )}
       renderExpandedContent={(order) => {
         const standalone = isStandaloneDispatchOrderType(order.orderType);
@@ -447,7 +447,7 @@ export default function AdminOrdersTable({
 
         return (
         <>
-          <ExpandedDetailSection title={`Order #${order.id}`}>
+          <ExpandedDetailSection title={order.referenceId || "Order"}>
             <DetailFieldsGrid columns={4}>
               <DetailField
                 label="Order date"
@@ -621,16 +621,17 @@ export default function AdminOrdersTable({
       }}
       title="Cancel order"
       description={
-        <>
-          Order{" "}
-          <span className="font-medium text-foreground">
-            #{cancelDialogOrder?.id}
-          </span>
-          {cancelDialogOrder?.referenceId ? (
-            <> · {cancelDialogOrder.referenceId}</>
-          ) : null}{" "}
-          will be cancelled and cannot be restored.
-        </>
+        cancelDialogOrder?.referenceId ? (
+          <>
+            Order{" "}
+            <span className="font-medium text-foreground">
+              {cancelDialogOrder.referenceId}
+            </span>{" "}
+            will be cancelled and cannot be restored.
+          </>
+        ) : (
+          <>This order will be cancelled and cannot be restored.</>
+        )
       }
       formId="admin-cancel-order-form"
       onSubmit={(e) => {

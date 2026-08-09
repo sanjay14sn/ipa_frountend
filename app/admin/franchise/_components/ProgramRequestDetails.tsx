@@ -41,7 +41,7 @@ export default function ProgramRequestDetails({
 }: ProgramRequestDetailsProps) {
   const fe = request.franchisee;
   const franchise = request.franchise;
-  const programName = request.program?.name ?? `Program #${request.programId}`;
+  const programName = request.program?.name ?? "Program";
   const location =
     [franchise?.city, franchise?.state].filter(Boolean).join(", ") || "—";
 
@@ -79,7 +79,7 @@ export default function ProgramRequestDetails({
                 <ContactPill
                   icon={Building2}
                   label="Name"
-                  value={franchise?.name ?? request.franchiseId}
+                  value={franchise?.name ?? franchise?.code ?? "—"}
                 />
                 <ContactPill
                   icon={MapPin}

@@ -352,7 +352,7 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
                 ? props.supplierTerms.find((t) => t.inventoryItemId === id)
                 : undefined;
             const displayName =
-              poTerm?.inventoryItem?.name ?? item?.name ?? `Item #${id}`;
+              poTerm?.inventoryItem?.name ?? item?.name ?? item?.sku ?? "Unnamed item";
             const displaySkuLine =
               [item?.sku, poTerm?.supplierSku].filter(Boolean).join(" · ") ||
               poTerm?.inventoryItem?.sku ||
@@ -511,7 +511,7 @@ export function ProcurementBulkLinePicker(props: ProcurementBulkLinePickerProps)
   const renderTermRow = (term: SupplierItemTerm, checked: boolean) => {
     const item = catalogItems.find((c) => c.id === term.inventoryItemId);
     const rowId = term.inventoryItemId;
-    const name = term.inventoryItem?.name ?? item?.name ?? `Item #${rowId}`;
+    const name = term.inventoryItem?.name ?? item?.name ?? item?.sku ?? "Unnamed item";
     return (
       <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer">
         <Checkbox

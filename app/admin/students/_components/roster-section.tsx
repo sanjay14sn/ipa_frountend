@@ -72,9 +72,7 @@ export function RosterSection() {
         s.franchiseCode ? (
           <span className="font-mono text-xs">{s.franchiseCode}</span>
         ) : (
-          <span className="font-mono text-xs text-muted-foreground">
-            {s.franchiseId.slice(0, 12)}…
-          </span>
+          <span className="text-xs text-muted-foreground">—</span>
         ),
     },
     {

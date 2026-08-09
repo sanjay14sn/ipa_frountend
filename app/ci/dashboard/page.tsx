@@ -251,7 +251,7 @@ export default function CIDashboardPage() {
             {nextTraining ? (
               <div className="rounded-xl border bg-background p-3 shadow-sm">
                 <p className="text-sm font-medium text-card-foreground">
-                  {nextTraining.trainingLevelName ?? `Level ${nextTraining.trainingLevelId}`}
+                  {nextTraining.trainingLevelName ?? "Training level"}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">Date: {formatDate(nextTraining.sessionDate)}</p>
                 <p className="mt-1 text-xs text-muted-foreground">State: {nextTraining.region}</p>

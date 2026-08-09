@@ -31,7 +31,7 @@ export default function CustomMaterialsList({
     <div className="space-y-3">
       {groups.map((g) => {
         const label = getStudentLabel?.(g.studentId);
-        const title = label?.name || g.studentName || `Student #${g.studentId}`;
+        const title = label?.name || g.studentName || "Student";
         return (
           <div
             key={g.studentId}

@@ -44,7 +44,7 @@ export function ProgramRequestsSection() {
     setProgram(
       emptyProgramPayroll(
         request.programId,
-        request.program?.name ?? `Program #${request.programId}`,
+        request.program?.name ?? "Program",
       ),
     );
     setShowPayrollDialog(true);
@@ -134,7 +134,7 @@ export function ProgramRequestsSection() {
         }}
         subjectName={
           selectedRequest
-            ? `${selectedRequest.franchise?.name ?? selectedRequest.franchiseId} – ${selectedRequest.program?.name ?? `Program #${selectedRequest.programId}`}`
+            ? `${selectedRequest.franchise?.name ?? "Franchise"} – ${selectedRequest.program?.name ?? "program"}`
             : ""
         }
         program={program}

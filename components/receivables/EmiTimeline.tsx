@@ -37,7 +37,7 @@ export interface EmiTimelineProps {
   gstFranchiseFee?: boolean | null;
   /** Card title. Defaults to "Your payment plan". */
   title?: string;
-  /** Shown muted to the right of the title (e.g. "Agreement #8"). */
+  /** Shown muted to the right of the title (e.g. a program or agreement name). */
   agreementRef?: string | null;
   /** Empty-state message when the agreement has no plan. */
   emptyMessage?: string;

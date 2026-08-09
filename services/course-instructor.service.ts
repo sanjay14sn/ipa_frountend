@@ -31,9 +31,12 @@ export enum BloodGroup {
 export interface CourseInstructorData {
   id: number;
   franchise: {
-    id: number;
+    id: string;
     name: string;
+    code?: string | null;
   };
+  /** Raw franchise FK — for grouping/lookups only, never display. */
+  franchiseId: string;
   programId: number;
   instructorId: string;
   name: string;
@@ -232,14 +235,20 @@ function mapRow(row: Record<string, unknown>): CourseInstructorData {
   const dobRaw = row.dob as string | Date | undefined;
   const validFromRaw = row.validFrom as string | Date | undefined;
   const expiryRaw = row.expiryDate as string | Date | undefined;
+  const franchiseRaw = row.franchise as
+    | { id?: unknown; name?: unknown; code?: unknown }
+    | null
+    | undefined;
   return {
     id: Number(row.id),
     franchise: {
-      id: 0,
-      name: String(row.franchiseId ?? ""),
+      id: String(franchiseRaw?.id ?? row.franchiseId ?? ""),
+      name: String(franchiseRaw?.name ?? ""),
+      code: franchiseRaw?.code != null ? String(franchiseRaw.code) : null,
     },
+    franchiseId: String(row.franchiseId ?? ""),
     programId: Number(row.programId ?? 0),
-    instructorId: String(row.instructorCode ?? row.id ?? ""),
+    instructorId: String(row.instructorCode ?? ""),
     name: String(row.name ?? ""),
     dob: dobRaw ? new Date(dobRaw) : new Date(),
     bloodGroup: String(row.bloodGroup ?? BloodGroup.O_POSITIVE) as BloodGroup,
@@ -570,7 +579,9 @@ export async function getCITrainingProgress(
   const trainings: CITrainingProgressLevel[] = (raw.trainings ?? []).map((t: any) => ({
     id: t.id,
     trainingLevelId: t.trainingLevelId,
-    trainingLevelName: t.trainingLevel?.name ?? `Level ${t.trainingLevelId}`,
+    trainingLevelName:
+      t.trainingLevel?.name ??
+      (t.displayOrder != null ? `Level ${t.displayOrder}` : "Training level"),
     displayOrder: t.displayOrder,
     paid: t.paid,
     isCompleted: t.isCompleted,
@@ -610,7 +621,9 @@ export async function getAdminCITrainingProgress(
   const trainings: CITrainingProgressLevel[] = (raw.trainings ?? []).map((t: any) => ({
     id: t.id,
     trainingLevelId: t.trainingLevelId,
-    trainingLevelName: t.trainingLevel?.name ?? `Level ${t.trainingLevelId}`,
+    trainingLevelName:
+      t.trainingLevel?.name ??
+      (t.displayOrder != null ? `Level ${t.displayOrder}` : "Training level"),
     displayOrder: t.displayOrder,
     paid: t.paid,
     isCompleted: t.isCompleted,

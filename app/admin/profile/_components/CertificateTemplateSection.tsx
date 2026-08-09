@@ -614,7 +614,7 @@ export function CertificateTemplateSection({
               >
                 <FileText className="h-3.5 w-3.5" />
                 <span className="max-w-[200px] truncate">
-                  {t.name || t.certificateTitle || `#${t.id}`}
+                  {t.name || t.certificateTitle || "Untitled template"}
                 </span>
                 {t.isActive === false ? (
                   <span className="text-[10px] text-muted-foreground">
@@ -696,7 +696,11 @@ export function CertificateTemplateSection({
         onOpenChange={setDeleteConfirmOpen}
         variant="destructive"
         title="Delete certificate template?"
-        description={`Delete certificate template "${templateName || `#${templateId}`}"? This cannot be undone.`}
+        description={
+          templateName
+            ? `Delete certificate template "${templateName}"? This cannot be undone.`
+            : "Delete this template? This cannot be undone."
+        }
         confirmLabel="Delete"
         onConfirm={async () => {
           setDeleteConfirmOpen(false);

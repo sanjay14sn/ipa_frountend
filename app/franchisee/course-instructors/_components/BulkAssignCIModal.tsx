@@ -36,7 +36,7 @@ export default function BulkAssignCIModal({ session, onClose }: BulkAssignCIModa
         title="Assign CIs to Session"
         description={
           session
-            ? `${formatDate(session.sessionDate)} — ${session.trainingLevelName ?? `Level ${session.trainingLevelId}`} — ${session.region}`
+            ? `${formatDate(session.sessionDate)} — ${session.trainingLevelName ?? "Training level"} — ${session.region}`
             : ""
         }
       />

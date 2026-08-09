@@ -70,7 +70,7 @@ const EMPTY_STATS: DashboardStats = {
 };
 
 function formatOrderId(order: OrderData) {
-  return order.referenceId || `ORD-${String(order.id).padStart(4, "0")}`;
+  return order.referenceId || "Order";
 }
 
 function formatApplicationSubtitle(application: FranchiseData) {

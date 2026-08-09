@@ -176,19 +176,11 @@ export default function StudentBulkImportPage() {
     return m;
   }, [levelsByProgramQ.data]);
 
-  /** Map `franchiseId (string) → CIs`. The CI mapper in services/course-instructor.service.ts
-   *  has a quirk: it stores the real `franchiseId` in `franchise.name` and
-   *  hard-codes `franchise.id = 0`. We bypass it by reading the raw row. */
+  /** Map `franchiseId (string) → CIs`. */
   const ciOptionsByFranchise = useMemo(() => {
     const m = new Map<string, PreviewSelectOption[]>();
     (cisQ.data?.result ?? []).forEach((ci) => {
-      // Real franchiseId lives in `franchise.name` per the mapper quirk —
-      // fall back to it if a clean `franchiseId` field isn't surfaced.
-      const fid = String(
-        (ci as unknown as { franchiseId?: unknown }).franchiseId ??
-          ci.franchise?.name ??
-          "",
-      );
+      const fid = String(ci.franchiseId ?? "");
       if (!fid) return;
       const arr = m.get(fid) ?? [];
       arr.push({

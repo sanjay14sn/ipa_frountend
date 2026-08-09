@@ -54,7 +54,9 @@ export default function OrdersTable({
       // FR-20: the human-readable order-type label is part of the haystack —
       // "custom" / "level" / "kit" narrow to matching order types.
       const matchesSearch =
-        order.id.toString().includes(searchTerm) ||
+        (order.referenceId ?? "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
         order.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
         orderTypeLabel(order.orderType)
           .toLowerCase()
@@ -97,7 +99,7 @@ export default function OrdersTable({
   const columns: DataTableColumn<OrderData>[] = [
     {
       key: "order",
-      header: "Order ID",
+      header: "Order",
       className: "w-[200px]",
     },
     {
@@ -232,7 +234,7 @@ export default function OrdersTable({
       columns={columns}
       getRowId={(order) => order.id.toString()}
       renderMainCell={(order) => (
-        <span className="font-medium">Order #{order.id}</span>
+        <span className="font-medium">{order.referenceId || "Order"}</span>
       )}
       renderExpandedContent={(order) => (
         <OrderDetails
@@ -273,8 +275,8 @@ export default function OrdersTable({
       title="Cancel order?"
       description={
         <>
-          This will cancel Order #{cancelOrder?.id}. If payment was captured, a
-          full refund will be initiated.
+          This will cancel order {cancelOrder?.referenceId ?? ""}. If payment
+          was captured, a full refund will be initiated.
         </>
       }
       confirmLabel="Cancel order"

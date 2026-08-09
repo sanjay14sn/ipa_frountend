@@ -64,12 +64,9 @@ export function UpcomingSection() {
           columns={columns}
           getRowId={(item) => String(item.sessionId)}
           renderMainCell={(item) => (
-            <div className="flex flex-col">
-              <span className="font-medium text-card-foreground">
-                {item.trainingLevelName ?? `Level ${item.trainingLevelId}`}
-              </span>
-              <span className="text-sm text-muted-foreground">Session #{item.sessionId}</span>
-            </div>
+            <span className="font-medium text-card-foreground">
+              {item.trainingLevelName ?? "Training level"}
+            </span>
           )}
           emptyMessage="No upcoming sessions found."
           resultsText={(count, total) => `Showing ${count} of ${total} upcoming sessions`}

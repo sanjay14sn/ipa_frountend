@@ -154,7 +154,7 @@ export async function getEligibleStudents(): Promise<EligibleStudentsResponse> {
         ? String(level.code)
         : level?.name
           ? String(level.name)
-          : String(s.levelId ?? ""),
+          : "N/A",
       durationInMonths: Number(level?.durationInMonths ?? 0),
       status: normalizeStudentStatus(s.status),
       lastCertIssuedAt: (s.lastCertIssuedAt as string | null) ?? null,

@@ -193,7 +193,7 @@ export default function FranchisePaymentsDetails({
                 title={
                   payment.razorpayPaymentId ||
                   payment.razorpayOrderId ||
-                  `#${payment.id}`
+                  "—"
                 }
               />
             )}

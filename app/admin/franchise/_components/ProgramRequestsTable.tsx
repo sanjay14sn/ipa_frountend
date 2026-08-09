@@ -132,7 +132,7 @@ export default function ProgramRequestsTable({
       key: "program",
       header: "Program",
       className: "text-center",
-      render: (r) => r.program?.name ?? `#${r.programId}`,
+      render: (r) => r.program?.name ?? "—",
     },
     {
       key: "status",
@@ -200,7 +200,7 @@ export default function ProgramRequestsTable({
         columns={columns}
         getRowId={(r) => r.id.toString()}
         renderMainCell={(r) => (
-          <TableMainCell title={r.franchise?.name ?? r.franchiseId} />
+          <TableMainCell title={r.franchise?.name ?? r.franchise?.code ?? "—"} />
         )}
         renderExpandedContent={(r) => <ProgramRequestDetails request={r} />}
         searchPlaceholder="Search franchise, program, or franchisee..."

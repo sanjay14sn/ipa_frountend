@@ -420,7 +420,7 @@ function InstallmentSummaryCard({
               {title}
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Split-up for the franchise fee linked to Agreement #{summary.agreementId}.
+              Split-up for the franchise fee linked to this agreement.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

@@ -234,8 +234,7 @@ function getLevelLabel(level: Record<string, unknown>, fallbackId: unknown): str
   // Certificate views display the level CODE (e.g. "L1"), not the name.
   if (code) return code;
   if (name) return name;
-  const numericId = Number(fallbackId ?? level.id ?? 0);
-  return numericId > 0 ? `Level ${numericId}` : "N/A";
+  return "N/A";
 }
 
 function mapCertRow(c: CertificateRow): AdminCertificateRequest {
@@ -265,7 +264,7 @@ function mapCertRow(c: CertificateRow): AdminCertificateRequest {
     status: (c.status as AdminCertificateRequest["status"]) ?? "Pending",
     marksObtained,
     totalMarks,
-    studentName: String(student.name ?? `Student #${fallbackStudentId}`),
+    studentName: String(student.name ?? student.rollNo ?? "Student"),
     studentRollNo: String(student.rollNo ?? ""),
     studentDateOfBirth: String(student.dateOfBirth ?? ""),
     studentSex: String(student.sex ?? ""),
@@ -280,8 +279,8 @@ function mapCertRow(c: CertificateRow): AdminCertificateRequest {
     studentIdIssued: String(student.idIssued ?? ""),
     studentIdIssueDate: student.idIssueDate ? String(student.idIssueDate) : undefined,
     instructorName: String(instructor.name ?? ""),
-    instructorInstructorId: String(instructor.instructorCode ?? fallbackInstructorId),
-    franchiseName: String(franchise.name ?? `Franchise ${fid}`),
+    instructorInstructorId: String(instructor.instructorCode ?? ""),
+    franchiseName: String(franchise.name ?? "—"),
     levelPassMark: passMark,
     levelTotalMarks: Number(level.totalMarks ?? totalMarks),
     certificatePdfPath: c.certificatePdfPath

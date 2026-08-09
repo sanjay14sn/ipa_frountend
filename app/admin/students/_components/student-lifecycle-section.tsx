@@ -120,7 +120,7 @@ export function StudentLifecycleSection() {
       header: "Franchise",
       className: "min-w-0 px-2",
       render: (row) => {
-        const label = row.franchiseName || row.franchiseId || "N/A";
+        const label = row.franchiseName || "N/A";
         const franchiseLabel =
           typeof label === "string" && label !== "N/A"
             ? formatEntityCodeForDisplay(label)
@@ -141,7 +141,7 @@ export function StudentLifecycleSection() {
           variant="outline"
           className="max-w-full truncate border px-1.5 text-[11px]"
         >
-          {row.levelName || row.levelCode || `Level ${row.levelId}`}
+          {row.levelName || row.levelCode || "—"}
         </Badge>
       ),
     },

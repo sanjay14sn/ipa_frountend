@@ -193,11 +193,6 @@ export function AgreementEmiScheduleCard({
     : "initialPayableItem" in summary
       ? summary.initialPayableItem
       : null;
-  const agreementId = fullSummary
-    ? fullSummary.agreementId
-    : "agreementId" in summary
-      ? summary.agreementId
-      : null;
   const payableItem =
     nextDueItem && !nextDueItem.paidAt
       ? nextDueItem
@@ -213,7 +208,6 @@ export function AgreementEmiScheduleCard({
       <EmiTimeline
         summary={summary}
         title="Franchise fee EMI plan"
-        agreementRef={agreementId ? `Agreement #${agreementId}` : null}
         onRecordPayment={onRecordPayment}
         onSendReminder={onSendReminder}
       />

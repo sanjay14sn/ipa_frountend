@@ -115,7 +115,7 @@ export function ProgramsSection() {
           getRowId={(r) => String(r.id)}
           renderMainCell={(r) => (
             <span className="font-medium">
-              {r.program?.name ?? `Program #${r.programId}`}
+              {r.program?.name ?? "—"}
             </span>
           )}
           renderExpandedContent={(r) => (
@@ -124,7 +124,7 @@ export function ProgramsSection() {
                 <DetailFieldsGrid columns={3}>
                   <DetailField
                     label="Program"
-                    value={r.program?.name ?? `#${r.programId}`}
+                    value={r.program?.name ?? "—"}
                   />
                   <DetailField
                     label="Franchise"

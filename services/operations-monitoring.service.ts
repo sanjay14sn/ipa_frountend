@@ -343,15 +343,15 @@ export async function getAdminOperationsMonitoring(
     ],
     orders: unresolvedOrders.slice(0, 3).map((order) => ({
       id: String(order.id),
-      title: order.referenceId || `Order #${order.id}`,
-      subtitle: `${order.franchise?.name ?? order.franchiseId ?? "Unknown franchise"} · ${order.totalItems ?? 0} item${order.totalItems === 1 ? "" : "s"}`,
+      title: order.referenceId || "Order",
+      subtitle: `${order.franchise?.name ?? "Unknown franchise"} · ${order.totalItems ?? 0} item${order.totalItems === 1 ? "" : "s"}`,
       status: String(order.adminStatus ?? order.paymentStatus ?? "Pending"),
       tone: orderTone(order),
     })),
     shipping: awaitingDispatch.slice(0, 3).map((order) => ({
       id: String(order.id),
-      title: order.referenceId || `Order #${order.id}`,
-      subtitle: `${order.franchise?.name ?? order.franchiseId ?? "Unknown franchise"} · ${describeDispatchAge(order.readyToShipAt)}`,
+      title: order.referenceId || "Order",
+      subtitle: `${order.franchise?.name ?? "Unknown franchise"} · ${describeDispatchAge(order.readyToShipAt)}`,
       status:
         String(order.adminStatus ?? "").toLowerCase() === "verified"
           ? "Verified"
@@ -360,8 +360,8 @@ export async function getAdminOperationsMonitoring(
     })),
     payments: paymentIssues.slice(0, 3).map((order) => ({
       id: String(order.id),
-      title: order.referenceId || `Order #${order.id}`,
-      subtitle: `${order.franchise?.name ?? order.franchiseId ?? "Unknown franchise"} · ${describeRecentDate(order.createdAt, "Payment needs attention")}`,
+      title: order.referenceId || "Order",
+      subtitle: `${order.franchise?.name ?? "Unknown franchise"} · ${describeRecentDate(order.createdAt, "Payment needs attention")}`,
       status:
         String(order.paymentStatus ?? "").toUpperCase() === "FAILED"
           ? "Failed"
@@ -377,14 +377,14 @@ export async function getAdminOperationsMonitoring(
     })),
     overduePurchaseOrders: overduePurchaseOrders.slice(0, 3).map((order) => ({
       id: String(order.id),
-      title: order.referenceNo || `PO #${order.id}`,
+      title: order.referenceNo || "Purchase order",
       subtitle: `${order.supplier?.name ?? "Unknown supplier"} · ${describeExpectedDate(order.expectedDeliveryAt)}`,
       status: safeStatusLabel(order.status),
       tone: procurementTone(order),
     })),
     replenishmentDrafts: replenishmentDrafts.slice(0, 3).map((order) => ({
       id: String(order.id),
-      title: order.referenceNo || `Draft #${order.id}`,
+      title: order.referenceNo || "Draft",
       subtitle: `${order.supplier?.name ?? "Awaiting supplier"} · ${order.lines.length} line${order.lines.length === 1 ? "" : "s"}`,
       status: "Draft",
       tone: "neutral",

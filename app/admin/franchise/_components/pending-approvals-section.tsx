@@ -87,10 +87,10 @@ export function PendingApprovalsSection() {
       const selectedProgram =
         detail.selectedProgram ??
         (detail.agreements?.[0]?.programId != null
-          ? { id: detail.agreements[0].programId, name: detail.agreements[0].programName ?? detail.agreements[0].program?.name ?? `Program #${detail.agreements[0].programId}` }
+          ? { id: detail.agreements[0].programId, name: detail.agreements[0].programName ?? detail.agreements[0].program?.name ?? "Program" }
           : null) ??
         (application.agreements?.[0]?.programId != null
-          ? { id: application.agreements[0].programId, name: application.agreements[0].programName ?? application.agreements[0].program?.name ?? `Program #${application.agreements[0].programId}` }
+          ? { id: application.agreements[0].programId, name: application.agreements[0].programName ?? application.agreements[0].program?.name ?? "Program" }
           : null);
 
       if (!selectedProgram) {

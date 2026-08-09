@@ -38,6 +38,8 @@ export type ReceiptRow = {
   id: string;
   receiptId: number;
   purchaseOrderId: number;
+  /** Reference of the parent PO when it is in the loaded PO list; null otherwise. */
+  poReferenceNo: string | null;
   supplierId: number;
   supplierName: string;
   createdAt?: string | null;

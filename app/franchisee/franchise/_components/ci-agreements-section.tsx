@@ -283,19 +283,18 @@ export function CIAgreementsSection() {
           onPageChange={setPage}
           renderMainCell={(r) => (
             <span className="font-medium">
-              {r.instructorName ?? `Instructor #${r.instructorId}`}
+              {r.instructorName ?? "—"}
               <span className="mx-1 text-muted-foreground">-</span>
-              {r.franchiseName ?? r.franchiseId}
+              {r.franchiseName ?? "—"}
             </span>
           )}
           renderExpandedContent={(r) => (
             <ExpandedDetailSurface>
               <ExpandedDetailSection title="Agreement details">
                 <DetailFieldsGrid columns={3}>
-                  <DetailField label="ID" value={String(r.id)} />
                   <DetailField
                     label="Instructor"
-                    value={r.instructorName ?? `Instructor #${r.instructorId}`}
+                    value={r.instructorName ?? "—"}
                   />
                   <DetailField
                     label="Status"

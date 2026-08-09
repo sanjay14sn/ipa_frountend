@@ -56,11 +56,6 @@ export default function AdminProfilePage() {
               <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                 <LabeledValue label="Role" value={profile?.role ?? "—"} />
                 <LabeledValue label="State" value={profile?.state || "—"} />
-                <LabeledValue
-                  label="Admin ID"
-                  value={profile?.id != null ? String(profile.id) : "—"}
-                  mono
-                />
               </div>
             </ProfileCardSection>
             <ProfileCardSection divider>

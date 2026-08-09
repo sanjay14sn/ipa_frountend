@@ -148,7 +148,7 @@ export default function UnifiedInvoiceGroupedSummary({
             {selectedStudentIds.map((sid) => {
               const student = getStudentById(sid);
               const bd = studentBreakdown(preview, sid);
-              const title = student?.name ?? bd?.studentName ?? `Student #${sid}`;
+              const title = student?.name ?? bd?.studentName ?? "Student";
               if (!bd) {
                 return (
                   <div

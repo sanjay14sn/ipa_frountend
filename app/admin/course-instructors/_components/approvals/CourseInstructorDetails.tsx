@@ -217,7 +217,6 @@ export default function CourseInstructorDetails({
                 label="Franchise"
                 value={instructor.franchise?.name || "—"}
               />
-              <DetailField label="Record ID" value={String(instructor.id)} mono />
               <DetailField label="Applied" value={formatDate(instructor.createdAt)} />
               <DetailField
                 label="Last updated"

@@ -61,7 +61,7 @@ function programNameForAgreement(
 ): string {
   if (programId == null || programId === undefined) return "Program";
   const hit = (profile?.franchise?.agreements ?? []).find((a) => a.programId === programId);
-  return hit?.programName ?? hit?.program?.name ?? `Program #${programId}`;
+  return hit?.programName ?? hit?.program?.name ?? "Program";
 }
 
 /**
@@ -123,7 +123,7 @@ export function buildAgreementDetailFranchiseData(
     agreement.program?.name ??
     agreement.programName ??
     agreement.programs?.[0]?.name ??
-    (agreement.programId != null ? `Program #${agreement.programId}` : "Program");
+    "Program";
 
   const paymentDetails = [
     {
@@ -146,7 +146,7 @@ export function buildAgreementDetailFranchiseData(
   ];
 
   return {
-    name: agreement.franchise?.name ?? `Franchise ${agreement.franchiseId ?? ""}`.trim(),
+    name: agreement.franchise?.name ?? "Franchise",
     contactPerson: agreement.franchisee?.name ?? "-",
     email: agreement.franchisee?.mail ?? "-",
     phone: agreement.franchisee?.phone ?? "-",

@@ -214,9 +214,9 @@ export function AdminAgreementsSection({
           // horizontal scroll; full text in the hover title.
           <div
             className="max-w-[230px] truncate font-medium"
-            title={`${record.franchise?.name ?? record.franchiseId ?? "—"} - ${record.program?.name ?? record.programName ?? "—"}`}
+            title={`${record.franchise?.name ?? "—"} - ${record.program?.name ?? record.programName ?? "—"}`}
           >
-            {record.franchise?.name ?? record.franchiseId ?? "—"}
+            {record.franchise?.name ?? "—"}
             <span className="mx-1 text-muted-foreground">-</span>
             {record.program?.name ?? record.programName ?? "—"}
           </div>

@@ -201,7 +201,7 @@ export default function PaymentsTable() {
             title={
               payment.razorpayPaymentId ||
               payment.razorpayOrderId ||
-              `#${payment.id}`
+              "—"
             }
           />
         )}

@@ -277,7 +277,7 @@ export function MyAgreementsSection() {
             getRowId={(record) => String(record.id)}
             renderMainCell={(record) => (
               <span className="font-medium">
-                {record.franchise?.name ?? record.franchiseId ?? "—"}
+                {record.franchise?.name ?? "—"}
                 <span className="mx-1 text-muted-foreground">-</span>
                 {record.program?.name ?? record.programName ?? "—"}
               </span>

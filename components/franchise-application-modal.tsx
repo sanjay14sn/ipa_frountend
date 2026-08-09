@@ -678,7 +678,7 @@ export function FranchiseApplicationModal({
                           return names[0];
                         }
                         return ids.length === 1
-                          ? `Program #${ids[0]}`
+                          ? "1 program selected"
                           : "Select exactly one program";
                       })()}
                     </span>

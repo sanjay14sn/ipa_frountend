@@ -84,7 +84,7 @@ export function ReceiptsTab({
     {
       key: "purchaseOrder",
       header: "Purchase order",
-      render: (receipt) => `PO #${receipt.purchaseOrderId}`,
+      render: (receipt) => receipt.poReferenceNo ?? "—",
     },
     {
       key: "supplier",
@@ -124,7 +124,9 @@ export function ReceiptsTab({
             getRowId={(receipt) => receipt.id}
             renderMainCell={(receipt) => (
               <div className="flex flex-col">
-                <span className="font-medium">Receipt #{receipt.receiptId}</span>
+                <span className="font-medium">
+                  {receipt.poReferenceNo ?? receipt.supplierName}
+                </span>
                 <span className="text-sm text-muted-foreground">
                   {receipt.lineCount} line{receipt.lineCount === 1 ? "" : "s"}
                   {receipt.linePreview ? ` - ${receipt.linePreview}` : ""}
@@ -159,7 +161,7 @@ export function ReceiptsTab({
         title="Post purchase receipt"
         description={
           receiptOrderId !== null
-            ? `PO #${receiptOrderId} - ordered quantities are from the purchase order. Unit cost is taken from the PO line (not editable).`
+            ? "Ordered quantities are from the purchase order. Unit cost is taken from the PO line (not editable)."
             : undefined
         }
         formId="post-receipt-form"
@@ -192,7 +194,7 @@ export function ReceiptsTab({
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-3">
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <div className="text-sm font-medium leading-snug">
-                        {item?.name ?? `Item #${line.inventoryItemId}`}
+                        {item?.name ?? "Unnamed item"}
                       </div>
                       <div className="text-xs leading-tight text-muted-foreground">
                         {item?.sku ?? "No SKU"}

@@ -349,9 +349,14 @@ export function OrderRowInvoiceDialog({
       <AppDialogHeader
         title={
           <>
-            {standaloneDispatch ? labels.titleStandalone : labels.titleMaterial}{" "}
-            <span className="font-medium text-muted-foreground">—</span>{" "}
-            <span className="text-muted-foreground">Order #{orderId}</span>
+            {standaloneDispatch ? labels.titleStandalone : labels.titleMaterial}
+            {order?.referenceId ? (
+              <>
+                {" "}
+                <span className="font-medium text-muted-foreground">—</span>{" "}
+                <span className="text-muted-foreground">{order.referenceId}</span>
+              </>
+            ) : null}
           </>
         }
         description={

@@ -527,8 +527,7 @@ export async function getFranchiseApplicationDetail(
     firstAgreement?.programName ??
     firstAgreement?.program?.name ??
     firstAgreement?.programs?.[0]?.name ??
-    raw.programRequests?.[0]?.program?.name ??
-    (selectedProgramId != null ? `Program #${selectedProgramId}` : undefined);
+    raw.programRequests?.[0]?.program?.name;
 
   return {
     ...raw,
@@ -537,7 +536,7 @@ export async function getFranchiseApplicationDetail(
       selectedProgramId != null
         ? {
             id: selectedProgramId,
-            name: selectedProgramName ?? `Program #${selectedProgramId}`,
+            name: selectedProgramName ?? "Program",
           }
         : null,
   };

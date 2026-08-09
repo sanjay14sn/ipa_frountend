@@ -92,7 +92,7 @@ function AdminCIProgressContent({ instructorId }: { instructorId: number }) {
                 {training.displayOrder}
               </span>
               <span className="text-sm text-card-foreground truncate">
-                {training.trainingLevelName ?? `Level ${training.trainingLevelId}`}
+                {training.trainingLevelName ?? "—"}
               </span>
               {training.isCompleted && training.marks != null && (
                 <span className="text-xs text-muted-foreground shrink-0">
@@ -238,7 +238,7 @@ export function FranchiseCiListTable({ franchiseId }: FranchiseCiListTableProps)
   ];
 
   const sortOptions: DataTableSortOption[] = [
-    { value: "id", label: "ID" },
+    { value: "id", label: "Date added" },
     { value: "name", label: "Name" },
     { value: "createdAt", label: "Created" },
   ];
