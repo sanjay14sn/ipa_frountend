@@ -163,6 +163,8 @@ export function ciSignatureSrc(stored: string | null | undefined): string | null
 export async function listCIAgreementsForFranchisee(params?: {
   page?: number;
   limit?: number;
+  /** Scope to the active franchise — multi-franchise owners otherwise see every franchise's CI agreements blended. */
+  franchiseId?: string;
 }): Promise<PaginatedResult<CIAgreementData>> {
   const res = await api.get("/contracting/ci-agreements", { params });
   const result = unwrapData<unknown>(res);

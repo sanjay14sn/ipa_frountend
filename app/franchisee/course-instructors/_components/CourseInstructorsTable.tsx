@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared";
-import { BarChart2 } from "lucide-react";
+import { BarChart2, Eye, PenLine } from "lucide-react";
 import { DataTable } from "@/components/shared";
 import type {
   DataTableColumn,
@@ -11,8 +11,14 @@ import type {
   DataTableSortOption,
 } from "@/components/shared";
 import { CourseInstructorData } from "@/services/course-instructor.service";
+import type { CIAgreementData } from "@/services/contracting.service";
 import CourseInstructorDetails from "./CourseInstructorDetails";
 import { TrainingProgressModal } from "@/components/ci-training/TrainingProgressModal";
+import {
+  CISignDialog,
+  CIViewDialog,
+  useCIAgreementsByInstructor,
+} from "./ci-agreement-dialogs";
 
 interface CourseInstructorsTableProps {
   courseInstructors?: CourseInstructorData[];
@@ -39,6 +45,12 @@ export default function CourseInstructorsTable({
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [progressModal, setProgressModal] = useState<{ id: number; name: string } | null>(null);
+  // CI agreements of the ACTIVE franchise, mapped per instructor — powers the
+  // view/sign row actions that used to live on the dashboard's CI card.
+  const { byInstructor: agreementsByInstructor, refetch: refetchAgreements } =
+    useCIAgreementsByInstructor();
+  const [signingAgreement, setSigningAgreement] = useState<CIAgreementData | null>(null);
+  const [viewingAgreementId, setViewingAgreementId] = useState<number | null>(null);
   const itemsPerPage = 10;
 
   const filteredData = useMemo(() => {
@@ -112,21 +124,48 @@ export default function CourseInstructorsTable({
     {
       key: "actions",
       header: "Actions",
-      className: "w-[80px]",
-      render: (ci) => (
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            title="View training progress"
-            aria-label="View training progress"
-            onClick={() => setProgressModal({ id: ci.id, name: ci.name })}
-          >
-            <BarChart2 className="w-4 h-4" />
-          </Button>
-        </div>
-      ),
+      className: "w-[120px]",
+      render: (ci) => {
+        const agreement = agreementsByInstructor.get(ci.id);
+        return (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              title="View training progress"
+              aria-label="View training progress"
+              onClick={() => setProgressModal({ id: ci.id, name: ci.name })}
+            >
+              <BarChart2 className="w-4 h-4" />
+            </Button>
+            {agreement ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title="View CI agreement"
+                aria-label="View CI agreement"
+                onClick={() => setViewingAgreementId(agreement.id)}
+              >
+                <Eye className="w-4 h-4" />
+              </Button>
+            ) : null}
+            {agreement?.phase === "PENDING_FRANCHISEE_SIGNATURE" ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title="Sign CI agreement"
+                aria-label="Sign CI agreement"
+                onClick={() => setSigningAgreement(agreement)}
+              >
+                <PenLine className="w-4 h-4" />
+              </Button>
+            ) : null}
+          </div>
+        );
+      },
     },
   ];
 
@@ -214,6 +253,20 @@ export default function CourseInstructorsTable({
         instructorName={progressModal.name}
       />
     )}
+
+    <CISignDialog
+      agreement={signingAgreement}
+      onSigned={() => {
+        setSigningAgreement(null);
+        void refetchAgreements();
+      }}
+      onClose={() => setSigningAgreement(null)}
+    />
+
+    <CIViewDialog
+      agreementId={viewingAgreementId}
+      onClose={() => setViewingAgreementId(null)}
+    />
     </>
   );
 }
