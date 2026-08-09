@@ -12,7 +12,6 @@ import {
   Building2,
   ChevronRight,
   GraduationCap,
-  IndianRupee,
   Package,
   ShoppingCart,
   Users,
@@ -25,6 +24,7 @@ import { RequestProgramsModal } from "@/components/request-programs-modal";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/hooks/api/query-keys";
 import { FranchiseRail } from "./_components/franchise-rail";
+import { AgreementHero } from "./_components/agreement-hero";
 import { type FranchiseeDashboardStats } from "@/services/dashboard.service";
 import { type OrderData } from "@/services/order.service";
 import { useFranchiseeDashboardStats } from "@/hooks/api/dashboard.hooks";
@@ -416,6 +416,19 @@ export default function FranchiseeDashboard() {
     return resolveFranchiseFeePaidFromSummary(emiSummary);
   }, [emiAgreementQuery.data?.payments, emiSummary]);
   const upcomingDue = useMemo(() => resolveUpcomingDue(emiSummary), [emiSummary]);
+  // Latest completed franchise-fee payment — the hero's "Paid in full · <date>".
+  const franchiseFeePaidAt = useMemo(() => {
+    const payments = emiAgreementQuery.data?.payments ?? [];
+    let latest: string | null = null;
+    for (const payment of payments) {
+      if (!isFranchiseFeePayment(payment) || !isCompletedPayment(payment)) continue;
+      if (!payment.paidAt) continue;
+      if (latest == null || new Date(payment.paidAt) > new Date(latest)) {
+        latest = payment.paidAt;
+      }
+    }
+    return latest;
+  }, [emiAgreementQuery.data?.payments]);
   const franchiseFeeCard = useMemo(
     () =>
       buildFranchiseFeeCardDisplay({
@@ -459,19 +472,9 @@ export default function FranchiseeDashboard() {
     );
   }
 
+  // The franchise-fee summary lives in the AgreementHero band now (fee +
+  // validity + renewal in one card); the strip carries the four count cells.
   const statCards: StatCellConfig[] = [
-    {
-      // FR-03: overdue EMIs show a red "Overdue" chip deep-linking to the
-      // agreements tab — never the old fake 100%-down trend.
-      label: "Franchise Fee Paid",
-      value: franchiseFeeCard.value,
-      sub: franchiseFeeCard.sub,
-      icon: IndianRupee,
-      alertChip:
-        emiOverdue > 0
-          ? { label: "Overdue", href: "/franchisee/dashboard?open=agreement" }
-          : undefined,
-    },
     {
       label: "Total Students",
       value: stats.students.total.toString(),
@@ -595,9 +598,16 @@ export default function FranchiseeDashboard() {
           }
         />
 
+        <AgreementHero
+          feeValue={franchiseFeeCard.value}
+          feeSub={franchiseFeeCard.sub}
+          feePaidAt={franchiseFeePaidAt}
+          overdue={emiOverdue > 0}
+        />
+
         {loading ? (
-          <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5">
-            {[...Array(5)].map((_, i) => (
+          <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
               <div key={i} className="space-y-3 px-4 py-4 sm:px-5">
                 <div className="h-8 w-24 animate-pulse rounded bg-muted" />
                 <div className="h-8 w-16 animate-pulse rounded bg-muted" />
@@ -606,7 +616,7 @@ export default function FranchiseeDashboard() {
             ))}
           </div>
         ) : (
-          <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5">
+          <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
             {statCards.map((s) => (
               <StatCell key={s.label} {...s} />
             ))}

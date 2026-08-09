@@ -1,8 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Eye, Loader2, PenLine, Plus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -17,20 +15,11 @@ import {
   AppDialogHeader,
   DetailDialog,
 } from "@/components/shared/dialog";
-import { AgreementRecordDetail } from "@/components/agreements/AgreementRecordDetail";
 import { CIAgreementDetail } from "@/components/agreements/CIAgreementDetail";
 import { cleanAgreementTitle } from "@/components/agreements/agreement-utils";
 import { SignatureCapturePanel } from "@/components/esignature/SignatureCapturePanel";
 import type { ESignatureResult } from "@/components/esignature/ESignaturePad";
-import { ComponentErrorBoundary } from "@/components/error/ComponentErrorBoundary";
-import { type RazorpaySuccessResponse } from "@/components/RazorpayPayment";
-import {
-  franchiseeProfileSignatureSrc,
-  submitFranchiseeSignature,
-  updateFranchiseeSignatureOnly,
-  type AgreementRecord,
-  type ESignaturePayload,
-} from "@/services/agreement.service";
+import { franchiseeProfileSignatureSrc } from "@/services/agreement.service";
 import {
   getCIAgreementByIdForFranchisee,
   listCIAgreementsForFranchisee,
@@ -43,24 +32,10 @@ import {
   listProgramRequests,
   type ProgramRequestItem,
 } from "@/services/program-request.service";
-import {
-  initiateReceivableItemPayment,
-  verifyFranchiseFeePayment,
-  type PaymentOrderResponse,
-} from "@/services/franchisee.service";
-import { abandonOrderPayment } from "@/services/order.service";
-import { useAgreementMine, useAgreementsMine } from "@/hooks/api/agreement.hooks";
 import { queryKeys } from "@/hooks/api/query-keys";
 import { useUser } from "@/context/user-context";
-import { deriveAgreementSummary } from "@/lib/agreement-summary";
-import { agreementTypeLabel } from "@/lib/payment-details-display";
 import { formatDate } from "@/lib/date-utils";
-import { getErrorMessage, getUserFriendlyMessage } from "@/lib/error-utils";
-
-const RazorpayPayment = dynamic(
-  () => import("@/components/RazorpayPayment"),
-  { ssr: false, loading: () => <Loader2 className="h-5 w-5 animate-spin" /> },
-);
+import { getErrorMessage } from "@/lib/error-utils";
 
 // ─── shared bits ─────────────────────────────────────────────────────────────
 
@@ -93,359 +68,6 @@ function RailSkeleton({ rows = 3 }: { rows?: number }) {
         <div key={i} className="h-4 rounded bg-muted" />
       ))}
     </div>
-  );
-}
-
-// ─── agreement card ──────────────────────────────────────────────────────────
-
-/**
- * Reads `?open=agreement` (the Overdue-EMI chip deep link) inside its own
- * Suspense boundary so the client page keeps prerendering.
- */
-function OpenAgreementParamReader({ onTrigger }: { onTrigger: () => void }) {
-  const searchParams = useSearchParams();
-  const open = searchParams.get("open");
-  useEffect(() => {
-    if (open === "agreement") onTrigger();
-  }, [open, onTrigger]);
-  return null;
-}
-
-/** Moved verbatim from the retired franchise page's My Agreements section. */
-function FranchiseeAgreementViewDialog({
-  agreementId,
-  open,
-  paymentOpen,
-  onOpenChange,
-  onInitiatePayment,
-  isInitiatingReceivablePayment,
-}: {
-  agreementId: number | null;
-  open: boolean;
-  paymentOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  onInitiatePayment: (
-    agreementId: number,
-    onRefresh: () => Promise<void>,
-  ) => Promise<void>;
-  isInitiatingReceivablePayment: boolean;
-}) {
-  const agreementQuery = useAgreementMine(open ? agreementId ?? undefined : undefined);
-
-  useEffect(() => {
-    if (agreementQuery.error) {
-      toast.error(
-        getErrorMessage(agreementQuery.error, "Failed to load agreement"),
-      );
-    }
-  }, [agreementQuery.error]);
-
-  const agreement = agreementQuery.data ?? null;
-  const resolvedAgreementId = agreement?.id ?? agreementId ?? 0;
-
-  async function handlePayReceivableItem() {
-    if (!resolvedAgreementId) return;
-    await onInitiatePayment(resolvedAgreementId, async () => {
-      await agreementQuery.refetch();
-    });
-  }
-
-  async function handleSign(result: ESignatureResult) {
-    if (!resolvedAgreementId) return;
-    const payload: ESignaturePayload = result;
-    try {
-      if (agreement?.signed) {
-        await updateFranchiseeSignatureOnly(resolvedAgreementId, payload);
-      } else {
-        await submitFranchiseeSignature(resolvedAgreementId, payload);
-      }
-      toast.success("Signature saved");
-      await agreementQuery.refetch();
-    } catch (err) {
-      toast.error(getUserFriendlyMessage(err, "Could not save signature."));
-    }
-  }
-
-  return (
-    <AppDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      modal={!paymentOpen}
-      size="2xl"
-      padding="flush"
-      maxHeight="max-h-[92vh]"
-      scrollBody
-    >
-      <AppDialogHeader
-        title={cleanAgreementTitle(agreement?.title)}
-        description="View the agreement without leaving the dashboard."
-      />
-      <AppDialogBody>
-        <div className="p-4 sm:p-5">
-          {agreementQuery.isLoading ? (
-            <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Loading agreement...
-            </div>
-          ) : agreement ? (
-            <AgreementRecordDetail
-              data={agreement}
-              onPayReceivableItem={handlePayReceivableItem}
-              isInitiatingReceivablePayment={isInitiatingReceivablePayment}
-              onSign={handleSign}
-            />
-          ) : (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              Agreement not found.
-            </p>
-          )}
-        </div>
-      </AppDialogBody>
-    </AppDialog>
-  );
-}
-
-function termProgress(record: AgreementRecord | null): {
-  pct: number;
-  monthsLeft: number;
-} | null {
-  if (!record?.expiresAt) return null;
-  const startRaw =
-    record.activatedAt ?? record.dateOfSigning ?? record.createdAt ?? null;
-  if (!startRaw) return null;
-  const start = new Date(startRaw).getTime();
-  const end = new Date(record.expiresAt).getTime();
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
-    return null;
-  }
-  const now = Date.now();
-  const pct = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
-  const monthsLeft = Math.max(
-    0,
-    Math.round((end - now) / (1000 * 60 * 60 * 24 * 30.44)),
-  );
-  return { pct, monthsLeft };
-}
-
-function AgreementRailCard() {
-  const { user } = useUser();
-  const router = useRouter();
-  const agreementsQuery = useAgreementsMine(user?.franchiseId, {});
-  const rows = agreementsQuery.data ?? [];
-  const [viewAgreementId, setViewAgreementId] = useState<number | null>(null);
-  const [wantsOpen, setWantsOpen] = useState(false);
-  const [paymentDetails, setPaymentDetails] =
-    useState<PaymentOrderResponse | null>(null);
-  const [isInitiatingReceivablePayment, setIsInitiatingReceivablePayment] =
-    useState(false);
-
-  const summary = deriveAgreementSummary(rows);
-  const franchiseRows = rows.filter((r) => r.kind === "FRANCHISE");
-  const preferred = franchiseRows.length > 0 ? franchiseRows : rows;
-  const active =
-    preferred.find((r) => r.status === "ACTIVE") ?? preferred[0] ?? null;
-  const progress = termProgress(
-    active && active.status === "ACTIVE" ? active : null,
-  );
-
-  // `paymentId` died with the unification — activation (status ACTIVE /
-  // activatedAt) is the "paid" signal now (same derivation as the old table).
-  const paid =
-    active != null &&
-    (active.activatedAt != null ||
-      active.status === "ACTIVE" ||
-      active.status === "SUSPENDED" ||
-      active.payment?.id != null);
-  const statusLabel = active
-    ? `${active.signed ? "Signed" : "Unsigned"} · ${paid ? "Paid" : "Awaiting payment"}`
-    : null;
-
-  // Overdue-EMI deep link: open the agreement dialog once rows are available.
-  useEffect(() => {
-    if (!wantsOpen || rows.length === 0) return;
-    setViewAgreementId(active?.id ?? rows[0].id);
-    setWantsOpen(false);
-    router.replace("/franchisee/dashboard", { scroll: false });
-  }, [wantsOpen, rows, active, router]);
-
-  async function handleInitiatePayment(
-    agreementId: number,
-    onRefresh: () => Promise<void>,
-  ) {
-    try {
-      setIsInitiatingReceivablePayment(true);
-      const payment = await initiateReceivableItemPayment(agreementId);
-      if (payment.isZeroAmount) {
-        toast.success("This EMI has no payable amount.");
-        await onRefresh();
-        await agreementsQuery.refetch();
-        return;
-      }
-      setPaymentDetails(payment);
-    } catch (e) {
-      toast.error(getErrorMessage(e, "Unable to start EMI payment"));
-    } finally {
-      setIsInitiatingReceivablePayment(false);
-    }
-  }
-
-  async function handlePaymentSuccess(response: RazorpaySuccessResponse) {
-    try {
-      await verifyFranchiseFeePayment({
-        paymentId: response.razorpay_payment_id,
-        orderId: response.razorpay_order_id,
-        signature: response.razorpay_signature,
-      });
-      toast.success("EMI payment verified");
-      setPaymentDetails(null);
-      await agreementsQuery.refetch();
-    } catch (e) {
-      toast.error(getErrorMessage(e, "Payment verification failed"));
-      setPaymentDetails(null);
-    }
-  }
-
-  function handlePaymentFailure(error: unknown) {
-    toast.error(getErrorMessage(error, "Payment was not completed"));
-    setPaymentDetails(null);
-  }
-
-  return (
-    <RailCard label="Franchise agreement">
-      <Suspense fallback={null}>
-        <OpenAgreementParamReader onTrigger={() => setWantsOpen(true)} />
-      </Suspense>
-
-      {agreementsQuery.isLoading && rows.length === 0 ? (
-        <RailSkeleton rows={4} />
-      ) : rows.length === 0 ? (
-        <p className="py-2 text-sm text-muted-foreground">
-          No agreements on file yet.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          <div>
-            <p className="text-lg font-semibold leading-snug text-card-foreground">
-              {summary.activeExpiresAt
-                ? `Valid till ${formatDate(summary.activeExpiresAt)}`
-                : "No active agreement"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {summary.activeTenure ? `${summary.activeTenure}-month term` : null}
-              {summary.activeTenure && summary.joinedAt ? " · " : null}
-              {summary.joinedAt
-                ? `joined ${formatDate(summary.joinedAt)}`
-                : null}
-            </p>
-          </div>
-
-          {progress ? (
-            <div>
-              <div className="h-2 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${progress.pct}%` }}
-                />
-              </div>
-              <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
-                <span>{Math.round(progress.pct)}% of term elapsed</span>
-                <span className="font-medium text-primary">
-                  {progress.monthsLeft} month{progress.monthsLeft === 1 ? "" : "s"} left
-                </span>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="flex flex-wrap items-center gap-2">
-            {statusLabel ? <Badge variant="outline">{statusLabel}</Badge> : null}
-            <span className="text-xs text-muted-foreground">
-              {summary.renewalCount === 0
-                ? "No renewals issued"
-                : `${summary.renewalCount} renewal${summary.renewalCount === 1 ? "" : "s"} issued`}
-            </span>
-          </div>
-
-          {rows.length > 1 ? (
-            <div className="divide-y rounded-xl border">
-              {rows.map((record) => (
-                <div
-                  key={record.id}
-                  className="flex items-center gap-2 px-3 py-2"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-card-foreground">
-                      {record.program?.name ?? record.programName ?? "Agreement"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {agreementTypeLabel(record.kind, record.origin)}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    title="View agreement"
-                    onClick={() => setViewAgreementId(record.id)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={() => active && setViewAgreementId(active.id)}
-            disabled={!active}
-          >
-            <Eye className="h-4 w-4" />
-            View agreement
-          </Button>
-        </div>
-      )}
-
-      <FranchiseeAgreementViewDialog
-        agreementId={viewAgreementId}
-        open={viewAgreementId != null}
-        paymentOpen={paymentDetails != null}
-        onInitiatePayment={handleInitiatePayment}
-        isInitiatingReceivablePayment={isInitiatingReceivablePayment}
-        onOpenChange={(open) => {
-          if (!open) setViewAgreementId(null);
-        }}
-      />
-
-      {paymentDetails && user?.profile ? (
-        <ComponentErrorBoundary componentName="RazorpayPayment">
-          <RazorpayPayment
-            key={paymentDetails.orderId}
-            orderId={paymentDetails.orderId}
-            amount={paymentDetails.amount}
-            currency={paymentDetails.currency}
-            franchiseName={paymentDetails.franchiseName || "Franchise"}
-            razorpayKey={paymentDetails.key}
-            onSuccess={handlePaymentSuccess}
-            onFailure={handlePaymentFailure}
-            onAbandon={async ({ orderId, reason }) => {
-              await abandonOrderPayment({
-                razorpayOrderId: orderId,
-                note: reason,
-              });
-            }}
-            userDetails={{
-              name: user.profile.name,
-              email: user.profile.mail,
-              phone: user.profile.phone,
-            }}
-          />
-        </ComponentErrorBoundary>
-      ) : null}
-    </RailCard>
   );
 }
 
@@ -767,17 +389,17 @@ export interface FranchiseRailProps {
 }
 
 /**
- * The retired /franchisee/franchise page compressed into three dashboard rail
- * cards: agreement lifecycle, program requests, and CI agreements. Stacks in
- * the right column at xl; flows as a card row below that.
+ * Programs + CI agreements from the retired /franchisee/franchise page as
+ * dashboard rail cards. The franchise agreement itself lives in the
+ * AgreementHero band under the header. Stacks in the right column at xl;
+ * flows as a card row below that.
  */
 export function FranchiseRail({ onRequestProgram }: FranchiseRailProps) {
   return (
     <div
       data-testid="franchise-rail"
-      className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-1"
+      className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-1"
     >
-      <AgreementRailCard />
       <ProgramsRailCard onRequestProgram={onRequestProgram} />
       <CIAgreementsRailCard />
     </div>
