@@ -174,7 +174,7 @@ export async function completeAssignment(
   await api.patch(`/admin/ci-training/assignment/${assignmentId}/complete`, input);
 }
 
-async function completeSession(sessionId: number): Promise<CITrainingSession> {
+export async function completeSession(sessionId: number): Promise<CITrainingSession> {
   const res = await api.patch(`/admin/ci-training/session/${sessionId}/complete`);
   return unwrapData<CITrainingSession>(res);
 }

@@ -25,6 +25,7 @@ import {
   listAssignmentsBySession,
   createSession,
   completeAssignment,
+  completeSession,
   reassignAssignment,
   rescheduleSession,
 } from "@/services/ci-training-admin.service";
@@ -623,9 +624,8 @@ function CompleteSessionModal({
       }
     }
 
-    setLoading(false);
-
     if (failed > 0) {
+      setLoading(false);
       toast.error(
         "Some CIs were not completed. Review the inline errors and submit again.",
       );
@@ -633,6 +633,18 @@ function CompleteSessionModal({
       return;
     }
 
+    // All marks recorded — now actually close the session so it stops
+    // surfacing to franchisees and further assignment is blocked.
+    try {
+      await completeSession(session.id);
+    } catch (err: unknown) {
+      setLoading(false);
+      toast.error(getApiErrorMessage(err, "Failed to mark the session completed"));
+      onSuccess();
+      return;
+    }
+
+    setLoading(false);
     toast.success("Session completed");
     onSuccess();
     closeModal();
@@ -980,17 +992,19 @@ export function SessionsTab() {
                 Reschedule
               </Button>
             )}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={(event) => {
-                event.stopPropagation();
-                setCompleteSessionTarget(s);
-              }}
-            >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              Complete Session
-            </Button>
+            {s.status === "OPEN" && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setCompleteSessionTarget(s);
+                }}
+              >
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                Complete Session
+              </Button>
+            )}
           </div>
         ),
       },

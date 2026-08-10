@@ -141,9 +141,12 @@ function deriveProgressStatus(
   training: Record<string, unknown>,
   assignment: Record<string, unknown>,
 ): string {
+  // isCompleted is authoritative over the latest assignment: an admin
+  // force-completion can leave that assignment stale (open or CANCELLED),
+  // but the level is done either way.
+  if (training.isCompleted === true) return "COMPLETED";
   const assignmentStatus = asNullableString(assignment.status);
   if (assignmentStatus) return assignmentStatus;
-  if (training.isCompleted === true) return "COMPLETED";
   if (training.isActive === true) return "ACTIVE";
   if (training.paid === true) return "PAID";
   return "UNPAID";
@@ -178,10 +181,9 @@ export function normalizeCIProgressResponse(payload: unknown): CIProgressItem[] 
       isCompleted: training.isCompleted === true,
       isActive: training.isActive === true,
       marks: asNullableNumber(training.marks),
-      sessionDate:
-        asNullableString(assignment.sessionDate) ??
-        asNullableString(assignment.assignedAt) ??
-        asNullableString(assignment.attemptedAt),
+      // Only the real session date — assignedAt/attemptedAt are assignment
+      // bookkeeping and rendered today's date for a not-yet-held session.
+      sessionDate: asNullableString(assignment.sessionDate),
       theoryMarks: asNullableNumber(assignment.theoryMarks),
       practicalMarks: asNullableNumber(assignment.practicalMarks),
       completedAt:

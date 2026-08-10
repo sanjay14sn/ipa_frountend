@@ -51,4 +51,33 @@ describe("normalizeCIProgressResponse", () => {
     expect(progress[1].trainingLevelName).toBe("Level 2");
     expect(progress[1].status).toBe("PAID");
   });
+
+  it("treats a completed training as COMPLETED even with a stale open assignment", () => {
+    // Admin force-completion used to leave the session assignment ASSIGNED,
+    // making the CI portal render the level as incomplete forever.
+    const [row] = normalizeCIProgressResponse({
+      trainings: [
+        {
+          id: 18,
+          trainingLevelId: 3,
+          trainingLevel: { id: 3, name: "Level 3", code: "CL3", displayOrder: 3 },
+          displayOrder: 3,
+          paid: true,
+          isCompleted: true,
+          isActive: false,
+          marks: 80,
+          assignment: {
+            status: "ASSIGNED",
+            sessionId: 42,
+            theoryMarks: null,
+            practicalMarks: null,
+            completedAt: null,
+          },
+        },
+      ],
+      purchases: [],
+    });
+    expect(row.status).toBe("COMPLETED");
+    expect(row.isCompleted).toBe(true);
+  });
 });
