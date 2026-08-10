@@ -28,7 +28,8 @@ import { handleFormApiError } from "@/lib/form-errors";
 import { useUniquenessCheck } from "@/hooks/api/uniqueness.hooks";
 import { checkFranchiseNameAvailability } from "@/services/uniqueness.service";
 import { toast } from "sonner";
-import { useUser } from "@/context/user-context";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/hooks/api/query-keys";
 import {
   AppDialog,
   DialogFormField,
@@ -72,7 +73,7 @@ export function RequestFranchiseModal({
   open,
   onOpenChange,
 }: RequestFranchiseModalProps) {
-  const { user, setUser } = useUser();
+  const queryClient = useQueryClient();
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: EMPTY_FORM,
@@ -153,7 +154,7 @@ export function RequestFranchiseModal({
     }
     setIsLoading(true);
     try {
-      const res = await requestNewFranchise({
+      await requestNewFranchise({
         name: values.name,
         type: values.type,
         city: values.city,
@@ -162,34 +163,15 @@ export function RequestFranchiseModal({
         pincode: values.pincode,
         programId: values.programId,
       });
-      const payload = res as unknown as {
-        franchise?: { id: string | number; name: string };
-        result?: { franchise?: { id: string | number; name: string } };
-      };
-      const franchise =
-        payload.franchise ??
-        payload.result?.franchise ??
-        (typeof res === "object" &&
-        res !== null &&
-        "id" in res &&
-        "name" in res
-          ? (res as { id: string | number; name: string })
-          : undefined);
       toast.success("Franchise request submitted successfully");
       setSubmitted(true);
-      if (user?.franchises && franchise) {
-        setUser({
-          ...user,
-          franchises: [
-            ...user.franchises,
-            {
-              id: String(franchise.id),
-              name: franchise.name,
-              status: "Pending",
-            },
-          ],
-        });
-      }
+      // The switcher list rides the profile query now — refetch it so the new
+      // Pending franchise appears without a re-login. (The old hand-append
+      // into user.franchises silently did nothing when the in-memory list was
+      // missing, e.g. after a page reload.)
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.auth.franchiseeProfile(),
+      });
     } catch (error) {
       handleFormApiError(error, {
         setErrors,

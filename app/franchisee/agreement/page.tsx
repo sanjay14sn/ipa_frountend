@@ -624,11 +624,16 @@ function FranchiseAgreementContent() {
     const isOperational =
       profile.franchise?.isOperational ??
       (profile.franchise?.validAgreementsCount ?? 0) > 0;
-    const updatedFranchises = user.franchises?.map((franchise) =>
-      franchise.id === currentFranchiseId
-        ? { ...franchise, status: profileFranchiseStatus ?? franchise.status }
-        : franchise,
-    );
+    // Prefer the me response's full list (fresh statuses for every franchise,
+    // and present even after a reload emptied the in-memory copy); patching
+    // the previous array is only the older-backend fallback.
+    const updatedFranchises =
+      profile.franchises ??
+      user.franchises?.map((franchise) =>
+        franchise.id === currentFranchiseId
+          ? { ...franchise, status: profileFranchiseStatus ?? franchise.status }
+          : franchise,
+      );
 
     setUser({
       ...user,

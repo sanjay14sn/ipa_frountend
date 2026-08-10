@@ -19,6 +19,8 @@ interface FranchiseeProfileResponse {
     reference: string;
     createdAt: string;
     updatedAt: string;
+    /** Every franchise the franchisee owns (any review status), newest first. */
+    franchises?: Array<{ id: string; name: string; status: string }>;
     franchise: {
       id: string;
       name: string;
@@ -61,7 +63,7 @@ interface FranchiseeProfileResponse {
 // }
 
 import { api } from "@/lib/axios";
-import { unwrapData, normalizePaginatedResult } from "@/lib/unwrap-api";
+import { unwrapData } from "@/lib/unwrap-api";
 
 export async function login(
   name: string,
@@ -115,27 +117,16 @@ export async function getFranchiseeProfile(): Promise<FranchiseeProfileResponse>
   return response.data;
 }
 
+/**
+ * Backend session switch only. The caller (UserContext.switchFranchise)
+ * refetches /franchisee/auth/me right after — that response now carries the
+ * new franchise's name/status and the full switcher list, so the extra
+ * GET /franchise round trip this used to make is gone.
+ */
 export async function switchFranchise(franchiseId: string): Promise<{
   franchiseId: string;
-  franchiseName: string;
-  franchiseStatus: string;
-  franchises: Array<{ id: string; name: string; status: string }>;
 }> {
-  await api.post("/franchisee/auth/switch", { franchiseId });
-  const listRes = await api.get("/franchise");
-  const listData = unwrapData<unknown>(listRes);
-  const { rows: franchisesRaw } = normalizePaginatedResult<{ id: string; name: string; status: string }>(listData);
-  const franchises = franchisesRaw.map((f) => ({
-    id: f.id,
-    name: f.name,
-    status: f.status,
-  }));
-  const current = franchises.find((f) => f.id === franchiseId);
-  return {
-    franchiseId,
-    franchiseName: current?.name ?? "",
-    franchiseStatus: current?.status ?? "",
-    franchises,
-  };
+  const response = await api.post("/franchisee/auth/switch", { franchiseId });
+  return unwrapData<{ franchiseId: string }>(response);
 }
 

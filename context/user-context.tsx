@@ -179,15 +179,25 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       : null;
     setUserWithStorage((prev) => {
       if (!prev) return prev;
+      // The post-switch profile fetch (new session cookie) is the source of
+      // truth for the new franchise's name/status and the switcher list; the
+      // in-memory row covers the rare profile-fetch failure tolerated above.
+      const fallbackRow = prev.franchises?.find(
+        (franchise) => franchise.id === data.franchiseId,
+      );
       return {
         ...prev,
         franchiseId: data.franchiseId,
-        franchiseName: data.franchiseName,
-        franchiseStatus: data.franchiseStatus,
+        franchiseName:
+          fetchedProfile?.franchise?.name ?? fallbackRow?.name ?? prev.franchiseName,
+        franchiseStatus:
+          fetchedProfile?.franchise?.status ??
+          fallbackRow?.status ??
+          prev.franchiseStatus,
         isOperational:
           fetchedProfile?.franchise?.isOperational ??
           (fetchedProfile?.franchise?.validAgreementsCount ?? 0) > 0,
-        franchises: data.franchises,
+        franchises: fetchedProfile?.franchises ?? prev.franchises,
         // Program scope is franchise-specific — clear the previous selection
         // here so applyScopeFromUser (called inside setUserWithStorage) picks
         // the first agreement of the NEW franchise rather than re-using the
@@ -306,15 +316,22 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         const isOperational =
           profile.franchise?.isOperational ??
           (profile.franchise?.validAgreementsCount ?? 0) > 0;
-        const franchises = prev.franchises?.map((franchise) =>
-          franchise.id === (profile.franchise?.id ?? prev.franchiseId)
-            ? {
-                ...franchise,
-                name: franchiseName ?? franchise.name,
-                status: franchiseStatus ?? franchise.status,
-              }
-            : franchise,
-        );
+        // The me response carries the full franchise list — sourcing it here
+        // (instead of patching the in-memory copy) is what re-arms the
+        // franchise switcher after a full page load, where the slim
+        // localStorage identity has no `franchises`. The map below is only a
+        // fallback for older backends whose me response lacks the field.
+        const franchises =
+          profile.franchises ??
+          prev.franchises?.map((franchise) =>
+            franchise.id === (profile.franchise?.id ?? prev.franchiseId)
+              ? {
+                  ...franchise,
+                  name: franchiseName ?? franchise.name,
+                  status: franchiseStatus ?? franchise.status,
+                }
+              : franchise,
+          );
         const sameId = prev.profile?.id === profile.id;
         const sameFranchiseUpdated =
           prev.profile?.franchise?.updatedAt === profile.franchise?.updatedAt;
@@ -345,6 +362,22 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
               row.signed === other.signed
             );
           });
+        // Same for the franchise-switcher feed: without this gate, a list
+        // change (new application, admin approval) arriving via the profile
+        // refetch would be skipped and the switcher would stay stale.
+        const prevFranchises = prev.franchises ?? [];
+        const nextFranchises = franchises ?? [];
+        const sameFranchises =
+          prevFranchises.length === nextFranchises.length &&
+          prevFranchises.every((row, i) => {
+            const other = nextFranchises[i];
+            if (!other) return false;
+            return (
+              row.id === other.id &&
+              row.name === other.name &&
+              row.status === other.status
+            );
+          });
         if (
           sameId &&
           sameFranchiseUpdated &&
@@ -353,6 +386,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           sameName &&
           sameSignature &&
           sameActivePrograms &&
+          sameFranchises &&
           prev.profile != null
         ) {
           return prev;

@@ -45,6 +45,13 @@ export interface User {
     reference: string;
     /** Raw stored signature path on the franchisee row (relative to /uploads). */
     franchiseeSignature?: string | null;
+    /**
+     * All franchises owned by this franchisee (any review status), from the
+     * /franchisee/auth/me response. Source of truth for `User.franchises` —
+     * riding the profile fetch is what lets the switcher survive full page
+     * loads (the persisted slim identity intentionally omits the list).
+     */
+    franchises?: Array<{ id: string; name: string; status: string }>;
     franchise?: {
       id: string;
       code?: string | null;

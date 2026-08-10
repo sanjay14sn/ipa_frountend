@@ -58,17 +58,6 @@ export function LoginCard({
         return;
       }
 
-      const franchisesRaw = await getFranchiseList();
-      const franchises = franchisesRaw.map((f) => ({
-        id: f.id,
-        name: f.name,
-        type: f.type,
-        status: f.status,
-      }));
-      const current = franchises.find(
-        (f) => f.id === loginResult.franchiseId,
-      );
-
       let profileData: Record<string, unknown> | null = null;
       try {
         const profileResponse = await getFranchiseeProfile();
@@ -78,6 +67,32 @@ export function LoginCard({
       } catch (profileError) {
         sendClientLog({ level: "warn", event: "login-profile-fetch-error", message: "Failed to fetch franchisee profile after login", context: { error: profileError } });
       }
+
+      // The me response carries the switcher list; the dedicated list
+      // endpoint is only the fallback when the profile fetch failed (or an
+      // older backend omits the field). A logged-in franchisee always owns at
+      // least one franchise, so an empty list means "field missing".
+      let franchises: Array<{
+        id: string;
+        name: string;
+        type?: string;
+        status: string;
+      }> = (
+        (profileData as {
+          franchises?: Array<{ id: string; name: string; status: string }>;
+        } | null)?.franchises ?? []
+      ).map((f) => ({ id: String(f.id), name: f.name, status: f.status }));
+      if (franchises.length === 0) {
+        franchises = (await getFranchiseList()).map((f) => ({
+          id: f.id,
+          name: f.name,
+          type: f.type,
+          status: f.status,
+        }));
+      }
+      const current = franchises.find(
+        (f) => f.id === loginResult.franchiseId,
+      );
 
       const profile = profileData
         ? {
