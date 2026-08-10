@@ -7,22 +7,26 @@ import {
   createCourseInstructor,
   updateCourseInstructor,
   getAllAdminCourseInstructorsByStatus,
-  getAdminCISummaries,
-  getAdminCIDetails,
+  getPaginatedAdminCourseInstructors,
   type CourseInstructorData,
   type CreateCourseInstructorRequest,
   type AdminCourseInstructorsByStatus,
   type CourseInstructorPaginationParams,
   type CourseInstructorListParams,
-  type CIFranchiseSummary,
 } from "@/services/course-instructor.service";
 import { useProgramId } from "@/hooks/use-scope";
 import { queryKeys } from "@/hooks/api/query-keys";
 import { getQueryClientBridge } from "@/hooks/api/query-client-bridge";
 
-export type { CIFranchiseSummary };
-
 const CI_LIST_PREFIX = ["course-instructors", "list"] as const;
+
+/** Invalidation prefix covering every admin status-scoped CI list
+ *  (Applications / Active CIs / Rejected tabs). */
+export const ADMIN_CI_STATUS_PREFIX = [
+  "course-instructors",
+  "admin",
+  "status",
+] as const;
 
 /** One network request per serialized filter set; pass `search` to scope the key + API params. */
 export function useCourseInstructors(
@@ -158,34 +162,35 @@ export function useCreateCourseInstructor() {
   });
 }
 
-export function useAdminCISummaries(
-  params: { page?: number; limit?: number; search?: string },
-  refreshKey = 0,
+/**
+ * Admin CI list scoped to one status — "Pending" / "Rejected" review statuses
+ * or the derived "valid" operational filter (Active CIs). All filtering is
+ * server-side (GET /admin/course-instructor). Keys share
+ * {@link ADMIN_CI_STATUS_PREFIX} so one invalidation refreshes all three tabs.
+ */
+export function useAdminCIListByStatus(
+  status: "Pending" | "Rejected" | "valid",
+  params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    franchiseId?: string;
+    sortBy?: string;
+    sortOrder?: "ASC" | "DESC";
+  },
 ) {
   return useQuery({
-    queryKey: queryKeys.courseInstructors.adminSummary(params as Record<string, unknown>, String(refreshKey)),
-    queryFn: () => getAdminCISummaries(params),
-    placeholderData: (prev) => prev,
-  });
-}
-
-export function useAdminCIDetails(
-  franchiseId: string,
-  params: { status?: string; page?: number; limit?: number; search?: string },
-) {
-  return useQuery({
-    queryKey: queryKeys.courseInstructors.adminDetails(franchiseId, params as Record<string, unknown>),
+    queryKey: [...ADMIN_CI_STATUS_PREFIX, status, params],
     queryFn: () =>
-      getAdminCIDetails(
-        franchiseId,
-        params as {
-          status?: "Pending" | "Approved" | "Rejected" | "all";
-          page?: number;
-          limit?: number;
-          search?: string;
-        },
-      ),
-    enabled: !!franchiseId,
+      getPaginatedAdminCourseInstructors({
+        status,
+        page: params.page,
+        limit: params.limit,
+        search: params.search || undefined,
+        franchiseId: params.franchiseId || undefined,
+        sortBy: params.sortBy,
+        sortOrder: params.sortOrder,
+      }),
     placeholderData: (prev) => prev,
   });
 }

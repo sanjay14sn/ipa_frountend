@@ -9,11 +9,19 @@ import { PageTabs, TabsContent } from "@/components/shared/page-tabs";
 import { CiApprovalsSection } from "./_components/approvals/ci-approvals-section";
 import { CiTrainingSection } from "./ci-training-section";
 import { CiAgreementsSection } from "./_components/ci-agreements-section";
+import { RejectedApplicationsSection } from "./_components/rejected-applications-section";
 import ActiveCourseInstructorsTable from "./_components/approvals/ActiveCourseInstructorsTable";
 import SetupExistingCIDialog from "./_components/approvals/SetupExistingCIDialog";
+import { ADMIN_CI_STATUS_PREFIX } from "@/hooks/api/course-instructor.hooks";
 import { PageSkeleton } from "@/components/shared";
 
-const TABS = ["applications", "active", "training", "agreements"] as const;
+const TABS = [
+  "applications",
+  "active",
+  "training",
+  "agreements",
+  "rejected",
+] as const;
 
 function AdminCourseInstructorsHubInner() {
   const [tab, setTab] = useTabFromUrl("applications", TABS);
@@ -21,9 +29,8 @@ function AdminCourseInstructorsHubInner() {
   const queryClient = useQueryClient();
 
   const handleSetupSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ["course-instructors", "admin", "summary"] });
-    queryClient.invalidateQueries({ queryKey: ["course-instructors", "admin", "details"] });
-    queryClient.invalidateQueries({ queryKey: ["course-instructors", "admin", "status"] });
+    queryClient.invalidateQueries({ queryKey: [...ADMIN_CI_STATUS_PREFIX] });
+    queryClient.invalidateQueries({ queryKey: ["ci-agreements", "admin"] });
   };
 
   return (
@@ -46,6 +53,7 @@ function AdminCourseInstructorsHubInner() {
         { value: "active", label: "Active CIs" },
         { value: "training", label: "CI training" },
         { value: "agreements", label: "Agreements" },
+        { value: "rejected", label: "Rejected" },
       ]}
       value={tab}
       onValueChange={setTab}
@@ -62,6 +70,10 @@ function AdminCourseInstructorsHubInner() {
 
       <TabsContent value="agreements" className="mt-0">
         <CiAgreementsSection />
+      </TabsContent>
+
+      <TabsContent value="rejected" className="mt-0">
+        <RejectedApplicationsSection />
       </TabsContent>
 
       <SetupExistingCIDialog

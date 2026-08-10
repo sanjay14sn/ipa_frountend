@@ -490,54 +490,6 @@ export async function getTrainingCourseInstructors(): Promise<{
   return { result: mapped };
 }
 
-export async function getPaginatedCourseInstructors(
-  status: string,
-  params: Record<string, unknown>,
-): Promise<{
-  data: CourseInstructorData[];
-  meta: { total: number; totalPages: number };
-}> {
-  const page = Number(params.page ?? 1) || 1;
-  const limit = Number(params.limit ?? 10) || 10;
-  const sortBy = typeof params.sortBy === "string" ? params.sortBy : undefined;
-  const sortOrder =
-    params.sortOrder === "ASC" || params.sortOrder === "DESC"
-      ? params.sortOrder
-      : undefined;
-  const search = typeof params.search === "string" ? params.search : undefined;
-
-  const paginated = await getPaginatedAdminCourseInstructors({
-    page,
-    limit,
-    search,
-    sortBy,
-    sortOrder,
-    status,
-  });
-
-  let rows = paginated.data;
-  // "valid" is the derived operational filter (active CIs). The backend filters
-  // and paginates it server-side, so trust its rows + meta rather than the
-  // review-status client filter below (rows carry a review status, not "valid").
-  if (status === "valid") {
-    return {
-      data: rows,
-      meta: {
-        total: paginated.meta.total ?? rows.length,
-        totalPages: paginated.meta.totalPages ?? 1,
-      },
-    };
-  }
-  if (rows.some((ci) => ci.status !== status)) {
-    rows = rows.filter((ci) => ci.status === status);
-  }
-  const total = rows.length;
-  return {
-    data: rows,
-    meta: { total, totalPages: Math.max(1, Math.ceil(total / limit)) },
-  };
-}
-
 async function getPaginatedFranchiseeCourseInstructors(
   params: CourseInstructorPaginationParams,
 ): Promise<PaginatedCourseInstructorsResponse> {
@@ -714,71 +666,6 @@ export async function getEligibleCourseInstructorsForCertificate(
     ? result
     : normalizePaginatedResult<unknown>(result).rows;
   return rows.map((row) => mapRow(row as Record<string, unknown>));
-}
-
-export interface CIFranchiseSummary {
-  franchiseId: string;
-  franchiseName: string;
-  totalPending: number;
-  totalApproved: number;
-  totalRejected: number;
-}
-
-// GET /admin/course-instructor/summary
-export async function getAdminCISummaries(params: {
-  page?: number;
-  limit?: number;
-  search?: string;
-}): Promise<{
-  data: CIFranchiseSummary[];
-  meta: { total: number; totalPages: number; page: number; limit: number };
-}> {
-  const normalized = await getPaginated<Record<string, unknown>>(
-    "/admin/course-instructor/summary",
-    params,
-  );
-  const data = normalized.rows.map((row) => ({
-    franchiseId: String(row.franchiseId ?? ""),
-    franchiseName: String(row.franchiseName ?? ""),
-    totalPending: Number(row.totalPending ?? 0),
-    totalApproved: Number(row.totalApproved ?? 0),
-    totalRejected: Number(row.totalRejected ?? 0),
-  }));
-  const lim = Number(normalized.limit ?? 10) || 10;
-  const totalPages = Math.max(1, Math.ceil(normalized.total / lim));
-  return {
-    data,
-    meta: { total: normalized.total, totalPages, page: normalized.page, limit: lim },
-  };
-}
-
-// GET /admin/course-instructor?franchiseId=...&status=...
-export async function getAdminCIDetails(
-  franchiseId: string,
-  params: {
-    status?: "Pending" | "Approved" | "Rejected" | "all";
-    page?: number;
-    limit?: number;
-    search?: string;
-  },
-): Promise<PaginatedCourseInstructorsResponse> {
-  const response = await api.get("/admin/course-instructor", {
-    params: compactRequestParams({
-      franchiseId,
-      ...(params as Record<string, string | number | boolean | undefined | null>),
-    }),
-  });
-  const result = unwrapData<unknown>(response);
-  const { rows: raw, total, page, limit } =
-    normalizePaginatedResult<unknown>(result);
-  const data = raw.map((r) => mapRow(r as Record<string, unknown>));
-  const lim = Number(limit ?? 10) || 10;
-  const pageNum = Number(page ?? 1) || 1;
-  const totalPages = Math.max(1, Math.ceil(total / lim));
-  return {
-    data,
-    meta: { total, page: pageNum, limit: lim, totalPages },
-  };
 }
 
 // ---------------------------------------------------------------------------

@@ -52,6 +52,37 @@ export function usePaginatedFranchisesAdmin(
   });
 }
 
+/** One dropdown option per approved franchise (value = franchise UUID). */
+export interface FranchiseOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * Approved franchises as `{value, label}` options for list filter dropdowns.
+ * Capped at the backend's 100-row page limit — fine for the current network
+ * size; revisit with a paged combobox if the network outgrows it.
+ */
+export function useFranchiseOptions() {
+  return useQuery({
+    queryKey: queryKeys.franchises.adminAll({ role: "filter-options" }),
+    queryFn: async (): Promise<FranchiseOption[]> => {
+      const res = await getPaginatedFranchises({
+        page: 1,
+        limit: 100,
+        status: "Approved",
+        sortBy: "name",
+        sortOrder: "ASC",
+      });
+      return res.data.map((f) => ({
+        value: String(f.id),
+        label: f.name,
+      }));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function usePaginatedFranchiseApplicationsAdmin(
   params: PaginationParams,
   enabled = true,

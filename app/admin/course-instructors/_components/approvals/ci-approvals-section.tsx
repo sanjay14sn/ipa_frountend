@@ -8,28 +8,22 @@ import {
   AdminCourseInstructorData,
   rejectCourseInstructor,
 } from "@/services/course-instructor.service";
+import { ADMIN_CI_STATUS_PREFIX } from "@/hooks/api/course-instructor.hooks";
 import { toast } from "sonner";
 import ApproveCIModal from "./ApproveCIModal";
-import CiApprovalsSummaryTable from "./CiApprovalsSummaryTable";
+import PendingApplicationsTable from "./pending-applications-table";
 
 export function CiApprovalsSection() {
   const queryClient = useQueryClient();
   const [approveTarget, setApproveTarget] = useState<AdminCourseInstructorData | null>(null);
   const [rejectTarget, setRejectTarget] = useState<AdminCourseInstructorData | null>(null);
   const [isRejecting, setIsRejecting] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const triggerRefresh = () => {
-    setRefreshTrigger((n) => n + 1);
-    void queryClient.invalidateQueries({
-      queryKey: ["course-instructors", "admin", "summary"],
-    });
-    void queryClient.invalidateQueries({
-      queryKey: ["course-instructors", "admin", "details"],
-    });
-    void queryClient.invalidateQueries({
-      queryKey: ["course-instructors", "admin", "status"],
-    });
+    // One prefix covers the Applications / Active CIs / Rejected lists;
+    // approval also issues a CI agreement, so refresh that tab too.
+    void queryClient.invalidateQueries({ queryKey: [...ADMIN_CI_STATUS_PREFIX] });
+    void queryClient.invalidateQueries({ queryKey: ["ci-agreements", "admin"] });
   };
 
   const handleApproveInstructor = (instructor: AdminCourseInstructorData) => {
@@ -60,8 +54,7 @@ export function CiApprovalsSection() {
     <TablePageShell embed>
       {/* R6: the hub owns the page header. */}
       <TableSectionSurface>
-        <CiApprovalsSummaryTable
-          refreshTrigger={refreshTrigger}
+        <PendingApplicationsTable
           onApprove={handleApproveInstructor}
           onReject={handleRejectInstructor}
         />

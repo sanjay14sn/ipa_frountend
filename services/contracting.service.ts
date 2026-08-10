@@ -237,6 +237,10 @@ export async function listCIAgreementsForAdmin(params?: {
   page?: number;
   limit?: number;
   search?: string;
+  franchiseId?: string;
+  status?: string;
+  sortBy?: string;
+  sortOrder?: "ASC" | "DESC";
 }): Promise<PaginatedResult<CIAgreementAdminRow>> {
   const res = await api.get("/admin/ci-agreement", { params });
   const result = unwrapData<unknown>(res);

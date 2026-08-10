@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { formatDate } from "@/lib/date-utils";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -15,12 +15,14 @@ import { useAgreementIdFromUrl } from "@/hooks/use-agreement-id-from-url";
 import {
   DataTable,
   type DataTableColumn,
+  type DataTableFilter,
+  type DataTableSortOption,
   StatusBadge,
-  TableLoadingState,
   TablePageShell,
-  PageSkeleton,
   formatStatusLabel,
 } from "@/components/shared";
+import { useFranchiseOptions } from "@/hooks/api/franchisee.hooks";
+import { useListParams } from "@/hooks/use-list-params";
 import {
   AppDialog,
   AppDialogBody,
@@ -269,9 +271,10 @@ function RenewDialog({
   );
 }
 
+const ITEMS_PER_PAGE = 20;
+
 function CIAgreementsTable() {
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
   const [actionDialog, setActionDialog] = useState<ActionDialogState | null>(null);
   const [renewAgreement, setRenewAgreement] = useState<{ id: number; title: string } | null>(null);
   const [historyAgreement, setHistoryAgreement] = useState<{ title: string; renewals: RenewalEntry[] } | null>(null);
@@ -280,16 +283,80 @@ function CIAgreementsTable() {
   // admin franchise agreements tab (shareable, survives reload).
   const [agreementId, setAgreementId] = useAgreementIdFromUrl();
 
+  // List state lives in the URL; "agr" prefix keeps the keys clear of the
+  // other tabs' lists on the same hub URL.
+  const listParams = useListParams({
+    filterDefaults: { franchise: "all", status: "all" },
+    defaultSortBy: "createdAt",
+    defaultSortOrder: "desc",
+    prefix: "agr",
+  });
+  const sortBy = listParams.sortBy ?? "createdAt";
+  const sortOrder: "ASC" | "DESC" =
+    listParams.sortOrder === "asc" ? "ASC" : "DESC";
+  const franchiseFilter = listParams.filters.franchise;
+  const statusFilter = listParams.filters.status;
+
+  const requestParams = useMemo(
+    () => ({
+      page: listParams.page,
+      limit: ITEMS_PER_PAGE,
+      search: listParams.search || undefined,
+      franchiseId: franchiseFilter !== "all" ? franchiseFilter : undefined,
+      status: statusFilter !== "all" ? statusFilter : undefined,
+      sortBy,
+      sortOrder,
+    }),
+    [listParams.page, listParams.search, franchiseFilter, statusFilter, sortBy, sortOrder],
+  );
+
   const query = useQuery({
-    queryKey: ["ci-agreements", "admin", page],
-    queryFn: () => listCIAgreementsForAdmin({ page, limit: 20 }),
+    queryKey: ["ci-agreements", "admin", requestParams],
+    queryFn: () => listCIAgreementsForAdmin(requestParams),
+    placeholderData: (prev) => prev,
   });
 
   const rows = query.data?.rows ?? [];
   const total = query.data?.total ?? 0;
-  const limit = query.data?.limit ?? 20;
-  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
   const loading = query.isLoading;
+
+  const franchiseOptions = useFranchiseOptions();
+  const filters: DataTableFilter[] = useMemo(
+    () => [
+      {
+        key: "franchise",
+        label: "Franchise",
+        options: [
+          { value: "all", label: "All franchises" },
+          ...(franchiseOptions.data ?? []),
+        ],
+        defaultValue: franchiseFilter,
+      },
+      {
+        // CI agreements are issued directly at APPROVED ("Pending signature"),
+        // so DRAFT is not offered.
+        key: "status",
+        label: "Status",
+        options: [
+          { value: "all", label: "All statuses" },
+          { value: "APPROVED", label: "Pending signature" },
+          { value: "ACTIVE", label: "Active" },
+          { value: "SUSPENDED", label: "Suspended" },
+          { value: "EXPIRED", label: "Expired" },
+          { value: "SUPERSEDED", label: "Superseded" },
+          { value: "VOID", label: "Void" },
+        ],
+        defaultValue: statusFilter,
+      },
+    ],
+    [franchiseOptions.data, franchiseFilter, statusFilter],
+  );
+
+  const sortOptions: DataTableSortOption[] = [
+    { value: "createdAt", label: "Date" },
+    { value: "expiresAt", label: "Expiry" },
+  ];
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["ci-agreements", "admin"] });
@@ -436,25 +503,44 @@ function CIAgreementsTable() {
 
   return (
     <div className="space-y-4">
-      {loading && rows.length === 0 ? (
-        <TableLoadingState message="Loading CI agreements..." />
-      ) : (
-        <DataTable<CIAgreementAdminRow>
-          data={rows}
-          loading={loading}
-          columns={columns}
-          getRowId={(row) => String(row.id)}
-          renderMainCell={(row) => (
-            <span className="font-medium">
-              {row.instructorName ?? "—"} - {row.franchiseName ?? "—"}
-            </span>
-          )}
-          emptyMessage="No CI agreements found."
-          resultsText={(_count, t) => `${t} agreement${t === 1 ? "" : "s"}`}
-          pagination={totalPages > 1 ? { total, totalPages } : undefined}
-          onPageChange={setPage}
-        />
-      )}
+      <DataTable<CIAgreementAdminRow>
+        data={rows}
+        loading={loading}
+        columns={columns}
+        getRowId={(row) => String(row.id)}
+        renderMainCell={(row) => (
+          <span className="font-medium">
+            {row.instructorName ?? "—"} - {row.franchiseName ?? "—"}
+          </span>
+        )}
+        initialSearchValue={listParams.search}
+        searchPlaceholder="Search by agreement title or instructor code..."
+        onSearchChange={listParams.setSearch}
+        filters={filters}
+        onFilterChange={(key, value) => {
+          const next = Array.isArray(value) ? (value[0] ?? "all") : value;
+          if (key === "franchise") listParams.setFilter("franchise", next || "all");
+          if (key === "status") listParams.setFilter("status", next || "all");
+        }}
+        sortOptions={sortOptions}
+        defaultSortBy={sortBy}
+        defaultSortOrder={sortOrder}
+        onSortChange={(by, order) => {
+          listParams.setSort(by, order === "ASC" ? "asc" : "desc");
+        }}
+        error={query.error}
+        onRetry={() => void query.refetch()}
+        errorMessage="Couldn't load CI agreements."
+        emptyState={{
+          title: "No CI agreements found",
+          hint: "Agreements are issued when an application is approved.",
+        }}
+        resultsText={(_count, t) => `${t} agreement${t === 1 ? "" : "s"}`}
+        pagination={{ total, totalPages }}
+        currentPage={listParams.page}
+        onPageChange={listParams.setPage}
+        itemsPerPage={ITEMS_PER_PAGE}
+      />
 
       {actionDialog && (
         <ActionDialog

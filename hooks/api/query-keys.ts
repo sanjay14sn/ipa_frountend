@@ -79,12 +79,6 @@ export const queryKeys = {
       programId == null
         ? (["ci-training-session-assignments", sessionId] as const)
         : (["ci-training-session-assignments", sessionId, programId] as const),
-    /** Admin summary view for a list of CIs (refreshed on demand). */
-    adminSummary: (params: Record<string, unknown>, refreshKey?: string) =>
-      ["course-instructors", "admin", "summary", params, refreshKey ?? ""] as const,
-    /** Admin detail view for a specific franchise's CIs. */
-    adminDetails: (franchiseId: string | null, params?: Record<string, unknown> | null) =>
-      ["course-instructors", "admin", "details", franchiseId, params ?? null] as const,
   },
   franchises: {
     list: (params?: Record<string, unknown> | null) =>
