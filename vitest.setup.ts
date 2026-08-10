@@ -15,6 +15,16 @@
 import "@testing-library/jest-dom";
 import { server } from "./tests/__mocks__/server";
 
+// jsdom has no ResizeObserver; Radix form controls (Checkbox, Select) observe
+// their hidden bubble input through it on mount.
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+globalThis.ResizeObserver ??=
+  ResizeObserverStub as unknown as typeof ResizeObserver;
+
 beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());

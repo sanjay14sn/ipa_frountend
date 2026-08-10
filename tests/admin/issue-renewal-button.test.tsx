@@ -56,11 +56,15 @@ describe("IssueRenewalButton", () => {
     },
   );
 
-  it("submits the renewal with the entered fee", async () => {
+  it("submits the edited fee and carries the prefilled terms verbatim", async () => {
     const { default: userEvent } = await import("@testing-library/user-event");
-    wrap(<IssueRenewalButton agreement={agreement()} />);
+    wrap(
+      <IssueRenewalButton
+        agreement={agreement({ monthlyFee: 1500, gstRoyalty: true })}
+      />,
+    );
     await userEvent.click(screen.getByRole("button", { name: /issue renewal/i }));
-    const fee = await screen.findByLabelText(/renewal fee/i);
+    const fee = await screen.findByLabelText("Franchise Fee *");
     await userEvent.clear(fee);
     await userEvent.type(fee, "5000");
     await userEvent.click(screen.getByRole("button", { name: /^issue$/i }));
@@ -70,7 +74,44 @@ describe("IssueRenewalButton", () => {
         franchiseFee: 5000,
         tenure: 12,
         unpaidItemsPolicy: "carry",
+        // Untouched terms travel as prefilled from the expired agreement —
+        // they are no longer silently copied server-side defaults.
+        monthlyFee: 1500,
+        gstRoyalty: true,
+        gstFranchiseFee: false,
       }),
+    );
+  });
+
+  it("sends a toggled GST-inclusive flag", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    wrap(<IssueRenewalButton agreement={agreement()} />);
+    await userEvent.click(screen.getByRole("button", { name: /issue renewal/i }));
+    await userEvent.click(
+      await screen.findByRole("checkbox", { name: /material cost incl/i }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^issue$/i }));
+    expect(renewMock).toHaveBeenCalledWith(
+      50,
+      expect.objectContaining({ gstMaterialCost: true, gstFranchiseFee: false }),
+    );
+  });
+
+  it("blocks submission until the cleared tenure is re-entered", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    wrap(<IssueRenewalButton agreement={agreement()} />);
+    await userEvent.click(screen.getByRole("button", { name: /issue renewal/i }));
+    const tenure = await screen.findByLabelText(/tenure/i);
+    await userEvent.clear(tenure);
+    await userEvent.click(screen.getByRole("button", { name: /^issue$/i }));
+    expect(renewMock).not.toHaveBeenCalled();
+    expect(screen.getByText(/tenure/i, { selector: "p" })).toBeInTheDocument();
+
+    await userEvent.type(tenure, "24");
+    await userEvent.click(screen.getByRole("button", { name: /^issue$/i }));
+    expect(renewMock).toHaveBeenCalledWith(
+      50,
+      expect.objectContaining({ tenure: 24 }),
     );
   });
 });

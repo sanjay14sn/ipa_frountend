@@ -1,9 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { RefreshCw } from "lucide-react";
@@ -24,6 +21,12 @@ import {
   AppDialogFooter,
 } from "@/components/shared/dialog";
 import {
+  AgreementTermsFields,
+  agreementTermsFieldsFromRecord,
+  validateAgreementTermsFields,
+  type AgreementTermsFieldsValue,
+} from "./agreement-terms-fields";
+import {
   renewAgreementAdmin,
   type AgreementRecord,
   type RenewAgreementInput,
@@ -31,24 +34,6 @@ import {
 } from "@/services/agreement.service";
 import { getErrorMessage } from "@/lib/error-utils";
 import { formatDate } from "@/lib/date-utils";
-
-const schema = z
-  .object({
-    franchiseFee: z.coerce.number().min(0),
-    tenure: z.coerce.number().int().min(1),
-    unpaidItemsPolicy: z.enum(["carry", "cancel"]),
-    cancelReason: z.string().trim().optional(),
-  })
-  .refine(
-    (v) =>
-      v.unpaidItemsPolicy !== "cancel" ||
-      (v.cancelReason != null && v.cancelReason.length > 0),
-    {
-      message: "Give a reason for cancelling the unpaid items",
-      path: ["cancelReason"],
-    },
-  );
-type FormValues = z.infer<typeof schema>;
 
 interface IssueRenewalButtonProps {
   agreement: AgreementRecord;
@@ -64,6 +49,10 @@ export interface IssueRenewalDialogProps {
  * Controlled renewal-terms dialog — used by IssueRenewalButton and by the
  * agreements-table row overflow menu (which supplies its own trigger).
  * Serves FRANCHISE and PROGRAM kinds (one renew endpoint for both).
+ *
+ * Every term of the expired agreement is prefilled and editable — the shared
+ * AgreementTermsFields owns the inputs, so the terms live in plain state
+ * (the sanctioned zod-less shape for forms whose blob a child component owns).
  */
 export function IssueRenewalDialog({
   agreement,
@@ -71,19 +60,13 @@ export function IssueRenewalDialog({
   onOpenChange,
 }: IssueRenewalDialogProps) {
   const queryClient = useQueryClient();
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      franchiseFee: agreement.franchiseFee ?? 0,
-      tenure: agreement.tenure ?? 12,
-      unpaidItemsPolicy: "carry",
-      cancelReason: "",
-    },
-  });
-  // Mirrored in local state (instead of form.watch) so the conditional
-  // reason field re-renders without opting the component out of the compiler.
+  const [terms, setTerms] = useState<AgreementTermsFieldsValue>(() =>
+    agreementTermsFieldsFromRecord(agreement),
+  );
   const [unpaidItemsPolicy, setUnpaidItemsPolicy] =
     useState<UnpaidItemsPolicy>("carry");
+  const [cancelReason, setCancelReason] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
 
   /**
    * Renewing an agreement that is still running schedules it: the backend parks
@@ -95,31 +78,28 @@ export function IssueRenewalDialog({
   const expiresOn = agreement.expiresAt ? formatDate(agreement.expiresAt) : null;
 
   const mutation = useMutation({
-    mutationFn: (values: FormValues) => {
-      const installment = agreement.installment ?? false;
+    mutationFn: () => {
       const dto: RenewAgreementInput = {
-        franchiseFee: values.franchiseFee,
-        tenure: values.tenure,
-        monthlyFee: agreement.monthlyFee ?? 0,
-        royalty: agreement.royalty ?? 0,
-        materialCost: agreement.materialCost ?? 0,
-        kitCost: agreement.kitCost ?? 0,
-        ciShare: agreement.ciShare ?? 0,
-        franchiseShare: agreement.franchiseShare ?? 0,
-        gstFranchiseFee: agreement.gstFranchiseFee ?? false,
-        gstRoyalty: agreement.gstRoyalty ?? false,
-        gstMaterialCost: agreement.gstMaterialCost ?? false,
-        installment,
-        // Required when installment=true — carried from the expired terms.
-        installmentMonths: installment
-          ? (agreement.installmentMonths ?? 12)
+        franchiseFee: terms.franchiseFee,
+        monthlyFee: terms.monthlyFee,
+        royalty: terms.royalty,
+        materialCost: terms.materialCost,
+        kitCost: terms.kitCost,
+        ciShare: terms.ciShare,
+        franchiseShare: terms.franchiseShare,
+        gstFranchiseFee: terms.gstFranchiseFee,
+        gstRoyalty: terms.gstRoyalty,
+        gstMaterialCost: terms.gstMaterialCost,
+        installment: terms.installment,
+        // Required when installment=true; axios drops the undefineds.
+        installmentMonths: terms.installment
+          ? terms.installmentMonths
           : undefined,
-        downPayment: installment ? (agreement.downPayment ?? null) : undefined,
-        unpaidItemsPolicy: values.unpaidItemsPolicy,
+        downPayment: terms.installment ? terms.downPayment : undefined,
+        tenure: terms.tenure,
+        unpaidItemsPolicy,
         cancelReason:
-          values.unpaidItemsPolicy === "cancel"
-            ? values.cancelReason
-            : undefined,
+          unpaidItemsPolicy === "cancel" ? cancelReason.trim() : undefined,
       };
       return renewAgreementAdmin(agreement.id, dto);
     },
@@ -136,41 +116,45 @@ export function IssueRenewalDialog({
     onError: (err) => toast.error(getErrorMessage(err, "Could not issue renewal")),
   });
 
+  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    // The renewal is born APPROVED (payable), so the fee must be real.
+    const message =
+      validateAgreementTermsFields(terms, { requirePositiveFee: true }) ??
+      (unpaidItemsPolicy === "cancel" && cancelReason.trim().length === 0
+        ? "Give a reason for cancelling the unpaid items"
+        : null);
+    setFormError(message);
+    if (message) return;
+    mutation.mutate();
+  };
+
   return (
-    <AppDialog open={open} onOpenChange={onOpenChange}>
+    <AppDialog open={open} onOpenChange={onOpenChange} size="lg" scrollBody>
       <AppDialogHeader
         title={scheduled ? "Schedule renewal" : "Issue renewal"}
         description={
           scheduled
-            ? `Set the renewal terms now. The renewal is held until this agreement expires${expiresOn ? ` on ${expiresOn}` : ""}, then issued to the franchisee automatically to sign and pay — so there is no gap in access.`
-            : "Set the renewal terms. The franchisee will sign and pay to reactivate."
+            ? `Adjust the renewal terms now — they are prefilled from the current agreement. The renewal is held until this agreement expires${expiresOn ? ` on ${expiresOn}` : ""}, then issued to the franchisee automatically to sign and pay — so there is no gap in access.`
+            : "Adjust the renewal terms — they are prefilled from the expired agreement. The franchisee will sign and pay to reactivate."
         }
       />
       <AppDialogBody>
         <form
           id="issue-renewal-form"
           className="space-y-4"
-          onSubmit={form.handleSubmit((v) => mutation.mutate(v))}
+          onSubmit={submit}
         >
-          <div className="space-y-1.5">
-            <Label htmlFor="renewal-fee">Renewal fee</Label>
-            <Input id="renewal-fee" type="number" step="1" {...form.register("franchiseFee")} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="renewal-tenure">Tenure (months)</Label>
-            <Input id="renewal-tenure" type="number" step="1" {...form.register("tenure")} />
-          </div>
+          <AgreementTermsFields
+            idPrefix="renewal"
+            value={terms}
+            onChange={(patch) => setTerms((prev) => ({ ...prev, ...patch }))}
+          />
           <div className="space-y-1.5">
             <Label htmlFor="renewal-unpaid-policy">Unpaid items on the old plan</Label>
             <Select
               value={unpaidItemsPolicy}
-              onValueChange={(v) => {
-                const policy = v as UnpaidItemsPolicy;
-                setUnpaidItemsPolicy(policy);
-                form.setValue("unpaidItemsPolicy", policy, {
-                  shouldValidate: true,
-                });
-              }}
+              onValueChange={(v) => setUnpaidItemsPolicy(v as UnpaidItemsPolicy)}
             >
               <SelectTrigger id="renewal-unpaid-policy" className="rounded-lg">
                 <SelectValue />
@@ -187,14 +171,13 @@ export function IssueRenewalDialog({
               <Input
                 id="renewal-cancel-reason"
                 placeholder="Why are the unpaid items being cancelled?"
-                {...form.register("cancelReason")}
+                value={cancelReason}
+                onChange={(event) => setCancelReason(event.target.value)}
               />
-              {form.formState.errors.cancelReason ? (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.cancelReason.message}
-                </p>
-              ) : null}
             </div>
+          ) : null}
+          {formError ? (
+            <p className="text-sm text-destructive">{formError}</p>
           ) : null}
         </form>
       </AppDialogBody>
