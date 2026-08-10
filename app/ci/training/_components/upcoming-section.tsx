@@ -32,19 +32,27 @@ export function UpcomingSection() {
 
   const columns: DataTableColumn<CIUpcomingSession>[] = [
     {
+      // The body of the first column is supplied by `renderMainCell` below —
+      // DataTable replaces columns[0]'s cell with the main cell, which shows
+      // the training level name.
+      key: "trainingLevel",
+      header: "Training Level",
+    },
+    {
       key: "date",
       header: "Date",
-      render: (item) => formatDate(item.sessionDate),
+      render: (item) =>
+        item.sessionDate ? formatDate(item.sessionDate) : "—",
     },
     {
       key: "region",
       header: "State / Region",
-      render: (item) => item.region,
+      render: (item) => <span className="capitalize">{item.region}</span>,
     },
     {
-      key: "venue",
-      header: "Venue",
-      render: (item) => item.venue ?? "-",
+      key: "notes",
+      header: "Notes",
+      render: (item) => item.notes ?? "—",
     },
     {
       key: "status",
@@ -65,7 +73,7 @@ export function UpcomingSection() {
           getRowId={(item) => String(item.sessionId)}
           renderMainCell={(item) => (
             <span className="font-medium text-card-foreground">
-              {item.trainingLevelName ?? "Training level"}
+              {item.trainingLevelName ?? item.trainingLevelCode ?? "Training level"}
             </span>
           )}
           emptyMessage="No upcoming sessions found."

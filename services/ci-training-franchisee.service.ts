@@ -7,6 +7,7 @@ export interface FranchiseeTrainingSession {
   region: string;
   trainingLevelId: number;
   trainingLevelName?: string | null;
+  trainingLevelCode?: string | null;
   sessionDate: string;
   notes?: string | null;
   status: "OPEN" | "COMPLETED";
@@ -48,8 +49,25 @@ export async function listFranchiseeTrainingSessions(params?: {
   const res = await api.get("/course-instructor/ci-training/sessions", {
     params: query,
   });
-  const payload = unwrapData<FranchiseeTrainingSession[]>(res);
-  return Array.isArray(payload) ? payload : [];
+  const payload = unwrapData<Record<string, unknown>[]>(res);
+  if (!Array.isArray(payload)) return [];
+  // Flatten the joined training level so rows always carry a display label
+  // (same shape the admin sessions service produces).
+  return payload.map((row: Record<string, unknown>) => {
+    const level = row.trainingLevel as
+      | { name?: string | null; code?: string | null }
+      | null
+      | undefined;
+    return {
+      ...(row as unknown as FranchiseeTrainingSession),
+      trainingLevelName:
+        (row.trainingLevelName as string | undefined) ?? level?.name ?? null,
+      trainingLevelCode:
+        (row.trainingLevelCode as string | null | undefined) ??
+        level?.code ??
+        null,
+    };
+  });
 }
 
 export async function listWaitingForSession(sessionId: number): Promise<WaitingCI[]> {

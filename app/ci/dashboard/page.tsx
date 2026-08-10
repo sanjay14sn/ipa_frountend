@@ -254,8 +254,10 @@ export default function CIDashboardPage() {
                   {nextTraining.trainingLevelName ?? "Training level"}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">Date: {formatDate(nextTraining.sessionDate)}</p>
-                <p className="mt-1 text-xs text-muted-foreground">State: {nextTraining.region}</p>
-                <p className="mt-1 text-xs text-muted-foreground">Venue: {nextTraining.venue ?? "-"}</p>
+                <p className="mt-1 text-xs text-muted-foreground capitalize">State: {nextTraining.region}</p>
+                {nextTraining.notes ? (
+                  <p className="mt-1 text-xs text-muted-foreground">Notes: {nextTraining.notes}</p>
+                ) : null}
                 <p className="mt-1 text-xs text-muted-foreground">Status: {nextTraining.assignmentStatus}</p>
               </div>
             ) : (

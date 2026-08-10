@@ -82,7 +82,7 @@ export default function CITrainingSessionsTab() {
       className: "w-[160px]",
       render: (s) => (
         <span className="text-sm text-card-foreground">
-          {s.trainingLevelName ?? "—"}
+          {s.trainingLevelName ?? s.trainingLevelCode ?? "—"}
         </span>
       ),
     },

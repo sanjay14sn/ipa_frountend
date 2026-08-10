@@ -73,10 +73,12 @@ export interface CIProgressItem {
 export interface CIUpcomingSession {
   sessionId: number;
   trainingLevelId: number;
-  trainingLevelName?: string;
+  trainingLevelName?: string | null;
+  trainingLevelCode?: string | null;
   region: string;
   sessionDate: string;
-  venue?: string | null;
+  /** Session notes — there is no venue field in the domain. */
+  notes?: string | null;
   assignmentStatus: string;
 }
 
