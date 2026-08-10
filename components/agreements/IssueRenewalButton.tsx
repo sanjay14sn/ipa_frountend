@@ -130,7 +130,7 @@ export function IssueRenewalDialog({
   };
 
   return (
-    <AppDialog open={open} onOpenChange={onOpenChange} size="lg" scrollBody>
+    <AppDialog open={open} onOpenChange={onOpenChange} size="xl" scrollBody>
       <AppDialogHeader
         title={scheduled ? "Schedule renewal" : "Issue renewal"}
         description={
@@ -147,6 +147,7 @@ export function IssueRenewalDialog({
         >
           <AgreementTermsFields
             idPrefix="renewal"
+            feeLabel="Renewal fee"
             value={terms}
             onChange={(patch) => setTerms((prev) => ({ ...prev, ...patch }))}
           />

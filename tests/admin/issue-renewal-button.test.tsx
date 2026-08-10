@@ -64,7 +64,7 @@ describe("IssueRenewalButton", () => {
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: /issue renewal/i }));
-    const fee = await screen.findByLabelText("Franchise Fee *");
+    const fee = await screen.findByLabelText("Renewal fee");
     await userEvent.clear(fee);
     await userEvent.type(fee, "5000");
     await userEvent.click(screen.getByRole("button", { name: /^issue$/i }));

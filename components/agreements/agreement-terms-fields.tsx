@@ -3,14 +3,18 @@
 import { IndianRupee } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { DialogFormField, DialogFormGrid } from "@/components/shared/dialog";
+import { Label } from "@/components/ui/label";
 import { selectInputValueOnFocus } from "@/lib/select-input-on-focus";
 import type { AgreementRecord } from "@/services/agreement.service";
 
 /**
  * The FRANCHISE/PROGRAM money terms shared by every form that writes them:
- * the edit-franchise "Agreement terms" section and the renewal dialog. Title
+ * the application-approval terms setter (PayrollTermsDialog), the
+ * edit-franchise "Agreement terms" section and the renewal dialog. Title
  * and notes stay with the edit section — a renewal derives its own title.
+ *
+ * The markup is the terms-setter design: "GST Inc." pill beside the field
+ * label, 3-column grid, installment card with disabled-until-enabled inputs.
  */
 export interface AgreementTermsFieldsValue {
   tenure: number;
@@ -88,33 +92,63 @@ export function validateAgreementTermsFields(
   return null;
 }
 
-interface RupeeInputProps {
+interface RupeeFieldProps {
   id: string;
+  label: string;
   value: number;
   onChange: (value: number) => void;
+  /** Renders the "GST Inc." pill beside the label (terms-setter style). */
+  gst?: {
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+    /** Accessible name — the visible pill says only "GST Inc." three times. */
+    ariaLabel: string;
+  };
 }
 
-function RupeeInput({ id, value, onChange }: RupeeInputProps) {
+function RupeeField({ id, label, value, onChange, gst }: RupeeFieldProps) {
+  const labelNode = (
+    <Label htmlFor={id} className="text-sm font-medium text-card-foreground">
+      {label}
+    </Label>
+  );
   return (
-    <div className="relative">
-      <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-      <Input
-        id={id}
-        type="number"
-        min={0}
-        value={value || ""}
-        // D10: `min` is only an attribute — type="number" still yields "-5", and
-        // the old handler passed it straight through. Clamp at the source so no
-        // negative amount can reach the sparse patch. NaN (a stray "e", "-")
-        // collapses to 0 rather than poisoning the diff.
-        onChange={(event) => {
-          const raw = event.target.value;
-          onChange(raw === "" ? 0 : Math.max(0, Number(raw) || 0));
-        }}
-        onFocus={selectInputValueOnFocus}
-        className="h-10 pl-10"
-        placeholder="0"
-      />
+    <div className="space-y-2">
+      {gst ? (
+        <div className="flex items-center gap-2">
+          {labelNode}
+          <label className="flex cursor-pointer items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5">
+            <input
+              type="checkbox"
+              aria-label={gst.ariaLabel}
+              checked={gst.checked}
+              onChange={(event) => gst.onChange(event.target.checked)}
+            />
+            <span className="text-xs text-primary">GST Inc.</span>
+          </label>
+        </div>
+      ) : (
+        labelNode
+      )}
+      <div className="relative">
+        <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input
+          id={id}
+          type="number"
+          min={0}
+          value={value || ""}
+          // D10: `min` is only an attribute — type="number" still yields "-5",
+          // and passing it through poisons the payload. Clamp at the source;
+          // NaN (a stray "e", "-") collapses to 0.
+          onChange={(event) => {
+            const raw = event.target.value;
+            onChange(raw === "" ? 0 : Math.max(0, Number(raw) || 0));
+          }}
+          onFocus={selectInputValueOnFocus}
+          className="h-10 pl-10"
+          placeholder="0"
+        />
+      </div>
     </div>
   );
 }
@@ -122,172 +156,186 @@ function RupeeInput({ id, value, onChange }: RupeeInputProps) {
 export interface AgreementTermsFieldsProps {
   /** Namespaces every field id (`${idPrefix}-fee`, …) so two forms never clash. */
   idPrefix: string;
+  /** Label of the fee field — "Renewal fee" in the renewal dialog. */
+  feeLabel?: string;
   value: AgreementTermsFieldsValue;
   onChange: (patch: Partial<AgreementTermsFieldsValue>) => void;
 }
 
 /**
- * Fee grid + GST-inclusive checkboxes + installment plan block. Pure inputs —
+ * Fee grid with per-field GST pills + installment plan block. Pure inputs —
  * the owning form holds the state and runs `validateAgreementTermsFields`.
  */
 export function AgreementTermsFields({
   idPrefix,
+  feeLabel = "Franchise Fee",
   value,
   onChange,
 }: AgreementTermsFieldsProps) {
   return (
-    <div className="space-y-4" data-testid="agreement-terms-fields">
-      <DialogFormGrid cols={2}>
-        <DialogFormField id={`${idPrefix}-fee`} label="Franchise Fee *">
-          <RupeeInput
-            id={`${idPrefix}-fee`}
-            value={value.franchiseFee}
-            onChange={(franchiseFee) => onChange({ franchiseFee })}
-          />
-        </DialogFormField>
-        <DialogFormField id={`${idPrefix}-kit-cost`} label="Kit Cost">
-          <RupeeInput
-            id={`${idPrefix}-kit-cost`}
-            value={value.kitCost}
-            onChange={(kitCost) => onChange({ kitCost })}
-          />
-        </DialogFormField>
-        <DialogFormField id={`${idPrefix}-material-cost`} label="Material Cost">
-          <RupeeInput
-            id={`${idPrefix}-material-cost`}
-            value={value.materialCost}
-            onChange={(materialCost) => onChange({ materialCost })}
-          />
-        </DialogFormField>
-        <DialogFormField id={`${idPrefix}-monthly-fee`} label="Monthly Fee">
-          <RupeeInput
-            id={`${idPrefix}-monthly-fee`}
-            value={value.monthlyFee}
-            onChange={(monthlyFee) => onChange({ monthlyFee })}
-          />
-        </DialogFormField>
-        <DialogFormField id={`${idPrefix}-royalty`} label="Royalty">
-          <RupeeInput
-            id={`${idPrefix}-royalty`}
-            value={value.royalty}
-            onChange={(royalty) => onChange({ royalty })}
-          />
-        </DialogFormField>
-        <DialogFormField id={`${idPrefix}-ci-share`} label="CI Share">
-          <RupeeInput
-            id={`${idPrefix}-ci-share`}
-            value={value.ciShare}
-            onChange={(ciShare) => onChange({ ciShare })}
-          />
-        </DialogFormField>
-        <DialogFormField
-          id={`${idPrefix}-franchise-share`}
-          label="Franchise Share"
-        >
-          <RupeeInput
-            id={`${idPrefix}-franchise-share`}
-            value={value.franchiseShare}
-            onChange={(franchiseShare) => onChange({ franchiseShare })}
-          />
-        </DialogFormField>
-        <DialogFormField
-          id={`${idPrefix}-tenure`}
-          label="Agreement Tenure (months) *"
-        >
-          <Input
-            id={`${idPrefix}-tenure`}
-            type="number"
-            min={1}
-            value={value.tenure || ""}
-            onChange={(event) =>
-              onChange({
-                tenure:
-                  event.target.value === "" ? 0 : Number(event.target.value),
-              })
-            }
-            onFocus={selectInputValueOnFocus}
-            className="h-10"
-            placeholder="12"
-          />
-        </DialogFormField>
-      </DialogFormGrid>
+    <div
+      className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3"
+      data-testid="agreement-terms-fields"
+    >
+      <RupeeField
+        id={`${idPrefix}-fee`}
+        label={feeLabel}
+        value={value.franchiseFee}
+        onChange={(franchiseFee) => onChange({ franchiseFee })}
+        gst={{
+          checked: value.gstFranchiseFee,
+          onChange: (gstFranchiseFee) => onChange({ gstFranchiseFee }),
+          ariaLabel: `${feeLabel} incl. GST`,
+        }}
+      />
 
-      <div className="grid gap-2 sm:grid-cols-3">
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={value.gstFranchiseFee}
-            onCheckedChange={(checked) =>
-              onChange({ gstFranchiseFee: checked === true })
-            }
-          />
-          Franchise fee incl. GST
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={value.gstRoyalty}
-            onCheckedChange={(checked) =>
-              onChange({ gstRoyalty: checked === true })
-            }
-          />
-          Royalty incl. GST
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={value.gstMaterialCost}
-            onCheckedChange={(checked) =>
-              onChange({ gstMaterialCost: checked === true })
-            }
-          />
-          Material cost incl. GST
-        </label>
+      <RupeeField
+        id={`${idPrefix}-kit-cost`}
+        label="Kit Cost"
+        value={value.kitCost}
+        onChange={(kitCost) => onChange({ kitCost })}
+      />
+
+      <RupeeField
+        id={`${idPrefix}-material-cost`}
+        label="Material Cost"
+        value={value.materialCost}
+        onChange={(materialCost) => onChange({ materialCost })}
+        gst={{
+          checked: value.gstMaterialCost,
+          onChange: (gstMaterialCost) => onChange({ gstMaterialCost }),
+          ariaLabel: "Material cost incl. GST",
+        }}
+      />
+
+      <RupeeField
+        id={`${idPrefix}-monthly-fee`}
+        label="Monthly Fee"
+        value={value.monthlyFee}
+        onChange={(monthlyFee) => onChange({ monthlyFee })}
+      />
+
+      <RupeeField
+        id={`${idPrefix}-royalty`}
+        label="Royalty"
+        value={value.royalty}
+        onChange={(royalty) => onChange({ royalty })}
+        gst={{
+          checked: value.gstRoyalty,
+          onChange: (gstRoyalty) => onChange({ gstRoyalty }),
+          ariaLabel: "Royalty incl. GST",
+        }}
+      />
+
+      <RupeeField
+        id={`${idPrefix}-ci-share`}
+        label="CI Share"
+        value={value.ciShare}
+        onChange={(ciShare) => onChange({ ciShare })}
+      />
+
+      <RupeeField
+        id={`${idPrefix}-franchise-share`}
+        label="Franchise Share"
+        value={value.franchiseShare}
+        onChange={(franchiseShare) => onChange({ franchiseShare })}
+      />
+
+      {/* Tenure */}
+      <div className="space-y-2">
+        <Label
+          htmlFor={`${idPrefix}-tenure`}
+          className="text-sm font-medium text-card-foreground"
+        >
+          Agreement Tenure (months)
+        </Label>
+        <Input
+          id={`${idPrefix}-tenure`}
+          type="number"
+          min={1}
+          value={value.tenure || ""}
+          onChange={(event) =>
+            onChange({
+              tenure:
+                event.target.value === "" ? 0 : Number(event.target.value),
+            })
+          }
+          onFocus={selectInputValueOnFocus}
+          className="h-10"
+          placeholder="12"
+        />
       </div>
 
-      <div className="space-y-3 rounded-lg border border-border p-3">
-        <label className="flex items-center gap-2 text-sm font-medium">
+      {/* Installment */}
+      <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/10 p-4 md:col-span-2 lg:col-span-3">
+        <div className="flex items-center gap-2">
           <Checkbox
+            id={`${idPrefix}-installment`}
             checked={value.installment}
             onCheckedChange={(checked) =>
               onChange({ installment: checked === true })
             }
           />
-          Installment plan
-        </label>
-        {value.installment ? (
-          <DialogFormGrid cols={2}>
-            <DialogFormField
+          <Label
+            htmlFor={`${idPrefix}-installment`}
+            className="cursor-pointer text-sm font-medium text-card-foreground"
+          >
+            Installment plan
+          </Label>
+        </div>
+        <div className="grid max-w-lg grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label
+              htmlFor={`${idPrefix}-installment-months`}
+              className="text-sm font-medium text-card-foreground"
+            >
+              Installment Months
+            </Label>
+            <Input
               id={`${idPrefix}-installment-months`}
-              label="Installment Months *"
+              type="number"
+              min={1}
+              value={value.installmentMonths || ""}
+              disabled={!value.installment}
+              onChange={(event) =>
+                onChange({
+                  installmentMonths:
+                    event.target.value === ""
+                      ? 0
+                      : Number(event.target.value),
+                })
+              }
+              onFocus={selectInputValueOnFocus}
+              className="h-10"
+              placeholder="6"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label
+              htmlFor={`${idPrefix}-down-payment`}
+              className="text-sm font-medium text-card-foreground"
             >
-              <Input
-                id={`${idPrefix}-installment-months`}
-                type="number"
-                min={1}
-                value={value.installmentMonths || ""}
-                onChange={(event) =>
-                  onChange({
-                    installmentMonths:
-                      event.target.value === ""
-                        ? 0
-                        : Number(event.target.value),
-                  })
-                }
-                onFocus={selectInputValueOnFocus}
-                className="h-10"
-                placeholder="6"
-              />
-            </DialogFormField>
-            <DialogFormField
+              Down Payment Amount
+            </Label>
+            <Input
               id={`${idPrefix}-down-payment`}
-              label="Down Payment Amount"
-            >
-              <RupeeInput
-                id={`${idPrefix}-down-payment`}
-                value={value.downPayment}
-                onChange={(downPayment) => onChange({ downPayment })}
-              />
-            </DialogFormField>
-          </DialogFormGrid>
-        ) : null}
+              type="number"
+              min={0}
+              value={value.downPayment || ""}
+              disabled={!value.installment}
+              onChange={(event) => {
+                const raw = event.target.value;
+                onChange({
+                  downPayment:
+                    raw === "" ? 0 : Math.max(0, Number(raw) || 0),
+                });
+              }}
+              onFocus={selectInputValueOnFocus}
+              className="h-10"
+              placeholder="0"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
