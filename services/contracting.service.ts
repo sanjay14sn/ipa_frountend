@@ -46,6 +46,9 @@ export interface CIAgreementHistoryEntry {
 export interface CIAgreementRecord {
   id: number;
   title: string;
+  /** Multi-franchise list reads only (GET /ci/agreements). */
+  franchiseId?: string;
+  isHandler?: boolean;
   /** Server-computed signing phase. */
   phase: CIAgreementPhase;
   /** Lifecycle status (UPPER_SNAKE). */
@@ -99,6 +102,62 @@ export interface CIAgreementData {
 export async function getCIAgreement(): Promise<CIAgreementRecord | null> {
   const res = await api.get("/ci/agreement");
   return unwrapData<CIAgreementRecord | null>(res) ?? null;
+}
+
+const CI_GATE_PHASE_RANK: Record<string, number> = {
+  SIGNED: 3,
+  PENDING_FRANCHISEE_SIGNATURE: 2,
+  PENDING_CI_SIGNATURE: 1,
+  EXPIRED: 0,
+};
+
+/**
+ * Portal gate phase over the CI's agreement LIST (pure — unit-tested).
+ * Single agreement → its phase verbatim (exact parity with the pre-multi-
+ * franchise gate). Several → the most-advanced non-void phase, so a CI with
+ * one signed agreement keeps full portal access while a newly attached
+ * franchise's agreement waits for signatures.
+ */
+export function deriveCIGatePhase(
+  agreements: CIAgreementRecord[],
+): CIAgreementPhase | null {
+  if (!agreements.length) return null;
+  if (agreements.length === 1) return agreements[0].phase ?? null;
+  const nonVoid = agreements.filter((a) => a.status !== "VOID");
+  const pool = nonVoid.length ? nonVoid : agreements;
+  return pool.reduce((best, a) =>
+    (CI_GATE_PHASE_RANK[a.phase] ?? -1) > (CI_GATE_PHASE_RANK[best.phase] ?? -1)
+      ? a
+      : best,
+  ).phase;
+}
+
+/** Agreements still waiting on the CI's own signature (non-void). */
+export function countPendingCISignatures(
+  agreements: CIAgreementRecord[],
+): number {
+  return agreements.filter(
+    (a) => a.status !== "VOID" && a.phase === "PENDING_CI_SIGNATURE",
+  ).length;
+}
+
+/**
+ * Multi-franchise CI: every agreement the CI holds, one detail view per
+ * franchise (handler first, each with its own renewal chain as `history`).
+ * Falls back to the singular GET /ci/agreement on older backends (404), so
+ * the multi-agreement UI can ship before the endpoint does.
+ */
+export async function listMyCIAgreements(): Promise<CIAgreementRecord[]> {
+  try {
+    const res = await api.get("/ci/agreements");
+    return unwrapData<CIAgreementRecord[]>(res) ?? [];
+  } catch (error) {
+    const status = (error as { response?: { status?: number } })?.response
+      ?.status;
+    if (status !== 404) throw error;
+    const one = await getCIAgreement();
+    return one ? [one] : [];
+  }
 }
 
 export interface CIESignaturePayload {

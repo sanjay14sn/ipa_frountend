@@ -18,7 +18,7 @@ import {
   type CIReceivablePayResponse,
   type CITrainingReceivable,
 } from "@/services/ci-training.service";
-import { getCIAgreement } from "@/services/contracting.service";
+import { listMyCIAgreements } from "@/services/contracting.service";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { CreditCard, Loader2 } from "lucide-react";
 import { getErrorMessage, getUserFriendlyMessage } from "@/lib/error-utils";
@@ -51,9 +51,9 @@ export function ReceivablesSection() {
     queryKey: ["ci-receivables"],
     queryFn: listCIReceivables,
   });
-  const { data: agreement, isLoading: isAgreementLoading } = useQuery({
-    queryKey: ["ci-agreement"],
-    queryFn: getCIAgreement,
+  const { data: agreements, isLoading: isAgreementLoading } = useQuery({
+    queryKey: ["ci-agreements", "mine"],
+    queryFn: listMyCIAgreements,
   });
 
   const today = useMemo(() => {
@@ -61,13 +61,17 @@ export function ReceivablesSection() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   }, []);
 
+  // Multi-franchise: ANY active, unexpired agreement unlocks payment —
+  // training fees hang off the handler agreement and the server enforces
+  // payability regardless.
   const isAgreementValid = useMemo(() => {
-    if (!agreement) return false;
-    if (agreement.status !== "ACTIVE") return false;
-    // expiresAt null = unlimited or not yet derived.
-    if (!agreement.expiresAt) return true;
-    return today <= agreement.expiresAt;
-  }, [agreement, today]);
+    return (agreements ?? []).some((agreement) => {
+      if (agreement.status !== "ACTIVE") return false;
+      // expiresAt null = unlimited or not yet derived.
+      if (!agreement.expiresAt) return true;
+      return today <= agreement.expiresAt;
+    });
+  }, [agreements, today]);
 
   const sortedReceivables = useMemo(
     () => [...receivables].sort((a, b) => a.receivableOrder - b.receivableOrder),

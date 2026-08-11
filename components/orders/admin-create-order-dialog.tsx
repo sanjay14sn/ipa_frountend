@@ -165,10 +165,14 @@ export default function AdminCreateOrderDialog({
     () =>
       (ciListQuery.data?.data ?? []).filter(
         (ci) =>
+          // Handler-only: the admin ?franchiseId= filter is membership-widened
+          // (multi-franchise CIs), but ordering rights stay with the handler —
+          // the scalar franchiseId is always the handler franchise.
+          ci.franchiseId === franchiseId &&
           (ci.operationalStatus === "valid" || ci.status === "Training") &&
           !ci.materialsOrdered,
       ),
-    [ciListQuery.data],
+    [ciListQuery.data, franchiseId],
   );
 
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);

@@ -26,6 +26,7 @@ import {
   waiveReceivableItem,
   type ReceivableSummaryItem,
 } from "@/services/agreement.service";
+import { InstructorFranchisesSection } from "../franchises/instructor-franchises-section";
 
 interface CourseInstructorDetailsProps {
   instructors: AdminCourseInstructorData[];
@@ -214,7 +215,7 @@ export default function CourseInstructorDetails({
                 mono
               />
               <DetailField
-                label="Franchise"
+                label="Handler franchise"
                 value={instructor.franchise?.name || "—"}
               />
               <DetailField label="Applied" value={formatDate(instructor.createdAt)} />
@@ -224,6 +225,13 @@ export default function CourseInstructorDetails({
               />
             </DetailFieldsGrid>
           </ExpandedDetailSection>
+
+          <Separator />
+
+          <InstructorFranchisesSection
+            instructor={instructor}
+            showActions={instructor.status === "Approved"}
+          />
 
           <Separator />
 

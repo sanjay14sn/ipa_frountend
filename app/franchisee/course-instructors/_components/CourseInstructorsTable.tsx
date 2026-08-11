@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared";
 import { BarChart2, Eye, PenLine } from "lucide-react";
@@ -212,6 +213,14 @@ export default function CourseInstructorsTable({
             <span className="ml-2 text-xs text-muted-foreground">
               · {ci.instructorId}
             </span>
+          ) : null}
+          {/* Multi-franchise CI handled by another franchise — visible +
+              certificate-eligible here, but not orderable/assignable.
+              Renders nothing while the backend omits isHandler. */}
+          {ci.isHandler === false ? (
+            <Badge variant="secondary" className="ml-2 align-middle">
+              Partner franchise
+            </Badge>
           ) : null}
         </span>
       )}

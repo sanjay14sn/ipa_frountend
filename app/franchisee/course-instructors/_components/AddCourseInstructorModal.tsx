@@ -141,7 +141,7 @@ export default function AddCourseInstructorModal({
     enabled: /\S+@\S+\.\S+/.test(formData.mail),
     fetcher: (value, opts) => checkCourseInstructorEmail("franchisee", value, opts),
     takenMessage:
-      "An account with this email already exists. Please use a different email.",
+      "An account with this email already exists. If they teach at another franchise, ask your admin to attach them to yours.",
   });
 
   // Merged view for rendering: base errors + live "taken" result.

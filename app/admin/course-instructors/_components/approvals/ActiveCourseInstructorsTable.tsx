@@ -78,7 +78,18 @@ export default function ActiveCourseInstructorsTable() {
     {
       key: "franchise",
       header: "Franchise",
-      render: (instructor) => instructor.franchise?.name || "—",
+      // Handler franchise; a muted +N marks additional attached franchises
+      // (renders nothing until the backend sends `franchises`).
+      render: (instructor) => (
+        <span>
+          {instructor.franchise?.name || "—"}
+          {(instructor.franchises?.length ?? 0) > 1 ? (
+            <span className="ml-1 text-xs text-muted-foreground">
+              +{(instructor.franchises?.length ?? 1) - 1}
+            </span>
+          ) : null}
+        </span>
+      ),
     },
     {
       key: "contact",

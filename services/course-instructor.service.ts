@@ -28,14 +28,27 @@ export enum BloodGroup {
 }
 
 
+/** One franchise attachment of a multi-franchise CI (admin detail reads). */
+export interface CIFranchiseAttachment {
+  franchiseId: string;
+  franchiseName: string | null;
+  franchiseCode?: string | null;
+  /** Whether this attachment is the handler (owner) franchise. */
+  isHandler: boolean;
+  status: string;
+  attachedAt?: string;
+  agreement?: { id: number; status?: string; phase?: string } | null;
+}
+
 export interface CourseInstructorData {
   id: number;
+  /** The HANDLER (owner) franchise — attachments live in `franchises`. */
   franchise: {
     id: string;
     name: string;
     code?: string | null;
   };
-  /** Raw franchise FK — for grouping/lookups only, never display. */
+  /** Raw handler-franchise FK — for grouping/lookups only, never display. */
   franchiseId: string;
   programId: number;
   instructorId: string;
@@ -62,6 +75,14 @@ export interface CourseInstructorData {
   createdBy: number;
   updatedBy: number;
   additionalDetails?: string;
+  /**
+   * Franchisee rows only: whether MY franchise is this CI's handler.
+   * `false` = partner-franchise CI (visible + certificate-eligible, but not
+   * orderable / session-assignable here). Absent on older payloads.
+   */
+  isHandler?: boolean;
+  /** Admin detail only: all franchise attachments (handler included). */
+  franchises?: CIFranchiseAttachment[];
 }
 
 /** ipa-new list responses omit legacy envelope fields */
@@ -272,6 +293,33 @@ function mapRow(row: Record<string, unknown>): CourseInstructorData {
     updatedAt: String(row.updatedAt ?? ""),
     createdBy: Number(row.createdBy ?? 0),
     updatedBy: Number(row.updatedBy ?? 0),
+    // Multi-franchise fields: defensively mapped so pre-multi-franchise
+    // payloads (missing fields) yield undefined rather than throwing.
+    isHandler: row.isHandler != null ? Boolean(row.isHandler) : undefined,
+    franchises: Array.isArray(row.franchises)
+      ? (row.franchises as Record<string, unknown>[]).map((f) => ({
+          franchiseId: String(f.franchiseId ?? ""),
+          franchiseName: f.franchiseName != null ? String(f.franchiseName) : null,
+          franchiseCode: f.franchiseCode != null ? String(f.franchiseCode) : null,
+          isHandler: Boolean(f.isHandler ?? false),
+          status: String(f.status ?? ""),
+          attachedAt: f.attachedAt != null ? String(f.attachedAt) : undefined,
+          agreement:
+            f.agreement && typeof f.agreement === "object"
+              ? {
+                  id: Number((f.agreement as Record<string, unknown>).id ?? 0),
+                  status:
+                    (f.agreement as Record<string, unknown>).status != null
+                      ? String((f.agreement as Record<string, unknown>).status)
+                      : undefined,
+                  phase:
+                    (f.agreement as Record<string, unknown>).phase != null
+                      ? String((f.agreement as Record<string, unknown>).phase)
+                      : undefined,
+                }
+              : null,
+        }))
+      : undefined,
   };
 }
 
@@ -468,6 +516,59 @@ export async function rejectCourseInstructor(courseInstructorId: number) {
     `/admin/course-instructor/${courseInstructorId}/reject`,
   );
   return unwrapData(response);
+}
+
+// ── multi-franchise membership (admin) ───────────────────────────────────────
+
+/** GET /admin/course-instructor/:id/franchises — all attachments, handler first. */
+export async function listCIFranchises(
+  courseInstructorId: number,
+): Promise<CIFranchiseAttachment[]> {
+  const response = await api.get(
+    `/admin/course-instructor/${courseInstructorId}/franchises`,
+  );
+  const rows = unwrapData<CIFranchiseAttachment[]>(response) ?? [];
+  return [...rows].sort(
+    (a, b) => Number(b.isHandler ?? false) - Number(a.isHandler ?? false),
+  );
+}
+
+/** POST /admin/course-instructor/:id/franchises — attach; issues a per-franchise agreement (full sign flow). */
+export async function attachCIFranchise(
+  courseInstructorId: number,
+  body: { franchiseId: string; tenure: number },
+): Promise<{ agreementId: number }> {
+  const response = await api.post(
+    `/admin/course-instructor/${courseInstructorId}/franchises`,
+    body,
+  );
+  return unwrapData<{ agreementId: number }>(response);
+}
+
+/** DELETE /admin/course-instructor/:id/franchises/:franchiseId — detach a secondary franchise (voids its agreement). */
+export async function detachCIFranchise(
+  courseInstructorId: number,
+  franchiseId: string,
+): Promise<{ ok: true; voidedAgreementId: number | null }> {
+  const response = await api.delete(
+    `/admin/course-instructor/${courseInstructorId}/franchises/${franchiseId}`,
+  );
+  return unwrapData<{ ok: true; voidedAgreementId: number | null }>(response);
+}
+
+/** POST /admin/course-instructor/:id/transfer — move the handler role (old handler fully detached, agreement voided; unpaid training fees carry over). */
+export async function transferCIHandler(
+  courseInstructorId: number,
+  body: { franchiseId: string; tenure?: number },
+): Promise<{ newHandlerAgreementId: number; voidedAgreementId: number | null }> {
+  const response = await api.post(
+    `/admin/course-instructor/${courseInstructorId}/transfer`,
+    body,
+  );
+  return unwrapData<{
+    newHandlerAgreementId: number;
+    voidedAgreementId: number | null;
+  }>(response);
 }
 
 async function resendCourseInstructorCredentialsEmail(

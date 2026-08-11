@@ -64,6 +64,9 @@ export const queryKeys = {
       listQueryKey("course-instructors", { role: "admin-status", ...params }),
     ciTraining: ["course-instructors", "ci-training"] as const,
     trainingList: ["course-instructors", "training-list"] as const,
+    /** Admin multi-franchise panel for one CI (attachments + per-franchise agreements). */
+    franchises: (ciId: number) =>
+      ["course-instructors", "admin", "franchises", ciId] as const,
     franchiseeSessions: (params?: Record<string, unknown> | null) =>
       listQueryKey("course-instructors", { role: "franchisee-sessions", ...params }),
     /** Per-session waiting-room (unassigned attendees) detail key. Scoped by the

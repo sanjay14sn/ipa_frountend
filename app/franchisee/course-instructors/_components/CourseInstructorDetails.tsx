@@ -32,6 +32,18 @@ export default function CourseInstructorDetails({
             label="Blood group"
             value={courseInstructor.bloodGroup || "—"}
           />
+          {/* Multi-franchise: only rendered once the backend sends isHandler.
+              The handler's name isn't in the franchisee contract — keep it generic. */}
+          {courseInstructor.isHandler != null ? (
+            <DetailField
+              label="Managed by"
+              value={
+                courseInstructor.isHandler
+                  ? "This franchise (handler)"
+                  : "Partner franchise"
+              }
+            />
+          ) : null}
         </DetailFieldsGrid>
       </ExpandedDetailSection>
 

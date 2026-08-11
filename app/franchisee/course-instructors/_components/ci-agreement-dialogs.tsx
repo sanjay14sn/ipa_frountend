@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -26,6 +26,38 @@ import {
 import { useUser } from "@/context/user-context";
 import { getErrorMessage } from "@/lib/error-utils";
 
+/** Live per the backend's LIVE_STATUSES — a row the sign/view buttons should target. */
+const LIVE_AGREEMENT_STATUSES = new Set(["APPROVED", "ACTIVE", "SUSPENDED"]);
+
+/**
+ * Deterministic current-agreement pick per instructor: prefer live rows
+ * (APPROVED/ACTIVE/SUSPENDED) over dead ones (VOID/SUPERSEDED/EXPIRED), then
+ * the newest (highest id). Replaces a last-write-wins Map.set that silently
+ * targeted whichever row the server happened to order last once an
+ * instructor had history rows (VOID + reissued APPROVED, SUPERSEDED chain).
+ */
+export function pickCurrentAgreementPerInstructor(
+  rows: CIAgreementData[],
+): Map<number, CIAgreementData> {
+  const byInstructor = new Map<number, CIAgreementData>();
+  for (const row of rows) {
+    if (row.instructorId == null) continue;
+    const current = byInstructor.get(row.instructorId);
+    if (!current) {
+      byInstructor.set(row.instructorId, row);
+      continue;
+    }
+    const rowLive = LIVE_AGREEMENT_STATUSES.has(String(row.status));
+    const currentLive = LIVE_AGREEMENT_STATUSES.has(String(current.status));
+    if (rowLive !== currentLive) {
+      if (rowLive) byInstructor.set(row.instructorId, row);
+      continue;
+    }
+    if (row.id > current.id) byInstructor.set(row.instructorId, row);
+  }
+  return byInstructor;
+}
+
 /**
  * Map of course-instructor id → their current CI agreement for the ACTIVE
  * franchise (server-side scoped via `franchiseId`, so a multi-franchise
@@ -41,10 +73,9 @@ export function useCIAgreementsByInstructor() {
     enabled: !!franchiseId,
   });
 
-  const byInstructor = new Map<number, CIAgreementData>();
-  for (const row of query.data?.rows ?? []) {
-    if (row.instructorId != null) byInstructor.set(row.instructorId, row);
-  }
+  const byInstructor = pickCurrentAgreementPerInstructor(
+    query.data?.rows ?? [],
+  );
   return { byInstructor, refetch: query.refetch };
 }
 
@@ -59,11 +90,20 @@ export function CISignDialog({
   onClose: () => void;
 }) {
   const { user } = useUser();
+  const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
 
   const profileSignatureSrc = franchiseeProfileSignatureSrc(
     user?.profile?.franchiseeSignature,
   );
+
+  // Countersigning can activate the agreement — refresh the CI list so the
+  // row's operationalStatus chip flips without a manual reload.
+  const invalidateCiList = () => {
+    void queryClient.invalidateQueries({
+      queryKey: ["course-instructors", "list"],
+    });
+  };
 
   const handleSignWithExisting = async () => {
     if (!agreement) return;
@@ -71,6 +111,7 @@ export function CISignDialog({
     try {
       await signCIAgreementAsFranchisee(agreement.id);
       toast.success("CI agreement signed successfully.");
+      invalidateCiList();
       onSigned();
     } catch (err) {
       toast.error(getErrorMessage(err, "Could not sign agreement. Please try again."));
@@ -87,6 +128,7 @@ export function CISignDialog({
       const file = new File([blob], "signature.svg", { type: "image/svg+xml" });
       await signCIAgreementAsFranchiseeFile(agreement.id, file);
       toast.success("CI agreement signed successfully.");
+      invalidateCiList();
       onSigned();
     } catch (err) {
       toast.error(getErrorMessage(err, "Could not sign agreement. Please try again."));

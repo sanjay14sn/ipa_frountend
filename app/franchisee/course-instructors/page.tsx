@@ -49,7 +49,7 @@ export default function FranchiseeCourseInstructorsPage() {
   return (
     <TablePageShell
       title="Course instructors"
-      description={`Manage course instructors for ${franchiseName}.`}
+      description={`Course instructors handled by or attached to ${franchiseName}.`}
       actions={
         <Button onClick={() => setIsAddModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />

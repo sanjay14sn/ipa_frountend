@@ -91,6 +91,11 @@ export default function UnifiedMaterialRequestDialog({
     () =>
       courseInstructors.filter(
         (ci) =>
+          // Handler-only (user-approved exception to the byte-identical freeze:
+          // data eligibility, not payment chrome). Partner-franchise CIs are
+          // visible in the list but only their handler orders materials —
+          // the backend FORBIDDEN check backstops this.
+          ci.isHandler !== false &&
           (ci.operationalStatus === "valid" || ci.status === "Training") &&
           !ci.materialsOrdered,
       ),

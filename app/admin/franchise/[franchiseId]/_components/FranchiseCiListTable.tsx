@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { formatDate } from "@/lib/date-utils";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart2, FileText, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -164,6 +165,20 @@ export function FranchiseCiListTable({ franchiseId }: FranchiseCiListTableProps)
         header: "Instructor",
       },
       {
+        key: "managed",
+        header: "Managed",
+        className: "text-center",
+        // The ?franchiseId= filter is membership-widened (multi-franchise
+        // CIs): the scalar franchiseId is always the handler, so equality
+        // distinguishes CIs this franchise handles from ones merely attached.
+        render: (c) =>
+          c.franchiseId === franchiseId ? (
+            <Badge>Handled</Badge>
+          ) : (
+            <Badge variant="secondary">Attached</Badge>
+          ),
+      },
+      {
         key: "city",
         header: "City",
         render: (c) => c.city || "—",
@@ -218,7 +233,7 @@ export function FranchiseCiListTable({ franchiseId }: FranchiseCiListTableProps)
         ),
       },
     ],
-    [],
+    [franchiseId],
   );
 
   const filters: DataTableFilter[] = [

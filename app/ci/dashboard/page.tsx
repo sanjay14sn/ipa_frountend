@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import {
   LastUpdated,
   ModulePill,
@@ -20,7 +21,11 @@ import {
   Trophy,
 } from "lucide-react";
 import { getCIProgress, getCIUpcomingSessions, listCIReceivables } from "@/services/ci-training.service";
-import { getCIAgreement } from "@/services/contracting.service";
+import {
+  countPendingCISignatures,
+  deriveCIGatePhase,
+  listMyCIAgreements,
+} from "@/services/contracting.service";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { CIDashboardPanel } from "../_components/ci-dashboard-cards";
 import { formatDate } from "@/lib/date-utils";
@@ -37,8 +42,8 @@ function phaseLabel(phase?: string | null): string {
 export default function CIDashboardPage() {
   const { user } = useCIAuth();
   const agreementQuery = useQuery({
-    queryKey: ["ci-agreement"],
-    queryFn: getCIAgreement,
+    queryKey: ["ci-agreements", "mine"],
+    queryFn: listMyCIAgreements,
   });
   const progressQuery = useQuery({
     queryKey: ["ci-progress"],
@@ -56,7 +61,11 @@ export default function CIDashboardPage() {
   const progress = progressQuery.data ?? [];
   const upcoming = upcomingQuery.data ?? [];
   const receivables = receivablesQuery.data ?? [];
-  const agreement = agreementQuery.data ?? null;
+  // Gate phase derived over ALL agreements (multi-franchise) — identical to
+  // the single agreement's phase when only one exists.
+  const agreements = agreementQuery.data ?? [];
+  const agreementPhase = deriveCIGatePhase(agreements);
+  const pendingSignatureCount = countPendingCISignatures(agreements);
 
   const completedLevels = useMemo(
     () => progress.filter((item) => item.status === "COMPLETED"),
@@ -120,9 +129,16 @@ export default function CIDashboardPage() {
                 onRefresh={handleRefresh}
                 isRefreshing={agreementQuery.isFetching}
               />
-              <Badge variant={agreement?.phase === "SIGNED" ? "default" : "secondary"}>
-                {phaseLabel(agreement?.phase)}
+              <Badge variant={agreementPhase === "SIGNED" ? "default" : "secondary"}>
+                {phaseLabel(agreementPhase ?? undefined)}
               </Badge>
+              {pendingSignatureCount > 0 ? (
+                <Link href="/ci/agreement">
+                  <Badge variant="outline">
+                    {pendingSignatureCount} awaiting signature
+                  </Badge>
+                </Link>
+              ) : null}
               {user?.instructorCode ? <Badge variant="outline">{user.instructorCode}</Badge> : null}
             </div>
           }
@@ -184,8 +200,8 @@ export default function CIDashboardPage() {
         <CIDashboardPanel label="Tools" title="Quick access">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <QuickAccessCard
-              title="My Agreement"
-              description="Agreement details and status"
+              title="My Agreements"
+              description="Per-franchise agreements and status"
               href="/ci/agreement"
               icon={FileText}
             />
