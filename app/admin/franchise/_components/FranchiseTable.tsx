@@ -2,17 +2,21 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Download, Loader2 } from "lucide-react";
 import {
   type DataTableFilter,
   type DataTableSortOption,
 } from "@/components/shared";
 import { ConfirmDialog } from "@/components/shared/dialog";
+import { Button } from "@/components/ui/button";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import {
+  exportFranchisesCsv,
   resendFranchiseeCredentials,
   type FranchiseData,
 } from "@/services/franchisee.service";
 import { usePaginatedFranchisesAdmin } from "@/hooks/api/franchisee.hooks";
+import { usePrograms } from "@/hooks/api/program.hooks";
 import { FranchiseHubTable } from "./FranchiseHubTable";
 import { EditFranchiseDialog } from "./edit-franchise-dialog";
 import { EditFranchiseeDialog } from "./edit-franchisee-dialog";
@@ -28,7 +32,7 @@ export default function FranchiseTable({
   // List state lives in the URL (SW-P10); "fr" prefix keeps the keys clear
   // of the applications tab's list on the same hub URL.
   const urlParams = useListParams({
-    filterDefaults: { status: "all", type: "all" },
+    filterDefaults: { status: "all", type: "all", program: "all", active: "all" },
     defaultSortBy: "createdAt",
     defaultSortOrder: "desc",
     prefix: "fr",
@@ -41,7 +45,11 @@ export default function FranchiseTable({
     | "DESC";
   const statusFilter = urlParams.filters.status;
   const typeFilter = urlParams.filters.type;
+  const programFilter = urlParams.filters.program;
+  const activeFilter = urlParams.filters.active;
   const itemsPerPage = 10;
+
+  const { programs } = usePrograms();
 
   const listParams = useMemo(
     () => ({
@@ -52,6 +60,9 @@ export default function FranchiseTable({
       sortOrder: sortOrder || undefined,
       status: statusFilter !== "all" ? statusFilter : undefined,
       type: typeFilter !== "all" ? typeFilter : undefined,
+      programId: programFilter !== "all" ? Number(programFilter) : undefined,
+      hasActiveAgreement:
+        activeFilter !== "all" ? (activeFilter as "yes" | "no") : undefined,
     }),
     [
       currentPage,
@@ -61,6 +72,8 @@ export default function FranchiseTable({
       sortOrder,
       statusFilter,
       typeFilter,
+      programFilter,
+      activeFilter,
     ],
   );
 
@@ -72,10 +85,33 @@ export default function FranchiseTable({
 
   const [resendTarget, setResendTarget] = useState<FranchiseData | null>(null);
   const [isResending, setIsResending] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [editFranchiseTarget, setEditFranchiseTarget] =
     useState<FranchiseData | null>(null);
   const [editFranchiseeTarget, setEditFranchiseeTarget] =
     useState<FranchiseData | null>(null);
+
+  // Same filters/search/sort as the table, no page/limit — the backend
+  // returns every matching row, not just the visible page.
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    try {
+      await exportFranchisesCsv({
+        search: searchTerm || undefined,
+        sortBy: sortBy || undefined,
+        sortOrder: sortOrder || undefined,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        type: typeFilter !== "all" ? typeFilter : undefined,
+        programId: programFilter !== "all" ? Number(programFilter) : undefined,
+        hasActiveAgreement:
+          activeFilter !== "all" ? (activeFilter as "yes" | "no") : undefined,
+      });
+    } catch (error) {
+      toast.error(getUserFriendlyMessage(error, "Failed to export CSV."));
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleConfirmResend = async () => {
     if (!resendTarget) return;
@@ -100,6 +136,10 @@ export default function FranchiseTable({
     void refetchRows();
   }, [refreshTrigger, refetchRows]);
 
+  // defaultValue is the live URL-derived value (not a hardcoded "all"):
+  // DataTable seeds its internal filter state once from defaultValue, so a
+  // URL-restored filter must arrive with the right value or the dropdown
+  // label goes stale.
   const filters: DataTableFilter[] = useMemo(
     () => [
       {
@@ -113,7 +153,7 @@ export default function FranchiseTable({
           { value: "all", label: "All statuses" },
           { value: "Approved", label: "Approved" },
         ],
-        defaultValue: "all",
+        defaultValue: statusFilter,
       },
       {
         key: "type",
@@ -125,16 +165,37 @@ export default function FranchiseTable({
           { value: "School", label: "School" },
           { value: "Regular", label: "Regular" },
         ],
-        defaultValue: "all",
+        defaultValue: typeFilter,
+      },
+      {
+        key: "program",
+        label: "Program",
+        options: [
+          { value: "all", label: "All programs" },
+          ...programs.map((p) => ({ value: String(p.id), label: p.name })),
+        ],
+        defaultValue: programFilter,
+      },
+      {
+        key: "active",
+        label: "Agreements",
+        options: [
+          { value: "all", label: "All agreements" },
+          { value: "yes", label: "Has active agreement" },
+          { value: "no", label: "No active agreement" },
+        ],
+        defaultValue: activeFilter,
       },
     ],
-    [],
+    [statusFilter, typeFilter, programFilter, activeFilter, programs],
   );
 
   const handleFilterChange = (key: string, value: string | string[]) => {
     const nextValue = Array.isArray(value) ? (value[0] ?? "all") : value;
     if (key === "status") urlParams.setFilter("status", nextValue || "all");
     if (key === "type") urlParams.setFilter("type", nextValue || "all");
+    if (key === "program") urlParams.setFilter("program", nextValue || "all");
+    if (key === "active") urlParams.setFilter("active", nextValue || "all");
   };
 
   const sortOptions: DataTableSortOption[] = [
@@ -175,10 +236,29 @@ export default function FranchiseTable({
         onSortChange={(newSortBy, newSortOrder) => {
           urlParams.setSort(newSortBy, newSortOrder === "ASC" ? "asc" : "desc");
         }}
+        toolbarActions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void handleExportCsv()}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Export CSV
+          </Button>
+        }
         emptyMessage="No franchises found matching your criteria"
         resultsText={(count, totalCount) => {
           const filtered =
-            searchTerm || statusFilter !== "all" || typeFilter !== "all"
+            searchTerm ||
+            statusFilter !== "all" ||
+            typeFilter !== "all" ||
+            programFilter !== "all" ||
+            activeFilter !== "all"
               ? " (filtered)"
               : "";
           return `Showing ${count} of ${totalCount} franchises${filtered}`;

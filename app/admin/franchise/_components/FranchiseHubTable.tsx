@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ interface FranchiseHubTableProps {
   defaultSortBy?: string;
   defaultSortOrder?: "ASC" | "DESC";
   onSortChange?: (sortBy: string, sortOrder: "ASC" | "DESC") => void;
+  toolbarActions?: ReactNode;
   emptyMessage: string;
   resultsText?: (count: number, total: number) => string;
   onApprove?: (application: FranchiseData) => void;
@@ -175,6 +177,7 @@ export function FranchiseHubTable({
   defaultSortBy,
   defaultSortOrder = "DESC",
   onSortChange,
+  toolbarActions,
   emptyMessage,
   resultsText,
   onApprove,
@@ -392,6 +395,7 @@ export function FranchiseHubTable({
       defaultSortBy={defaultSortBy}
       defaultSortOrder={defaultSortOrder}
       onSortChange={onSortChange}
+      toolbarActions={toolbarActions}
       pagination={pagination}
       currentPage={currentPage}
       onPageChange={onPageChange}

@@ -1,4 +1,5 @@
 import { api } from "@/lib/axios";
+import { triggerBlobDownload } from "@/lib/download";
 import {
   compactRequestParams,
   normalizePaginatedResult,
@@ -184,6 +185,10 @@ export interface PaginationParams {
   search?: string;
   status?: string;
   type?: string;
+  /** Franchises with a non-CI agreement referencing this program (any status). */
+  programId?: number;
+  /** "yes" = ≥1 ACTIVE non-CI agreement, "no" = none; same-row with programId. */
+  hasActiveAgreement?: "yes" | "no";
   sortBy?: string;
   sortOrder?: string;
 }
@@ -631,6 +636,8 @@ export async function getPaginatedFranchises(
       sortOrder: params.sortOrder,
       status,
       type: params.type,
+      programId: params.programId,
+      hasActiveAgreement: params.hasActiveAgreement,
     } as Record<string, string | number | boolean | undefined | null>),
   });
   const result = unwrapData<unknown>(response);
@@ -650,6 +657,37 @@ export async function getPaginatedFranchises(
       hasPreviousPage: pageNum > 1,
     },
   };
+}
+
+/**
+ * Download the FULL filtered admin franchise list as CSV — the backend
+ * ignores page/limit, so the file contains every row matching the filters,
+ * not just the current page.
+ */
+export async function exportFranchisesCsv(
+  params: PaginationParams,
+): Promise<void> {
+  const status =
+    params.status != null &&
+    params.status !== "" &&
+    params.status !== "all"
+      ? params.status
+      : undefined;
+  const response = await api.get<Blob>("/admin/franchise/all/export", {
+    params: compactRequestParams({
+      search: params.search,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+      status,
+      type: params.type,
+      programId: params.programId,
+      hasActiveAgreement: params.hasActiveAgreement,
+    } as Record<string, string | number | boolean | undefined | null>),
+    responseType: "blob",
+  });
+  const blob = new Blob([response.data], { type: "text/csv;charset=utf-8" });
+  const stamp = new Date().toISOString().slice(0, 10);
+  triggerBlobDownload(blob, `franchises-export-${stamp}.csv`);
 }
 
 export async function getPaginatedFranchiseApplications(
