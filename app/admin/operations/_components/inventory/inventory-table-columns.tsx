@@ -5,6 +5,7 @@ import {
   ArrowRightLeft,
   Boxes,
   Edit2,
+  History,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import { INVENTORY_CATEGORIES } from "@/lib/inventory-categories";
 import { formatRupees } from "@/lib/currency-utils";
 
 export type InventoryColumnCallbacks = {
+  onHistory: (item: InventoryItemSummary) => void;
   onAdjust: (item: InventoryItemSummary) => void;
   onProcurement: (itemId: number) => void;
   onEdit: (item: InventoryItemSummary) => void;
@@ -73,6 +75,15 @@ export function buildInventoryColumns(
       className: "text-right",
       render: (item) => (
         <div className="flex justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => callbacks.onHistory(item)}
+            title="View movement history"
+            aria-label="View movement history"
+          >
+            <History className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"

@@ -39,6 +39,7 @@ import {
   EditInventoryDialog,
 } from "./inventory/inventory-item-dialogs";
 import { StockAdjustmentDialog } from "./inventory/stock-adjustment-dialog";
+import { MovementHistoryDialog } from "./inventory/movement-history-dialog";
 import {
   buildInventoryColumns,
   InventoryExpandedRow,
@@ -89,6 +90,8 @@ export function InventorySection({
   const [adjustingItem, setAdjustingItem] = useState<InventoryItemSummary | null>(null);
   const [adjustForm, setAdjustForm] = useState<AdjustmentFormState>(EMPTY_ADJUSTMENT);
   const [isAdjustSubmitting, setIsAdjustSubmitting] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyItem, setHistoryItem] = useState<InventoryItemSummary | null>(null);
 
   const programIdNum = programFilter === "" || programFilter === 0 ? undefined : Number(programFilter);
   const levelIdNum = levelFilter === "" || levelFilter === 0 ? undefined : Number(levelFilter);
@@ -205,6 +208,11 @@ export function InventorySection({
     setIsAdjustOpen(true);
   }
 
+  function openHistory(item: InventoryItemSummary) {
+    setHistoryItem(item);
+    setIsHistoryOpen(true);
+  }
+
   function closeAdjust() {
     if (isAdjustSubmitting) return;
     setIsAdjustOpen(false);
@@ -271,6 +279,7 @@ export function InventorySection({
   const adjustPreview = deriveAdjustmentPreview(adjustingItem, adjustForm);
 
   const columns = buildInventoryColumns({
+    onHistory: openHistory,
     onAdjust: openAdjust,
     onProcurement: openProcurement,
     onEdit: openEdit,
@@ -309,7 +318,8 @@ export function InventorySection({
           {/* ADM-24: one line of orientation — detail lives in row tooltips. */}
           <p className="text-sm text-muted-foreground">
             The item master with stock levels; use a row&apos;s Adjust action
-            to record manual corrections.
+            to record manual corrections, or its History action to review
+            every movement.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -399,6 +409,16 @@ export function InventorySection({
         isAdjustSubmitting={isAdjustSubmitting}
         onClose={closeAdjust}
         onConfirm={() => void handleAdjust()}
+      />
+
+      <MovementHistoryDialog
+        open={isHistoryOpen}
+        item={historyItem}
+        regionLocationId={regionLocationId}
+        onClose={() => {
+          setIsHistoryOpen(false);
+          setHistoryItem(null);
+        }}
       />
     </div>
   );

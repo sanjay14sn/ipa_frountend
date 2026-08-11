@@ -215,6 +215,11 @@ export const queryKeys = {
     listPrefix: ["inventory", "list"] as const,
     detail: (materialId: number) =>
       ["inventory", "detail", materialId] as const,
+    /** Per-item movement ledger. Partial invalidate: `movementsPrefix(itemId)`. */
+    movements: (itemId: number, params?: Record<string, unknown> | null) =>
+      ["inventory", "movements", itemId, params ?? {}] as const,
+    movementsPrefix: (itemId: number) =>
+      ["inventory", "movements", itemId] as const,
     all: ["inventory", "all"] as const,
     kitCatalog: ["inventory", "kit-catalog"] as const,
     programKitItems: (programId: number) =>

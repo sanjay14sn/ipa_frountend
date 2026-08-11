@@ -47,6 +47,9 @@ export async function invalidateAfterStockAdjustment(materialId?: number) {
         qc.invalidateQueries({
           queryKey: queryKeys.inventory.detail(materialId),
         }),
+        qc.invalidateQueries({
+          queryKey: queryKeys.inventory.movementsPrefix(materialId),
+        }),
       );
     }
 

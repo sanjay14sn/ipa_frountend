@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   getAllInventory,
+  getInventoryMovements,
   getKitCatalogItems,
   getProgramKitItems,
   getInventoryItemsForLevel,
@@ -11,6 +12,7 @@ import {
   getPaginatedInventory,
   type Inventory,
   type ProgramKitItemSummary,
+  type StockMovementType,
 } from "@/services/inventory.service";
 import { queryKeys } from "@/hooks/api/query-keys";
 
@@ -99,6 +101,48 @@ export function useInventoryPaginatedQuery(filters: InventoryPaginatedFilters) {
     total: q.data?.total ?? 0,
     totalPages: q.data?.totalPages ?? 1,
   };
+}
+
+export type InventoryMovementsParams = {
+  itemId: number;
+  fromDate: string;
+  toDate: string;
+  movementType?: StockMovementType;
+  page: number;
+  limit: number;
+  /** Super-admin region view: scope to this warehouse location. */
+  regionLocationId?: number;
+};
+
+/**
+ * Per-item movement ledger. Deliberately NOT fetched on mount: pass `null`
+ * until the admin applies a date range (the history dialog's Load button) —
+ * the backend requires the range, and the UI must never fetch on dialog-open.
+ */
+export function useInventoryMovementsQuery(
+  params: InventoryMovementsParams | null,
+) {
+  return useQuery({
+    queryKey: queryKeys.inventory.movements(params?.itemId ?? 0, {
+      fromDate: params?.fromDate,
+      toDate: params?.toDate,
+      movementType: params?.movementType,
+      page: params?.page,
+      limit: params?.limit,
+      regionLocationId: params?.regionLocationId,
+    }),
+    queryFn: () =>
+      getInventoryMovements(params!.itemId, {
+        fromDate: params!.fromDate,
+        toDate: params!.toDate,
+        movementType: params!.movementType,
+        page: params!.page,
+        limit: params!.limit,
+        regionLocationId: params!.regionLocationId,
+      }),
+    enabled: params !== null,
+    placeholderData: (prev) => prev,
+  });
 }
 
 function useInventoryMonitoring() {

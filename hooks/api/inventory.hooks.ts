@@ -9,8 +9,10 @@
  */
 
 export type { ProgramKitItemSummary } from "@/hooks/api/inventory-lists.hooks";
+export type { InventoryMovementsParams } from "@/hooks/api/inventory-lists.hooks";
 export {
   useInventoryPaginatedQuery,
+  useInventoryMovementsQuery,
   useAllInventory,
   useKitCatalog,
   useProgramKitItems,

@@ -497,6 +497,114 @@ export async function adjustInventoryStock(
   };
 }
 
+export type StockMovementType =
+  | "ORDER_RESERVE"
+  | "ORDER_BACKORDER"
+  | "SUPPLIER_RECEIVED"
+  | "ORDER_CANCEL_RELEASE"
+  | "ORDER_FULFILL"
+  | "MANUAL_ADJUSTMENT";
+
+export type StockMovementBucket = "ON_HAND" | "ON_ORDER";
+
+export type StockMovementRow = {
+  id: number;
+  occurredAt: string;
+  movementType: StockMovementType;
+  bucket: StockMovementBucket;
+  deltaQty: number;
+  /** Post-movement on-hand balance; null for on-order rows and backfilled history. */
+  onHandAfter: number | null;
+  note: string | null;
+  backfilled: boolean;
+  order: {
+    id: number;
+    referenceId: string;
+    franchiseName: string | null;
+  } | null;
+  receipt: {
+    id: number;
+    purchaseOrderId: number;
+    poReferenceNo: string | null;
+    supplierName: string | null;
+  } | null;
+  actorName: string | null;
+};
+
+export type PaginatedStockMovementsResult = {
+  rows: StockMovementRow[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+function normalizeMovementRow(raw: any): StockMovementRow {
+  return {
+    id: Number(raw?.id ?? 0),
+    occurredAt: String(raw?.occurredAt ?? ""),
+    movementType: raw?.movementType as StockMovementType,
+    bucket: (raw?.bucket ?? "ON_HAND") as StockMovementBucket,
+    deltaQty: Number(raw?.deltaQty ?? 0),
+    onHandAfter: raw?.onHandAfter == null ? null : Number(raw.onHandAfter),
+    note: raw?.note ?? null,
+    backfilled: Boolean(raw?.backfilled),
+    order: raw?.order
+      ? {
+          id: Number(raw.order.id ?? 0),
+          referenceId: String(raw.order.referenceId ?? ""),
+          franchiseName: raw.order.franchiseName ?? null,
+        }
+      : null,
+    receipt: raw?.receipt
+      ? {
+          id: Number(raw.receipt.id ?? 0),
+          purchaseOrderId: Number(raw.receipt.purchaseOrderId ?? 0),
+          poReferenceNo: raw.receipt.poReferenceNo ?? null,
+          supplierName: raw.receipt.supplierName ?? null,
+        }
+      : null,
+    actorName: raw?.actorName ?? null,
+  };
+}
+
+/**
+ * Per-item stock movement ledger. The date range is mandatory — the backend
+ * refuses unbounded scans, and the history dialog only fetches after the
+ * admin picks a range and presses Load.
+ */
+export async function getInventoryMovements(
+  itemId: number,
+  params: {
+    fromDate: string;
+    toDate: string;
+    movementType?: StockMovementType;
+    page?: number;
+    limit?: number;
+    /** Super-admin region view: scope to this warehouse location. */
+    regionLocationId?: number;
+  },
+): Promise<PaginatedStockMovementsResult> {
+  const response = await api.get(`/inventory/${itemId}/movements`, {
+    params: compactRequestParams(
+      params as Record<string, string | number | boolean | undefined | null>,
+    ),
+  });
+  const normalized = normalizePaginatedResult<unknown>(
+    unwrapData<unknown>(response),
+  );
+  return {
+    rows: normalized.rows.map(normalizeMovementRow),
+    total: normalized.total,
+    page: normalized.page,
+    limit: normalized.limit,
+    totalPages: Math.max(
+      1,
+      Math.ceil(normalized.total / (normalized.limit || 10)),
+    ),
+  };
+}
+
 export async function getInventoryMonitoring(
   regionLocationId?: number,
 ): Promise<InventoryMonitoringSummary> {
