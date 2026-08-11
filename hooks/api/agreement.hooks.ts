@@ -7,6 +7,7 @@ import {
   getAgreementsMine,
   getAgreementAdmin,
   getAgreementMine,
+  getAgreementSwitcherAdmin,
   waiveReceivableItem,
   updateReceivableItemDueDate,
   recordReceivablePayment,
@@ -93,6 +94,20 @@ export function useAgreementAdmin(id: number | undefined) {
 async function invalidateAgreementLists() {
   const client = getQueryClientBridge();
   await client.invalidateQueries({ queryKey: ["agreements", "list"] });
+}
+
+/** Admin: a franchise's agreement/program switcher feed (program picker in the
+ * admin create-on-behalf order dialog). */
+export function useAgreementSwitcherAdmin(
+  franchiseId: string | null,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: ["agreements", "switcher-admin", franchiseId],
+    queryFn: () => getAgreementSwitcherAdmin(franchiseId!),
+    enabled: enabled && !!franchiseId,
+    staleTime: 5 * 60 * 1000,
+  });
 }
 
 /** Admin: one-time free franchise kit dispatch for a Valid NEW_FRANCHISE agreement. */

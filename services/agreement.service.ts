@@ -798,7 +798,7 @@ async function getAgreementSwitcherMine(): Promise<AgreementSwitcherItem[]> {
 }
 
 /** GET /admin/agreement/franchise/:franchiseId/switcher — admin switcher feed. */
-async function getAgreementSwitcherAdmin(
+export async function getAgreementSwitcherAdmin(
   franchiseId: string,
 ): Promise<AgreementSwitcherItem[]> {
   const response = await api.get(

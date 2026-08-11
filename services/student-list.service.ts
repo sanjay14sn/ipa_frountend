@@ -394,6 +394,7 @@ export async function getPaginatedStudentsAdmin(
     sortBy: params.sortBy,
     sortOrder: params.sortOrder,
     franchiseId: params.franchiseId,
+    programId: params.programId,
   });
   const data = raw.map((r) => mapStudentRow(r as Record<string, unknown>));
   const lim = limit || 20;

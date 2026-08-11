@@ -194,3 +194,26 @@ export function useAdminCIListByStatus(
     placeholderData: (prev) => prev,
   });
 }
+
+/**
+ * Admin CI list for one franchise with NO status filter (admin create-on-behalf
+ * order flow). Deliberately unfiltered server-side: the order dialog applies the
+ * franchisee eligibility predicate client-side — `operationalStatus === "valid"
+ * OR status === "Training"` — which a single server status filter can't express.
+ */
+export function useAdminCIsByFranchise(
+  franchiseId: string | null,
+  opts?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: [...ADMIN_CI_STATUS_PREFIX, "all", franchiseId],
+    queryFn: () =>
+      getPaginatedAdminCourseInstructors({
+        page: 1,
+        limit: 100,
+        franchiseId: franchiseId!,
+      }),
+    enabled: !!franchiseId && (opts?.enabled ?? true),
+    placeholderData: (prev) => prev,
+  });
+}

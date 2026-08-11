@@ -128,6 +128,14 @@ export const queryKeys = {
     /** Custom-order available items (level + kit) for a set of students. */
     availableItems: (studentIds: number[]) =>
       ["orders", "available-items", [...studentIds].sort((a, b) => a - b)] as const,
+    /** Admin variant of availableItems, scoped to a franchise. */
+    availableItemsAdmin: (franchiseId: string, studentIds: number[]) =>
+      [
+        "orders",
+        "available-items-admin",
+        franchiseId,
+        [...studentIds].sort((a, b) => a - b),
+      ] as const,
   },
   programs: {
     all: ["programs"] as const,

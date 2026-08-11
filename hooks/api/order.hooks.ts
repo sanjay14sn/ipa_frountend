@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   getFranchiseeOrders,
   getAllOrdersAdmin,
@@ -8,12 +9,15 @@ import {
   getOrderById,
   getOrderByIdAdmin,
   getAvailableItemsForStudents,
+  getAvailableItemsForStudentsAdmin,
+  createOrderAdmin,
   type OrderData,
   type GroupedOrdersResponse,
   type FranchiseeOrderListParams,
   type StudentAvailableItems,
 } from "@/services/order.service";
 import { useProgramId } from "@/hooks/use-scope";
+import { extractErrorMessage } from "@/lib/error-utils";
 import { queryKeys } from "./query-keys";
 import { getQueryClientBridge } from "./query-client-bridge";
 
@@ -105,6 +109,37 @@ export function useAvailableItems(studentIds: number[], enabled = true) {
     queryFn: () => getAvailableItemsForStudents(studentIds),
     enabled: enabled && studentIds.length > 0,
     placeholderData: (prev) => prev as StudentAvailableItems[] | undefined,
+  });
+}
+
+/** Admin variant of useAvailableItems, scoped to the target franchise
+ * (admin create-on-behalf order flow). */
+export function useAdminAvailableItems(
+  franchiseId: string | null,
+  studentIds: number[],
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: queryKeys.orders.availableItemsAdmin(franchiseId ?? "", studentIds),
+    queryFn: () => getAvailableItemsForStudentsAdmin(franchiseId!, studentIds),
+    enabled: enabled && !!franchiseId && studentIds.length > 0,
+    placeholderData: (prev) => prev as StudentAvailableItems[] | undefined,
+  });
+}
+
+/** Admin create-on-behalf order — no payment step; the order lands PAID and
+ * allocates immediately. */
+export function useCreateOrderAdminMutation() {
+  return useMutation({
+    mutationFn: (payload: Parameters<typeof createOrderAdmin>[0]) =>
+      createOrderAdmin(payload),
+    onSuccess: async () => {
+      await invalidateAdminOrders();
+      toast.success("Order created — no payment required");
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error, "Failed to create order"));
+    },
   });
 }
 

@@ -317,6 +317,28 @@ export async function getMyAgreementTshirts(
     : [];
 }
 
+/** Admin: a franchise's agreement t-shirt options (admin create-on-behalf order flow). */
+export async function getAgreementTshirtsAdmin(
+  franchiseId: string,
+  programId: number,
+): Promise<InventoryByCategoryItem[]> {
+  const response = await api.get(
+    `/inventory/programs/${programId}/franchise/${encodeURIComponent(franchiseId)}/agreement-tshirts`,
+  );
+  const data = unwrapData<unknown[]>(response);
+  return Array.isArray(data)
+    ? data.map((row) => {
+        const r = row as Record<string, unknown>;
+        return {
+          id: Number(r?.id ?? 0),
+          sku: String(r?.sku ?? ""),
+          name: String(r?.name ?? ""),
+          unitPrice: Number(r?.unitPrice ?? 0),
+        };
+      })
+    : [];
+}
+
 export async function getProgramKitItems(
   programId: number,
 ): Promise<ProgramKitItemSummary[]> {

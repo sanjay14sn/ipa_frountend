@@ -9,6 +9,7 @@ import {
   Download,
   Eye,
   MoreHorizontal,
+  Plus,
   RefreshCw,
   RotateCw,
   ShieldCheck,
@@ -38,6 +39,7 @@ import { verifyShipment, downloadChallan, regenerateDc, type VerifyShipmentDto }
 import { useAdminOrderRows } from "@/hooks/api/order.hooks";
 import { VerifyShipmentDialog } from "@/components/shipping/VerifyShipmentDialog";
 import { AdminOrderInvoiceDialog } from "./AdminOrderInvoiceDialog";
+import AdminCreateOrderDialog from "./admin-create-order-dialog";
 import { DispatchItemsSummaryTable } from "./DispatchItemsSummaryTable";
 import { isStandaloneDispatchOrderType } from "./dispatch-order-helpers";
 import { Separator } from "@/components/ui/separator";
@@ -109,6 +111,7 @@ export default function AdminOrdersTable({
   const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
   const [cancelDialogOrder, setCancelDialogOrder] = useState<OrderData | null>(null);
   const [refundOnCancel, setRefundOnCancel] = useState(false);
+  const [createOrderOpen, setCreateOrderOpen] = useState(false);
 
   const ordersQuery = useAdminOrderRows({
     page: currentPage,
@@ -600,11 +603,26 @@ export default function AdminOrdersTable({
       resultsText={(count, tot) =>
         `Showing ${count} of ${tot} order${tot !== 1 ? "s" : ""}`
       }
+      toolbarActions={
+        !readOnly ? (
+          <Button size="sm" onClick={() => setCreateOrderOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create order
+          </Button>
+        ) : undefined
+      }
     />
 
     <AdminOrderInvoiceDialog
       orderId={detailOrderId}
       onClose={() => setDetailOrderId(null)}
+    />
+
+    <AdminCreateOrderDialog
+      open={createOrderOpen}
+      onClose={() => setCreateOrderOpen(false)}
+      franchiseId={franchiseId}
+      onCreated={() => void ordersQuery.refetch()}
     />
 
     <VerifyShipmentDialog

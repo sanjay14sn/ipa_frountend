@@ -13,6 +13,12 @@ import {
   normalizePaginatedResult,
   unwrapData,
 } from "@/lib/unwrap-api";
+import type {
+  CustomMaterialLine,
+  FranchiseKitOrderItem,
+  StartingKitItem,
+  StudentAvailableItems,
+} from "./order-franchisee.service";
 
 // ---------------------------------------------------------------------------
 // Shared primitive types
@@ -977,6 +983,65 @@ export async function refreshOrderAllocationAdmin(
 ): Promise<RefreshOrderAllocationResult> {
   const response = await api.post(`/admin/order/${orderId}/refresh-allocation`);
   return unwrapData<RefreshOrderAllocationResult>(response);
+}
+
+/** Admin create-on-behalf cart: the franchisee CreateOrderDto minus payment
+ * fields, with the target franchise explicit. */
+export interface AdminCreateOrderPayload {
+  franchiseId: string;
+  studentIds?: number[];
+  instructorIds?: number[];
+  startingKitItems?: StartingKitItem[];
+  customItems?: CustomMaterialLine[];
+  franchiseKitItems?: FranchiseKitOrderItem[];
+  franchiseKitProgramId?: number;
+  notes?: string;
+}
+
+/** Creates an order for a franchise with no payment step — the backend lands it
+ * PAID (no payment row) and allocation proceeds immediately. Body is built
+ * key-by-key because the backend DTO is forbidNonWhitelisted. */
+export async function createOrderAdmin(
+  payload: AdminCreateOrderPayload,
+): Promise<OrderData> {
+  const body: Record<string, unknown> = { franchiseId: payload.franchiseId };
+  if (payload.studentIds != null && payload.studentIds.length > 0) {
+    body.studentIds = payload.studentIds;
+  }
+  if (payload.instructorIds != null && payload.instructorIds.length > 0) {
+    body.instructorIds = payload.instructorIds;
+  }
+  if (payload.startingKitItems != null && payload.startingKitItems.length > 0) {
+    body.startingKitItems = payload.startingKitItems;
+  }
+  if (payload.customItems != null && payload.customItems.length > 0) {
+    body.customItems = payload.customItems;
+  }
+  if (payload.franchiseKitItems != null && payload.franchiseKitItems.length > 0) {
+    body.franchiseKitItems = payload.franchiseKitItems;
+    if (payload.franchiseKitProgramId != null) {
+      body.franchiseKitProgramId = payload.franchiseKitProgramId;
+    }
+  }
+  if (payload.notes != null && payload.notes.trim() !== "") {
+    body.notes = payload.notes;
+  }
+  const response = await api.post("/admin/order", body);
+  return normalizeOrder(unwrapData(response));
+}
+
+/** Admin variant of the Custom Materials picker feed — items each student may
+ * custom-order, scoped to the given franchise. */
+export async function getAvailableItemsForStudentsAdmin(
+  franchiseId: string,
+  studentIds: number[],
+): Promise<StudentAvailableItems[]> {
+  if (studentIds.length === 0) return [];
+  const response = await api.post("/admin/order/available-items", {
+    franchiseId,
+    studentIds,
+  });
+  return unwrapData<StudentAvailableItems[]>(response) ?? [];
 }
 
 
