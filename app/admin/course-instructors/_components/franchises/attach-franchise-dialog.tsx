@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
   SelectContent,
@@ -42,7 +43,9 @@ export function AttachFranchiseDialog({
 }: AttachFranchiseDialogProps) {
   const [franchiseId, setFranchiseId] = useState("");
   const [tenure, setTenure] = useState("12");
+  const [startDate, setStartDate] = useState("");
   const attachMutation = useAttachCIFranchise(instructor.id);
+  const today = new Date().toISOString().slice(0, 10);
 
   const franchisesQuery = useQuery({
     queryKey: ["admin-franchises-for-ci-attach"],
@@ -69,19 +72,30 @@ export function AttachFranchiseDialog({
     if (open) return;
     setFranchiseId("");
     setTenure("12");
+    setStartDate("");
   }, [open]);
 
   const tenureNum = Number(tenure);
+  const startDateValid = !startDate || startDate <= today;
   const canSubmit =
-    !!franchiseId && Number.isInteger(tenureNum) && tenureNum >= 1;
+    !!franchiseId &&
+    Number.isInteger(tenureNum) &&
+    tenureNum >= 1 &&
+    startDateValid;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!canSubmit) return;
     try {
-      await attachMutation.mutateAsync({ franchiseId, tenure: tenureNum });
+      await attachMutation.mutateAsync({
+        franchiseId,
+        tenure: tenureNum,
+        ...(startDate ? { agreementStartDate: startDate } : {}),
+      });
       toast.success(
-        "Franchise attached — the new agreement is awaiting the CI's signature.",
+        startDate
+          ? "Franchise attached — the agreement is recorded as signed and active."
+          : "Franchise attached — the new agreement is awaiting the CI's signature.",
       );
       onOpenChange(false);
     } catch (err) {
@@ -148,14 +162,25 @@ export function AttachFranchiseDialog({
           />
         </DialogFormField>
 
+        <DialogFormField
+          id="attach-start-date"
+          label="Agreement start date"
+          error={
+            startDateValid ? undefined : "Start date cannot be in the future."
+          }
+          hint="Set this if the CI already works at this franchise and is being recorded late — the agreement is back-signed on this date and active immediately. Leave empty to send it for signing."
+        >
+          <DateInput value={startDate} onChange={setStartDate} />
+        </DialogFormField>
+
         <div
           className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground"
           data-testid="attach-franchise-signflow-note"
         >
-          A new CI agreement will be issued for this franchise. The CI signs it
-          in their portal, the franchisee countersigns, and it activates on the
-          second signature. Ordering and training-session rights stay with the
-          handler franchise.
+          {startDate
+            ? "The agreement will be recorded as signed by both parties on the chosen date and becomes active immediately — no portal signing round-trip. Its expiry derives from that date plus the tenure."
+            : "A new CI agreement will be issued for this franchise. The CI signs it in their portal, the franchisee countersigns, and it activates on the second signature."}{" "}
+          Ordering and training-session rights stay with the handler franchise.
         </div>
       </div>
     </FormDialog>

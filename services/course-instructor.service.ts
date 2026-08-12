@@ -533,10 +533,15 @@ export async function listCIFranchises(
   );
 }
 
-/** POST /admin/course-instructor/:id/franchises — attach; issues a per-franchise agreement (full sign flow). */
+/**
+ * POST /admin/course-instructor/:id/franchises — attach; issues a
+ * per-franchise agreement. `agreementStartDate` (today/past) back-fills a CI
+ * who already worked there: back-signed on that date, active immediately.
+ * Omitted → full sign flow (CI signs, franchisee countersigns).
+ */
 export async function attachCIFranchise(
   courseInstructorId: number,
-  body: { franchiseId: string; tenure: number },
+  body: { franchiseId: string; tenure: number; agreementStartDate?: string },
 ): Promise<{ agreementId: number }> {
   const response = await api.post(
     `/admin/course-instructor/${courseInstructorId}/franchises`,

@@ -45,8 +45,11 @@ export function useCIFranchises(
 export function useAttachCIFranchise(ciId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: { franchiseId: string; tenure: number }) =>
-      attachCIFranchise(ciId, body),
+    mutationFn: (body: {
+      franchiseId: string;
+      tenure: number;
+      agreementStartDate?: string;
+    }) => attachCIFranchise(ciId, body),
     onSuccess: () => {
       for (const key of membershipInvalidationKeys(ciId)) {
         void queryClient.invalidateQueries({ queryKey: key as unknown[] });
