@@ -4,6 +4,7 @@ import {
   normalizePaginatedResult,
   unwrapData,
 } from "@/lib/unwrap-api";
+import { triggerBlobDownload } from "@/lib/download";
 import type { InventoryCategoryName } from "@/lib/inventory-categories";
 
 export type InventoryLifecycleStatus =
@@ -620,6 +621,40 @@ export async function getInventoryMovements(
       Math.ceil(normalized.total / (normalized.limit || 10)),
     ),
   };
+}
+
+export type ExportInventoryMovementsParams = {
+  fromDate: string;
+  toDate: string;
+  search?: string;
+  programId?: number;
+  levelId?: number;
+  category?: string;
+  status?: string;
+  lowStock?: boolean;
+  /** Super-admin region view: scope to this warehouse location. */
+  regionLocationId?: number;
+};
+
+/**
+ * Download the movement-summary CSV: one row per catalog item matching the
+ * filters, with stock-in / stock-out movement counts and quantities for the
+ * mandatory date range.
+ */
+export async function exportInventoryMovementsCsv(
+  params: ExportInventoryMovementsParams,
+): Promise<void> {
+  const response = await api.get<Blob>("/inventory/movements/export", {
+    params: compactRequestParams(
+      params as Record<string, string | number | boolean | undefined | null>,
+    ),
+    responseType: "blob",
+  });
+  const blob = new Blob([response.data], { type: "text/csv;charset=utf-8" });
+  triggerBlobDownload(
+    blob,
+    `inventory-movements-${params.fromDate}-to-${params.toDate}.csv`,
+  );
 }
 
 export async function getInventoryMonitoring(

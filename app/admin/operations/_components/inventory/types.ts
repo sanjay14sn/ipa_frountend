@@ -74,6 +74,28 @@ export function reasonOptionsForDirection(
   );
 }
 
+/** Quick-fill presets shared by the movement-history and CSV-export dialogs. */
+export const MOVEMENT_QUICK_RANGES = [
+  { days: 7, label: "Last 7 days" },
+  { days: 30, label: "Last 30 days" },
+  { days: 90, label: "Last 90 days" },
+] as const;
+
+/** Local-date ISO (yyyy-MM-dd) — toISOString would shift the day near midnight IST. */
+export function toIsoDate(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** From/To pair for a trailing N-day window ending today. */
+export function quickRangeDates(days: number): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - (days - 1));
+  return { from: toIsoDate(from), to: toIsoDate(to) };
+}
+
 export const EMPTY_FORM: InventoryFormState = {
   name: "",
   description: "",

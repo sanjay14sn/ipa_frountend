@@ -39,6 +39,7 @@ import type {
   StockMovementRow,
   StockMovementType,
 } from "@/services/inventory.service";
+import { MOVEMENT_QUICK_RANGES, quickRangeDates } from "./types";
 
 const MOVEMENTS_PER_PAGE = 10;
 
@@ -62,18 +63,6 @@ const TYPE_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
   })),
 ];
 
-const QUICK_RANGES = [
-  { days: 7, label: "Last 7 days" },
-  { days: 30, label: "Last 30 days" },
-  { days: 90, label: "Last 90 days" },
-];
-
-/** Local-date ISO (yyyy-MM-dd) — toISOString would shift the day near midnight IST. */
-function toIsoDate(date: Date): string {
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${day}`;
-}
 
 function MovementReferenceCell({ movement }: { movement: StockMovementRow }) {
   if (movement.order) {
@@ -249,11 +238,9 @@ export function MovementHistoryDialog({
   );
 
   function applyQuickRange(days: number) {
-    const to = new Date();
-    const from = new Date();
-    from.setDate(from.getDate() - (days - 1));
-    setDraftFrom(toIsoDate(from));
-    setDraftTo(toIsoDate(to));
+    const range = quickRangeDates(days);
+    setDraftFrom(range.from);
+    setDraftTo(range.to);
     setRangeError(null);
   }
 
@@ -343,7 +330,7 @@ export function MovementHistoryDialog({
                 }}
               />
               <div className="flex gap-1 pb-0.5">
-                {QUICK_RANGES.map((range) => (
+                {MOVEMENT_QUICK_RANGES.map((range) => (
                   <Button
                     key={range.days}
                     variant="outline"

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Plus } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -31,6 +31,8 @@ type Props = {
   onProgramChange: (value: number | "") => void;
   onLevelChange: (value: number | "") => void;
   onAddClick: () => void;
+  /** Opens the movement-summary CSV export dialog (read-safe, shown in all views). */
+  onExportClick: () => void;
   /** Read-only oversight view: hide the "Add item" action. */
   readOnly?: boolean;
 };
@@ -44,6 +46,7 @@ export function InventoryTableToolbar({
   onProgramChange,
   onLevelChange,
   onAddClick,
+  onExportClick,
   readOnly,
 }: Props) {
   return (
@@ -95,6 +98,14 @@ export function InventoryTableToolbar({
           </SelectContent>
         </Select>
       </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onExportClick}
+      >
+        <Download className="mr-2 h-4 w-4" />
+        Export CSV
+      </Button>
       {!readOnly && (
         <Button
           className="h-9"

@@ -41,6 +41,7 @@ import {
 } from "./inventory/inventory-item-dialogs";
 import { StockAdjustmentDialog } from "./inventory/stock-adjustment-dialog";
 import { MovementHistoryDialog } from "./inventory/movement-history-dialog";
+import { ExportMovementsDialog } from "./inventory/export-movements-dialog";
 import {
   buildInventoryColumns,
   InventoryExpandedRow,
@@ -93,6 +94,7 @@ export function InventorySection({
   const [isAdjustSubmitting, setIsAdjustSubmitting] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [historyItem, setHistoryItem] = useState<InventoryItemSummary | null>(null);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const programIdNum = programFilter === "" || programFilter === 0 ? undefined : Number(programFilter);
   const levelIdNum = levelFilter === "" || levelFilter === 0 ? undefined : Number(levelFilter);
@@ -312,6 +314,7 @@ export function InventorySection({
         setFormData(EMPTY_FORM);
         setIsAddOpen(true);
       }}
+      onExportClick={() => setIsExportOpen(true)}
       readOnly={readOnly}
     />
   );
@@ -425,6 +428,20 @@ export function InventorySection({
           setIsHistoryOpen(false);
           setHistoryItem(null);
         }}
+      />
+
+      <ExportMovementsDialog
+        open={isExportOpen}
+        filters={{
+          search: searchTerm || undefined,
+          programId: programIdNum,
+          levelId: levelIdNum,
+          category: categoryFilter || undefined,
+          status: statusFilter || undefined,
+          lowStock: lowStockOnly || undefined,
+          regionLocationId,
+        }}
+        onClose={() => setIsExportOpen(false)}
       />
     </div>
   );
