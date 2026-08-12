@@ -456,12 +456,28 @@ export async function unassignInventoryFromTrainingLevel(
   );
 }
 
+export type StockAdjustmentReasonType =
+  | "CYCLE_COUNT_CORRECTION"
+  | "DATA_ENTRY_CORRECTION"
+  | "OPENING_STOCK"
+  | "PURCHASE_WITHOUT_PO"
+  | "RETURN_FROM_FRANCHISEE"
+  | "DAMAGED"
+  | "EXPIRED_OR_OBSOLETE"
+  | "LOST_OR_STOLEN"
+  | "RETURN_TO_SUPPLIER"
+  | "INTERNAL_USE"
+  | "SAMPLE_OR_DEMO"
+  | "OTHER";
+
 export type StockAdjustmentInput = {
   inventoryItemId: number;
   /** Positive to add stock, negative to remove. Must not be zero. */
   deltaQty: number;
-  /** Required free-text reason (e.g. "physical recount", "damaged in storage"). */
-  reason: string;
+  /** Why the adjustment happened; the backend enforces per-type direction rules. */
+  reasonType: StockAdjustmentReasonType;
+  /** Optional details; the backend requires them when reasonType is OTHER. */
+  reason?: string;
   /**
    * Optional. Only honored for positive adjustments. When omitted, the
    * weighted-average cost is preserved (pure quantity add).
@@ -487,7 +503,8 @@ export async function adjustInventoryStock(
   const response = await api.post("/inventory/stock-adjustments", {
     inventoryItemId: input.inventoryItemId,
     deltaQty: input.deltaQty,
-    reason: input.reason.trim(),
+    reasonType: input.reasonType,
+    ...(input.reason?.trim() ? { reason: input.reason.trim() } : {}),
     ...(input.unitCost !== undefined ? { unitCost: input.unitCost } : {}),
     ...(input.locationId !== undefined ? { locationId: input.locationId } : {}),
   });

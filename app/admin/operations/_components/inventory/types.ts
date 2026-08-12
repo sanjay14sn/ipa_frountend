@@ -3,6 +3,7 @@ import type {
   InventoryItemSummary,
   InventoryLifecycleStatus,
   InventoryType,
+  StockAdjustmentReasonType,
 } from "@/services/inventory.service";
 import type { InventoryCategoryName } from "@/lib/inventory-categories";
 
@@ -27,6 +28,9 @@ export type AdjustmentDirection = "INCREASE" | "DECREASE";
 export type AdjustmentFormState = {
   direction: AdjustmentDirection;
   quantity: string;
+  /** StockAdjustmentReasonType value; empty until the admin picks one. */
+  reasonType: string;
+  /** Free-text details; required when reasonType is OTHER. */
   reason: string;
   unitCost: string;
 };
@@ -34,9 +38,41 @@ export type AdjustmentFormState = {
 export const EMPTY_ADJUSTMENT: AdjustmentFormState = {
   direction: "INCREASE",
   quantity: "",
+  reasonType: "",
   reason: "",
   unitCost: "",
 };
+
+export type AdjustmentReasonOption = {
+  value: StockAdjustmentReasonType;
+  label: string;
+  /** Which adjustment direction(s) this reason is valid for. */
+  direction: AdjustmentDirection | "BOTH";
+};
+
+/** Mirrors the backend's StockAdjustmentReasonType + its direction rules. */
+export const ADJUSTMENT_REASON_OPTIONS: AdjustmentReasonOption[] = [
+  { value: "CYCLE_COUNT_CORRECTION", label: "Cycle count correction", direction: "BOTH" },
+  { value: "DATA_ENTRY_CORRECTION", label: "Data entry correction", direction: "BOTH" },
+  { value: "OPENING_STOCK", label: "Opening stock", direction: "INCREASE" },
+  { value: "PURCHASE_WITHOUT_PO", label: "Purchase without PO", direction: "INCREASE" },
+  { value: "RETURN_FROM_FRANCHISEE", label: "Return from franchisee", direction: "INCREASE" },
+  { value: "DAMAGED", label: "Damaged", direction: "DECREASE" },
+  { value: "EXPIRED_OR_OBSOLETE", label: "Expired / obsolete", direction: "DECREASE" },
+  { value: "LOST_OR_STOLEN", label: "Lost / stolen", direction: "DECREASE" },
+  { value: "RETURN_TO_SUPPLIER", label: "Return to supplier", direction: "DECREASE" },
+  { value: "INTERNAL_USE", label: "Internal use", direction: "DECREASE" },
+  { value: "SAMPLE_OR_DEMO", label: "Sample / demo", direction: "DECREASE" },
+  { value: "OTHER", label: "Other (details required)", direction: "BOTH" },
+];
+
+export function reasonOptionsForDirection(
+  direction: AdjustmentDirection,
+): AdjustmentReasonOption[] {
+  return ADJUSTMENT_REASON_OPTIONS.filter(
+    (option) => option.direction === "BOTH" || option.direction === direction,
+  );
+}
 
 export const EMPTY_FORM: InventoryFormState = {
   name: "",

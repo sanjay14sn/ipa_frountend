@@ -14,9 +14,10 @@ import {
 } from "@/components/ui/select";
 import type { InventoryItemSummary } from "@/services/inventory.service";
 import { formatRupees } from "@/lib/currency-utils";
-import type {
-  AdjustmentDirection,
-  AdjustmentFormState,
+import {
+  reasonOptionsForDirection,
+  type AdjustmentDirection,
+  type AdjustmentFormState,
 } from "./types";
 
 export type AdjustmentPreview = {
@@ -66,7 +67,8 @@ export function StockAdjustmentDialog({
         !isAdjustSubmitting &&
         !adjustPreview.error &&
         Boolean(adjustForm.quantity.trim()) &&
-        Boolean(adjustForm.reason.trim())
+        Boolean(adjustForm.reasonType) &&
+        (adjustForm.reasonType !== "OTHER" || Boolean(adjustForm.reason.trim()))
       }
     >
       {adjustingItem ? (
@@ -102,13 +104,22 @@ export function StockAdjustmentDialog({
               <Select
                 value={adjustForm.direction}
                 onValueChange={(value) =>
-                  setAdjustForm((prev) => ({
-                    ...prev,
-                    direction: value as AdjustmentDirection,
-                    // Clear cost when switching to decrease (cost only
-                    // applies to increases)
-                    unitCost: value === "INCREASE" ? prev.unitCost : "",
-                  }))
+                  setAdjustForm((prev) => {
+                    const direction = value as AdjustmentDirection;
+                    const stillValid = reasonOptionsForDirection(
+                      direction,
+                    ).some((option) => option.value === prev.reasonType);
+                    return {
+                      ...prev,
+                      direction,
+                      // Reasons are direction-scoped (e.g. Damaged can only
+                      // remove stock) — drop a now-invalid selection.
+                      reasonType: stillValid ? prev.reasonType : "",
+                      // Clear cost when switching to decrease (cost only
+                      // applies to increases)
+                      unitCost: direction === "INCREASE" ? prev.unitCost : "",
+                    };
+                  })
                 }
               >
                 <SelectTrigger>
@@ -181,9 +192,31 @@ export function StockAdjustmentDialog({
             ) : null}
 
             <DialogFormField label="Reason">
+              <Select
+                value={adjustForm.reasonType || undefined}
+                onValueChange={(value) =>
+                  setAdjustForm((prev) => ({ ...prev, reasonType: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  {reasonOptionsForDirection(adjustForm.direction).map(
+                    (option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+            </DialogFormField>
+
+            <DialogFormField label="Details">
               <Textarea
-                rows={3}
-                placeholder="e.g. Physical recount, damaged in storage, returned by franchisee..."
+                rows={2}
+                placeholder="e.g. Monsoon leakage in the store room, franchise closure return..."
                 value={adjustForm.reason}
                 onChange={(event) =>
                   setAdjustForm((prev) => ({
@@ -193,7 +226,9 @@ export function StockAdjustmentDialog({
                 }
               />
               <p className="text-xs text-muted-foreground">
-                Stored on the audit trail. Required. Up to 500 characters.
+                {adjustForm.reasonType === "OTHER"
+                  ? 'Required for "Other". Stored on the audit trail; up to 500 characters.'
+                  : "Optional. Stored on the audit trail; up to 500 characters."}
               </p>
             </DialogFormField>
 

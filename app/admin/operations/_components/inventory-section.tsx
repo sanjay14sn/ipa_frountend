@@ -14,6 +14,7 @@ import {
   getInventoryItemsForLevel,
   updateInventory,
   type InventoryItemSummary,
+  type StockAdjustmentReasonType,
 } from "@/services/inventory.service";
 import { isInventoryCategory } from "@/lib/inventory-categories";
 import {
@@ -231,12 +232,16 @@ export function InventorySection({
       toast.error(preview.error);
       return;
     }
-    if (!trimmedReason) {
+    if (!adjustForm.reasonType) {
       toast.error("A reason is required for stock adjustments.");
       return;
     }
+    if (adjustForm.reasonType === "OTHER" && !trimmedReason) {
+      toast.error('Details are required when the reason is "Other".');
+      return;
+    }
     if (trimmedReason.length > 500) {
-      toast.error("Reason must be 500 characters or fewer.");
+      toast.error("Details must be 500 characters or fewer.");
       return;
     }
 
@@ -256,7 +261,8 @@ export function InventorySection({
       await adjustInventoryStock({
         inventoryItemId: adjustingItem.id,
         deltaQty,
-        reason: trimmedReason,
+        reasonType: adjustForm.reasonType as StockAdjustmentReasonType,
+        ...(trimmedReason ? { reason: trimmedReason } : {}),
         ...(unitCost !== undefined ? { unitCost } : {}),
       });
       toast.success(
