@@ -1,14 +1,17 @@
 "use client";
 
+import { useState } from "react";
+import { Award } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DataTable,
   StatusBadge,
   TableMainCell,
   TablePageShell,
-  formatStatusLabel,
   type DataTableColumn,
   type DataTableFilter,
 } from "@/components/shared";
+import StudentCertificatesModal from "@/components/students/StudentCertificatesModal";
 import { useAdminStudentsRoster } from "@/hooks/api/student.hooks";
 import { useListParams } from "@/hooks/use-list-params";
 import { formatDate } from "@/lib/date-utils";
@@ -32,6 +35,7 @@ function levelLabel(student: StudentData): string {
  * `roster.` prefix so it coexists with ?tab= and other tabs' params.
  */
 export function RosterSection() {
+  const [certStudent, setCertStudent] = useState<StudentData | null>(null);
   const listParams = useListParams({
     filterDefaults: { status: "all" },
     prefix: "roster",
@@ -69,7 +73,11 @@ export function RosterSection() {
       key: "franchise",
       header: "Franchise",
       render: (s) =>
-        s.franchiseCode ? (
+        s.franchiseName ? (
+          <span className="block truncate text-sm" title={s.franchiseName}>
+            {s.franchiseName}
+          </span>
+        ) : s.franchiseCode ? (
           <span className="font-mono text-xs">{s.franchiseCode}</span>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
@@ -86,19 +94,26 @@ export function RosterSection() {
       render: (s) => <StatusBadge label={s.status} />,
     },
     {
-      key: "agreement",
-      header: "Agreement",
-      render: (s) =>
-        s.enrolledAgreementId != null && s.agreementStatus ? (
-          <StatusBadge label={formatStatusLabel(s.agreementStatus)} />
-        ) : (
-          <span className="text-xs text-muted-foreground">No agreement</span>
-        ),
-    },
-    {
       key: "joined",
       header: "Joined",
       render: (s) => (s.dateOfJoining ? formatDate(s.dateOfJoining) : "—"),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      render: (s) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0 p-0"
+          type="button"
+          onClick={() => setCertStudent(s)}
+          title="View certificates"
+          aria-label="View certificates"
+        >
+          <Award className="h-3.5 w-3.5 text-emerald-600" />
+        </Button>
+      ),
     },
   ];
 
@@ -136,6 +151,18 @@ export function RosterSection() {
           `Showing ${count} of ${total} student${total !== 1 ? "s" : ""}`
         }
       />
+
+      {certStudent != null && (
+        <StudentCertificatesModal
+          open={certStudent != null}
+          onOpenChange={(open) => {
+            if (!open) setCertStudent(null);
+          }}
+          studentId={certStudent.id}
+          studentName={certStudent.name}
+          mode="admin"
+        />
+      )}
     </TablePageShell>
   );
 }

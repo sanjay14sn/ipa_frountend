@@ -31,6 +31,8 @@ export interface StudentData {
   franchiseId: string;
   /** Short franchise code segment (e.g. "017") — present on admin list rows. */
   franchiseCode?: string;
+  /** Franchise display name — present on admin list rows. */
+  franchiseName?: string;
   programId: number;
   name: string;
   rollNo: string;
@@ -186,11 +188,17 @@ function normalizeStudentStream(row: Record<string, unknown>): string {
 
 export function mapStudentRow(row: Record<string, unknown>): StudentData {
   const idIssued = normalizeStudentIdStatus(row.idIssued);
+  const franchise =
+    row.franchise && typeof row.franchise === "object"
+      ? (row.franchise as Record<string, unknown>)
+      : undefined;
+  const franchiseName = franchise?.name != null ? String(franchise.name) : undefined;
 
   return {
     id: Number(row.id),
     franchiseId: String(row.franchiseId ?? ""),
     franchiseCode: row.franchiseCode != null ? String(row.franchiseCode) : undefined,
+    franchiseName: franchiseName || undefined,
     programId: Number(row.programId ?? 0),
     name: String(row.name ?? ""),
     rollNo: String(row.rollNo ?? ""),
