@@ -20,10 +20,13 @@ export function useLevelsByProgram(programId: number | undefined) {
   });
 }
 
-function useAllLevels() {
+export function useAllLevels() {
   return useQuery({
     queryKey: queryKeys.levels.all,
     queryFn: getAllLevels,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 

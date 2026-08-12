@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Award } from "lucide-react";
+import { Award, Download, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -13,9 +14,15 @@ import {
 } from "@/components/shared";
 import StudentCertificatesModal from "@/components/students/StudentCertificatesModal";
 import { useAdminStudentsRoster } from "@/hooks/api/student.hooks";
+import { useFranchiseOptions } from "@/hooks/api/franchisee.hooks";
+import { useAllLevels } from "@/hooks/api/level.hooks";
 import { useListParams } from "@/hooks/use-list-params";
 import { formatDate } from "@/lib/date-utils";
-import type { StudentData } from "@/services/student.service";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
+import {
+  exportStudentsAdminCsv,
+  type StudentData,
+} from "@/services/student.service";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -30,29 +37,72 @@ function levelLabel(student: StudentData): string {
 
 /**
  * ADM-12: network-wide student roster — the first browsable list of every
- * student across franchises. Search + status filter are server-side
+ * student across franchises. Search + all filters are server-side
  * (unscoped GET /admin/student); list state lives in the URL under the
  * `roster.` prefix so it coexists with ?tab= and other tabs' params.
  */
 export function RosterSection() {
   const [certStudent, setCertStudent] = useState<StudentData | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const listParams = useListParams({
-    filterDefaults: { status: "all" },
+    filterDefaults: {
+      status: "all",
+      franchise: "all",
+      level: "all",
+      idStatus: "all",
+    },
     prefix: "roster",
   });
   const search = listParams.search;
   const statusFilter = listParams.filters.status;
+  const franchiseFilter = listParams.filters.franchise;
+  const levelFilter = listParams.filters.level;
+  const idStatusFilter = listParams.filters.idStatus;
+
+  const franchiseOptionsQuery = useFranchiseOptions();
+  const levelsQuery = useAllLevels();
+
+  // Shared by the list query and the CSV export (which ignores page/limit).
+  const activeFilters = {
+    search: search || undefined,
+    status: statusFilter === "all" ? undefined : statusFilter,
+    franchiseId: franchiseFilter === "all" ? undefined : franchiseFilter,
+    levelId: levelFilter === "all" ? undefined : Number(levelFilter),
+    idStatus: idStatusFilter === "all" ? undefined : idStatusFilter,
+  };
+  const isFiltered =
+    Boolean(search) ||
+    statusFilter !== "all" ||
+    franchiseFilter !== "all" ||
+    levelFilter !== "all" ||
+    idStatusFilter !== "all";
 
   const rosterQuery = useAdminStudentsRoster({
     page: listParams.page,
     limit: ITEMS_PER_PAGE,
-    search: search || undefined,
-    status: statusFilter === "all" ? undefined : statusFilter,
+    ...activeFilters,
   });
 
   const students = rosterQuery.data?.data ?? [];
   const meta = rosterQuery.data?.meta;
 
+  // Same filters/search as the table, no page/limit — the backend returns
+  // every matching row, not just the visible page.
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    try {
+      await exportStudentsAdminCsv(activeFilters);
+    } catch (error) {
+      toast.error(getUserFriendlyMessage(error, "Failed to export CSV."));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // defaultValue is the live URL-derived value (not a hardcoded "all"):
+  // DataTable seeds its internal filter state once from defaultValue, so a
+  // URL-restored filter must arrive with the right value or the dropdown
+  // label goes stale.
   const filters: DataTableFilter[] = [
     {
       key: "status",
@@ -64,6 +114,38 @@ export function RosterSection() {
         { value: "completed", label: "Completed" },
       ],
       defaultValue: statusFilter,
+    },
+    {
+      key: "franchise",
+      label: "Franchise",
+      options: [
+        { value: "all", label: "All franchises" },
+        ...(franchiseOptionsQuery.data ?? []),
+      ],
+      defaultValue: franchiseFilter,
+    },
+    {
+      key: "level",
+      label: "Level",
+      options: [
+        { value: "all", label: "All levels" },
+        ...(levelsQuery.data ?? []).map((l) => ({
+          value: String(l.id),
+          label: l.name || l.code,
+        })),
+      ],
+      defaultValue: levelFilter,
+    },
+    {
+      key: "idStatus",
+      label: "ID Status",
+      options: [
+        { value: "all", label: "All ID statuses" },
+        { value: "Not Issued", label: "Not Issued" },
+        { value: "Requested", label: "Requested" },
+        { value: "Issued", label: "Issued" },
+      ],
+      defaultValue: idStatusFilter,
     },
   ];
 
@@ -132,8 +214,29 @@ export function RosterSection() {
         onSearchChange={(value) => listParams.setSearch(value)}
         filters={filters}
         onFilterChange={(key, value) => {
-          if (key === "status") listParams.setFilter("status", value as string);
+          const next = Array.isArray(value) ? (value[0] ?? "all") : value;
+          if (key === "status") listParams.setFilter("status", next || "all");
+          else if (key === "franchise")
+            listParams.setFilter("franchise", next || "all");
+          else if (key === "level") listParams.setFilter("level", next || "all");
+          else if (key === "idStatus")
+            listParams.setFilter("idStatus", next || "all");
         }}
+        toolbarActions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void handleExportCsv()}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Export CSV
+          </Button>
+        }
         pagination={
           meta ? { total: meta.total, totalPages: meta.totalPages } : undefined
         }
@@ -148,7 +251,9 @@ export function RosterSection() {
           hint: "Students appear here as franchises enroll them.",
         }}
         resultsText={(count, total) =>
-          `Showing ${count} of ${total} student${total !== 1 ? "s" : ""}`
+          `Showing ${count} of ${total} student${total !== 1 ? "s" : ""}${
+            isFiltered ? " (filtered)" : ""
+          }`
         }
       />
 

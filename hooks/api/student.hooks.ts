@@ -560,9 +560,7 @@ export function useBulkDispatchIdCards() {
  * runtime-verified to return rows across all franchises when no franchiseId
  * is sent.
  */
-export function useAdminStudentsRoster(
-  params?: Omit<StudentPaginationParams, "franchiseId">,
-) {
+export function useAdminStudentsRoster(params?: StudentPaginationParams) {
   return useQuery({
     queryKey: ["admin-students", "roster", params ?? null],
     queryFn: () => getPaginatedStudentsAdmin({ ...params }),

@@ -1,5 +1,6 @@
 import { api } from "@/lib/axios";
-import { getPaginated, unwrapData } from "@/lib/unwrap-api";
+import { compactRequestParams, getPaginated, unwrapData } from "@/lib/unwrap-api";
+import { triggerBlobDownload } from "@/lib/download";
 import { withProgramScope } from "@/services/_scope";
 
 export interface Response {
@@ -402,6 +403,8 @@ export async function getPaginatedStudentsAdmin(
     sortBy: params.sortBy,
     sortOrder: params.sortOrder,
     franchiseId: params.franchiseId,
+    levelId: params.levelId,
+    idStatus: params.idStatus,
     programId: params.programId,
   });
   const data = raw.map((r) => mapStudentRow(r as Record<string, unknown>));
@@ -419,6 +422,32 @@ export async function getPaginatedStudentsAdmin(
       hasPreviousPage: pageNum > 1,
     },
   };
+}
+
+/**
+ * Download the FULL filtered admin roster as CSV — the backend ignores
+ * page/limit, so the file contains every row matching the filters, not just
+ * the current page.
+ */
+export async function exportStudentsAdminCsv(
+  params: StudentPaginationParams,
+): Promise<void> {
+  const response = await api.get<Blob>("/admin/student/export", {
+    params: compactRequestParams({
+      search: params.search,
+      status: params.status,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+      franchiseId: params.franchiseId,
+      levelId: params.levelId,
+      idStatus: params.idStatus,
+      programId: params.programId,
+    } as Record<string, string | number | boolean | undefined | null>),
+    responseType: "blob",
+  });
+  const blob = new Blob([response.data], { type: "text/csv;charset=utf-8" });
+  const stamp = new Date().toISOString().slice(0, 10);
+  triggerBlobDownload(blob, `students-export-${stamp}.csv`);
 }
 
 export async function updateStudentAdmin(
