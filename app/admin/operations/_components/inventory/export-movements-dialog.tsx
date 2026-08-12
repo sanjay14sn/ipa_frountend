@@ -88,8 +88,10 @@ export function ExportMovementsDialog({
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
           One CSV row per item matching the current table filters (search,
-          program, level, category, status, stock level), with increase and
-          decrease movement counts and quantities for the chosen range.
+          program, level, category, status, stock level). Each movement type
+          gets its own column for the chosen range — Received, Dispatched,
+          Adjusted (increase and decrease), Allocated, Backordered, Released —
+          plus stock-in / stock-out totals and net change.
         </p>
         <div className="flex flex-wrap items-end gap-2">
           <DateToolbarField
