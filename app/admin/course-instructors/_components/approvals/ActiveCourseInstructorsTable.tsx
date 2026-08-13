@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { StatusBadge } from "@/components/shared";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable, TableMainCell } from "@/components/shared";
 import type {
@@ -143,6 +144,25 @@ export default function ActiveCourseInstructorsTable() {
       key: "city",
       header: "City",
       render: (instructor) => instructor.city || "—",
+    },
+    {
+      key: "eligibility",
+      header: "Eligibility",
+      className: "text-center",
+      // Highest completed training level (codes are the unique identifier);
+      // a CI with no completed level yet is "New". Renders — until the
+      // backend sends the field.
+      render: (instructor) =>
+        instructor.completedThroughLevel === undefined ? (
+          "—"
+        ) : instructor.completedThroughLevel === null ? (
+          <Badge variant="outline">New</Badge>
+        ) : (
+          <span>
+            {instructor.completedThroughLevel.code ||
+              instructor.completedThroughLevel.name}
+          </span>
+        ),
     },
     {
       key: "status",

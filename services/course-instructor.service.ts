@@ -84,6 +84,16 @@ export interface CourseInstructorData {
   isHandler?: boolean;
   /** Admin detail only: all franchise attachments (handler included). */
   franchises?: CIFranchiseAttachment[];
+  /**
+   * Eligibility: highest completed training level (admin list rows).
+   * null = brand-new CI with no completed level; absent on older payloads.
+   */
+  completedThroughLevel?: {
+    id: number;
+    name: string;
+    code: string;
+    displayOrder: number;
+  } | null;
 }
 
 /** ipa-new list responses omit legacy envelope fields */
@@ -297,6 +307,19 @@ function mapRow(row: Record<string, unknown>): CourseInstructorData {
     // Multi-franchise fields: defensively mapped so pre-multi-franchise
     // payloads (missing fields) yield undefined rather than throwing.
     isHandler: row.isHandler != null ? Boolean(row.isHandler) : undefined,
+    completedThroughLevel:
+      row.completedThroughLevel && typeof row.completedThroughLevel === "object"
+        ? {
+            id: Number((row.completedThroughLevel as Record<string, unknown>).id ?? 0),
+            name: String((row.completedThroughLevel as Record<string, unknown>).name ?? ""),
+            code: String((row.completedThroughLevel as Record<string, unknown>).code ?? ""),
+            displayOrder: Number(
+              (row.completedThroughLevel as Record<string, unknown>).displayOrder ?? 0,
+            ),
+          }
+        : row.completedThroughLevel === null
+          ? null
+          : undefined,
     franchises: Array.isArray(row.franchises)
       ? (row.franchises as Record<string, unknown>[]).map((f) => ({
           franchiseId: String(f.franchiseId ?? ""),
