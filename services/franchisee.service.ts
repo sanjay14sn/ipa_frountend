@@ -1,5 +1,5 @@
 import { api } from "@/lib/axios";
-import { triggerBlobDownload } from "@/lib/download";
+import { downloadCsvExport } from "@/lib/download";
 import {
   compactRequestParams,
   normalizePaginatedResult,
@@ -673,8 +673,9 @@ export async function exportFranchisesCsv(
     params.status !== "all"
       ? params.status
       : undefined;
-  const response = await api.get<Blob>("/admin/franchise/all/export", {
-    params: compactRequestParams({
+  await downloadCsvExport(
+    "/admin/franchise/all/export",
+    {
       search: params.search,
       sortBy: params.sortBy,
       sortOrder: params.sortOrder,
@@ -682,12 +683,9 @@ export async function exportFranchisesCsv(
       type: params.type,
       programId: params.programId,
       hasActiveAgreement: params.hasActiveAgreement,
-    } as Record<string, string | number | boolean | undefined | null>),
-    responseType: "blob",
-  });
-  const blob = new Blob([response.data], { type: "text/csv;charset=utf-8" });
-  const stamp = new Date().toISOString().slice(0, 10);
-  triggerBlobDownload(blob, `franchises-export-${stamp}.csv`);
+    },
+    "franchises-export",
+  );
 }
 
 export async function getPaginatedFranchiseApplications(

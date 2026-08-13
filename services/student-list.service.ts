@@ -1,6 +1,6 @@
 import { api } from "@/lib/axios";
 import { compactRequestParams, getPaginated, unwrapData } from "@/lib/unwrap-api";
-import { triggerBlobDownload } from "@/lib/download";
+import { downloadCsvExport } from "@/lib/download";
 import { withProgramScope } from "@/services/_scope";
 
 export interface Response {
@@ -432,8 +432,9 @@ export async function getPaginatedStudentsAdmin(
 export async function exportStudentsAdminCsv(
   params: StudentPaginationParams,
 ): Promise<void> {
-  const response = await api.get<Blob>("/admin/student/export", {
-    params: compactRequestParams({
+  await downloadCsvExport(
+    "/admin/student/export",
+    {
       search: params.search,
       status: params.status,
       sortBy: params.sortBy,
@@ -442,12 +443,9 @@ export async function exportStudentsAdminCsv(
       levelId: params.levelId,
       idStatus: params.idStatus,
       programId: params.programId,
-    } as Record<string, string | number | boolean | undefined | null>),
-    responseType: "blob",
-  });
-  const blob = new Blob([response.data], { type: "text/csv;charset=utf-8" });
-  const stamp = new Date().toISOString().slice(0, 10);
-  triggerBlobDownload(blob, `students-export-${stamp}.csv`);
+    },
+    "students-export",
+  );
 }
 
 export async function updateStudentAdmin(

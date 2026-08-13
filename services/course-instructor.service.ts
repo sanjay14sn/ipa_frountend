@@ -1,4 +1,5 @@
 import { api } from "@/lib/axios";
+import { downloadCsvExport } from "@/lib/download";
 import {
   compactRequestParams,
   getPaginated,
@@ -516,6 +517,28 @@ export async function rejectCourseInstructor(courseInstructorId: number) {
     `/admin/course-instructor/${courseInstructorId}/reject`,
   );
   return unwrapData(response);
+}
+
+/**
+ * Full filtered export of the admin CI table (server-built CSV; page/limit
+ * ignored). Pass `status: "valid"` for the Active tab's derived operational
+ * filter. Goes through the shared downloadCsvExport client.
+ */
+export async function exportCourseInstructorsCsv(
+  params: CourseInstructorListParams,
+): Promise<void> {
+  await downloadCsvExport(
+    "/admin/course-instructor/export",
+    {
+      search: params.search,
+      status: params.status,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+      franchiseId: params.franchiseId,
+      programId: params.programId,
+    },
+    "course-instructors-export",
+  );
 }
 
 // ── multi-franchise membership (admin) ───────────────────────────────────────

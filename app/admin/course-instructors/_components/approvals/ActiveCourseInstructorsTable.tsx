@@ -9,12 +9,18 @@ import type {
   DataTableFilter,
   DataTableSortOption,
 } from "@/components/shared";
-import { AdminCourseInstructorData } from "@/services/course-instructor.service";
+import {
+  AdminCourseInstructorData,
+  exportCourseInstructorsCsv,
+} from "@/services/course-instructor.service";
 import { useAdminCIListByStatus } from "@/hooks/api/course-instructor.hooks";
 import { useFranchiseOptions } from "@/hooks/api/franchisee.hooks";
+import { usePrograms } from "@/hooks/api/program.hooks";
 import { useListParams } from "@/hooks/use-list-params";
+import { getUserFriendlyMessage } from "@/lib/error-utils";
+import { toast } from "sonner";
 import CourseInstructorDetails from "./CourseInstructorDetails";
-import { BarChart2, FileText } from "lucide-react";
+import { BarChart2, Download, FileText, Loader2 } from "lucide-react";
 import { AdminCIAgreementSheet } from "@/components/agreements/AdminCIAgreementSheet";
 import { TrainingProgressModal } from "@/components/ci-training/TrainingProgressModal";
 
@@ -31,7 +37,7 @@ export default function ActiveCourseInstructorsTable() {
   // List state lives in the URL; "active" prefix keeps the keys clear of the
   // other tabs' lists on the same hub URL.
   const listParams = useListParams({
-    filterDefaults: { franchise: "all" },
+    filterDefaults: { franchise: "all", program: "all" },
     defaultSortBy: "createdAt",
     defaultSortOrder: "desc",
     prefix: "active",
@@ -40,21 +46,41 @@ export default function ActiveCourseInstructorsTable() {
   const sortOrder: "ASC" | "DESC" =
     listParams.sortOrder === "asc" ? "ASC" : "DESC";
   const franchiseFilter = listParams.filters.franchise;
+  const programFilter = listParams.filters.program;
 
-  // "valid" = derived operational filter (latest CI agreement is Valid).
+  // Shared by the list query and the CSV export (which ignores page/limit).
+  // "valid" = derived operational filter (latest CI agreement is Valid);
+  // franchiseId matches attached-or-handler (multi-franchise CIs).
+  const activeFilters = {
+    search: listParams.search || undefined,
+    franchiseId: franchiseFilter !== "all" ? franchiseFilter : undefined,
+    programId: programFilter !== "all" ? Number(programFilter) : undefined,
+    sortBy,
+    sortOrder,
+  };
   const listQuery = useAdminCIListByStatus("valid", {
     page: listParams.page,
     limit: ITEMS_PER_PAGE,
-    search: listParams.search || undefined,
-    franchiseId: franchiseFilter !== "all" ? franchiseFilter : undefined,
-    sortBy,
-    sortOrder,
+    ...activeFilters,
   });
 
   const instructors = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
 
+  const [isExporting, setIsExporting] = useState(false);
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    try {
+      await exportCourseInstructorsCsv({ ...activeFilters, status: "valid" });
+    } catch (error) {
+      toast.error(getUserFriendlyMessage(error, "Failed to export CSV."));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const franchiseOptions = useFranchiseOptions();
+  const { programs } = usePrograms();
   const filters: DataTableFilter[] = useMemo(
     () => [
       {
@@ -66,8 +92,20 @@ export default function ActiveCourseInstructorsTable() {
         ],
         defaultValue: franchiseFilter,
       },
+      {
+        key: "program",
+        label: "Program",
+        options: [
+          { value: "all", label: "All programs" },
+          ...(programs ?? []).map((p) => ({
+            value: String(p.id),
+            label: p.name,
+          })),
+        ],
+        defaultValue: programFilter,
+      },
     ],
-    [franchiseOptions.data, franchiseFilter],
+    [franchiseOptions.data, franchiseFilter, programs, programFilter],
   );
 
   const columns: DataTableColumn<AdminCourseInstructorData>[] = [
@@ -188,11 +226,26 @@ export default function ActiveCourseInstructorsTable() {
         onSearchChange={listParams.setSearch}
         filters={filters}
         onFilterChange={(key, value) => {
-          if (key === "franchise") {
+          if (key === "franchise" || key === "program") {
             const next = Array.isArray(value) ? (value[0] ?? "all") : value;
-            listParams.setFilter("franchise", next || "all");
+            listParams.setFilter(key, next || "all");
           }
         }}
+        toolbarActions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void handleExportCsv()}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Export CSV
+          </Button>
+        }
         sortOptions={sortOptions}
         defaultSortBy={sortBy}
         defaultSortOrder={sortOrder}

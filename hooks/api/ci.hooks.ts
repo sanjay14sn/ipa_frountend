@@ -175,6 +175,7 @@ export function useAdminCIListByStatus(
     limit?: number;
     search?: string;
     franchiseId?: string;
+    programId?: number;
     sortBy?: string;
     sortOrder?: "ASC" | "DESC";
   },
@@ -188,6 +189,7 @@ export function useAdminCIListByStatus(
         limit: params.limit,
         search: params.search || undefined,
         franchiseId: params.franchiseId || undefined,
+        programId: params.programId,
         sortBy: params.sortBy,
         sortOrder: params.sortOrder,
       }),

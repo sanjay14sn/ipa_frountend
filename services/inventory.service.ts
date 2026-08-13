@@ -4,7 +4,7 @@ import {
   normalizePaginatedResult,
   unwrapData,
 } from "@/lib/unwrap-api";
-import { triggerBlobDownload } from "@/lib/download";
+import { downloadCsvExport } from "@/lib/download";
 import type { InventoryCategoryName } from "@/lib/inventory-categories";
 
 export type InventoryLifecycleStatus =
@@ -644,15 +644,9 @@ export type ExportInventoryMovementsParams = {
 export async function exportInventoryMovementsCsv(
   params: ExportInventoryMovementsParams,
 ): Promise<void> {
-  const response = await api.get<Blob>("/inventory/movements/export", {
-    params: compactRequestParams(
-      params as Record<string, string | number | boolean | undefined | null>,
-    ),
-    responseType: "blob",
-  });
-  const blob = new Blob([response.data], { type: "text/csv;charset=utf-8" });
-  triggerBlobDownload(
-    blob,
+  await downloadCsvExport(
+    "/inventory/movements/export",
+    params as Record<string, string | number | boolean | undefined | null>,
     `inventory-movements-${params.fromDate}-to-${params.toDate}.csv`,
   );
 }
