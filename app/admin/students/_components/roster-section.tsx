@@ -129,9 +129,11 @@ export function RosterSection() {
       label: "Level",
       options: [
         { value: "all", label: "All levels" },
+        // Codes, not names: names repeat across programs/streams ("Level 1"
+        // exists in each); the code is the unique, recognizable identifier.
         ...(levelsQuery.data ?? []).map((l) => ({
           value: String(l.id),
-          label: l.name || l.code,
+          label: l.code || l.name,
         })),
       ],
       defaultValue: levelFilter,
