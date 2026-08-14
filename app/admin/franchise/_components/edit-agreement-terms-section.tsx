@@ -32,12 +32,17 @@ export interface AgreementTermsFormState extends AgreementTermsFieldsValue {
   notes: string;
 }
 
-/** Agreements whose details are still editable (unsigned; CI kinds excluded). */
+/**
+ * Agreements whose details are editable (CI kinds excluded): unsigned ones for
+ * staff, every non-terminal one for a superadmin.
+ */
 export function editableAgreementsFrom(
   agreements: AgreementRecord[] | null | undefined,
+  opts: { superAdmin?: boolean } = {},
 ): AgreementRecord[] {
   return (agreements ?? []).filter(
-    (agreement) => getAgreementActionVisibility(agreement, "admin").editTerms,
+    (agreement) =>
+      getAgreementActionVisibility(agreement, "admin", opts).editTerms,
   );
 }
 
@@ -128,6 +133,8 @@ export function validateAgreementTermsForm(
 export interface EditAgreementTermsSectionProps {
   /** Every agreement of the franchise — the section filters to editable ones. */
   agreements: AgreementRecord[] | null | undefined;
+  /** Superadmins may edit terms at any lifecycle point (backend override). */
+  superAdmin?: boolean;
   selectedId: number | null;
   onSelect: (agreementId: number) => void;
   value: AgreementTermsFormState | null;
@@ -135,25 +142,31 @@ export interface EditAgreementTermsSectionProps {
 }
 
 /**
- * "Agreement terms" section of the admin edit-franchise dialog. Editable only
- * while the agreement is unsigned (DRAFT, or APPROVED before the franchisee
- * signs) — mirrors the backend gate on PATCH /admin/agreement/:id.
+ * "Agreement terms" section of the admin edit-franchise dialog. For staff,
+ * editable only while the agreement is unsigned (DRAFT, or APPROVED before
+ * the franchisee signs); superadmins can edit any non-terminal agreement —
+ * mirrors the backend gate on PATCH /admin/agreement/:id.
  */
 export function EditAgreementTermsSection({
   agreements,
+  superAdmin = false,
   selectedId,
   onSelect,
   value,
   onChange,
 }: EditAgreementTermsSectionProps) {
-  const editable = editableAgreementsFrom(agreements);
+  const editable = editableAgreementsFrom(agreements, { superAdmin });
   const selected =
     editable.find((agreement) => agreement.id === selectedId) ?? null;
 
   return (
     <FormSection
       title="Agreement terms"
-      description="Editable until the franchisee signs the agreement."
+      description={
+        superAdmin
+          ? "As superadmin you can edit terms at any stage. Payments already collected are not recalculated."
+          : "Editable until the franchisee signs the agreement."
+      }
     >
       {editable.length === 0 ? (
         <DialogStateMessage
@@ -165,7 +178,9 @@ export function EditAgreementTermsSection({
           }
           description={
             (agreements?.length ?? 0) > 0
-              ? "Every agreement of this franchise has been signed. Signed terms are the artifact of record — issue a renewal to change them."
+              ? superAdmin
+                ? "This franchise only has superseded or void agreements — those records are final."
+                : "Every agreement of this franchise has been signed. Signed terms are the artifact of record — issue a renewal to change them."
               : "This franchise has no agreement yet. Terms are created during the approval flow."
           }
         />
@@ -175,7 +190,11 @@ export function EditAgreementTermsSection({
             <DialogFormField
               id="edit-agreement-target"
               label="Agreement"
-              hint="Only unsigned agreements are listed."
+              hint={
+                superAdmin
+                  ? "Superseded and void agreements are not listed."
+                  : "Only unsigned agreements are listed."
+              }
             >
               <Select
                 value={String(selected.id)}

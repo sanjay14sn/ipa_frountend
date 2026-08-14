@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { DialogFormField, FormDialog } from "@/components/shared/dialog";
 import { StateCitySelect } from "@/components/StateCitySelect";
+import { useUser } from "@/context/user-context";
 import { useUpdateFranchiseAdmin } from "@/hooks/api/franchisee.hooks";
 import { useUpdateAgreementDetailsAdmin } from "@/hooks/api/agreement.hooks";
 import type { AgreementRecord } from "@/services/agreement.service";
@@ -83,6 +84,10 @@ export function EditFranchiseDialog({
     useState<AgreementTermsFormState | null>(null);
   const [agreementInitial, setAgreementInitial] =
     useState<AgreementTermsFormState | null>(null);
+  const { user } = useUser();
+  // Superadmins may edit agreement terms at any lifecycle point — the backend
+  // PATCH lifts the signature gate for them.
+  const superAdmin = user?.adminRole === "super";
   const updateFranchise = useUpdateFranchiseAdmin();
   const updateAgreement = useUpdateAgreementDetailsAdmin();
 
@@ -117,16 +122,16 @@ export function EditFranchiseDialog({
       state: franchise.state ?? "",
       pincode: franchise.pincode ?? "",
     });
-    const editable = editableAgreementsFrom(agreements);
+    const editable = editableAgreementsFrom(agreements, { superAdmin });
     const first = editable[0] ?? null;
     setSelectedAgreementId(first?.id ?? null);
     const seeded = first ? agreementTermsFormFromRecord(first) : null;
     setAgreementForm(seeded);
     setAgreementInitial(seeded);
-  }, [open, franchise, agreements]);
+  }, [open, franchise, agreements, superAdmin]);
 
   const selectAgreement = (agreementId: number) => {
-    const target = editableAgreementsFrom(agreements).find(
+    const target = editableAgreementsFrom(agreements, { superAdmin }).find(
       (agreement) => agreement.id === agreementId,
     );
     if (!target) return;
@@ -138,7 +143,7 @@ export function EditFranchiseDialog({
 
   const selectedAgreement =
     selectedAgreementId !== null
-      ? (editableAgreementsFrom(agreements).find(
+      ? (editableAgreementsFrom(agreements, { superAdmin }).find(
           (agreement) => agreement.id === selectedAgreementId,
         ) ?? null)
       : null;
@@ -299,6 +304,7 @@ export function EditFranchiseDialog({
 
         <EditAgreementTermsSection
           agreements={agreements}
+          superAdmin={superAdmin}
           selectedId={selectedAgreementId}
           onSelect={selectAgreement}
           value={agreementForm}

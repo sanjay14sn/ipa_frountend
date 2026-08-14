@@ -144,7 +144,11 @@ export interface AgreementActionVisibility {
   reactivate: boolean;
   void: boolean;
   renew: boolean;
-  /** Details/terms are editable only before any signature lands (DRAFT, or APPROVED unsigned). */
+  /**
+   * Details/terms are editable before any signature lands (DRAFT, or APPROVED
+   * unsigned); a superadmin may edit at any lifecycle point except
+   * SUPERSEDED/VOID — mirrors the backend override on PATCH /admin/agreement/:id.
+   */
   editTerms: boolean;
 }
 
@@ -166,6 +170,7 @@ export function getAgreementActionVisibility(
     | "fullySigned"
   >,
   role: "admin" | "franchisee",
+  opts: { superAdmin?: boolean } = {},
 ): AgreementActionVisibility {
   if (role !== "admin") {
     return {
@@ -224,9 +229,13 @@ export function getAgreementActionVisibility(
     // meant the franchisee lost access in the gap.
     renew: status === "EXPIRED" || status === "ACTIVE" || status === "SUSPENDED",
     // CI terms carry the training plan and are managed from the CI flows.
+    // Superadmin bypasses the signature gate (SUPERSEDED early-returned above;
+    // VOID stays locked — both are terminal on the backend too).
     editTerms:
       agreement.kind !== "CI" &&
-      (status === "DRAFT" || (status === "APPROVED" && !signed)),
+      (opts.superAdmin
+        ? status !== "VOID"
+        : status === "DRAFT" || (status === "APPROVED" && !signed)),
   };
 }
 

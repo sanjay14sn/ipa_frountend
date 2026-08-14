@@ -223,6 +223,60 @@ describe("getAgreementActionVisibility", () => {
     ).toBe(false);
   });
 
+  it("editTerms: superadmin edits at any lifecycle point except SUPERSEDED/VOID", () => {
+    const superAdmin = { superAdmin: true };
+    expect(
+      getAgreementActionVisibility(
+        { ...makeAgreement({ status: "APPROVED" }), signed: true },
+        "admin",
+        superAdmin,
+      ).editTerms,
+    ).toBe(true);
+    expect(
+      getAgreementActionVisibility(
+        makeAgreement({ status: "ACTIVE" }),
+        "admin",
+        superAdmin,
+      ).editTerms,
+    ).toBe(true);
+    expect(
+      getAgreementActionVisibility(
+        makeAgreement({ status: "SUSPENDED" }),
+        "admin",
+        superAdmin,
+      ).editTerms,
+    ).toBe(true);
+    expect(
+      getAgreementActionVisibility(
+        makeAgreement({ status: "EXPIRED" }),
+        "admin",
+        superAdmin,
+      ).editTerms,
+    ).toBe(true);
+    expect(
+      getAgreementActionVisibility(
+        makeAgreement({ status: "SUPERSEDED" }),
+        "admin",
+        superAdmin,
+      ).editTerms,
+    ).toBe(false);
+    expect(
+      getAgreementActionVisibility(
+        makeAgreement({ status: "VOID" }),
+        "admin",
+        superAdmin,
+      ).editTerms,
+    ).toBe(false);
+    // CI kinds stay managed from the CI flows even for superadmin.
+    expect(
+      getAgreementActionVisibility(
+        makeAgreement({ kind: "CI", status: "ACTIVE" }),
+        "admin",
+        superAdmin,
+      ).editTerms,
+    ).toBe(false);
+  });
+
   it("editTerms: CI agreements and franchisees never edit terms here", () => {
     expect(
       getAgreementActionVisibility(
