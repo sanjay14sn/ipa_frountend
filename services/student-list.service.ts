@@ -66,6 +66,8 @@ export interface StudentData {
   enrolledAgreementId?: number | null;
   /** Admin list rows only: live status of that agreement (UPPER_SNAKE). */
   agreementStatus?: string | null;
+  /** uploads/-relative profile photo path; null = initials monogram. */
+  photoPath?: string | null;
 }
 
 export interface StudentsResponse {
@@ -229,7 +231,30 @@ export function mapStudentRow(row: Record<string, unknown>): StudentData {
     createdBy: Number(row.createdBy ?? 0),
     updatedBy: Number(row.updatedBy ?? 0),
     materialsOrdered: Boolean(row.materialsOrdered ?? false),
+    photoPath: row.photoPath != null ? String(row.photoPath) : null,
   };
+}
+
+export async function uploadStudentPhoto(
+  studentId: number,
+  file: File,
+  mode: "admin" | "franchise",
+): Promise<{ photoPath: string | null }> {
+  const fd = new FormData();
+  // Only the file field — the backend photo routes bind no body DTO.
+  fd.append("photo", file);
+  const base = mode === "admin" ? "/admin/student" : "/student";
+  const response = await api.post(`${base}/${studentId}/photo`, fd);
+  return unwrapData<{ photoPath: string | null }>(response);
+}
+
+export async function removeStudentPhoto(
+  studentId: number,
+  mode: "admin" | "franchise",
+): Promise<{ photoPath: string | null }> {
+  const base = mode === "admin" ? "/admin/student" : "/student";
+  const response = await api.delete(`${base}/${studentId}/photo`);
+  return unwrapData<{ photoPath: string | null }>(response);
 }
 
 // Keys declared on the backend DTOs (update-student.dto.ts). The global

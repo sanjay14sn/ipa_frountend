@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import { RequestedIdDetail } from "@/services/student.service";
 import { issueIdCardWithRevalidation } from "@/hooks/api/student.hooks";
+import { uploadedFileSrc } from "@/lib/uploads";
 import { sendClientLog } from "@/lib/client-telemetry";
 
 interface IdCardPreviewModalProps {
@@ -134,9 +135,18 @@ export default function IdCardPreviewModal({
 
                   {/* Student Info */}
                   <div className="flex-1 flex items-center gap-4">
-                    <div className="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center">
-                      <User className="h-8 w-8 text-white" />
-                    </div>
+                    {student.photoPath ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- API-served photo behind session cookies; next/image optimization can't forward credentials
+                      <img
+                        src={uploadedFileSrc(student.photoPath) ?? undefined}
+                        alt={student.name}
+                        className="w-16 h-16 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center">
+                        <User className="h-8 w-8 text-white" />
+                      </div>
+                    )}
                     <div className="flex-1 space-y-1">
                       <h4 className="font-semibold text-lg">{student.name}</h4>
                       <p className="text-sm opacity-90">

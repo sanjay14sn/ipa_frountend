@@ -8,6 +8,8 @@ import {
   updateCourseInstructor,
   getAllAdminCourseInstructorsByStatus,
   getPaginatedAdminCourseInstructors,
+  uploadCourseInstructorPhoto,
+  removeCourseInstructorPhoto,
   type CourseInstructorData,
   type CreateCourseInstructorRequest,
   type AdminCourseInstructorsByStatus,
@@ -17,6 +19,7 @@ import {
 import { useProgramId } from "@/hooks/use-scope";
 import { queryKeys } from "@/hooks/api/query-keys";
 import { getQueryClientBridge } from "@/hooks/api/query-client-bridge";
+import { toast as sonnerToast } from "sonner";
 
 const CI_LIST_PREFIX = ["course-instructors", "list"] as const;
 
@@ -160,6 +163,41 @@ export function useCreateCourseInstructor() {
       void qc.invalidateQueries({ queryKey: CI_LIST_PREFIX });
     },
   });
+}
+
+/**
+ * Upload/remove a CI's profile photo. `mode` picks the audience route
+ * (admin vs franchisee). The bare ["course-instructors"] prefix covers every
+ * list variant (franchisee list, admin roster, status tabs).
+ */
+export function useCourseInstructorPhotoMutations(
+  mode: "admin" | "franchisee",
+) {
+  const qc = useQueryClient();
+
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ["course-instructors"] });
+  };
+
+  const upload = useMutation({
+    mutationFn: ({ ciId, file }: { ciId: number; file: File }) =>
+      uploadCourseInstructorPhoto(ciId, file, mode),
+    onSuccess: () => {
+      invalidate();
+      sonnerToast.success("Photo updated");
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: ({ ciId }: { ciId: number }) =>
+      removeCourseInstructorPhoto(ciId, mode),
+    onSuccess: () => {
+      invalidate();
+      sonnerToast.success("Photo removed");
+    },
+  });
+
+  return { upload, remove };
 }
 
 /**

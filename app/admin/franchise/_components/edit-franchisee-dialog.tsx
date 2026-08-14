@@ -11,9 +11,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DialogFormField, FormDialog } from "@/components/shared/dialog";
+import { ProfilePhotoControl } from "@/components/shared/profile";
 import { StateCitySelect } from "@/components/StateCitySelect";
 import { BloodGroup } from "@/services/franchise.enums";
-import { useUpdateFranchiseeAdmin } from "@/hooks/api/franchisee.hooks";
+import {
+  useFranchiseePhotoAdminMutations,
+  useUpdateFranchiseeAdmin,
+} from "@/hooks/api/franchisee.hooks";
+import { uploadedFileSrc, validatePhotoFile } from "@/lib/uploads";
 
 /** Structural subset of FranchiseeResponse — `mail` is the email column. */
 export interface EditableFranchiseeDetails {
@@ -30,6 +35,7 @@ export interface EditableFranchiseeDetails {
   education?: string | null;
   occupation?: string | null;
   reference?: string | null;
+  photoPath?: string | null;
 }
 
 interface EditFranchiseeDialogProps {
@@ -80,13 +86,20 @@ export function EditFranchiseeDialog({
   onOpenChange,
 }: EditFranchiseeDialogProps) {
   const [form, setForm] = useState<FranchiseeFormState>(emptyForm);
+  // Photo changes save immediately (unlike the form fields, which save on
+  // submit), so the current path is tracked locally from mutation results
+  // rather than waiting on the parent detail refetch.
+  const [photoPath, setPhotoPath] = useState<string | null>(null);
   const updateFranchisee = useUpdateFranchiseeAdmin();
+  const photoMutations = useFranchiseePhotoAdminMutations();
 
   useEffect(() => {
     if (!franchisee) {
       setForm(emptyForm);
+      setPhotoPath(null);
       return;
     }
+    setPhotoPath(franchisee.photoPath ?? null);
     setForm({
       name: franchisee.name ?? "",
       dob: toDateInputValue(franchisee.dob),
@@ -107,6 +120,27 @@ export function EditFranchiseeDialog({
     (field: keyof FranchiseeFormState) =>
     (event: React.ChangeEvent<HTMLInputElement>) =>
       setForm((prev) => ({ ...prev, [field]: event.target.value }));
+
+  const handlePhotoSelect = (file: File) => {
+    if (!franchisee) return;
+    const problem = validatePhotoFile(file);
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
+    photoMutations.upload.mutate(
+      { franchiseeId: franchisee.id, file },
+      { onSuccess: (result) => setPhotoPath(result.photoPath) },
+    );
+  };
+
+  const handlePhotoRemove = () => {
+    if (!franchisee) return;
+    photoMutations.remove.mutate(
+      { franchiseeId: franchisee.id },
+      { onSuccess: (result) => setPhotoPath(result.photoPath) },
+    );
+  };
 
   const submit = async () => {
     if (!franchisee) return;
@@ -164,6 +198,18 @@ export function EditFranchiseeDialog({
       cancelLabel="Cancel"
     >
       <div className="space-y-4">
+        {/* Saves immediately — independent of the form's Save button. */}
+        <ProfilePhotoControl
+          name={form.name || franchisee?.name}
+          src={uploadedFileSrc(photoPath)}
+          onSelectFile={handlePhotoSelect}
+          onRemove={handlePhotoRemove}
+          isBusy={
+            photoMutations.upload.isPending || photoMutations.remove.isPending
+          }
+          size="md"
+        />
+
         <DialogFormField id="edit-franchisee-name" label="Name *">
           <Input
             id="edit-franchisee-name"

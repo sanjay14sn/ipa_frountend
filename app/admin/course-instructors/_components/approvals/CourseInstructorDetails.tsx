@@ -14,7 +14,10 @@ import {
   ExpandedDetailSurface,
   StatusBadge,
 } from "@/components/shared";
+import { ProfilePhotoControl } from "@/components/shared/profile";
 import { AdminCourseInstructorData } from "@/services/course-instructor.service";
+import { useCourseInstructorPhotoMutations } from "@/hooks/api/course-instructor.hooks";
+import { uploadedFileSrc, validatePhotoFile } from "@/lib/uploads";
 import { formatDate } from "@/lib/date-utils";
 import { formatRupees } from "@/lib/currency-utils";
 import { getErrorMessage } from "@/lib/error-utils";
@@ -160,6 +163,35 @@ function InstructorReceivablesSection({ instructorId }: InstructorReceivablesSec
   );
 }
 
+function InstructorPhotoSection({
+  instructor,
+}: {
+  instructor: AdminCourseInstructorData;
+}) {
+  const { upload, remove } = useCourseInstructorPhotoMutations("admin");
+
+  const handleSelectFile = (file: File) => {
+    const problem = validatePhotoFile(file);
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
+    upload.mutate({ ciId: instructor.id, file });
+  };
+
+  return (
+    <ExpandedDetailSection title="Photo">
+      <ProfilePhotoControl
+        name={instructor.name}
+        src={uploadedFileSrc(instructor.photoPath)}
+        onSelectFile={handleSelectFile}
+        onRemove={() => remove.mutate({ ciId: instructor.id })}
+        isBusy={upload.isPending || remove.isPending}
+      />
+    </ExpandedDetailSection>
+  );
+}
+
 export default function CourseInstructorDetails({
   instructors,
 }: CourseInstructorDetailsProps) {
@@ -168,6 +200,10 @@ export default function CourseInstructorDetails({
       {instructors.map((instructor, index) => (
         <div key={instructor.id}>
           {index > 0 ? <Separator /> : null}
+
+          <InstructorPhotoSection instructor={instructor} />
+
+          <Separator />
 
           <ExpandedDetailSection title="Contact">
             <DetailFieldsGrid columns={3}>

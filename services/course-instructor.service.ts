@@ -94,6 +94,8 @@ export interface CourseInstructorData {
     code: string;
     displayOrder: number;
   } | null;
+  /** uploads/-relative profile photo path; null = initials monogram. */
+  photoPath?: string | null;
 }
 
 /** ipa-new list responses omit legacy envelope fields */
@@ -304,6 +306,7 @@ function mapRow(row: Record<string, unknown>): CourseInstructorData {
     updatedAt: String(row.updatedAt ?? ""),
     createdBy: Number(row.createdBy ?? 0),
     updatedBy: Number(row.updatedBy ?? 0),
+    photoPath: row.photoPath != null ? String(row.photoPath) : null,
     // Multi-franchise fields: defensively mapped so pre-multi-franchise
     // payloads (missing fields) yield undefined rather than throwing.
     isHandler: row.isHandler != null ? Boolean(row.isHandler) : undefined,
@@ -430,6 +433,28 @@ export async function updateCourseInstructor(
   _data: Partial<CourseInstructorData>,
 ): Promise<CourseInstructorData> {
   throw new Error("Not supported in ipa-new");
+}
+
+export async function uploadCourseInstructorPhoto(
+  ciId: number,
+  file: File,
+  mode: "admin" | "franchisee",
+): Promise<{ photoPath: string | null }> {
+  const fd = new FormData();
+  // Only the file field — the backend photo routes bind no body DTO.
+  fd.append("photo", file);
+  const base = mode === "admin" ? "/admin/course-instructor" : "/course-instructor";
+  const response = await api.post(`${base}/${ciId}/photo`, fd);
+  return unwrapData<{ photoPath: string | null }>(response);
+}
+
+export async function removeCourseInstructorPhoto(
+  ciId: number,
+  mode: "admin" | "franchisee",
+): Promise<{ photoPath: string | null }> {
+  const base = mode === "admin" ? "/admin/course-instructor" : "/course-instructor";
+  const response = await api.delete(`${base}/${ciId}/photo`);
+  return unwrapData<{ photoPath: string | null }>(response);
 }
 
 export async function deleteCourseInstructor(_id: number): Promise<void> {

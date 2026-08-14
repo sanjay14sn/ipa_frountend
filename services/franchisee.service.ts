@@ -84,6 +84,8 @@ export interface FranchiseeResponse {
   education: string;
   occupation: string;
   reference: string;
+  /** uploads/-relative profile photo path; null = initials monogram. */
+  photoPath?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -843,6 +845,45 @@ export async function updateFranchiseeAdmin(
     payload,
   );
   return unwrapData(response);
+}
+
+export async function uploadMyProfilePhoto(
+  file: File,
+): Promise<{ photoPath: string | null }> {
+  const fd = new FormData();
+  // Only the file field — the backend photo routes bind no body DTO.
+  fd.append("photo", file);
+  const response = await api.post("/franchisee/auth/me/photo", fd);
+  return unwrapData<{ photoPath: string | null }>(response);
+}
+
+export async function removeMyProfilePhoto(): Promise<{
+  photoPath: string | null;
+}> {
+  const response = await api.delete("/franchisee/auth/me/photo");
+  return unwrapData<{ photoPath: string | null }>(response);
+}
+
+export async function uploadFranchiseePhotoAdmin(
+  franchiseeId: number,
+  file: File,
+): Promise<{ photoPath: string | null }> {
+  const fd = new FormData();
+  fd.append("photo", file);
+  const response = await api.post(
+    `/admin/franchise/franchisee/${franchiseeId}/photo`,
+    fd,
+  );
+  return unwrapData<{ photoPath: string | null }>(response);
+}
+
+export async function removeFranchiseePhotoAdmin(
+  franchiseeId: number,
+): Promise<{ photoPath: string | null }> {
+  const response = await api.delete(
+    `/admin/franchise/franchisee/${franchiseeId}/photo`,
+  );
+  return unwrapData<{ photoPath: string | null }>(response);
 }
 
 export interface VerifyPaymentDto {

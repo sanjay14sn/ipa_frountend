@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import {
   DetailField,
@@ -7,7 +8,10 @@ import {
   ExpandedDetailSection,
   ExpandedDetailSurface,
 } from "@/components/shared";
+import { ProfilePhotoControl } from "@/components/shared/profile";
 import { CourseInstructorData } from "@/services/course-instructor.service";
+import { useCourseInstructorPhotoMutations } from "@/hooks/api/course-instructor.hooks";
+import { uploadedFileSrc, validatePhotoFile } from "@/lib/uploads";
 import { calculateAge, formatDate } from "@/lib/date-utils";
 
 interface CourseInstructorDetailsProps {
@@ -17,8 +21,31 @@ interface CourseInstructorDetailsProps {
 export default function CourseInstructorDetails({
   courseInstructor,
 }: CourseInstructorDetailsProps) {
+  const { upload, remove } = useCourseInstructorPhotoMutations("franchisee");
+
+  const handleSelectFile = (file: File) => {
+    const problem = validatePhotoFile(file);
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
+    upload.mutate({ ciId: courseInstructor.id, file });
+  };
+
   return (
     <ExpandedDetailSurface>
+      <ExpandedDetailSection title="Photo">
+        <ProfilePhotoControl
+          name={courseInstructor.name}
+          src={uploadedFileSrc(courseInstructor.photoPath)}
+          onSelectFile={handleSelectFile}
+          onRemove={() => remove.mutate({ ciId: courseInstructor.id })}
+          isBusy={upload.isPending || remove.isPending}
+        />
+      </ExpandedDetailSection>
+
+      <Separator />
+
       <ExpandedDetailSection title="Personal">
         <DetailFieldsGrid columns={3}>
           <DetailField

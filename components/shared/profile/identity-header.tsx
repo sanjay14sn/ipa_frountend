@@ -7,6 +7,8 @@ interface IdentityHeaderProps {
   subtitle?: ReactNode;
   badge?: ReactNode;
   initials?: string;
+  /** Renderable photo URL; the monogram falls back to initials without it. */
+  avatarSrc?: string | null;
   avatarSize?: AvatarSize;
   avatarTone?: AvatarTone;
   className?: string;
@@ -17,6 +19,7 @@ export function IdentityHeader({
   subtitle,
   badge,
   initials,
+  avatarSrc,
   avatarSize = "md",
   avatarTone = "primary",
   className,
@@ -27,6 +30,7 @@ export function IdentityHeader({
         <AvatarMonogram
           name={name}
           initials={initials}
+          src={avatarSrc}
           size={avatarSize}
           tone={avatarTone}
         />

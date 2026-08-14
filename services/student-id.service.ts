@@ -31,6 +31,8 @@ export interface RequestedIdDetail {
   idIssueDate?: string;
   /** Present when listing mixed Requested/Issued rows (admin id-card "all"). */
   idIssued?: string;
+  /** uploads/-relative profile photo path; null/absent = placeholder box. */
+  photoPath?: string | null;
   franchise?: {
     id: string;
     name: string;
@@ -98,6 +100,7 @@ function mapRequestedIdDetail(row: Record<string, unknown>): RequestedIdDetail {
     idRequestedAt: row.idRequestedAt
       ? String(row.idRequestedAt)
       : undefined,
+    photoPath: row.photoPath != null ? String(row.photoPath) : null,
     franchise: {
       id: franchiseId,
       name: franchiseName,

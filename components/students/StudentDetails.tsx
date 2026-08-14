@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import {
   DetailField,
@@ -7,15 +8,23 @@ import {
   ExpandedDetailSection,
   ExpandedDetailSurface,
 } from "@/components/shared";
+import { ProfilePhotoControl } from "@/components/shared/profile";
 import type { StudentData } from "@/services/student.service";
+import { useStudentPhotoMutations } from "@/hooks/api/student.hooks";
+import { uploadedFileSrc, validatePhotoFile } from "@/lib/uploads";
 import { getStudentLevelName } from "./student-helpers";
 import { formatDate, calculateAge } from "@/lib/date-utils";
 
 interface StudentDetailsProps {
   student: StudentData;
+  /** Picks the photo mutation audience routes; display is identical. */
+  mode?: "franchise" | "admin";
 }
 
-export default function StudentDetails({ student }: StudentDetailsProps) {
+export default function StudentDetails({
+  student,
+  mode = "franchise",
+}: StudentDetailsProps) {
   const joinedDate = formatDate(student.dateOfJoining ?? student.createdAt);
   const primaryPhone =
     student.fatherContactNo || student.motherContactNo || "—";
@@ -26,8 +35,31 @@ export default function StudentDetails({ student }: StudentDetailsProps) {
       ? student.stream
       : (student.stream as { name?: string })?.name ?? "—";
 
+  const { upload, remove } = useStudentPhotoMutations(mode);
+
+  const handleSelectFile = (file: File) => {
+    const problem = validatePhotoFile(file);
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
+    upload.mutate({ studentId: student.id, file });
+  };
+
   return (
     <ExpandedDetailSurface>
+      <ExpandedDetailSection title="Photo">
+        <ProfilePhotoControl
+          name={student.name}
+          src={uploadedFileSrc(student.photoPath)}
+          onSelectFile={handleSelectFile}
+          onRemove={() => remove.mutate({ studentId: student.id })}
+          isBusy={upload.isPending || remove.isPending}
+        />
+      </ExpandedDetailSection>
+
+      <Separator />
+
       <ExpandedDetailSection title="Student details">
         <DetailFieldsGrid columns={3}>
           <DetailField label="Roll number" value={student.rollNo || "—"} mono />

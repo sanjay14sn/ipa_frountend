@@ -1,4 +1,6 @@
 export { IdentityHeader } from "./identity-header";
+export { AvatarMonogram, type AvatarSize, type AvatarTone } from "./avatar-monogram";
+export { ProfilePhotoControl, type ProfilePhotoControlProps } from "./profile-photo-control";
 
 export { ContactPill, ContactPillGrid } from "./contact-pill";
 

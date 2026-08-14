@@ -13,6 +13,7 @@ import {
   type DataTableFilter,
 } from "@/components/shared";
 import StudentCertificatesModal from "@/components/students/StudentCertificatesModal";
+import StudentDetails from "@/components/students/StudentDetails";
 import { useAdminStudentsRoster } from "@/hooks/api/student.hooks";
 import { useFranchiseOptions } from "@/hooks/api/franchisee.hooks";
 import { useAllLevels } from "@/hooks/api/level.hooks";
@@ -210,6 +211,9 @@ export function RosterSection() {
         getRowId={(s) => String(s.id)}
         renderMainCell={(s) => (
           <TableMainCell title={s.name} subtitle={s.rollNo} />
+        )}
+        renderExpandedContent={(s) => (
+          <StudentDetails student={s} mode="admin" />
         )}
         initialSearchValue={search}
         searchPlaceholder="Search by name, roll no, or email..."

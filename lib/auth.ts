@@ -45,6 +45,8 @@ export interface User {
     reference: string;
     /** Raw stored signature path on the franchisee row (relative to /uploads). */
     franchiseeSignature?: string | null;
+    /** Raw stored profile-photo path (relative to /uploads); null = none. */
+    photoPath?: string | null;
     /**
      * All franchises owned by this franchisee (any review status), from the
      * /franchisee/auth/me response. Source of truth for `User.franchises` —

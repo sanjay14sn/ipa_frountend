@@ -1,14 +1,18 @@
 "use client";
 
 import { Store } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeaderCard, PageSkeleton, StatusBadge } from "@/components/shared";
 import {
   IdentityHeader,
   LabeledValue,
   ProfileCard,
   ProfileCardSection,
+  ProfilePhotoControl,
 } from "@/components/shared/profile";
 import { useUser } from "@/context/user-context";
+import { useMyProfilePhotoMutations } from "@/hooks/api/franchisee.hooks";
+import { uploadedFileSrc, validatePhotoFile } from "@/lib/uploads";
 import { formatDate } from "@/lib/date-utils";
 import { formatRupees } from "@/lib/currency-utils";
 
@@ -45,6 +49,16 @@ function PayrollTermsRow({ terms }: { terms: PayrollTerms }) {
 export default function FranchiseeProfilePage() {
   const { user } = useUser();
   const profile = user?.profile;
+  const { upload, remove } = useMyProfilePhotoMutations();
+
+  const handleSelectFile = (file: File) => {
+    const problem = validatePhotoFile(file);
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
+    upload.mutate({ file });
+  };
 
   if (!user) return <PageSkeleton />;
 
@@ -60,12 +74,23 @@ export default function FranchiseeProfilePage() {
           <IdentityHeader
             name={profile?.name ?? user.name ?? "—"}
             subtitle={profile?.mail}
+            avatarSrc={uploadedFileSrc(profile?.photoPath)}
             badge={
               profile?.franchise?.status ? (
                 <StatusBadge label={profile.franchise.status} />
               ) : undefined
             }
           />
+          <ProfileCardSection divider>
+            <ProfilePhotoControl
+              name={profile?.name ?? user.name}
+              src={uploadedFileSrc(profile?.photoPath)}
+              onSelectFile={handleSelectFile}
+              onRemove={() => remove.mutate()}
+              isBusy={upload.isPending || remove.isPending}
+              size="md"
+            />
+          </ProfileCardSection>
           <ProfileCardSection divider>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3">
               <LabeledValue label="Phone" value={profile?.phone || "—"} />

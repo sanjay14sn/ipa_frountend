@@ -271,7 +271,9 @@ export default function StudentsTable({
             </span>
           );
         }}
-        renderExpandedContent={(student) => <StudentDetails student={student} />}
+        renderExpandedContent={(student) => (
+          <StudentDetails student={student} mode={mode} />
+        )}
         searchPlaceholder="Search students, roll numbers, email, or parent names..."
         onSearchChange={(v) => onSearchChange?.(v)}
         filters={filters}

@@ -9,6 +9,10 @@ import {
   getFranchiseStartingKits,
   updateFranchiseAdmin,
   updateFranchiseeAdmin,
+  uploadMyProfilePhoto,
+  removeMyProfilePhoto,
+  uploadFranchiseePhotoAdmin,
+  removeFranchiseePhotoAdmin,
   type FranchiseData,
   type FranchiseeGroupedItem,
   type FranchiseStartingKitRow,
@@ -167,5 +171,68 @@ export function useUpdateFranchiseeAdmin() {
       toast.error(extractErrorMessage(error));
     },
   });
+}
+
+/**
+ * Franchisee changes their own profile photo. Invalidating the
+ * franchisee-profile prefix refetches /franchisee/auth/me, whose sync effect
+ * in user-context refreshes `user.profile` (and thus the profile header).
+ */
+export function useMyProfilePhotoMutations() {
+  const queryClient = useQueryClient();
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({
+      queryKey: ["auth", "franchisee-profile"],
+    });
+  };
+
+  const upload = useMutation({
+    mutationFn: ({ file }: { file: File }) => uploadMyProfilePhoto(file),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Photo updated");
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: () => removeMyProfilePhoto(),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Photo removed");
+    },
+  });
+
+  return { upload, remove };
+}
+
+/** Admin changes a franchisee's profile photo from the franchise detail page. */
+export function useFranchiseePhotoAdminMutations() {
+  const queryClient = useQueryClient();
+
+  const upload = useMutation({
+    mutationFn: ({
+      franchiseeId,
+      file,
+    }: {
+      franchiseeId: number;
+      file: File;
+    }) => uploadFranchiseePhotoAdmin(franchiseeId, file),
+    onSuccess: () => {
+      invalidateAdminFranchiseViews(queryClient);
+      toast.success("Photo updated");
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: ({ franchiseeId }: { franchiseeId: number }) =>
+      removeFranchiseePhotoAdmin(franchiseeId),
+    onSuccess: () => {
+      invalidateAdminFranchiseViews(queryClient);
+      toast.success("Photo removed");
+    },
+  });
+
+  return { upload, remove };
 }
 

@@ -344,6 +344,11 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         const sameSignature =
           (prev.profile?.franchiseeSignature ?? null) ===
           (profile.franchiseeSignature ?? null);
+        // Same reasoning for the profile photo: the photo mutation refetches
+        // this profile, and without a gate the skip path would keep the stale
+        // photoPath in localStorage until the next unrelated change.
+        const samePhotoPath =
+          (prev.profile?.photoPath ?? null) === (profile.photoPath ?? null);
         // Also gate on the agreement-switcher feed: when admin approves a
         // new program (or the franchisee signs/pays), `activePrograms`
         // changes but `franchise.updatedAt` doesn't, and the skip path
@@ -385,6 +390,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           sameOperational &&
           sameName &&
           sameSignature &&
+          samePhotoPath &&
           sameActivePrograms &&
           sameFranchises &&
           prev.profile != null

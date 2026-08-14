@@ -38,6 +38,8 @@ import {
   getPaginatedStudentsAdmin,
   updateStudentAdmin,
   getAdminStudentLifecycleById,
+  uploadStudentPhoto,
+  removeStudentPhoto,
   type StudentData,
   type StudentPaginationParams,
   type CertificatePaginationParams,
@@ -354,6 +356,43 @@ export async function updateStudentAdminWithRevalidation(
     /* bridge not mounted */
   }
   return result;
+}
+
+/**
+ * Upload/remove a student's profile photo. `mode` picks the audience route
+ * (admin vs franchisee). Photo changes touch every list the row appears in,
+ * plus the admin ID-card details that feed the ID-card preview.
+ */
+export function useStudentPhotoMutations(mode: "admin" | "franchise") {
+  const queryClient = useQueryClient();
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: STUDENTS_LIST_PREFIX });
+    void queryClient.invalidateQueries({ queryKey: ["admin-students"] });
+    void queryClient.invalidateQueries({
+      queryKey: ["admin-id-card-details", "list"],
+    });
+  };
+
+  const upload = useMutation({
+    mutationFn: ({ studentId, file }: { studentId: number; file: File }) =>
+      uploadStudentPhoto(studentId, file, mode),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Photo updated");
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: ({ studentId }: { studentId: number }) =>
+      removeStudentPhoto(studentId, mode),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Photo removed");
+    },
+  });
+
+  return { upload, remove };
 }
 
 export async function requestStudentIdsWithRevalidation(studentIds: number[]) {
