@@ -654,6 +654,13 @@ export interface UpdateAgreementDetailsInput {
   /** Required when `installment` is true. */
   installmentMonths?: number;
   downPayment?: number;
+  // Lifecycle dates (ISO) — superadmin only; the backend rejects them for staff.
+  /** Rewrites the franchisee's captured signing date; agreement must be signed. */
+  signedAt?: string;
+  /** Adjustable once the agreement has entered force. */
+  activatedAt?: string;
+  /** Explicit expiry; when absent, a signedAt/tenure change re-derives it. */
+  expiresAt?: string;
 }
 
 /** PATCH /admin/agreement/:id — edit details/terms of an unsigned agreement. */

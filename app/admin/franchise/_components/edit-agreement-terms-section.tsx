@@ -30,6 +30,15 @@ import type {
 export interface AgreementTermsFormState extends AgreementTermsFieldsValue {
   title: string;
   notes: string;
+  /** Lifecycle dates as yyyy-MM-dd ("" = not set) — superadmin-only fields. */
+  signedAt: string;
+  activatedAt: string;
+  expiresAt: string;
+}
+
+/** ISO timestamp → yyyy-MM-dd for `<input type="date">` ("" when absent). */
+function toDateInputValue(iso: string | null | undefined): string {
+  return iso ? iso.slice(0, 10) : "";
 }
 
 /**
@@ -52,6 +61,9 @@ export function agreementTermsFormFromRecord(
   return {
     title: agreement.title ?? "",
     notes: agreement.notes ?? "",
+    signedAt: toDateInputValue(agreement.franchiseeSignedAt),
+    activatedAt: toDateInputValue(agreement.activatedAt),
+    expiresAt: toDateInputValue(agreement.expiresAt),
     // Money/GST/installment seeding (incl. the D9 tenure rule) is shared with
     // the renewal dialog.
     ...agreementTermsFieldsFromRecord(agreement),
@@ -108,6 +120,13 @@ export function buildAgreementDetailsPatch(
       patch.installmentMonths = current.installmentMonths;
       patch.downPayment = current.downPayment;
     }
+  }
+  // Lifecycle dates (superadmin fields). A blanked date is treated as
+  // unchanged — dates can be moved, never unset.
+  const dateKeys = ["signedAt", "activatedAt", "expiresAt"] as const;
+  for (const key of dateKeys) {
+    const next = current[key]?.trim() ?? "";
+    if (next && next !== initial[key]) patch[key] = next;
   }
   return patch;
 }
@@ -247,6 +266,63 @@ export function EditAgreementTermsSection({
             value={value}
             onChange={onChange}
           />
+
+          {superAdmin &&
+          (selected.franchiseeSignedAt ||
+            selected.activatedAt ||
+            selected.expiresAt) ? (
+            <div className="space-y-4">
+              <p className="text-sm font-medium">Lifecycle dates</p>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {selected.franchiseeSignedAt ? (
+                  <DialogFormField
+                    id="edit-agreement-signed-at"
+                    label="Signing date"
+                  >
+                    <Input
+                      id="edit-agreement-signed-at"
+                      type="date"
+                      value={value.signedAt}
+                      onChange={(event) =>
+                        onChange({ signedAt: event.target.value })
+                      }
+                    />
+                  </DialogFormField>
+                ) : null}
+                {selected.activatedAt ? (
+                  <DialogFormField
+                    id="edit-agreement-activated-at"
+                    label="Activation date"
+                  >
+                    <Input
+                      id="edit-agreement-activated-at"
+                      type="date"
+                      value={value.activatedAt}
+                      onChange={(event) =>
+                        onChange({ activatedAt: event.target.value })
+                      }
+                    />
+                  </DialogFormField>
+                ) : null}
+                {selected.expiresAt ? (
+                  <DialogFormField
+                    id="edit-agreement-expires-at"
+                    label="Expiry date"
+                    hint="Left untouched, it re-derives from signing date + tenure."
+                  >
+                    <Input
+                      id="edit-agreement-expires-at"
+                      type="date"
+                      value={value.expiresAt}
+                      onChange={(event) =>
+                        onChange({ expiresAt: event.target.value })
+                      }
+                    />
+                  </DialogFormField>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
     </FormSection>

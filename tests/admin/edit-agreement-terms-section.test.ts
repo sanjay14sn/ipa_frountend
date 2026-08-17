@@ -26,7 +26,7 @@ function form(over: Partial<AgreementTermsFormState> = {}): AgreementTermsFormSt
     monthlyFee: 0, royalty: 0, materialCost: 0, kitCost: 0, ciShare: 0,
     franchiseShare: 0, gstFranchiseFee: false, gstRoyalty: false,
     gstMaterialCost: false, installment: false, installmentMonths: 0,
-    downPayment: 0,
+    downPayment: 0, signedAt: "", activatedAt: "", expiresAt: "",
     ...over,
   };
 }
@@ -47,6 +47,43 @@ describe("agreementTermsFormFromRecord — D9 tenure fallback", () => {
     const initial = agreementTermsFormFromRecord(agreement({ tenure: null }));
     const patch = buildAgreementDetailsPatch(initial, { ...initial, tenure: 12 });
     expect(patch.tenure).toBe(12);
+  });
+});
+
+describe("lifecycle dates (superadmin fields)", () => {
+  it("seeds yyyy-MM-dd values from the record's ISO timestamps", () => {
+    const seeded = agreementTermsFormFromRecord(
+      agreement({
+        franchiseeSignedAt: "2026-02-01T10:30:00.000Z",
+        activatedAt: "2026-02-03T00:00:00.000Z",
+        expiresAt: "2027-02-01T00:00:00.000Z",
+      } as Partial<AgreementRecord>),
+    );
+    expect(seeded.signedAt).toBe("2026-02-01");
+    expect(seeded.activatedAt).toBe("2026-02-03");
+    expect(seeded.expiresAt).toBe("2027-02-01");
+  });
+
+  it("sends only the dates that changed", () => {
+    const initial = form({
+      signedAt: "2026-02-01", activatedAt: "2026-02-03", expiresAt: "2027-02-01",
+    });
+    const patch = buildAgreementDetailsPatch(initial, {
+      ...initial,
+      signedAt: "2025-12-15",
+    });
+    expect(patch.signedAt).toBe("2025-12-15");
+    expect(patch.activatedAt).toBeUndefined();
+    expect(patch.expiresAt).toBeUndefined();
+  });
+
+  it("treats a blanked date as unchanged — dates move, never unset", () => {
+    const initial = form({ signedAt: "2026-02-01" });
+    const patch = buildAgreementDetailsPatch(initial, {
+      ...initial,
+      signedAt: "",
+    });
+    expect(patch.signedAt).toBeUndefined();
   });
 });
 
