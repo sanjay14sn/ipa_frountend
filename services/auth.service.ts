@@ -64,6 +64,7 @@ interface FranchiseeProfileResponse {
 
 import { api } from "@/lib/axios";
 import { unwrapData } from "@/lib/unwrap-api";
+import type { ToursCompletedMap } from "@/lib/tours/tour-types";
 
 export async function login(
   name: string,
@@ -97,6 +98,8 @@ export async function getAdminProfile(): Promise<{
   emailId?: string;
   role: "super" | "staff";
   state?: string | null;
+  /** Guided-tour completion map (docs/guided-tours/); absent on old backends. */
+  toursCompleted?: ToursCompletedMap;
 }> {
   const response = await api.get("/admin/auth/me");
   return unwrapData(response);

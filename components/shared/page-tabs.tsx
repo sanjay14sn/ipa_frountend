@@ -105,6 +105,7 @@ export function PageTabs<T extends string>({
               value={tab.value}
               disabled={tab.disabled}
               className="gap-1.5"
+              data-tour={`tab:${tab.value}`}
             >
               {tab.label}
               {tab.badge ? <span>{tab.badge}</span> : null}

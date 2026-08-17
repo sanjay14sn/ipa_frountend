@@ -148,3 +148,9 @@ L2 kit below **never import** `@/services`, `@/hooks/api`, `@/context`, or
 props interface, `className` merged via `cn()`, `data-testid` on the root,
 no `any` in public props. Kit components that display money/dates format
 raw values themselves via the shared formatters.
+
+Guided-tour anchors (docs/guided-tours/): `data-tour` attributes mark tour
+targets — derived automatically on sidebar nav links (`nav:<href>` in
+portal-sidebar) and PageTabs triggers (`tab:<value>`); page widgets use
+kebab-case ids (`data-tour="dashboard-stats"`). Keep them stable — the tour
+registry test asserts every referenced anchor exists.

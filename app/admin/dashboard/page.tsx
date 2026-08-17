@@ -420,7 +420,10 @@ export default function AdminDashboard() {
         }
       />
 
-      <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5">
+      <div
+        className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5"
+        data-tour="dashboard-stats"
+      >
         {!statsReady
           ? summary.map((item) => (
               <StatCardSkeleton
@@ -440,7 +443,8 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid xl:grid-cols-3">
-        <div className="border-b xl:border-r">
+        {/* The tour spotlights this first panel to explain the whole grid. */}
+        <div className="border-b xl:border-r" data-tour="dashboard-quick-access">
           <DashboardPanel
             label="Franchises"
             title="Quick access"

@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { TourHelpButton } from "@/components/layout/tour-help-button";
 import { useUser } from "@/context/user-context";
 import { useCIAuth } from "@/context/ci-auth-context";
 import { getUserFromStorage } from "@/lib/auth";
@@ -121,6 +122,7 @@ export function PortalHeaderActions({
 
   return (
     <div className="ml-auto flex items-center gap-0.5 sm:gap-1">
+      <TourHelpButton portal={portal} />
       <NotificationBell />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -129,6 +131,7 @@ export function PortalHeaderActions({
             size="icon"
             className="h-9 w-9 shrink-0 rounded-full"
             data-testid="user-menu-trigger"
+            data-tour="header-profile"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
               {initialsOf(displayName)}

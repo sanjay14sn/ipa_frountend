@@ -1,4 +1,5 @@
 import { api } from "@/lib/axios";
+import type { ToursCompletedMap } from "@/lib/tours/tour-types";
 
 export interface CIUser {
   id: number;
@@ -9,6 +10,8 @@ export interface CIUser {
   programId: number;
   franchiseId: string;
   credentialsIssuedAt?: string | null;
+  /** Guided-tour completion map (docs/guided-tours/); absent on old backends. */
+  toursCompleted?: ToursCompletedMap;
 }
 
 export interface CILoginResponse {

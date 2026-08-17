@@ -114,6 +114,7 @@ export function PortalSidebar({
                         <Link
                           href={item.href}
                           aria-current={active ? "page" : undefined}
+                          data-tour={`nav:${item.href}`}
                         >
                           {/* Yellow 2px active indicator bar. */}
                           {active ? (

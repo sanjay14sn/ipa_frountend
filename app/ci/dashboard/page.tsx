@@ -155,7 +155,10 @@ export default function CIDashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5">
+          <div
+            className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-5"
+            data-tour="dashboard-stats"
+          >
             {/* CI-06: kit StatCell; navigation rides the chip + quick links
                 (R4), not whole-cell anchors. */}
             <StatCell
@@ -197,6 +200,7 @@ export default function CIDashboardPage() {
 
         {/* CI-06: kit QuickAccessCard; links target the hub tabs directly —
             no redirect hop. */}
+        <div data-tour="dashboard-quick-access">
         <CIDashboardPanel label="Tools" title="Quick access">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <QuickAccessCard
@@ -225,6 +229,7 @@ export default function CIDashboardPage() {
             />
           </div>
         </CIDashboardPanel>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

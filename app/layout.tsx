@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Caveat, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import "driver.js/dist/driver.css";
+import "./tour.css";
 import { Toaster } from "sonner";
 import { UserProvider } from "@/context/user-context";
 import { NotificationProvider } from "@/context/notification-context";

@@ -265,7 +265,10 @@ function PendingActionsCard({
 }) {
   const actionable = items.filter((item) => item.count > 0);
   return (
-    <Card className="rounded-2xl border-border bg-card shadow-sm">
+    <Card
+      className="rounded-2xl border-border bg-card shadow-sm"
+      data-tour="pending-actions"
+    >
       <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
         <CardTitle className="flex items-center gap-3 text-xl font-normal text-card-foreground">
           <ModulePill label="Actions" />
@@ -328,7 +331,10 @@ function OrderRow({ order }: { order: import("@/services/order.service").OrderDa
 
 function RecentOrdersCard({ orders }: { orders: import("@/services/order.service").OrderData[] }) {
   return (
-    <Card className="rounded-2xl border-border bg-card shadow-sm">
+    <Card
+      className="rounded-2xl border-border bg-card shadow-sm"
+      data-tour="recent-orders"
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2 sm:p-5 sm:pb-2">
         <CardTitle className="flex items-center gap-3 text-xl font-normal text-card-foreground">
           <ModulePill label="Orders" />
@@ -562,7 +568,8 @@ export default function FranchiseeDashboard() {
       />
 
       <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-        <PageHeaderCard
+        <div data-tour="dashboard-header">
+          <PageHeaderCard
           embedded
           className="border-b py-5"
           eyebrow={<ModulePill label="Franchise" />}
@@ -596,7 +603,8 @@ export default function FranchiseeDashboard() {
               ) : null}
             </>
           }
-        />
+          />
+        </div>
 
         <AgreementHero
           feeValue={franchiseFeeCard.value}
@@ -616,20 +624,25 @@ export default function FranchiseeDashboard() {
             ))}
           </div>
         ) : (
-          <div className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
+          <div
+            className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4"
+            data-tour="dashboard-stats"
+          >
             {statCards.map((s) => (
               <StatCell key={s.label} {...s} />
             ))}
           </div>
         )}
 
-        <DashboardPanel label="Tools" title="Quick access">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {quickLinks.map((l) => (
-              <QuickLink key={l.href} {...l} />
-            ))}
-          </div>
-        </DashboardPanel>
+        <div data-tour="dashboard-quick-access">
+          <DashboardPanel label="Tools" title="Quick access">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {quickLinks.map((l) => (
+                <QuickLink key={l.href} {...l} />
+              ))}
+            </div>
+          </DashboardPanel>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">

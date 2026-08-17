@@ -119,6 +119,7 @@ export function NotificationBell() {
           size="icon"
           aria-label="Open notifications"
           className="relative text-primary hover:bg-accent hover:text-primary"
+          data-tour="header-notifications"
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (

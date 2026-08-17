@@ -13,6 +13,8 @@ import { InventorySection } from "./_components/inventory-section";
 import { ProcurementSection } from "./_components/ProcurementSection";
 import { MonitoringSection } from "./_components/MonitoringSection";
 
+// KEEP IN SYNC with STAFF_ADMIN_OPERATIONS_TABS in lib/tours/staff-admin-tour.ts
+// (the staff-admin guided tour walks these tabs; it can't import from @/app).
 const TABS = [
   "orders",
   "shipping",

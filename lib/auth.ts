@@ -48,6 +48,12 @@ export interface User {
     /** Raw stored profile-photo path (relative to /uploads); null = none. */
     photoPath?: string | null;
     /**
+     * Guided-tour completion map (docs/guided-tours/) — rides the
+     * /franchisee/auth/me row spread; absent on old backends (treated as
+     * completed, fail-open).
+     */
+    toursCompleted?: Record<string, { version: number; completedAt: string }>;
+    /**
      * All franchises owned by this franchisee (any review status), from the
      * /franchisee/auth/me response. Source of truth for `User.franchises` —
      * riding the profile fetch is what lets the switcher survive full page
