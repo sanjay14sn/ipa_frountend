@@ -163,7 +163,10 @@ export function ReceivablesSection() {
         </ComponentErrorBoundary>
       ) : null}
 
-      <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <div
+        data-tour="receivables-summary"
+        className="rounded-xl border border-border bg-card p-4 shadow-sm"
+      >
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(140px,1.4fr)_auto] sm:items-center">
           <div className="text-sm font-medium text-card-foreground">
             {settledCount} of {receivables.length} receivables settled

@@ -29,15 +29,15 @@ export default function CourseInstructorTabs({
   return (
     <Tabs defaultValue="regular" className="space-y-4">
       <TabsList className="h-auto flex-wrap justify-start gap-1">
-        <TabsTrigger value="regular" className="gap-2">
+        <TabsTrigger value="regular" data-tour="tab:regular" className="gap-2">
           Active & Training
           <Badge variant="secondary">{courseInstructors.length}</Badge>
         </TabsTrigger>
-        <TabsTrigger value="approval" className="gap-2">
+        <TabsTrigger value="approval" data-tour="tab:approval" className="gap-2">
           Approval Pending
           <Badge variant="secondary">{approvalPendingCourseInstructors.length}</Badge>
         </TabsTrigger>
-        <TabsTrigger value="ci-sessions" className="gap-2">
+        <TabsTrigger value="ci-sessions" data-tour="tab:ci-sessions" className="gap-2">
           CI Training Sessions
         </TabsTrigger>
       </TabsList>

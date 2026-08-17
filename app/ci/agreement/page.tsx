@@ -98,7 +98,10 @@ function CIAgreementContent() {
 
   if (!list.length) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div
+        data-tour="ci-agreement-view"
+        className="flex min-h-screen items-center justify-center bg-background p-4"
+      >
         <Card className="w-full max-w-lg overflow-hidden rounded-2xl border-border bg-card shadow-sm">
           <CardHeader className="border-b bg-accent/30 px-5 py-5">
             <CardTitle className="text-xl font-normal text-card-foreground">
@@ -117,7 +120,11 @@ function CIAgreementContent() {
 
   // Single agreement — the pre-multi-franchise experience, verbatim.
   if (list.length === 1) {
-    return <AgreementSignFlow agreement={list[0]} onSigned={handleSigned} />;
+    return (
+      <div data-tour="ci-agreement-view">
+        <AgreementSignFlow agreement={list[0]} onSigned={handleSigned} />
+      </div>
+    );
   }
 
   const selectedId = Number(searchParams.get("agreementId")) || null;
@@ -126,7 +133,7 @@ function CIAgreementContent() {
 
   if (selected) {
     return (
-      <div>
+      <div data-tour="ci-agreement-view">
         <div className="mx-auto w-full max-w-5xl px-4 pt-4 sm:px-5 lg:px-6">
           <Button
             type="button"
@@ -147,7 +154,10 @@ function CIAgreementContent() {
   const sorted = [...list].sort((a, b) => pickerRank(a) - pickerRank(b));
 
   return (
-    <div className="min-h-screen bg-background px-4 py-5 sm:px-5 lg:px-6">
+    <div
+      data-tour="ci-agreement-view"
+      className="min-h-screen bg-background px-4 py-5 sm:px-5 lg:px-6"
+    >
       <div className="mx-auto w-full max-w-3xl">
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div className="border-b border-border px-4 py-5 sm:px-5">

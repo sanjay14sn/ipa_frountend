@@ -66,7 +66,7 @@ export function FranchiseeCertificateRequestsSection() {
       description="Request and view certificates for your students"
     >
       <Tabs defaultValue="request" className="space-y-4">
-        <TabsList>
+        <TabsList data-tour="certificates-subtabs">
           <TabsTrigger value="request">Request Certificate</TabsTrigger>
           <TabsTrigger value="history">Certificate History</TabsTrigger>
         </TabsList>

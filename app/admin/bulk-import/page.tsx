@@ -38,7 +38,10 @@ export default function BulkImportHubPage() {
       title="Bulk import"
       description="Create many records at once from a CSV file. After upload, review and fix any flagged rows inline, then confirm the import."
     >
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        data-tour="bulk-import-tiles"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      >
         {TILES.map((tile) => {
           const Icon = tile.icon;
           const disabled = tile.status === "soon";

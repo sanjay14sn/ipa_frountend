@@ -35,6 +35,11 @@ export interface TourDefinition {
   page: string;
   /** Selector that must exist before auto-start (real data, not skeletons). */
   readyWhen: string;
+  /**
+   * The page's tab values (PageTabs or hand-anchored raw tabs). Purely for the
+   * registry test: every `tab:` anchor and `step.tab` must be listed here.
+   */
+  tabs?: readonly string[];
   steps: readonly TourStep[];
 }
 

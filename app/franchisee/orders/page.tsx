@@ -309,12 +309,14 @@ export default function FranchiseeOrdersPage() {
 
       {/* FR-17: the four computed counts finally render (the cancelled count
           used to leak out as a lone caption line). */}
-      <SummaryStatGrid>
-        <SummaryStatCard label="Pending" value={orderCounts.pending} />
-        <SummaryStatCard label="Shipped" value={orderCounts.shipped} />
-        <SummaryStatCard label="Delivered" value={orderCounts.delivered} />
-        <SummaryStatCard label="Cancelled" value={orderCounts.cancelled} />
-      </SummaryStatGrid>
+      <div data-tour="orders-summary">
+        <SummaryStatGrid>
+          <SummaryStatCard label="Pending" value={orderCounts.pending} />
+          <SummaryStatCard label="Shipped" value={orderCounts.shipped} />
+          <SummaryStatCard label="Delivered" value={orderCounts.delivered} />
+          <SummaryStatCard label="Cancelled" value={orderCounts.cancelled} />
+        </SummaryStatGrid>
+      </div>
 
       {pendingOrderRetry && (
         <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">

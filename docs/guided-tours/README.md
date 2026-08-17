@@ -13,12 +13,38 @@ page, re-runnable anytime from the **?** help button beside the profile menu.
 
 ## Tour keys and versioning
 
+Each role has a **main tour** (shell + dashboard, listed first in its registry
+list) plus **per-page mini-tours** that auto-start on the first visit to that
+page.
+
 | Key | Role | Runs on | Steps file |
 |---|---|---|---|
 | `super-admin-dashboard` | Superadmin | `/admin/dashboard` | steps-super-admin.md |
 | `staff-admin-operations` | Regional (staff) admin | `/admin/operations` | steps-staff-admin.md |
 | `franchisee-dashboard` | Operational franchisee | `/franchisee/dashboard` | steps-franchisee.md |
 | `ci-dashboard` | Signed CI | `/ci/dashboard` | steps-ci.md |
+| `admin-franchise-hub` | Superadmin | `/admin/franchise` | steps-pages-admin.md |
+| `admin-students` | Superadmin | `/admin/students` | steps-pages-admin.md |
+| `admin-ci-hub` | Superadmin | `/admin/course-instructors` | steps-pages-admin.md |
+| `admin-operations-hq` | Superadmin | `/admin/operations` | steps-pages-admin.md |
+| `admin-regional-operations` | Superadmin | `/admin/regional-operations` | steps-pages-admin.md |
+| `admin-bulk-import` | Superadmin | `/admin/bulk-import` | steps-pages-admin.md |
+| `admin-programs` | Superadmin | `/admin/programs` | steps-pages-admin.md |
+| `admin-admins` | Superadmin | `/admin/admins` | steps-pages-admin.md |
+| `franchisee-students` | Operational franchisee | `/franchisee/students` | steps-pages-franchisee.md |
+| `franchisee-course-instructors` | Operational franchisee | `/franchisee/course-instructors` | steps-pages-franchisee.md |
+| `franchisee-orders` | Operational franchisee | `/franchisee/orders` | steps-pages-franchisee.md |
+| `ci-agreement` | Signed CI | `/ci/agreement` | steps-pages-ci.md |
+| `ci-training` | Signed CI | `/ci/training` | steps-pages-ci.md |
+
+The registry (`lib/tours/tour-registry.ts`) holds one frozen list per role —
+`SUPER_ADMIN_TOURS`, `STAFF_ADMIN_TOURS`, `FRANCHISEE_TOURS`, `CI_TOURS` — with
+the main tour first. `findTourForPage(tours, pathname)` resolves the current
+page's tour by exact pathname match. The **? button** replays the current
+page's tour when one exists, and otherwise falls back to the role's main tour
+(navigating to its page first). Note superadmin and staff admin get *different*
+tours on `/admin/operations` (`admin-operations-hq` vs `staff-admin-operations`)
+via list membership.
 
 Each tour has an integer `version` (starts at 1). A user's completion entry counts
 only while `entry.version >= def.version` — **bump the version to re-show the tour to
@@ -60,22 +86,53 @@ Tour steps target elements via CSS selectors with three conventions:
   `lib/navigation/nav-config.ts` stays the single source of truth. The registry unit
   test asserts every `nav:` anchor matches a real nav-config href.
 - `[data-tour="tab:<value>"]` — `PageTabs` triggers (derived from the tab value in
-  `components/shared/page-tabs.tsx`). Used by the staff-admin tab-walking tour.
+  `components/shared/page-tabs.tsx`). Used by all tab-walking tours. The raw
+  Radix tabs on `/franchisee/course-instructors` carry hand-added `tab:` anchors.
 - `[data-tour="<kebab-id>"]` — page widgets (e.g. `dashboard-stats`); existing kit
   `data-testid`s are reused where they already exist (`agreement-hero`,
   `franchise-rail`, `user-menu-trigger`).
 - `anchor: null` — a centered, element-less step (welcome / finish).
+
+**Kit-wide anchors** (emitted automatically, usable on any page): `page-actions`
+(PageHeaderCard actions slot — header CTA buttons), `page-tabs-list` (the tab
+strip), `page-header-extras` (PageTabs headerExtras wrapper, e.g. the
+regional-ops region select), `table-search` / `table-filters` / `table-actions`
+(DataTable toolbar: search input, filter+sort row, toolbarActions cluster).
+
+**Per-page one-offs**: `onboard-franchise`, `ci-training-subtabs`,
+`procurement-subtabs`, `program-sections`, `bulk-import-tiles`,
+`certificates-subtabs`, `orders-summary`, `receivables-summary`,
+`ci-agreement-view`. Nested raw-Tabs strips get a single highlight step — never
+a tab-walk.
+
+**Toolbar-step ordering rule**: on tabbed pages, panels mount on first
+activation and stay mounted (`forceMount` + `useVisitedTabs`), so a
+`table-search`/`table-actions` selector can match a *hidden* panel's toolbar
+once several tabs have been visited. Author toolbar steps immediately after
+their tab's own step (before walking other tabs) AND give them the same `tab`
+value, so Back-navigation re-activates the right tab before highlighting.
+Because `querySelector` picks the FIRST match in DOM order, a shared toolbar
+anchor must target the first-declared panel — true today on every toured page.
+
+**Cross-tab steps**: steps that carry a `tab` always survive the start-time
+presence filter, even when their anchor lives inside a not-yet-mounted (or
+unmounted — some pages don't keep inactive panels) tab panel. The engine's
+Next/Back handlers activate the TARGET step's tab and give the panel a frame
+to mount before moving, with driver's per-step element wait (2.5s) +
+`skipMissingElement` as the fallback for slow or genuinely absent anchors.
 
 Steps whose anchor has no matching DOM element when the tour starts are silently
 dropped (conditional widgets), and the step counter reflects the filtered list.
 
 ## Auto-start rules
 
-The tour auto-starts only when ALL hold:
+A tour auto-starts only when ALL hold (applies to the main tour on the
+dashboard AND to each page mini-tour on its own page — first visit to each
+page auto-starts that page's tour, once per user per page):
 
 1. Desktop viewport (≥768px — the sidebar collapses into a sheet below that; mobile
    gets no tour and no ? button in v1).
-2. The user is on the tour's page (`def.page`).
+2. The user is on the tour's page (`def.page`, exact pathname match).
 3. The user is eligible: superadmin / staff admin; franchisee with
    `isFranchiseOperational(user)`; CI with `agreementPhase === "SIGNED"`. Funnel
    users (franchisee pre-agreement, CI pre-signature) are excluded — their pages are
@@ -111,8 +168,10 @@ the FE deploy — decided: NOT backfilling; existing users have never seen a tou
 
 ## Adding a new tour later
 
-1. Add a `TourDefinition` file in `lib/tours/` and register it in `tour-registry.ts`.
+1. Add a `TourDefinition` (in the role's page-tours file in `lib/tours/`) and
+   append it to that role's list in `tour-registry.ts`. Set `tabs` if the page
+   has tab anchors (the registry test validates `tab:` anchors against it).
 2. Add any new `data-tour` widget anchors and list them in `KNOWN_WIDGET_ANCHORS`.
-3. Add a steps doc here and a row to the table above.
-4. Wire its trigger (the ? button maps portal → tour in `hooks/use-guided-tour.ts`).
+3. Add a steps table to the role's steps-pages doc and a row to the table above.
+4. Nothing else — auto-start and the ? button resolve tours by pathname.
 No backend change needed — the JSONB map accepts any new key.

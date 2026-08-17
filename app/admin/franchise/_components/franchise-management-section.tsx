@@ -37,6 +37,7 @@ export function FranchiseManagementSection() {
       {/* R6: the hub owns the page header; this section renders toolbar + content only. */}
       <div className="flex justify-end">
         <Button
+          data-tour="onboard-franchise"
           onClick={async () => {
             await ensureProgramsLoaded();
             setIsCreateDialogOpen(true);

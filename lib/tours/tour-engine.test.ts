@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { freezeTour, widgetAnchor } from "./tour-types";
+import { freezeTour, tabAnchor, widgetAnchor } from "./tour-types";
 import { isTourActive, startTour, stopTour } from "./tour-engine";
 
 // The engine is tested against a fake driver.js: these tests own the engine's
@@ -15,6 +15,8 @@ interface FakeConfig {
   onPopoverRender?: (popover: {
     footer: HTMLElement;
   }) => void;
+  onNextClick?: () => void;
+  onPrevClick?: () => void;
   onDoneClick?: () => void;
   onDestroyed?: () => void;
 }
@@ -25,9 +27,20 @@ function makeFakeDriver(config: FakeConfig) {
     destroy: vi.fn(() => config.onDestroyed?.()),
     getActiveIndex: vi.fn(() => 2),
     isActive: vi.fn(() => true),
+    isLastStep: vi.fn(() => false),
+    moveNext: vi.fn(),
+    movePrevious: vi.fn(),
     refresh: vi.fn(),
   };
 }
+
+function lastInstance() {
+  return driverFactory.mock.results.at(-1)!.value as ReturnType<
+    typeof makeFakeDriver
+  >;
+}
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 80));
 
 const TOUR = freezeTour({
   key: "test-tour",
@@ -128,5 +141,59 @@ describe("teardown routing", () => {
     lastConfig().onPopoverRender!({ footer });
     lastConfig().onPopoverRender!({ footer });
     expect(footer.querySelectorAll(".ipa-tour-skip")).toHaveLength(1);
+  });
+});
+
+describe("tab-aware navigation", () => {
+  const TAB_TOUR = freezeTour({
+    key: "tab-tour",
+    version: 1,
+    page: "/t",
+    readyWhen: tabAnchor("one"),
+    tabs: ["one", "two"],
+    steps: [
+      { anchor: null, title: "w", body: "w" },
+      { anchor: tabAnchor("one"), tab: "one", title: "1", body: "1" },
+      // anchor lives inside tab two's panel — absent until that tab mounts
+      { anchor: widgetAnchor("inside-two"), tab: "two", title: "2", body: "2" },
+    ],
+  });
+
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <button data-tour="tab:one" data-state="active"></button>
+      <button data-tour="tab:two" data-state="inactive"></button>
+    `;
+  });
+
+  it("keeps tab-carrying steps whose anchor is not mounted yet", () => {
+    startTour(TAB_TOUR, { onFinished: vi.fn(), onSkipRequested: vi.fn() });
+    expect(lastConfig().steps).toHaveLength(3);
+  });
+
+  it("Next activates the target step's tab before moving", async () => {
+    const clicks: string[] = [];
+    document
+      .querySelector(tabAnchor("two"))!
+      .addEventListener("mousedown", () => clicks.push("two"));
+    startTour(TAB_TOUR, { onFinished: vi.fn(), onSkipRequested: vi.fn() });
+    const instance = lastInstance();
+    instance.getActiveIndex.mockReturnValue(1); // on step 2 → next is the tab-two step
+    lastConfig().onNextClick!();
+    await settle();
+    expect(clicks).toEqual(["two"]);
+    expect(instance.moveNext).toHaveBeenCalledTimes(1);
+  });
+
+  it("Next on the last step routes to the finish flow", async () => {
+    const onFinished = vi.fn();
+    startTour(TAB_TOUR, { onFinished, onSkipRequested: vi.fn() });
+    const instance = lastInstance();
+    instance.isLastStep.mockReturnValue(true);
+    lastConfig().onNextClick!();
+    await settle();
+    expect(onFinished).toHaveBeenCalledTimes(1);
+    expect(instance.moveNext).not.toHaveBeenCalled();
+    expect(isTourActive()).toBe(false);
   });
 });

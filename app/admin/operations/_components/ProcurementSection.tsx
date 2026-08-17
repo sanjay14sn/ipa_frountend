@@ -727,7 +727,10 @@ export function ProcurementSection({
         onValueChange={(value) => setActiveTab(value as ProcurementSubTab)}
         className="space-y-6"
       >
-        <TabsList className="h-auto w-full justify-start rounded-none border-b bg-transparent p-0">
+        <TabsList
+          data-tour="procurement-subtabs"
+          className="h-auto w-full justify-start rounded-none border-b bg-transparent p-0"
+        >
           {!isRegionalAdmin && (
             <TabsTrigger
               value="suppliers-sourcing"

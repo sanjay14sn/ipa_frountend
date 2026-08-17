@@ -376,7 +376,7 @@ export default function DataTable<T>({
                 {(!!onSearchChange || sortOptions.length > 0) && (
                   <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
                     {onSearchChange && (
-                      <div className="relative flex-1">
+                      <div className="relative flex-1" data-tour="table-search">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           placeholder={searchPlaceholder}
@@ -425,7 +425,10 @@ export default function DataTable<T>({
                 )}
 
                 {hasToolbarActions && (
-                  <div className="flex flex-wrap items-end gap-2 xl:justify-end">
+                  <div
+                    className="flex flex-wrap items-end gap-2 xl:justify-end"
+                    data-tour="table-actions"
+                  >
                     {toolbarActions}
                   </div>
                 )}
@@ -433,7 +436,7 @@ export default function DataTable<T>({
             )}
 
             {(filters.length > 0 || multiSelectFilters.length > 0) && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2" data-tour="table-filters">
                 {filters.map((filter) => (
                   <Select
                     key={filter.key}

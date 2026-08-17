@@ -23,6 +23,7 @@ export const STAFF_ADMIN_TOUR = freezeTour({
   version: 1,
   page: "/admin/operations",
   readyWhen: tabAnchor("monitoring"),
+  tabs: STAFF_ADMIN_OPERATIONS_TABS,
   steps: [
     {
       anchor: null,

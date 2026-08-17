@@ -166,7 +166,10 @@ export function ProgramList({
               className="space-y-4"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <TabsList className="flex h-auto flex-wrap gap-1">
+                <TabsList
+                  data-tour="program-sections"
+                  className="flex h-auto flex-wrap gap-1"
+                >
                   <TabsTrigger value="basic">Basic</TabsTrigger>
                   <TabsTrigger value="ci-training">CI Training</TabsTrigger>
                   <TabsTrigger value="kit-items">Kit Items</TabsTrigger>

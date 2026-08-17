@@ -9,28 +9,38 @@ import { isFranchiseOperational } from "@/lib/auth";
 import { getAdminProfile } from "@/services/auth.service";
 import { queryKeys } from "@/hooks/api/query-keys";
 import { useMarkTourComplete, type TourPortal } from "@/hooks/api/tours.hooks";
-import { TOURS, isTourCompleted } from "@/lib/tours/tour-registry";
-import type { TourDefinition } from "@/lib/tours/tour-types";
+import {
+  CI_TOURS,
+  FRANCHISEE_TOURS,
+  STAFF_ADMIN_TOURS,
+  SUPER_ADMIN_TOURS,
+  findTourForPage,
+  isTourCompleted,
+  mainTour,
+} from "@/lib/tours/tour-registry";
+import type { TourDefinition, ToursCompletedMap } from "@/lib/tours/tour-types";
 import { startTour, stopTour, waitForElement } from "@/lib/tours/tour-engine";
 
 /**
  * Eligibility + auto-start + persistence wiring for the guided tours
  * (docs/guided-tours/). Mounted once per portal via TourHelpButton in
  * PortalHeaderActions; the overlay itself lives in lib/tours/tour-engine.
+ *
+ * Each role has a list of tours (main shell tour first + per-page mini-tours).
+ * The current page's tour auto-starts on first visit; the ? button replays the
+ * current page's tour, falling back to the main tour elsewhere.
  */
 
 // Module-level session state: survives re-renders and remounts, resets on a
 // full page load. `startedThisSession` stops re-auto-starts (and doubles as
 // the strict-mode guard); `pendingStartKey` carries a ?-button click across
-// the router.push to the tour's page.
+// the router.push to the target tour's page.
 const startedThisSession = new Set<string>();
 let pendingStartKey: string | null = null;
 
-interface ResolvedTour {
+interface PendingSkip {
   def: TourDefinition;
-  /** Server completion state has loaded (auto-start waits for it). */
-  stateLoaded: boolean;
-  completed: boolean;
+  stepIndex: number;
 }
 
 export interface GuidedTourControls {
@@ -57,7 +67,7 @@ export function useGuidedTour(portal: TourPortal): GuidedTourControls {
   const pathname = usePathname();
   const router = useRouter();
   const markTourComplete = useMarkTourComplete(portal);
-  const [skipStepIndex, setSkipStepIndex] = useState<number | null>(null);
+  const [pendingSkip, setPendingSkip] = useState<PendingSkip | null>(null);
   const [skipNonce, setSkipNonce] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
 
@@ -83,20 +93,17 @@ export function useGuidedTour(portal: TourPortal): GuidedTourControls {
     return () => mql.removeEventListener("change", update);
   }, []);
 
-  let resolved: ResolvedTour | null = null;
+  // Resolve the role's tour list + completion source.
+  let roleTours: readonly TourDefinition[] | null = null;
+  let stateLoaded = false;
+  let toursCompleted: ToursCompletedMap | undefined;
   if (portal === "admin") {
-    // adminRole arrives with the profile fetch — no tour until it's known.
+    // adminRole arrives with the profile fetch — no tours until it's known.
     if (user?.role === "admin" && user.adminRole) {
-      const def =
-        user.adminRole === "super" ? TOURS.superAdmin : TOURS.staffAdmin;
-      resolved = {
-        def,
-        stateLoaded: adminProfileQuery.data !== undefined,
-        completed: isTourCompleted(
-          adminProfileQuery.data?.toursCompleted,
-          def,
-        ),
-      };
+      roleTours =
+        user.adminRole === "super" ? SUPER_ADMIN_TOURS : STAFF_ADMIN_TOURS;
+      stateLoaded = adminProfileQuery.data !== undefined;
+      toursCompleted = adminProfileQuery.data?.toursCompleted;
     }
   } else if (portal === "franchisee") {
     // Funnel (pre-agreement) franchisees are excluded by design.
@@ -105,113 +112,118 @@ export function useGuidedTour(portal: TourPortal): GuidedTourControls {
       (user.role === "franchisee" || user.role === "franchise") &&
       isFranchiseOperational(user)
     ) {
-      resolved = {
-        def: TOURS.franchisee,
-        stateLoaded: user.profile != null,
-        completed: isTourCompleted(
-          user.profile?.toursCompleted,
-          TOURS.franchisee,
-        ),
-      };
+      roleTours = FRANCHISEE_TOURS;
+      stateLoaded = user.profile != null;
+      toursCompleted = user.profile?.toursCompleted;
     }
   } else if (ciUser && agreementPhase === "SIGNED") {
     // Pre-signature CIs are excluded by design (their header has no actions).
-    resolved = {
-      def: TOURS.ci,
-      stateLoaded: true,
-      completed: isTourCompleted(ciUser.toursCompleted, TOURS.ci),
-    };
+    roleTours = CI_TOURS;
+    stateLoaded = true;
+    toursCompleted = ciUser.toursCompleted;
   }
 
-  const def = resolved?.def ?? null;
-  const stateLoaded = resolved?.stateLoaded ?? false;
-  const completed = resolved?.completed ?? true;
+  const pageTour = roleTours ? findTourForPage(roleTours, pathname) : null;
+  const fallbackTour = roleTours ? mainTour(roleTours) : null;
+  const pageTourCompleted = pageTour
+    ? isTourCompleted(toursCompleted, pageTour)
+    : true;
 
-  const markComplete = useCallback(() => {
-    if (!def) return;
-    markTourComplete.mutate(
-      { tourKey: def.key, version: def.version },
-      {
-        onSuccess: () => {
-          if (portal === "ci") void refreshCI();
+  const markComplete = useCallback(
+    (def: TourDefinition) => {
+      markTourComplete.mutate(
+        { tourKey: def.key, version: def.version },
+        {
+          onSuccess: () => {
+            if (portal === "ci") void refreshCI();
+          },
         },
-      },
-    );
-    // Belt-and-braces: even if the write fails, don't re-offer this session.
-    startedThisSession.add(def.key);
-  }, [def, markTourComplete, portal, refreshCI]);
+      );
+      // Belt-and-braces: even if the write fails, don't re-offer this session.
+      startedThisSession.add(def.key);
+    },
+    // mutate is referentially stable in react-query v5.
+    [markTourComplete.mutate, portal, refreshCI],
+  );
 
   const launch = useCallback(
-    (startAt = 0) => {
-      if (!def) return;
+    (def: TourDefinition, startAt = 0) => {
       startTour(def, {
         startAt,
-        onFinished: markComplete,
+        onFinished: () => markComplete(def),
         onSkipRequested: (stepIndex) => {
           setSkipNonce((n) => n + 1);
-          setSkipStepIndex(stepIndex);
+          setPendingSkip({ def, stepIndex });
         },
       });
     },
-    [def, markComplete],
+    [markComplete],
   );
 
-  // Auto-start: first visit to the tour's page once the server says "not
+  // Safety net FIRST (declaration order = run order per commit): a route
+  // change mid-tour (programmatic redirect — user navigation is blocked by
+  // the overlay) must not leave a stranded overlay. No-ops when idle.
+  useEffect(() => {
+    stopTour();
+  }, [pathname]);
+  useEffect(() => () => stopTour(), []);
+
+  // Auto-start: first visit to a tour's page once the server says "not
   // completed" and the page's real data has rendered. A pending ?-click
   // (cross-page start) bypasses the completed/session checks.
   useEffect(() => {
-    if (!def || !isDesktop || pathname !== def.page) return;
-    const isPendingManualStart = pendingStartKey === def.key;
+    if (!pageTour || !isDesktop || pathname !== pageTour.page) return;
+    const isPendingManualStart = pendingStartKey === pageTour.key;
     if (!isPendingManualStart) {
-      if (!stateLoaded || completed || startedThisSession.has(def.key)) return;
+      if (
+        !stateLoaded ||
+        pageTourCompleted ||
+        startedThisSession.has(pageTour.key)
+      ) {
+        return;
+      }
     }
     let cancelled = false;
-    void waitForElement(def.readyWhen).then((found) => {
+    void waitForElement(pageTour.readyWhen).then((found) => {
       if (cancelled || !found) return;
-      if (pendingStartKey === def.key) pendingStartKey = null;
-      startedThisSession.add(def.key);
-      launch();
+      if (pendingStartKey === pageTour.key) pendingStartKey = null;
+      startedThisSession.add(pageTour.key);
+      launch(pageTour);
     });
     return () => {
       cancelled = true;
     };
-  }, [def, isDesktop, pathname, stateLoaded, completed, launch]);
-
-  // Safety nets: a programmatic redirect mid-tour (user navigation is blocked
-  // by the overlay) or an unmount must not leave a stranded overlay.
-  useEffect(() => {
-    if (def && pathname !== def.page) stopTour();
-  }, [def, pathname]);
-  useEffect(() => () => stopTour(), []);
+  }, [pageTour, isDesktop, pathname, stateLoaded, pageTourCompleted, launch]);
 
   const start = useCallback(() => {
-    if (!def) return;
-    if (pathname !== def.page) {
-      pendingStartKey = def.key;
-      router.push(def.page);
+    const target = pageTour ?? fallbackTour;
+    if (!target) return;
+    if (pathname !== target.page) {
+      pendingStartKey = target.key;
+      router.push(target.page);
       return;
     }
-    startedThisSession.add(def.key);
-    void waitForElement(def.readyWhen).then((found) => {
-      if (found) launch();
+    startedThisSession.add(target.key);
+    void waitForElement(target.readyWhen).then((found) => {
+      if (found) launch(target);
     });
-  }, [def, pathname, router, launch]);
+  }, [pageTour, fallbackTour, pathname, router, launch]);
 
   const confirmSkip = useCallback(() => {
-    setSkipStepIndex(null);
-    markComplete();
-  }, [markComplete]);
+    if (pendingSkip) markComplete(pendingSkip.def);
+    setPendingSkip(null);
+  }, [pendingSkip, markComplete]);
 
   const cancelSkip = useCallback(() => {
-    const resumeAt = skipStepIndex ?? 0;
-    setSkipStepIndex(null);
-    launch(resumeAt);
-  }, [skipStepIndex, launch]);
+    const paused = pendingSkip;
+    setPendingSkip(null);
+    if (paused) launch(paused.def, paused.stepIndex);
+  }, [pendingSkip, launch]);
 
   return {
-    available: def != null,
+    available: roleTours != null,
     start,
-    skipStepIndex,
+    skipStepIndex: pendingSkip?.stepIndex ?? null,
     skipNonce,
     confirmSkip,
     cancelSkip,

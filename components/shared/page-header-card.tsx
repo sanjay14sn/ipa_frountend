@@ -53,7 +53,10 @@ export function PageHeaderCard({
           ) : null}
         </div>
         {actions ? (
-          <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+          <div
+            className="flex shrink-0 flex-wrap gap-2 sm:justify-end"
+            data-tour="page-actions"
+          >
             {actions}
           </div>
         ) : null}

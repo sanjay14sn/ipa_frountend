@@ -96,9 +96,16 @@ export function PageTabs<T extends string>({
         actions={action}
         className={headerClassName}
       >
-        {headerExtras ? <div className="mt-3">{headerExtras}</div> : null}
+        {headerExtras ? (
+          <div className="mt-3" data-tour="page-header-extras">
+            {headerExtras}
+          </div>
+        ) : null}
 
-        <TabsList className="mt-4 flex h-auto flex-wrap justify-start gap-1">
+        <TabsList
+          className="mt-4 flex h-auto flex-wrap justify-start gap-1"
+          data-tour="page-tabs-list"
+        >
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.value}
