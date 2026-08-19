@@ -163,6 +163,7 @@ function GroupCardSection({
             <Input
               type="number"
               min="0"
+              max="100"
               value={formState.applyToAll}
               onChange={(e) => onApplyToAllChange(group.key, e.target.value)}
               placeholder="Enter marks"
@@ -243,6 +244,7 @@ function GroupCardSection({
               <Input
                 type="number"
                 min="0"
+                max="100"
                 value={formState.marksMap[student.id] ?? ""}
                 onChange={(e) => onMarksChange(group.key, student.id, e.target.value)}
                 placeholder="Marks"
@@ -360,7 +362,12 @@ export default function BulkRequestCertificateModal({
     if (!state?.courseInstructorId) return false;
     return g.students.every((s) => {
       const v = state.marksMap[s.id];
-      const validMarks = v !== undefined && v !== "" && !isNaN(parseInt(v)) && parseInt(v) >= 0;
+      const validMarks =
+        v !== undefined &&
+        v !== "" &&
+        !isNaN(parseInt(v)) &&
+        parseInt(v) >= 0 &&
+        parseInt(v) <= 100;
       const cd = state.completionMap[s.id];
       const minDate = s.minCompletionDate;
       const validDate =
@@ -393,8 +400,8 @@ export default function BulkRequestCertificateModal({
           return;
         }
         const marks = parseInt(v);
-        if (isNaN(marks) || marks < 0) {
-          toast.error(`Invalid marks for ${s.name}`);
+        if (isNaN(marks) || marks < 0 || marks > 100) {
+          toast.error(`Invalid marks for ${s.name} — must be between 0 and 100`);
           return;
         }
       }
