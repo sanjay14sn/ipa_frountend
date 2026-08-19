@@ -162,6 +162,12 @@ export default function FranchiseCertificateDetails({
       },
     },
     {
+      key: "requestDate",
+      header: "Request date",
+      className: "text-center",
+      render: (req) => (req.requestDate ? formatDate(req.requestDate) : "—"),
+    },
+    {
       key: "dispatch",
       header: "Dispatch",
       className: "text-center",
