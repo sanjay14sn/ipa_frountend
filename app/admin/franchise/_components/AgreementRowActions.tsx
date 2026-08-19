@@ -4,12 +4,17 @@ import { useState } from "react";
 import {
   Ban,
   Download,
+  Eye,
   MoreHorizontal,
   PackageOpen,
   PauseCircle,
   RefreshCw,
 } from "lucide-react";
-import type { AgreementRecord } from "@/services/agreement.service";
+import {
+  getScheduleBPdfPathAdmin,
+  type AgreementRecord,
+} from "@/services/agreement.service";
+import { FilePreviewDialog } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -42,6 +47,7 @@ export function AgreementRowActions({
 }) {
   const vis = getAgreementActionVisibility(agreement, "admin");
 
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [manageKitOpen, setManageKitOpen] = useState(false);
   const [renewalOpen, setRenewalOpen] = useState(false);
   const [suspendOpen, setSuspendOpen] = useState(false);
@@ -74,6 +80,10 @@ export function AgreementRowActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => setPreviewOpen(true)}>
+            <Eye className="mr-2 h-4 w-4" />
+            View Schedule B
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => void onDownloadScheduleB()}>
             <Download className="mr-2 h-4 w-4" />
             Download Schedule B
@@ -110,6 +120,18 @@ export function AgreementRowActions({
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <FilePreviewDialog
+        files={[
+          {
+            url: getScheduleBPdfPathAdmin(agreement.id),
+            filename: `schedule-b-agreement-${agreement.id}.pdf`,
+          },
+        ]}
+        index={previewOpen ? 0 : null}
+        onIndexChange={() => {}}
+        onClose={() => setPreviewOpen(false)}
+      />
 
       {showManageKit ? (
         <ManageKitDialog

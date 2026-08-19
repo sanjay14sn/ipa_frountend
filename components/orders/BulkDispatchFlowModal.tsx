@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -18,6 +18,7 @@ import {
   AppDialogFooter,
   AppDialogHeader,
 } from "@/components/shared/dialog";
+import { FilePreviewBody } from "@/components/shared";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -171,13 +172,12 @@ export function BulkDispatchFlowModal({
   const [step, setStep] = useState<"select" | "preview">("select");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [search, setSearch] = useState("");
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [orderMode, setOrderMode] = useState<"new" | "existing">("new");
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [approvedIds, setApprovedIds] = useState<number[]>([]);
   const [alreadyIssuedIds, setAlreadyIssuedIds] = useState<number[]>([]);
   const [failedIds, setFailedIds] = useState<number[]>([]);
-  const downloadedKeyRef = useRef<string | null>(null);
 
   const eligibleQuery = useApproveAndDispatchEligibleCertificates(
     { franchiseId, page: 1, limit: 100 },
@@ -206,11 +206,7 @@ export function BulkDispatchFlowModal({
     setApprovedIds([]);
     setAlreadyIssuedIds([]);
     setFailedIds([]);
-    if (pdfUrl) {
-      window.URL.revokeObjectURL(pdfUrl);
-    }
-    setPdfUrl(null);
-    downloadedKeyRef.current = null;
+    setPdfBlob(null);
   }
 
   useEffect(() => {
@@ -219,20 +215,6 @@ export function BulkDispatchFlowModal({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-
-  // Auto-download once when entering preview step with a fresh blob URL.
-  useEffect(() => {
-    if (step !== "preview" || !pdfUrl) return;
-    const key = pdfUrl;
-    if (downloadedKeyRef.current === key) return;
-    downloadedKeyRef.current = key;
-    const a = document.createElement("a");
-    a.href = pdfUrl;
-    a.download = `certificates-bulk-${formatYyyymmdd(new Date())}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }, [step, pdfUrl]);
 
   function toggle(id: number) {
     setSelectedIds((prev) =>
@@ -269,11 +251,7 @@ export function BulkDispatchFlowModal({
         (id) => !failed.includes(id),
       );
       const blob = await previewMutation.mutateAsync(dispatchableIds);
-      if (pdfUrl) {
-        window.URL.revokeObjectURL(pdfUrl);
-      }
-      const url = window.URL.createObjectURL(blob);
-      setPdfUrl(url);
+      setPdfBlob(blob);
 
       // 3) Advance to step 2.
       setStep("preview");
@@ -303,10 +281,7 @@ export function BulkDispatchFlowModal({
           skipped ? ` (${skipped} skipped)` : ""
         }`,
       );
-      if (pdfUrl) {
-        window.URL.revokeObjectURL(pdfUrl);
-      }
-      setPdfUrl(null);
+      setPdfBlob(null);
       onComplete();
       onOpenChange(false);
     } catch (err) {
@@ -317,11 +292,7 @@ export function BulkDispatchFlowModal({
   }
 
   function handleBack() {
-    if (pdfUrl) {
-      window.URL.revokeObjectURL(pdfUrl);
-      setPdfUrl(null);
-    }
-    downloadedKeyRef.current = null;
+    setPdfBlob(null);
     setStep("select");
   }
 
@@ -578,15 +549,17 @@ export function BulkDispatchFlowModal({
                 </div>
               ) : null}
 
-              <div className="min-h-0 flex-1 overflow-hidden">
-                {pdfUrl ? (
-                  <iframe
-                    src={pdfUrl}
-                    title="Bulk certificate dispatch preview"
-                    className="block h-full w-full rounded-md border border-border/60 bg-white shadow-sm"
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border/60 bg-card shadow-sm">
+                {pdfBlob ? (
+                  <FilePreviewBody
+                    source={{
+                      kind: "blob",
+                      blob: pdfBlob,
+                      filename: `certificates-bulk-${formatYyyymmdd(new Date())}.pdf`,
+                    }}
                   />
                 ) : (
-                  <div className="flex h-full items-center justify-center rounded-md border border-border/60 bg-white text-sm text-muted-foreground shadow-sm">
+                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                     Preview unavailable.
                   </div>
                 )}

@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
 import { getFranchiseFeePayable } from "@/lib/gst";
 import { formatRupees } from "@/lib/currency-utils";
 import { type AgreementScheduleBView } from "@/services/agreement.service";
-import { Download, IndianRupee, Loader2 } from "lucide-react";
+import { ExpandableImage } from "@/components/shared";
+import { Download, Eye, IndianRupee, Loader2 } from "lucide-react";
 import { type LucideIcon } from "lucide-react";
 import { fmtShortDate } from "@/components/agreements/record-detail/agreement-utils";
 
@@ -127,6 +128,7 @@ export function ScheduleBCard({
   executedAt,
   loading,
   onDownload,
+  onPreview,
   downloadDisabled = false,
   downloadDisabledTitle,
 }: {
@@ -136,6 +138,8 @@ export function ScheduleBCard({
   loading: boolean;
   /** When omitted and `downloadDisabled` is false, the Download PDF action is hidden. */
   onDownload?: () => void;
+  /** Opens the in-app PDF viewer. Hidden when omitted. */
+  onPreview?: () => void;
   /** Franchisee: disabled while franchise-fee receivables are still pending. */
   downloadDisabled?: boolean;
   downloadDisabledTitle?: string;
@@ -187,23 +191,31 @@ export function ScheduleBCard({
               Commercial schedule and royalty breakup for this agreement.
             </p>
           </div>
-          {onDownload || downloadDisabled ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={loading || downloadDisabled}
-              onClick={onDownload}
-              title={downloadDisabled ? downloadDisabledTitle : undefined}
-            >
-              {loading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-2 h-4 w-4" />
-              )}
-              Download PDF
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {onPreview ? (
+              <Button type="button" variant="outline" size="sm" onClick={onPreview}>
+                <Eye className="mr-2 h-4 w-4" />
+                View PDF
+              </Button>
+            ) : null}
+            {onDownload || downloadDisabled ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={loading || downloadDisabled}
+                onClick={onDownload}
+                title={downloadDisabled ? downloadDisabledTitle : undefined}
+              >
+                {loading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                Download PDF
+              </Button>
+            ) : null}
+          </div>
         </div>
       </CardHeader>
 
@@ -407,12 +419,11 @@ export function ScheduleBCard({
                 </div>
                 {signatureSrc ? (
                   <div className="overflow-hidden rounded-lg border bg-muted/30 p-3 min-h-20 flex items-center justify-center">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <ExpandableImage
                       src={signatureSrc}
                       alt="Franchisee signature"
-                      className="mx-auto max-h-20 w-auto max-w-full object-contain"
-                      loading="lazy"
+                      imgClassName="mx-auto max-h-20 w-auto max-w-full object-contain"
+                      className="mx-auto"
                     />
                   </div>
                 ) : (

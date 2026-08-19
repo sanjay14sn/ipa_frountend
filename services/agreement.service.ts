@@ -732,16 +732,25 @@ async function downloadScheduleBPdf(url: string): Promise<void> {
   window.URL.revokeObjectURL(objectUrl);
 }
 
+/** Api-relative Schedule-B PDF paths — shared by download and in-app preview. */
+export function getScheduleBPdfPathAdmin(agreementId: number): string {
+  return `/admin/agreement/${agreementId}/schedule-b-pdf`;
+}
+
+export function getScheduleBPdfPathMine(agreementId: number): string {
+  return `/agreement/${agreementId}/schedule-b-pdf`;
+}
+
 export async function downloadScheduleBPdfAdmin(
   agreementId: number,
 ): Promise<void> {
-  await downloadScheduleBPdf(`/admin/agreement/${agreementId}/schedule-b-pdf`);
+  await downloadScheduleBPdf(getScheduleBPdfPathAdmin(agreementId));
 }
 
 export async function downloadScheduleBPdfMine(
   agreementId: number,
 ): Promise<void> {
-  await downloadScheduleBPdf(`/agreement/${agreementId}/schedule-b-pdf`);
+  await downloadScheduleBPdf(getScheduleBPdfPathMine(agreementId));
 }
 
 /**

@@ -17,6 +17,8 @@ import {
   agreementSignatureSrc,
   downloadScheduleBPdfAdmin,
   downloadScheduleBPdfMine,
+  getScheduleBPdfPathAdmin,
+  getScheduleBPdfPathMine,
   getAdminAgreementContent,
   getFranchiseeAgreementContent,
   getReceivablePlanMine,
@@ -38,6 +40,7 @@ import PaymentBreakdown from "@/components/agreements/PaymentBreakdown";
 import {
   Check,
   Download,
+  Eye,
   FileText,
   Loader2,
   Mail,
@@ -55,7 +58,13 @@ import {
 import { AgreementEmiScheduleCard } from "@/components/agreements/record-detail/AgreementEmiScheduleCard";
 import { ScheduleBCard } from "@/components/agreements/record-detail/ScheduleBCard";
 import type { ESignatureResult, ESignaturePadProps } from "@/components/esignature/ESignaturePad";
-import { ContactPill, ContactPillGrid, FactCell, Timeline } from "@/components/shared";
+import {
+  ContactPill,
+  ContactPillGrid,
+  FactCell,
+  FilePreviewDialog,
+  Timeline,
+} from "@/components/shared";
 import { SignatureDisplay } from "@/components/esignature/SignatureDisplay";
 
 const ESignaturePad = dynamic<ESignaturePadProps>(
@@ -108,6 +117,7 @@ function ReadOnlyAgreementContent({
   onExpandAll,
   onCollapseAll,
   onDownloadPDF,
+  onPreviewPDF,
   downloadDisabled = false,
   downloadDisabledTitle,
   loading,
@@ -126,6 +136,8 @@ function ReadOnlyAgreementContent({
   onCollapseAll: () => void;
   /** When omitted and `downloadDisabled` is false, the PDF download action is hidden. */
   onDownloadPDF?: () => void;
+  /** Opens the in-app PDF viewer. Hidden when omitted. */
+  onPreviewPDF?: () => void;
   downloadDisabled?: boolean;
   downloadDisabledTitle?: string;
   loading: boolean;
@@ -139,6 +151,17 @@ function ReadOnlyAgreementContent({
             <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            {onPreviewPDF ? (
+              <Button
+                onClick={onPreviewPDF}
+                variant="outline"
+                size="sm"
+                className="rounded-lg border-border text-xs"
+              >
+                <Eye className="mr-1 h-3 w-3" />
+                View
+              </Button>
+            ) : null}
             {onDownloadPDF || downloadDisabled ? (
               <Button
                 onClick={onDownloadPDF}
@@ -613,6 +636,7 @@ export function AgreementRecordDetail({
   const pathname = usePathname();
   const isAdminContext = pathname?.startsWith("/admin") ?? false;
   const [schedulePdfLoading, setSchedulePdfLoading] = useState(false);
+  const [scheduleBPreviewOpen, setScheduleBPreviewOpen] = useState(false);
   const [fullReceivablePlan, setFullReceivablePlan] =
     useState<ReceivableInstallmentSummary | null>(null);
   const [fullReceivablePlanLoading, setFullReceivablePlanLoading] =
@@ -685,6 +709,9 @@ export function AgreementRecordDetail({
   const canDownloadScheduleB = actionVisibility.download;
   const scheduleBDownloadDisabledTitle =
     "Complete pending franchise fee payments to download Schedule B";
+  const scheduleBPdfPath = isAdminContext
+    ? getScheduleBPdfPathAdmin(data.id)
+    : getScheduleBPdfPathMine(data.id);
 
   async function handleDownloadScheduleB() {
     setSchedulePdfLoading(true);
@@ -791,6 +818,11 @@ export function AgreementRecordDetail({
                 ? () => void handleDownloadScheduleB()
                 : undefined
             }
+            onPreviewPDF={
+              canDownloadScheduleB
+                ? () => setScheduleBPreviewOpen(true)
+                : undefined
+            }
             downloadDisabled={!isAdminContext && !canDownloadScheduleB}
             downloadDisabledTitle={scheduleBDownloadDisabledTitle}
             sections={agreementContent.sections}
@@ -807,6 +839,11 @@ export function AgreementRecordDetail({
             onDownload={
               canDownloadScheduleB
                 ? () => void handleDownloadScheduleB()
+                : undefined
+            }
+            onPreview={
+              canDownloadScheduleB
+                ? () => setScheduleBPreviewOpen(true)
                 : undefined
             }
             downloadDisabled={!isAdminContext && !canDownloadScheduleB}
@@ -829,6 +866,18 @@ export function AgreementRecordDetail({
           </TabsContent>
         ) : null}
       </Tabs>
+
+      <FilePreviewDialog
+        files={[
+          {
+            url: scheduleBPdfPath,
+            filename: `schedule-b-agreement-${data.id}.pdf`,
+          },
+        ]}
+        index={scheduleBPreviewOpen ? 0 : null}
+        onIndexChange={() => {}}
+        onClose={() => setScheduleBPreviewOpen(false)}
+      />
     </div>
   );
 }

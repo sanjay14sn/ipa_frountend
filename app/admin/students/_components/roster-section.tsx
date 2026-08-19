@@ -196,7 +196,7 @@ export function RosterSection() {
           title="View certificates"
           aria-label="View certificates"
         >
-          <Award className="h-3.5 w-3.5 text-emerald-600" />
+          <Award className="h-3.5 w-3.5 text-success" />
         </Button>
       ),
     },

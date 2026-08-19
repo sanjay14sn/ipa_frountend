@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Loader2, PlayCircle } from "lucide-react";
+import { Download, Eye, Loader2, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FilePreviewDialog } from "@/components/shared";
 import {
   downloadScheduleBPdfAdmin,
+  getScheduleBPdfPathAdmin,
   type AgreementRecord,
 } from "@/services/agreement.service";
 import { getErrorMessage } from "@/lib/error-utils";
@@ -30,6 +32,7 @@ export function AgreementActionBar({ agreement }: { agreement: AgreementRecord }
   const status = agreementStatusBadge(agreement.status, agreement.signed);
 
   const [downloading, setDownloading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [reactivateOpen, setReactivateOpen] = useState(false);
 
   const reactivate = useReactivateAgreementMutation(agreement.id);
@@ -53,21 +56,33 @@ export function AgreementActionBar({ agreement }: { agreement: AgreementRecord }
       </Badge>
 
       {vis.download ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="rounded-lg"
-          onClick={() => void handleDownload()}
-          disabled={downloading}
-        >
-          {downloading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="mr-2 h-4 w-4" />
-          )}
-          Schedule B
-        </Button>
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-lg"
+            onClick={() => setPreviewOpen(true)}
+          >
+            <Eye className="mr-2 h-4 w-4" />
+            View Schedule B
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-lg"
+            onClick={() => void handleDownload()}
+            disabled={downloading}
+          >
+            {downloading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Schedule B
+          </Button>
+        </>
       ) : null}
 
       {vis.reactivate ? (
@@ -89,6 +104,17 @@ export function AgreementActionBar({ agreement }: { agreement: AgreementRecord }
       ) : null}
 
       {vis.renew ? <IssueRenewalButton agreement={agreement} /> : null}
+      <FilePreviewDialog
+        files={[
+          {
+            url: getScheduleBPdfPathAdmin(agreement.id),
+            filename: `schedule-b-agreement-${agreement.id}.pdf`,
+          },
+        ]}
+        index={previewOpen ? 0 : null}
+        onIndexChange={() => {}}
+        onClose={() => setPreviewOpen(false)}
+      />
       <ConfirmDialog
         open={reactivateOpen}
         onOpenChange={setReactivateOpen}

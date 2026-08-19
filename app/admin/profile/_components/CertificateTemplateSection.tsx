@@ -1,33 +1,5 @@
 "use client";
 
-// PDF.js is loaded dynamically from a CDN script tag; declare its shape so
-// we can avoid `(window as any)` casts throughout this file.
-declare global {
-  interface Window {
-    pdfjsLib?: {
-      getDocument: (params: {
-        url: string;
-        withCredentials?: boolean;
-        isEvalSupported?: boolean;
-      }) => {
-        promise: Promise<{
-          numPages: number;
-          getPage: (
-            n: number,
-          ) => Promise<{
-            getViewport: (opts: {
-              scale: number;
-            }) => { width: number; height: number };
-            render: (ctx: object) => { promise: Promise<void> };
-          }>;
-        }>;
-      };
-      GlobalWorkerOptions: { workerSrc: string };
-    };
-    pdfjs?: Window["pdfjsLib"];
-  }
-}
-
 import { useState, useEffect, useRef } from "react";
 import { Loader2, Plus, Trash2, FileText } from "lucide-react";
 import { toast } from "sonner";
@@ -41,6 +13,8 @@ import {
   type FieldCoordinate,
 } from "@/services/program.service";
 import { getApiBaseUrl } from "@/lib/api-utils";
+import { api } from "@/lib/axios";
+import { loadPdfjs } from "@/lib/pdfjs";
 import { sendClientLog } from "@/lib/client-telemetry";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import dynamic from "next/dynamic";
@@ -487,58 +461,45 @@ export function CertificateTemplateSection({
       if (!templatePreviewUrl || typeof window === "undefined") return;
 
       try {
-        let pdfjsLib = window.pdfjsLib;
+        const pdfjs = await loadPdfjs();
 
-        if (!pdfjsLib) {
-          await new Promise<void>((resolve, reject) => {
-            const script = document.createElement("script");
-            script.src =
-              "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-            script.onload = () => {
-              pdfjsLib = window.pdfjsLib ?? window.pdfjs;
-              if (pdfjsLib) {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
-                resolve();
-              } else {
-                reject(new Error("PDF.js failed to load"));
-              }
-            };
-            script.onerror = () =>
-              reject(new Error("Failed to load PDF.js script"));
-            document.head.appendChild(script);
-          });
-        }
+        // A freshly selected file is a local blob: URL; a saved template is a
+        // cookie-gated /uploads URL that must ride the shared axios instance.
+        const data: ArrayBuffer = templatePreviewUrl.startsWith("blob:")
+          ? await (await fetch(templatePreviewUrl)).arrayBuffer()
+          : (
+              await api.get<ArrayBuffer>(templatePreviewUrl, {
+                responseType: "arraybuffer",
+              })
+            ).data;
 
-        if (!pdfjsLib) throw new Error("PDF.js not available");
-
-        const loadingTask = pdfjsLib.getDocument({
-          url: templatePreviewUrl,
-          withCredentials: false,
-          isEvalSupported: false,
-        });
+        // pdf.js v6 dropped the `isEvalSupported` option (the eval-based font
+        // path it guarded no longer exists).
+        const loadingTask = pdfjs.getDocument({ data });
         const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1);
+        try {
+          const page = await pdf.getPage(1);
 
-        const { width: pdfWidth, height: pdfHeight } = page.getViewport({
-          scale: 1.0,
-        });
+          const { width: pdfWidth, height: pdfHeight } = page.getViewport({
+            scale: 1.0,
+          });
 
-        const viewport = page.getViewport({ scale: 2.0 });
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
+          const viewport = page.getViewport({ scale: 2.0 });
+          const canvas = document.createElement("canvas");
 
-        if (!context) return;
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
 
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
+          await page.render({ canvas, viewport }).promise;
 
-        await page.render({ canvasContext: context, viewport }).promise;
+          // A newer render started while this one was in flight — drop it.
+          if (seq !== pdfRenderSeqRef.current) return;
 
-        // A newer render started while this one was in flight — drop it.
-        if (seq !== pdfRenderSeqRef.current) return;
-
-        setTemplateImageUrl(canvas.toDataURL("image/png"));
-        setPdfScale({ width: pdfWidth, height: pdfHeight, scale: 2.0 });
+          setTemplateImageUrl(canvas.toDataURL("image/png"));
+          setPdfScale({ width: pdfWidth, height: pdfHeight, scale: 2.0 });
+        } finally {
+          void pdf.loadingTask.destroy().catch(() => {});
+        }
       } catch (error) {
         sendClientLog({
           level: "error",

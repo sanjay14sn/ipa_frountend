@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Truck, PackageCheck, X, Download } from "lucide-react";
+import { Truck, PackageCheck, X } from "lucide-react";
 import { toast } from "sonner";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { formatRupees } from "@/lib/currency-utils";
@@ -29,6 +29,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ConfirmDialog } from "@/components/shared/dialog";
 import { ShipShipmentDialog } from "./ShipShipmentDialog";
+import { DcDownload } from "@/components/orders/DcDownload";
 import { DispatchItemsSummaryTable } from "@/components/orders/DispatchItemsSummaryTable";
 import type { ShipShipmentDto } from "@/services/fulfillment.service";
 import { useListParams } from "@/hooks/use-list-params";
@@ -192,16 +193,12 @@ export default function AdminShippingTable({
                 </Button>
               ) : null}
               {row.dcPdfPath && !isCancelled ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 p-0"
-                  title="Download delivery challan"
-                  aria-label="Download delivery challan"
+                <DcDownload
+                  variant="icon"
+                  label="Download delivery challan"
+                  previewUrl={`/uploads/${row.dcPdfPath}`}
                   onClick={() => void downloadChallan(row.dcPdfPath!)}
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
+                />
               ) : null}
               {!isDone ? (
                 <Button
@@ -262,13 +259,12 @@ export default function AdminShippingTable({
                   value={(() => {
                     const cancelled = row.status === "CANCELLED";
                     return row.dcPdfPath && !cancelled ? (
-                      <button
-                        className="flex items-center gap-1 text-primary underline underline-offset-2 hover:opacity-75"
+                      <DcDownload
+                        variant="link"
+                        label="Download"
+                        previewUrl={`/uploads/${row.dcPdfPath}`}
                         onClick={() => void downloadChallan(row.dcPdfPath!)}
-                      >
-                        <Download className="h-3 w-3" />
-                        Download
-                      </button>
+                      />
                     ) : (
                       "Not generated"
                     );

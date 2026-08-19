@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { DetailDialog } from "@/components/shared/dialog";
-import { StatusBadge } from "@/components/shared";
+import { FilePreviewDialog, StatusBadge } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Award, Download, Loader2 } from "lucide-react";
+import { Award, Eye, Loader2 } from "lucide-react";
 import {
   getStudentCertificates,
   getAdminStudentCertificates,
@@ -36,6 +36,11 @@ export default function StudentCertificatesModal({
 }: StudentCertificatesModalProps) {
   const [certificates, setCertificates] = useState<StudentCertificate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open) setPreviewIndex(null);
+  }, [open]);
 
   useEffect(() => {
     if (!open || !studentId) return;
@@ -73,14 +78,26 @@ export default function StudentCertificatesModal({
   const getTotalMarks = (certificate: StudentCertificate) =>
     certificate.totalMarks || certificate.levelTotalMarks || 0;
 
-  const handleDownload = (certificate: StudentCertificate) => {
-    const url = mode === "admin"
-      ? getAdminCertificatePdfUrl(certificate.id)
-      : getFranchiseeCertificatePdfUrl(certificate.id);
-    window.open(url, "_blank");
+  const issuedCertificates = certificates.filter(
+    (certificate) => certificate.status === "Issued",
+  );
+  const previewFiles = issuedCertificates.map((certificate) => ({
+    url:
+      mode === "admin"
+        ? getAdminCertificatePdfUrl(certificate.id)
+        : getFranchiseeCertificatePdfUrl(certificate.id),
+    filename: `${studentName || certificate.studentName || "certificate"}-${certificate.certificateLevel}.pdf`,
+  }));
+
+  const handleView = (certificate: StudentCertificate) => {
+    const index = issuedCertificates.findIndex(
+      (issued) => issued.id === certificate.id,
+    );
+    if (index >= 0) setPreviewIndex(index);
   };
 
   return (
+    <>
     <DetailDialog
       open={open}
       onOpenChange={onOpenChange}
@@ -141,12 +158,12 @@ export default function StudentCertificatesModal({
                   variant="outline"
                   size="icon"
                   disabled={!hasPdf}
-                  onClick={() => handleDownload(certificate)}
-                  title={hasPdf ? "Download PDF" : "PDF not yet available"}
-                  aria-label={hasPdf ? "Download PDF" : "PDF not yet available"}
+                  onClick={() => handleView(certificate)}
+                  title={hasPdf ? "View certificate" : "PDF not yet available"}
+                  aria-label={hasPdf ? "View certificate" : "PDF not yet available"}
                   className="h-8 w-8 shrink-0 rounded-md"
                 >
-                  <Download className="h-4 w-4" />
+                  <Eye className="h-4 w-4" />
                 </Button>
               </div>
             );
@@ -154,5 +171,12 @@ export default function StudentCertificatesModal({
         </div>
       )}
     </DetailDialog>
+    <FilePreviewDialog
+      files={previewFiles}
+      index={previewIndex}
+      onIndexChange={setPreviewIndex}
+      onClose={() => setPreviewIndex(null)}
+    />
+    </>
   );
 }

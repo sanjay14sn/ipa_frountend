@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { Camera, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ExpandableImage } from "../file-preview/expandable-image";
 import { AvatarMonogram, type AvatarSize } from "./avatar-monogram";
 
 export interface ProfilePhotoControlProps {
@@ -16,6 +17,8 @@ export interface ProfilePhotoControlProps {
   isBusy?: boolean;
   disabled?: boolean;
   size?: AvatarSize;
+  /** Click the photo to view it full size. Default true (when a photo exists). */
+  expandable?: boolean;
   className?: string;
 }
 
@@ -32,6 +35,7 @@ export function ProfilePhotoControl({
   isBusy = false,
   disabled = false,
   size = "lg",
+  expandable = true,
   className,
 }: ProfilePhotoControlProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,7 +46,18 @@ export function ProfilePhotoControl({
       data-testid="profile-photo-control"
       className={cn("flex items-center gap-3", className)}
     >
-      <AvatarMonogram name={name} src={src} size={size} />
+      {expandable && src ? (
+        <ExpandableImage
+          src={src}
+          alt={name ? `${name} photo` : "Profile photo"}
+          filename={name || "profile-photo"}
+          className="shrink-0 rounded-full"
+        >
+          <AvatarMonogram name={name} src={src} size={size} />
+        </ExpandableImage>
+      ) : (
+        <AvatarMonogram name={name} src={src} size={size} />
+      )}
       <input
         ref={fileInputRef}
         type="file"

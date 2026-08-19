@@ -3,6 +3,7 @@ import { PenLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/date-utils";
 import { OnFileBadge } from "@/components/shared/status-badge";
+import { ExpandableImage } from "@/components/shared/file-preview/expandable-image";
 
 export interface SignatureDisplayProps {
   /** Signature image source (SVG/PNG url or data URI). */
@@ -16,6 +17,8 @@ export interface SignatureDisplayProps {
   onFile?: boolean;
   /** Rendered inside the frame when no signature exists (CTA, copy). */
   emptyContent?: React.ReactNode;
+  /** Click the signature to view it full size. Default true. */
+  expandable?: boolean;
   className?: string;
 }
 
@@ -33,6 +36,7 @@ export function SignatureDisplay({
   maxH = "sm",
   onFile = false,
   emptyContent,
+  expandable = true,
   className,
 }: SignatureDisplayProps) {
   return (
@@ -44,13 +48,21 @@ export function SignatureDisplay({
       </div>
       {src ? (
         <div className="flex items-center justify-center rounded-lg border bg-muted/30 py-3">
-          {/* eslint-disable-next-line @next/next/no-img-element -- API-served signature behind session cookies; next/image optimization can't forward credentials */}
-          <img
-            src={src}
-            alt={signerLabel}
-            className={cn("w-auto max-w-full object-contain", MAX_H[maxH])}
-            loading="lazy"
-          />
+          {expandable ? (
+            <ExpandableImage
+              src={src}
+              alt={signerLabel}
+              imgClassName={cn("w-auto max-w-full object-contain", MAX_H[maxH])}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element -- API-served signature behind session cookies; next/image optimization can't forward credentials
+            <img
+              src={src}
+              alt={signerLabel}
+              className={cn("w-auto max-w-full object-contain", MAX_H[maxH])}
+              loading="lazy"
+            />
+          )}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-muted/30 py-3">

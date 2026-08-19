@@ -1,7 +1,9 @@
 "use client";
 
-import { Download, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Download, Eye, Loader2 } from "lucide-react";
 
+import { FilePreviewDialog } from "@/components/shared";
 import { RowActionButton } from "@/components/shared/row-action-button";
 import { cn } from "@/lib/utils";
 
@@ -12,12 +14,15 @@ export interface DcDownloadProps {
   busy?: boolean;
   /** @default "Delivery challan" */
   label?: string;
+  /** In-app preview URL (api-relative, e.g. `/uploads/<dcPdfPath>`). Adds a View action. */
+  previewUrl?: string;
   className?: string;
 }
 
 /**
- * The delivery-challan download affordance, identical in orders and
- * shipping. Link variant = inline text link; icon variant = RowActionButton.
+ * The delivery-challan affordance, identical in orders and shipping.
+ * Link variant = inline text link; icon variant = RowActionButton.
+ * With `previewUrl` set, a View action opens the challan in the in-app viewer.
  */
 export function DcDownload({
   href,
@@ -25,20 +30,48 @@ export function DcDownload({
   variant,
   busy = false,
   label = "Delivery challan",
+  previewUrl,
   className,
 }: DcDownloadProps) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const previewDialog = previewUrl ? (
+    <FilePreviewDialog
+      files={[
+        {
+          url: previewUrl,
+          filename: previewUrl.split("/").pop() || "delivery-challan.pdf",
+        },
+      ]}
+      index={previewOpen ? 0 : null}
+      onIndexChange={() => {}}
+      onClose={() => setPreviewOpen(false)}
+    />
+  ) : null;
+
   if (variant === "icon") {
     return (
-      <RowActionButton
-        icon={Download}
-        label={label}
-        busy={busy}
-        onClick={() => {
-          if (onClick) onClick();
-          else if (href) window.open(href, "_blank", "noopener");
-        }}
-        className={className}
-      />
+      <>
+        {previewUrl ? (
+          <RowActionButton
+            icon={Eye}
+            label="View delivery challan"
+            onClick={() => setPreviewOpen(true)}
+            className={className}
+          />
+        ) : null}
+        <RowActionButton
+          icon={Download}
+          label={label}
+          busy={busy}
+          onClick={() => {
+            if (onClick) onClick();
+            else if (href) window.open(href, "_blank", "noopener");
+          }}
+          className={className}
+        />
+        {previewDialog}
+      </>
     );
   }
 
@@ -57,7 +90,7 @@ export function DcDownload({
     className,
   );
 
-  return href ? (
+  const downloadNode = href ? (
     <a
       data-testid="dc-download"
       className={linkClass}
@@ -77,5 +110,23 @@ export function DcDownload({
     >
       {body}
     </button>
+  );
+
+  if (!previewUrl) return downloadNode;
+
+  return (
+    <span className="inline-flex items-center gap-3">
+      <button
+        data-testid="dc-preview"
+        type="button"
+        className={linkClass}
+        onClick={() => setPreviewOpen(true)}
+      >
+        <Eye className="h-3.5 w-3.5" />
+        View
+      </button>
+      {downloadNode}
+      {previewDialog}
+    </span>
   );
 }

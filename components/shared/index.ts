@@ -72,3 +72,16 @@ export { SummaryStatCard, SummaryStatGrid } from "./summary-stat-card";
 export { TableMainCell } from "./table-main-cell";
 
 export * from "./profile";
+
+export { FilePreviewDialog } from "./file-preview/file-preview-dialog";
+export type {
+  PreviewFile,
+  FilePreviewDialogProps,
+} from "./file-preview/file-preview-dialog";
+export { FilePreviewBody } from "./file-preview/file-preview-body";
+export type {
+  FilePreviewBodyProps,
+  FilePreviewSource,
+} from "./file-preview/file-preview-body";
+export { ExpandableImage } from "./file-preview/expandable-image";
+export type { ExpandableImageProps } from "./file-preview/expandable-image";

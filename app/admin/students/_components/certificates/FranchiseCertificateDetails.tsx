@@ -6,11 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { DetailDialog } from "@/components/shared/dialog";
-import { Check, X, FileText, ExternalLink } from "lucide-react";
+import { Check, X, FileText } from "lucide-react";
 import {
   DataTable,
   ExpandedDetailSection,
   ExpandedDetailSurface,
+  FilePreviewBody,
   StatusBadge,
   TableMainCell,
   type DataTableColumn,
@@ -326,30 +327,26 @@ export default function FranchiseCertificateDetails({
             : "Certificate preview"
         }
         footer={{
-          primary: {
-            label: "Open in New Tab",
-            onClick: () => window.open(certificatePreviewUrl, "_blank"),
-            disabled: !certificatePreviewUrl,
-          },
           secondary: {
             label: "Close",
             onClick: () => setSelectedCertificate(null),
           },
         }}
       >
-        <div className="min-h-[65vh] flex-1 overflow-hidden rounded-lg border bg-muted">
+        <div className="flex h-[65vh] flex-col overflow-hidden rounded-lg border">
           {certificatePreviewUrl ? (
-            <iframe
-              src={certificatePreviewUrl}
-              title={
-                selectedCertificate
-                  ? `${selectedCertificate.studentName} certificate`
-                  : "Certificate preview"
-              }
-              className="h-full min-h-[65vh] w-full bg-white"
+            <FilePreviewBody
+              key={certificatePreviewUrl}
+              source={{
+                kind: "url",
+                url: certificatePreviewUrl,
+                filename: selectedCertificate
+                  ? `${selectedCertificate.studentName}-certificate.pdf`
+                  : "certificate.pdf",
+              }}
             />
           ) : (
-            <div className="flex h-full min-h-[65vh] items-center justify-center p-6 text-sm text-muted-foreground">
+            <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
               Certificate PDF is not available.
             </div>
           )}

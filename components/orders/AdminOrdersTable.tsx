@@ -527,6 +527,7 @@ export default function AdminOrdersTable({
                     <DcDownload
                       variant="link"
                       label="Download"
+                      previewUrl={`/uploads/${order.shipment!.dcPdfPath!}`}
                       onClick={() => void downloadChallan(order.shipment!.dcPdfPath!)}
                     />
                   ) : (
