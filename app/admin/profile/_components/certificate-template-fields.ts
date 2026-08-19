@@ -26,8 +26,8 @@ export const CERTIFICATE_FIELDS: CertificateFieldDef[] = [
   {
     key: "student_level",
     label: "Student Level",
-    sample: "3",
-    description: "Completed level number",
+    sample: "III",
+    description: "Completed level as a Roman numeral (I–XX)",
   },
   {
     key: "student_stream",
