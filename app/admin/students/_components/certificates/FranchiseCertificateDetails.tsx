@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { formatDate } from "@/lib/date-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DetailDialog } from "@/components/shared/dialog";
 import { Check, X, FileText } from "lucide-react";
 import {
@@ -15,7 +17,6 @@ import {
   StatusBadge,
   TableMainCell,
   type DataTableColumn,
-  type DataTableFilter,
 } from "@/components/shared";
 import {
   AdminCertificateRequest,
@@ -28,37 +29,70 @@ import {
   useAdminCertificateDetails,
   useDispatchEligibleOrders,
 } from "@/hooks/api/student.hooks";
+import { queryKeys } from "@/hooks/api/query-keys";
 import { useApproveAndDispatchEligibleCertificates } from "@/hooks/api/certificate-dispatch.hooks";
 import { BulkDispatchFlowModal } from "@/components/orders/BulkDispatchFlowModal";
+
+/** One pipeline stage — a pure projection of `status` + `dispatchStatus`. */
+type Stage = "all" | "requested" | "ready" | "dispatched" | "rejected";
+
+const STAGE_QUERY: Record<
+  Stage,
+  { status?: string; dispatchStatus?: string }
+> = {
+  all: {},
+  requested: { status: "Pending" },
+  ready: { status: "Issued", dispatchStatus: "NOT_DISPATCHED" },
+  dispatched: { dispatchStatus: "DISPATCHED" },
+  rejected: { status: "Rejected" },
+};
+
+const SECTION_TITLES: Record<Stage, string> = {
+  all: "Certificate requests",
+  requested: "Awaiting approval",
+  ready: "Ready to dispatch",
+  dispatched: "Dispatched certificates",
+  rejected: "Rejected requests",
+};
 
 interface FranchiseCertificateDetailsProps {
   franchiseId: string;
   franchiseName: string;
+  /** Per-stage counts from the parent summary row — shown as tab badges. */
+  counts?: {
+    pending: number;
+    ready: number;
+    dispatched: number;
+    rejected: number;
+  };
 }
 
 export default function FranchiseCertificateDetails({
   franchiseId,
   franchiseName,
+  counts,
 }: FranchiseCertificateDetailsProps) {
   const [page, setPage] = useState(1);
   const limit = 10;
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [stage, setStage] = useState<Stage>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCertificate, setSelectedCertificate] =
     useState<AdminCertificateRequest | null>(null);
   const [dateFilter, setDateFilter] = useState("");
   const [dispatchOpen, setDispatchOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const queryParams = useMemo(
     () => ({
       page,
       limit,
       search: searchTerm || undefined,
-      status: statusFilter,
+      status: STAGE_QUERY[stage].status ?? "all",
+      dispatchStatus: STAGE_QUERY[stage].dispatchStatus,
       sortBy: "id",
       sortOrder: "DESC" as const,
     }),
-    [page, searchTerm, statusFilter],
+    [page, searchTerm, stage],
   );
 
   const detailsQuery = useAdminCertificateDetails(franchiseId, queryParams);
@@ -117,14 +151,7 @@ export default function FranchiseCertificateDetails({
     }
   };
 
-  const sectionTitle =
-    statusFilter === "Pending"
-      ? "Awaiting approval"
-      : statusFilter === "Issued"
-        ? "Issued certificates"
-        : statusFilter === "Rejected"
-          ? "Rejected requests"
-          : "Certificate requests";
+  const sectionTitle = SECTION_TITLES[stage];
 
   const columns: DataTableColumn<AdminCertificateRequest>[] = [
     {
@@ -140,11 +167,6 @@ export default function FranchiseCertificateDetails({
           {req.studentLevel}
         </Badge>
       ),
-    },
-    {
-      key: "certificate",
-      header: "Certificate",
-      render: (req) => req.templateName || "—",
     },
     {
       key: "instructor",
@@ -169,17 +191,21 @@ export default function FranchiseCertificateDetails({
       render: (req) => (req.requestDate ? formatDate(req.requestDate) : "—"),
     },
     {
-      key: "dispatch",
-      header: "Dispatch",
+      key: "stage",
+      header: "Stage",
       className: "text-center",
       render: (req) =>
-        req.dispatchStatus === "Dispatched" ? (
+        req.status === "Pending" ? (
+          <StatusBadge tone="warning" label="Requested" />
+        ) : req.status === "Rejected" ? (
+          <StatusBadge tone="destructive" label="Rejected" />
+        ) : req.dispatchStatus === "Dispatched" ? (
           <StatusBadge
             tone="success"
             label={`Dispatched${req.dispatchedAt ? ` ${formatDate(req.dispatchedAt)}` : ""}`}
           />
         ) : (
-          <StatusBadge tone="neutral" label="Not dispatched" />
+          <StatusBadge tone="info" label="Ready to dispatch" />
         ),
     },
     {
@@ -222,24 +248,44 @@ export default function FranchiseCertificateDetails({
             <FileText className="h-4 w-4 text-blue-600" />
           </Button>
         ) : (
-          <StatusBadge label={req.status} />
+          <span className="text-sm text-muted-foreground">—</span>
         ),
     },
   ];
 
-  const filters: DataTableFilter[] = [
-    {
-      key: "status",
-      label: "Status",
-      options: [
-        { value: "all", label: "All" },
-        { value: "Pending", label: "Pending" },
-        { value: "Issued", label: "Issued" },
-        { value: "Rejected", label: "Rejected" },
-      ],
-      defaultValue: "all",
-    },
-  ];
+  const totalAll = counts
+    ? counts.pending + counts.ready + counts.dispatched + counts.rejected
+    : undefined;
+  const tabBadge = (value: number | undefined) =>
+    value !== undefined ? <Badge variant="secondary">{value}</Badge> : null;
+
+  const stageTabs = (
+    <Tabs
+      value={stage}
+      onValueChange={(value) => {
+        setStage(value as Stage);
+        setPage(1);
+      }}
+    >
+      <TabsList className="h-auto flex-wrap justify-start gap-1">
+        <TabsTrigger value="all" className="gap-2">
+          All {tabBadge(totalAll)}
+        </TabsTrigger>
+        <TabsTrigger value="requested" className="gap-2">
+          Requested {tabBadge(counts?.pending)}
+        </TabsTrigger>
+        <TabsTrigger value="ready" className="gap-2">
+          Ready to dispatch {tabBadge(counts?.ready)}
+        </TabsTrigger>
+        <TabsTrigger value="dispatched" className="gap-2">
+          Dispatched {tabBadge(counts?.dispatched)}
+        </TabsTrigger>
+        <TabsTrigger value="rejected" className="gap-2">
+          Rejected {tabBadge(counts?.rejected)}
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
 
   const toolbarActions = (
     <div className="flex flex-wrap items-center gap-2">
@@ -261,6 +307,7 @@ export default function FranchiseCertificateDetails({
         title="Approves any pending certificates in your selection and dispatches all selected"
       >
         Approve and Dispatch
+        {eligibleCertCount > 0 ? ` (${eligibleCertCount})` : ""}
       </Button>
     </div>
   );
@@ -274,7 +321,9 @@ export default function FranchiseCertificateDetails({
               No franchise selected.
             </p>
           ) : (
-            <DataTable
+            <div className="space-y-3">
+              {stageTabs}
+              <DataTable
               data={requests}
               loading={loading}
               columns={columns}
@@ -282,17 +331,19 @@ export default function FranchiseCertificateDetails({
               renderMainCell={(req) => (
                 <TableMainCell
                   title={req.studentName}
-                  subtitle={req.studentRollNo}
+                  subtitle={[
+                    req.studentRollNo,
+                    req.templateName && req.templateName !== "Level Certificate"
+                      ? req.templateName
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 />
               )}
               searchPlaceholder="Search by student, roll number, or instructor..."
               onSearchChange={(value) => {
                 setSearchTerm(value);
-                setPage(1);
-              }}
-              filters={filters}
-              onFilterChange={(key, value) => {
-                if (key === "status") setStatusFilter(value as string);
                 setPage(1);
               }}
               toolbarActions={toolbarActions}
@@ -304,7 +355,8 @@ export default function FranchiseCertificateDetails({
               resultsText={(count, total) =>
                 `Showing ${count} of ${total} requests`
               }
-            />
+              />
+            </div>
           )}
         </ExpandedDetailSection>
       </ExpandedDetailSurface>
@@ -361,6 +413,9 @@ export default function FranchiseCertificateDetails({
         isLoadingOrders={eligibleQuery.isLoading}
         onComplete={() => {
           void detailsQuery.refetch();
+          void queryClient.invalidateQueries({
+            queryKey: queryKeys.studentAdmin.certSummariesPrefix,
+          });
         }}
       />
     </>

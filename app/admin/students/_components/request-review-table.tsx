@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, StatusBadge, TableMainCell } from "@/components/shared";
-import type { DataTableColumn } from "@/components/shared";
+import type { DataTableColumn, StatusTone } from "@/components/shared";
 import type {
   CertificateFranchiseSummary,
   IdCardFranchiseSummary,
@@ -24,6 +24,22 @@ export interface RequestReviewTableProps {
   /** Kept for the id tab's existing invalidation pattern. */
   refreshTrigger?: number;
   onActionSuccess?: () => void;
+}
+
+/** Non-zero counts get a toned badge; zero stays quiet. */
+function countCell(value: number, tone: StatusTone) {
+  return value > 0 ? (
+    <StatusBadge tone={tone} label={String(value)} />
+  ) : (
+    <span className="text-sm text-muted-foreground">—</span>
+  );
+}
+
+/** Approvals outrank dispatches — a franchise with both says "Approve". */
+function nextActionLabel(g: CertificateFranchiseSummary): string {
+  if (g.totalPending > 0) return `Approve ${g.totalPending}`;
+  if (g.totalReadyToDispatch > 0) return `Dispatch ${g.totalReadyToDispatch}`;
+  return "Up to date";
 }
 
 /**
@@ -95,39 +111,72 @@ export default function RequestReviewTable({
       : [
           { key: "franchise", header: "Franchise", className: "w-[280px]" },
           {
-            key: "pending",
-            header: "Pending",
+            key: "requested",
+            header: "Requested",
             className: "text-center",
-            render: (g) => (
-              <StatusBadge
-                tone="warning"
-                label={String((g as CertificateFranchiseSummary).totalPending)}
-              />
-            ),
+            render: (g) =>
+              countCell(
+                (g as CertificateFranchiseSummary).totalPending,
+                "warning",
+              ),
           },
           {
-            key: "issued",
-            header: "Issued",
+            key: "readyToDispatch",
+            header: "Ready to dispatch",
             className: "text-center",
-            render: (g) => (
-              <StatusBadge tone="success" label={String(g.totalIssued)} />
-            ),
+            render: (g) =>
+              countCell(
+                (g as CertificateFranchiseSummary).totalReadyToDispatch,
+                "info",
+              ),
           },
           {
-            key: "rejected",
-            header: "Rejected",
+            key: "dispatched",
+            header: "Dispatched",
+            className: "text-center",
+            render: (g) =>
+              countCell(
+                (g as CertificateFranchiseSummary).totalDispatched,
+                "success",
+              ),
+          },
+          {
+            key: "nextAction",
+            header: "Next action",
             className: "text-center",
             render: (g) => (
-              <StatusBadge
-                tone="destructive"
-                label={String((g as CertificateFranchiseSummary).totalRejected)}
-              />
+              <span className="text-sm text-muted-foreground">
+                {nextActionLabel(g as CertificateFranchiseSummary)}
+              </span>
             ),
           },
         ];
 
+  const certTotals =
+    kind === "certificate" ? certQuery.data?.totals : undefined;
+
   return (
-    <DataTable
+    <>
+      {kind === "certificate" && !scopedFranchiseId && certTotals ? (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+          <span>
+            Across {total} franchise{total !== 1 ? "s" : ""}:
+          </span>
+          <StatusBadge tone="warning" label={String(certTotals.totalPending)} />
+          <span>requested</span>
+          <StatusBadge
+            tone="info"
+            label={String(certTotals.totalReadyToDispatch)}
+          />
+          <span>ready to dispatch</span>
+          <StatusBadge
+            tone="success"
+            label={String(certTotals.totalDispatched)}
+          />
+          <span>dispatched</span>
+        </div>
+      ) : null}
+      <DataTable
       data={summaries}
       loading={loading}
       columns={columns}
@@ -144,6 +193,12 @@ export default function RequestReviewTable({
           <FranchiseCertificateDetails
             franchiseId={g.franchiseId}
             franchiseName={g.franchiseName}
+            counts={{
+              pending: (g as CertificateFranchiseSummary).totalPending,
+              ready: (g as CertificateFranchiseSummary).totalReadyToDispatch,
+              dispatched: (g as CertificateFranchiseSummary).totalDispatched,
+              rejected: (g as CertificateFranchiseSummary).totalRejected,
+            }}
           />
         )
       }
@@ -170,6 +225,7 @@ export default function RequestReviewTable({
           kind === "id" ? "ID" : "certificate"
         } requests`
       }
-    />
+      />
+    </>
   );
 }

@@ -100,7 +100,17 @@ export interface CertificateFranchiseSummary {
   franchiseName: string;
   totalPending: number;
   totalIssued: number;
+  /** ISSUED but not yet dispatched — the pipeline's "ready" stage. */
+  totalReadyToDispatch: number;
+  totalDispatched: number;
   totalRejected: number;
+}
+
+/** Cross-franchise grand totals for the summary header strip. */
+export interface CertificateSummaryTotals {
+  totalPending: number;
+  totalReadyToDispatch: number;
+  totalDispatched: number;
 }
 
 export interface CertificatePaginationParams {
@@ -110,6 +120,8 @@ export interface CertificatePaginationParams {
   sortBy?: string;
   sortOrder?: string;
   status?: string;
+  /** Raw enum: NOT_DISPATCHED | DISPATCHED. */
+  dispatchStatus?: string;
   programId?: number;
 }
 
@@ -438,21 +450,39 @@ export async function getAdminCertificateSummaries(
 ): Promise<{
   data: CertificateFranchiseSummary[];
   meta: { total: number; totalPages: number };
+  totals: CertificateSummaryTotals;
 }> {
-  const normalized = await getPaginated<Record<string, unknown>>(
-    "/admin/certification/summary",
-    params,
-  );
+  // Not getPaginated: it drops the extra `totals` key the endpoint returns.
+  const response = await api.get("/admin/certification/summary", {
+    params: compactRequestParams(
+      params as Record<string, string | number | boolean | undefined | null>,
+    ),
+  });
+  const result = unwrapData<unknown>(response);
+  const normalized = normalizePaginatedResult<Record<string, unknown>>(result);
+  const rawTotals =
+    result && typeof result === "object"
+      ? ((result as Record<string, unknown>).totals as
+          | Record<string, unknown>
+          | undefined)
+      : undefined;
+  const totals: CertificateSummaryTotals = {
+    totalPending: Number(rawTotals?.totalPending ?? 0),
+    totalReadyToDispatch: Number(rawTotals?.totalReadyToDispatch ?? 0),
+    totalDispatched: Number(rawTotals?.totalDispatched ?? 0),
+  };
   const data = normalized.rows.map((row) => ({
     franchiseId: String(row.franchiseId ?? ""),
     franchiseName: String(row.franchiseName ?? ""),
     totalPending: Number(row.totalPending ?? 0),
     totalIssued: Number(row.totalIssued ?? 0),
+    totalReadyToDispatch: Number(row.totalReadyToDispatch ?? 0),
+    totalDispatched: Number(row.totalDispatched ?? 0),
     totalRejected: Number(row.totalRejected ?? 0),
   }));
   const lim = Number(normalized.limit ?? 20) || 20;
   const totalPages = Math.max(1, Math.ceil(normalized.total / lim));
-  return { data, meta: { total: normalized.total, totalPages } };
+  return { data, meta: { total: normalized.total, totalPages }, totals };
 }
 
 export async function getAdminCertificatesByFranchise(
@@ -470,6 +500,7 @@ export async function getAdminCertificatesByFranchise(
       sortBy: params.sortBy,
       sortOrder: params.sortOrder,
       status: statusParam,
+      dispatchStatus: params.dispatchStatus,
     } as Record<string, string | number | boolean | undefined | null>),
   });
   const result = unwrapData<unknown>(response);
