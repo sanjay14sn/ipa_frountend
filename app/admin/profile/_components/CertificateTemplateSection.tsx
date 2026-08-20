@@ -5,6 +5,7 @@ import { Loader2, Plus, Trash2, FileText } from "lucide-react";
 import { toast } from "sonner";
 import {
   listCertificateTemplates,
+  replaceCertificateTemplateFile,
   updateCertificateTemplate,
   uploadCertificateTemplate,
   deleteCertificateTemplate,
@@ -222,7 +223,21 @@ export function CertificateTemplateSection({
       };
 
       if (templateFile) {
-        await uploadCertificateTemplate(program.id, templateFile, templatePayload);
+        if (templateId != null) {
+          // Editing an existing template: swap its PDF in place (same id,
+          // level attachments kept) instead of creating a new pool entry.
+          await replaceCertificateTemplateFile(
+            templateId,
+            templateFile,
+            templatePayload,
+          );
+        } else {
+          await uploadCertificateTemplate(
+            program.id,
+            templateFile,
+            templatePayload,
+          );
+        }
       } else {
         await updateCertificateTemplate(program.id, {
           id: templateId,

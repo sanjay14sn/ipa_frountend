@@ -139,6 +139,31 @@ export async function uploadCertificateTemplate(
   });
 }
 
+/**
+ * Replace an existing template's PDF in place — same template id, level
+ * attachments kept. Already-issued certificates are unaffected (their PDFs
+ * are rendered and stored at approval time).
+ */
+export async function replaceCertificateTemplateFile(
+  templateId: number,
+  file: File,
+  data: {
+    name?: string;
+    certificateTitle?: string;
+    issuerName?: string;
+    fieldCoordinates?: Record<string, unknown>;
+    additionalText?: string;
+    isActive?: boolean;
+  },
+): Promise<void> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("data", JSON.stringify(data));
+  await api.post(`/admin/certification/template/${templateId}/upload`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
+
 export async function deleteCertificateTemplate(id: number): Promise<void> {
   await api.delete(`/admin/certification/template/${id}`);
 }
