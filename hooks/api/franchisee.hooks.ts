@@ -9,6 +9,7 @@ import {
   getFranchiseStartingKits,
   updateFranchiseAdmin,
   updateFranchiseeAdmin,
+  deleteFranchiseAdmin,
   uploadMyProfilePhoto,
   removeMyProfilePhoto,
   uploadFranchiseePhotoAdmin,
@@ -131,6 +132,21 @@ function invalidateAdminFranchiseViews(
   void queryClient.invalidateQueries({ queryKey: ["franchises-grouped", "list"] });
   void queryClient.invalidateQueries({ queryKey: ["franchise-applications", "list"] });
   void queryClient.invalidateQueries({ queryKey: ["admin-franchise-detail"] });
+}
+
+/**
+ * Superadmin hard delete. Beyond the admin franchise views, the shared
+ * franchise filter dropdowns (students roster, CI tabs) read a
+ * ["franchises-admin","list"] variant, which the fan-out already covers.
+ */
+export function useDeleteFranchiseAdmin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (franchiseId: string) => deleteFranchiseAdmin(franchiseId),
+    onSuccess: () => {
+      invalidateAdminFranchiseViews(queryClient);
+    },
+  });
 }
 
 export function useUpdateFranchiseAdmin() {

@@ -40,6 +40,7 @@ import {
   getAdminStudentLifecycleById,
   uploadStudentPhoto,
   removeStudentPhoto,
+  deleteStudentAdmin,
   type StudentData,
   type StudentPaginationParams,
   type CertificatePaginationParams,
@@ -326,6 +327,22 @@ export function useCreateStudentWithRevalidation() {
     // toast), so suppress the global error toast for this mutation.
     meta: { suppressErrorToast: true },
     onSuccess: () => invalidateStudentLists(qc),
+  });
+}
+
+/**
+ * Superadmin hard delete. Touches every list the row appears in, including
+ * the admin roster's own `["admin-students"]` namespace (not covered by the
+ * `["students","list"]` prefix).
+ */
+export function useDeleteStudentAdmin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (studentId: number) => deleteStudentAdmin(studentId),
+    onSuccess: () => {
+      invalidateStudentLists(qc);
+      void qc.invalidateQueries({ queryKey: ["admin-students"] });
+    },
   });
 }
 

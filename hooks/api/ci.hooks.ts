@@ -10,6 +10,7 @@ import {
   getPaginatedAdminCourseInstructors,
   uploadCourseInstructorPhoto,
   removeCourseInstructorPhoto,
+  deleteCourseInstructorAdmin,
   type CourseInstructorData,
   type CreateCourseInstructorRequest,
   type AdminCourseInstructorsByStatus,
@@ -206,6 +207,24 @@ export function useCourseInstructorPhotoMutations(
  * server-side (GET /admin/course-instructor). Keys share
  * {@link ADMIN_CI_STATUS_PREFIX} so one invalidation refreshes all three tabs.
  */
+/**
+ * Superadmin hard delete. The bare ["course-instructors"] prefix covers every
+ * CI list variant (franchisee list + all admin status tabs); agreements and
+ * the hub summary counters are invalidated alongside.
+ */
+export function useDeleteCourseInstructorAdmin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (courseInstructorId: number) =>
+      deleteCourseInstructorAdmin(courseInstructorId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["course-instructors"] });
+      void queryClient.invalidateQueries({ queryKey: ["ci-agreements", "admin"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-ci-count"] });
+    },
+  });
+}
+
 export function useAdminCIListByStatus(
   status: "Pending" | "Rejected" | "valid",
   params: {

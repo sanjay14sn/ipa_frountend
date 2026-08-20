@@ -812,6 +812,19 @@ export async function resendFranchiseeCredentials(
   return unwrapData(response);
 }
 
+/**
+ * DELETE /admin/franchise/:id — superadmin hard delete. Irreversible; the
+ * backend refuses (409) while students, course instructors, issued agreements
+ * or orders exist. Removes the owner's login too when this was their only
+ * franchise.
+ */
+export async function deleteFranchiseAdmin(
+  franchiseId: string,
+): Promise<{ message: string; franchiseeRemoved: boolean }> {
+  const response = await api.delete(`/admin/franchise/${franchiseId}`);
+  return unwrapData<{ message: string; franchiseeRemoved: boolean }>(response);
+}
+
 /** Admin edit of descriptive franchise details. Codes are issued identity and never change. */
 export interface UpdateFranchiseAdminRequest {
   name?: string;

@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   DataTable,
   TableMainCell,
@@ -10,7 +12,13 @@ import {
   type DataTableFilter,
   type DataTableSortOption,
 } from "@/components/shared";
-import { useAdminCIListByStatus } from "@/hooks/api/course-instructor.hooks";
+import { ConfirmDialog } from "@/components/shared/dialog";
+import { Button } from "@/components/ui/button";
+import { useUser } from "@/context/user-context";
+import {
+  useAdminCIListByStatus,
+  useDeleteCourseInstructorAdmin,
+} from "@/hooks/api/course-instructor.hooks";
 import { useFranchiseOptions } from "@/hooks/api/franchisee.hooks";
 import { useListParams } from "@/hooks/use-list-params";
 import { formatDate } from "@/lib/date-utils";
@@ -20,12 +28,19 @@ import CourseInstructorDetails from "./approvals/CourseInstructorDetails";
 const ITEMS_PER_PAGE = 10;
 
 /**
- * Rejected tab: read-only history of rejected CI applications (rejection is
- * final — no un-reject route exists). Same toolbar contract as the other CI
- * tabs: search + franchise filter + sort, all server-side. List state lives
- * in the URL under the `rej.` prefix.
+ * Rejected tab: history of rejected CI applications (rejection is final — no
+ * un-reject route exists; superadmins can hard-delete a row for good). Same
+ * toolbar contract as the other CI tabs: search + franchise filter + sort,
+ * all server-side. List state lives in the URL under the `rej.` prefix.
  */
 export function RejectedApplicationsSection() {
+  const { user } = useUser();
+  const isSuperAdmin = user?.role === "admin" && user.adminRole === "super";
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+  const deleteMutation = useDeleteCourseInstructorAdmin();
   const listParams = useListParams({
     filterDefaults: { franchise: "all" },
     defaultSortBy: "createdAt",
@@ -97,7 +112,41 @@ export function RejectedApplicationsSection() {
       header: "Rejected",
       render: (ci) => (ci.updatedAt ? formatDate(ci.updatedAt) : "—"),
     },
+    ...(isSuperAdmin
+      ? [
+          {
+            key: "actions",
+            header: "Actions",
+            className: "w-[70px]",
+            render: (ci) => (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                title="Delete application"
+                aria-label="Delete application"
+                onClick={() => setDeleteTarget({ id: ci.id, name: ci.name })}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            ),
+          } satisfies DataTableColumn<AdminCourseInstructorData>,
+        ]
+      : []),
   ];
+
+  const handleDeleteInstructor = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success(`Application for "${deleteTarget.name}" deleted.`);
+    } catch {
+      /* the global mutation error toast reports the reason */
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
 
   return (
     <TablePageShell embed>
@@ -155,6 +204,23 @@ export function RejectedApplicationsSection() {
           }
         />
       </TableSectionSurface>
+
+      <ConfirmDialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        variant="destructive"
+        title="Delete course instructor?"
+        description={
+          deleteTarget
+            ? `This will permanently delete the rejected application for "${deleteTarget.name}" and its applicant record. This action is not recoverable.`
+            : ""
+        }
+        confirmLabel="Delete instructor"
+        isConfirming={deleteMutation.isPending}
+        onConfirm={handleDeleteInstructor}
+      />
     </TablePageShell>
   );
 }

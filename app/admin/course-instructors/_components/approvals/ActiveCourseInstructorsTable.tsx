@@ -15,15 +15,27 @@ import {
   exportCourseInstructorsCsv,
   resendCourseInstructorCredentialsEmail,
 } from "@/services/course-instructor.service";
-import { useAdminCIListByStatus } from "@/hooks/api/course-instructor.hooks";
+import {
+  useAdminCIListByStatus,
+  useDeleteCourseInstructorAdmin,
+} from "@/hooks/api/course-instructor.hooks";
 import { useFranchiseOptions } from "@/hooks/api/franchisee.hooks";
 import { usePrograms } from "@/hooks/api/program.hooks";
 import { useListParams } from "@/hooks/use-list-params";
+import { useUser } from "@/context/user-context";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { toast } from "sonner";
 import CourseInstructorDetails from "./CourseInstructorDetails";
-import { BarChart2, Download, FileText, KeyRound, Loader2 } from "lucide-react";
+import {
+  BarChart2,
+  Download,
+  FileText,
+  KeyRound,
+  Loader2,
+  Trash2,
+} from "lucide-react";
 import { AdminCIAgreementSheet } from "@/components/agreements/AdminCIAgreementSheet";
+import { ConfirmDialog } from "@/components/shared/dialog";
 import { SetPasswordDialog } from "@/components/shared/set-password-dialog";
 import { TrainingProgressModal } from "@/components/ci-training/TrainingProgressModal";
 
@@ -41,6 +53,13 @@ export default function ActiveCourseInstructorsTable() {
     name: string;
   } | null>(null);
   const [isResending, setIsResending] = useState(false);
+  const { user } = useUser();
+  const isSuperAdmin = user?.role === "admin" && user.adminRole === "super";
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+  const deleteMutation = useDeleteCourseInstructorAdmin();
 
   // List state lives in the URL; "active" prefix keeps the keys clear of the
   // other tabs' lists on the same hub URL.
@@ -100,6 +119,18 @@ export default function ActiveCourseInstructorsTable() {
       );
     } finally {
       setIsResending(false);
+    }
+  };
+
+  const handleDeleteInstructor = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success(`Course instructor "${deleteTarget.name}" deleted.`);
+    } catch {
+      /* the global mutation error toast reports the reason */
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -198,7 +229,7 @@ export default function ActiveCourseInstructorsTable() {
     {
       key: "actions",
       header: "Actions",
-      className: "w-[100px]",
+      className: "w-[140px]",
       render: (instructor) => (
         <div className="flex items-center gap-1">
           <Button
@@ -248,6 +279,21 @@ export default function ActiveCourseInstructorsTable() {
           >
             <KeyRound className="h-4 w-4" />
           </Button>
+          {isSuperAdmin ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              title="Delete instructor"
+              aria-label="Delete instructor"
+              onClick={() =>
+                setDeleteTarget({ id: instructor.id, name: instructor.name })
+              }
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          ) : null}
         </div>
       ),
     },
@@ -357,6 +403,23 @@ export default function ActiveCourseInstructorsTable() {
           instructorName={progressModal.name}
         />
       )}
+
+      <ConfirmDialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        variant="destructive"
+        title="Delete course instructor?"
+        description={
+          deleteTarget
+            ? `This will permanently delete "${deleteTarget.name}", their franchise attachments, training records and portal login. This action is not recoverable. Deletion is refused while any agreement is on record.`
+            : ""
+        }
+        confirmLabel="Delete instructor"
+        isConfirming={deleteMutation.isPending}
+        onConfirm={handleDeleteInstructor}
+      />
     </>
   );
 }

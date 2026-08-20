@@ -22,7 +22,15 @@ import {
   TableMainCell,
 } from "@/components/shared";
 import type { FranchiseData } from "@/services/franchisee.service";
-import { Eye, KeyRound, Check, X, PencilLine, UserPen } from "lucide-react";
+import {
+  Eye,
+  KeyRound,
+  Check,
+  X,
+  PencilLine,
+  Trash2,
+  UserPen,
+} from "lucide-react";
 import { FranchiseTableExpanded } from "./FranchiseTableExpanded";
 import { ReceivableCompactLine } from "@/components/receivables/InstallmentSummaryCard";
 import { formatDate } from "@/lib/date-utils";
@@ -54,6 +62,8 @@ interface FranchiseHubTableProps {
   onResendCredentials?: (franchise: FranchiseData) => void;
   onEditFranchise?: (franchise: FranchiseData) => void;
   onEditFranchisee?: (franchise: FranchiseData) => void;
+  /** Superadmin hard delete; pass only when the viewer may delete. */
+  onDeleteFranchise?: (franchise: FranchiseData) => void;
   disableApproveActions?: boolean;
 }
 
@@ -185,6 +195,7 @@ export function FranchiseHubTable({
   onResendCredentials,
   onEditFranchise,
   onEditFranchisee,
+  onDeleteFranchise,
   disableApproveActions,
 }: FranchiseHubTableProps) {
   const columns: DataTableColumn<FranchiseData>[] =
@@ -296,6 +307,18 @@ export function FranchiseHubTable({
                     <KeyRound className="h-4 w-4" />
                   </Button>
                 ) : null}
+                {onDeleteFranchise ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => onDeleteFranchise(item)}
+                    title="Delete franchise"
+                    aria-label="Delete franchise"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                ) : null}
               </div>
             ),
           },
@@ -352,9 +375,22 @@ export function FranchiseHubTable({
                         </Button>
                       ) : null}
                     </>
-                  ) : (
+                  ) : null}
+                  {onDeleteFranchise ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      onClick={() => onDeleteFranchise(item)}
+                      title="Delete application"
+                      aria-label="Delete application"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  ) : null}
+                  {!canReview && !onDeleteFranchise ? (
                     <span className="text-xs text-muted-foreground">No actions</span>
-                  )}
+                  ) : null}
                 </div>
               );
             },

@@ -1,13 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   type DataTableFilter,
   type DataTableMultiSelectFilter,
   type DataTableSortOption,
 } from "@/components/shared";
+import { ConfirmDialog } from "@/components/shared/dialog";
+import { useUser } from "@/context/user-context";
 import { FranchiseType } from "@/services/franchise.enums";
-import { usePaginatedFranchiseApplicationsAdmin } from "@/hooks/api/franchisee.hooks";
+import {
+  useDeleteFranchiseAdmin,
+  usePaginatedFranchiseApplicationsAdmin,
+} from "@/hooks/api/franchisee.hooks";
 import { type FranchiseData } from "@/services/franchisee.service";
 import { FranchiseHubTable } from "./FranchiseHubTable";
 import { useListParams } from "@/hooks/use-list-params";
@@ -73,6 +79,27 @@ export default function PendingApprovalsTable({
     refetch: refetchApplications,
   } = usePaginatedFranchiseApplicationsAdmin(listParams);
 
+  const { user } = useUser();
+  const isSuperAdmin = user?.role === "admin" && user.adminRole === "super";
+  const [deleteTarget, setDeleteTarget] = useState<FranchiseData | null>(null);
+  const deleteMutation = useDeleteFranchiseAdmin();
+
+  const handleDeleteApplication = async () => {
+    if (!deleteTarget) return;
+    try {
+      const result = await deleteMutation.mutateAsync(String(deleteTarget.id));
+      toast.success(
+        result.franchiseeRemoved
+          ? `Application "${deleteTarget.name}" deleted along with the applicant's portal login.`
+          : `Application "${deleteTarget.name}" deleted.`,
+      );
+    } catch {
+      /* the global mutation error toast reports the reason */
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
   const totalPages = franchisePage?.meta.totalPages ?? 0;
   const total = franchisePage?.meta.total ?? 0;
 
@@ -113,6 +140,7 @@ export default function PendingApprovalsTable({
   ];
 
   return (
+    <>
     <FranchiseHubTable
       variant="applications"
       data={franchisePage?.data ?? []}
@@ -146,8 +174,26 @@ export default function PendingApprovalsTable({
       }}
       onApprove={onApprove}
       onReject={onReject}
+      onDeleteFranchise={isSuperAdmin ? setDeleteTarget : undefined}
       disableApproveActions={disableApproveActions}
     />
+    <ConfirmDialog
+      open={deleteTarget != null}
+      onOpenChange={(open) => {
+        if (!open) setDeleteTarget(null);
+      }}
+      variant="destructive"
+      title="Delete franchise application?"
+      description={
+        deleteTarget
+          ? `This will permanently delete the application "${deleteTarget.name}", its draft agreement terms — and the applicant's portal login if they hold no other franchise. This action is not recoverable.`
+          : ""
+      }
+      confirmLabel="Delete application"
+      isConfirming={deleteMutation.isPending}
+      onConfirm={handleDeleteApplication}
+    />
+    </>
   );
 }
 

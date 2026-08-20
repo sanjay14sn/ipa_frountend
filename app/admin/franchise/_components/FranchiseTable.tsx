@@ -7,15 +7,20 @@ import {
   type DataTableFilter,
   type DataTableSortOption,
 } from "@/components/shared";
+import { ConfirmDialog } from "@/components/shared/dialog";
 import { SetPasswordDialog } from "@/components/shared/set-password-dialog";
 import { Button } from "@/components/ui/button";
+import { useUser } from "@/context/user-context";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import {
   exportFranchisesCsv,
   resendFranchiseeCredentials,
   type FranchiseData,
 } from "@/services/franchisee.service";
-import { usePaginatedFranchisesAdmin } from "@/hooks/api/franchisee.hooks";
+import {
+  useDeleteFranchiseAdmin,
+  usePaginatedFranchisesAdmin,
+} from "@/hooks/api/franchisee.hooks";
 import { usePrograms } from "@/hooks/api/program.hooks";
 import { FranchiseHubTable } from "./FranchiseHubTable";
 import { EditFranchiseDialog } from "./edit-franchise-dialog";
@@ -90,6 +95,26 @@ export default function FranchiseTable({
     useState<FranchiseData | null>(null);
   const [editFranchiseeTarget, setEditFranchiseeTarget] =
     useState<FranchiseData | null>(null);
+  const { user } = useUser();
+  const isSuperAdmin = user?.role === "admin" && user.adminRole === "super";
+  const [deleteTarget, setDeleteTarget] = useState<FranchiseData | null>(null);
+  const deleteMutation = useDeleteFranchiseAdmin();
+
+  const handleDeleteFranchise = async () => {
+    if (!deleteTarget) return;
+    try {
+      const result = await deleteMutation.mutateAsync(String(deleteTarget.id));
+      toast.success(
+        result.franchiseeRemoved
+          ? `Franchise "${deleteTarget.name}" deleted along with its owner's portal login.`
+          : `Franchise "${deleteTarget.name}" deleted.`,
+      );
+    } catch {
+      /* the global mutation error toast reports the reason */
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
 
   // Same filters/search/sort as the table, no page/limit — the backend
   // returns every matching row, not just the visible page.
@@ -267,6 +292,23 @@ export default function FranchiseTable({
         onResendCredentials={setResendTarget}
         onEditFranchise={setEditFranchiseTarget}
         onEditFranchisee={setEditFranchiseeTarget}
+        onDeleteFranchise={isSuperAdmin ? setDeleteTarget : undefined}
+      />
+      <ConfirmDialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        variant="destructive"
+        title="Delete franchise?"
+        description={
+          deleteTarget
+            ? `This will permanently delete "${deleteTarget.name}", its draft agreements and program requests — and the owner's portal login if this is their only franchise. This action is not recoverable. Deletion is refused while students, course instructors, issued agreements or orders exist.`
+            : ""
+        }
+        confirmLabel="Delete franchise"
+        isConfirming={deleteMutation.isPending}
+        onConfirm={handleDeleteFranchise}
       />
       <EditFranchiseDialog
         franchise={editFranchiseTarget}

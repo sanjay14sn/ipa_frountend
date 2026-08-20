@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Award, Download, Loader2 } from "lucide-react";
+import { Award, Download, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,9 +12,14 @@ import {
   type DataTableColumn,
   type DataTableFilter,
 } from "@/components/shared";
+import { ConfirmDialog } from "@/components/shared/dialog";
 import StudentCertificatesModal from "@/components/students/StudentCertificatesModal";
 import StudentDetails from "@/components/students/StudentDetails";
-import { useAdminStudentsRoster } from "@/hooks/api/student.hooks";
+import { useUser } from "@/context/user-context";
+import {
+  useAdminStudentsRoster,
+  useDeleteStudentAdmin,
+} from "@/hooks/api/student.hooks";
 import { useFranchiseOptions } from "@/hooks/api/franchisee.hooks";
 import { useAllLevels } from "@/hooks/api/level.hooks";
 import { useListParams } from "@/hooks/use-list-params";
@@ -43,7 +48,11 @@ function levelLabel(student: StudentData): string {
  * `roster.` prefix so it coexists with ?tab= and other tabs' params.
  */
 export function RosterSection() {
+  const { user } = useUser();
+  const isSuperAdmin = user?.role === "admin" && user.adminRole === "super";
   const [certStudent, setCertStudent] = useState<StudentData | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<StudentData | null>(null);
+  const deleteMutation = useDeleteStudentAdmin();
   const [isExporting, setIsExporting] = useState(false);
   const listParams = useListParams({
     filterDefaults: {
@@ -86,6 +95,18 @@ export function RosterSection() {
 
   const students = rosterQuery.data?.data ?? [];
   const meta = rosterQuery.data?.meta;
+
+  const handleDeleteStudent = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success(`Student "${deleteTarget.name}" deleted.`);
+    } catch {
+      /* the global mutation error toast reports the reason */
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
 
   // Same filters/search as the table, no page/limit — the backend returns
   // every matching row, not just the visible page.
@@ -187,17 +208,32 @@ export function RosterSection() {
       key: "actions",
       header: "Actions",
       render: (s) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 shrink-0 p-0"
-          type="button"
-          onClick={() => setCertStudent(s)}
-          title="View certificates"
-          aria-label="View certificates"
-        >
-          <Award className="h-3.5 w-3.5 text-success" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0 p-0"
+            type="button"
+            onClick={() => setCertStudent(s)}
+            title="View certificates"
+            aria-label="View certificates"
+          >
+            <Award className="h-3.5 w-3.5 text-success" />
+          </Button>
+          {isSuperAdmin ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0 p-0 text-destructive hover:text-destructive"
+              type="button"
+              onClick={() => setDeleteTarget(s)}
+              title="Delete student"
+              aria-label="Delete student"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          ) : null}
+        </div>
       ),
     },
   ];
@@ -274,6 +310,23 @@ export function RosterSection() {
           mode="admin"
         />
       )}
+
+      <ConfirmDialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        variant="destructive"
+        title="Delete student?"
+        description={
+          deleteTarget
+            ? `This will permanently delete "${deleteTarget.name}" along with their level progressions and certificate records. This action is not recoverable.`
+            : ""
+        }
+        confirmLabel="Delete student"
+        isConfirming={deleteMutation.isPending}
+        onConfirm={handleDeleteStudent}
+      />
     </TablePageShell>
   );
 }

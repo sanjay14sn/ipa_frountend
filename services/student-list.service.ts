@@ -377,8 +377,12 @@ export async function updateStudent(
   return mapStudentRow(unwrapData<Record<string, unknown>>(response));
 }
 
-export async function deleteStudent(_studentId: number): Promise<void> {
-  throw new Error("Student delete not available in ipa-new");
+/** DELETE /admin/student/:id — superadmin hard delete. Irreversible. */
+export async function deleteStudentAdmin(
+  studentId: number,
+): Promise<{ message: string }> {
+  const response = await api.delete(`/admin/student/${studentId}`);
+  return unwrapData<{ message: string }>(response);
 }
 
 export async function getPaginatedStudents(

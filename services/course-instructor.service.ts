@@ -459,8 +459,17 @@ export async function removeCourseInstructorPhoto(
   return unwrapData<{ photoPath: string | null }>(response);
 }
 
-export async function deleteCourseInstructor(_id: number): Promise<void> {
-  throw new Error("Not supported in ipa-new");
+/**
+ * DELETE /admin/course-instructor/:id — superadmin hard delete. Irreversible;
+ * the backend refuses (409) while any agreement row names the instructor.
+ */
+export async function deleteCourseInstructorAdmin(
+  courseInstructorId: number,
+): Promise<{ message: string }> {
+  const response = await api.delete(
+    `/admin/course-instructor/${courseInstructorId}`,
+  );
+  return unwrapData<{ message: string }>(response);
 }
 
 
