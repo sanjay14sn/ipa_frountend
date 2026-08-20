@@ -227,7 +227,8 @@
       "Ambarethnagar": "ABN",
       "Balewadi": "BLW",
       "Panchwad": "PNW",
-      "Jule": "JUL"
+      "Jule": "JUL",
+      "Sinhagad Road": "SGR"
     }
   },
   "Gujarat": {
@@ -586,7 +587,8 @@
       "Ponda": "PON",
       "Bicholim": "BIC",
       "Curchorem": "CUR",
-      "Sanquelim": "SAN"
+      "Sanquelim": "SAN",
+      "Goa": "GOA"
     }
   },
   "Manipur": {
@@ -715,6 +717,31 @@
     "code": "AN",
     "cities": {
       "Port Blair": "PBL"
+    }
+  },
+  "Dubai": {
+    "code": "DB",
+    "cities": {
+      "Dubai": "DXB"
+    }
+  },
+  "Jeddah": {
+    "code": "JD",
+    "cities": {
+      "Jeddah": "JED"
+    }
+  },
+  "Australia": {
+    "code": "AU",
+    "cities": {
+      "Melbourne": "MEL",
+      "Newcastle": "NCL"
+    }
+  },
+  "Zimbabwe": {
+    "code": "ZW",
+    "cities": {
+      "Bulawayo": "BYO"
     }
   }
 }
