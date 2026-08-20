@@ -12,6 +12,7 @@ import { FranchiseType, BloodGroup } from "@/services/franchise.enums";
 import { UserPlus } from "lucide-react";
 import { handleFormApiError } from "@/lib/form-errors";
 import { replaceStepErrors } from "@/lib/form-utils";
+import { validatePasswordSet } from "@/components/shared/password-set-fields";
 import { useUniquenessCheck } from "@/hooks/api/uniqueness.hooks";
 import {
   checkFranchiseeAvailability,
@@ -66,6 +67,8 @@ const stepFieldsFor = (
       return Object.keys(prev).filter((k) =>
         /^(signedAt|paid|split|unpaidDueDate)-/.test(k),
       );
+    case 4:
+      return ["password", "confirmPassword"];
     default:
       return [];
   }
@@ -281,10 +284,12 @@ export function CreateFranchiseDialog({
         }
         break;
 
-      case 4: // Security (only for new franchisee; password is auto-emailed)
+      case 4: // Security (only for a new franchisee; existing keep theirs)
         if (franchiseeMode === "existing") break;
-        // Password field is informational only — backend auto-generates and
-        // emails the credentials. Skip strict validation.
+        Object.assign(
+          newErrors,
+          validatePasswordSet(formData.password, formData.confirmPassword),
+        );
         break;
     }
 
@@ -456,6 +461,7 @@ export function CreateFranchiseDialog({
                   education: formData.education || undefined,
                   occupation: formData.occupation || undefined,
                   reference: formData.reference || undefined,
+                  password: formData.password,
                 },
               },
         franchise: {

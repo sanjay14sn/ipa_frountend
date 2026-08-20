@@ -19,6 +19,7 @@ import {
   setFranchiseProgramKitItems,
 } from "@/services/inventory.service";
 import { getErrorMessage } from "@/lib/error-utils";
+import { KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import type { PayrollDetails, ProgramPayroll } from "./types";
 import PendingApprovalsTable from "./PendingApprovalsTable";
@@ -26,6 +27,11 @@ import { TablePageShell, TableSectionSurface } from "@/components/shared";
 import { type KitRow } from "./StartingKitEditor";
 import { PayrollTermsDialog } from "./PayrollTermsDialog";
 import { sendClientLog } from "@/lib/client-telemetry";
+import {
+  PasswordSetFields,
+  validatePasswordSet,
+  type PasswordSetErrors,
+} from "@/components/shared/password-set-fields";
 
 const emptyProgramPayroll = (): ProgramPayroll => ({
   programId: 0,
@@ -58,6 +64,11 @@ export function PendingApprovalsSection() {
     programPayroll: emptyProgramPayroll(),
   });
   const [kitRows, setKitRows] = useState<KitRow[]>([]);
+  const [credentialPassword, setCredentialPassword] = useState("");
+  const [credentialConfirm, setCredentialConfirm] = useState("");
+  const [credentialErrors, setCredentialErrors] = useState<PasswordSetErrors>(
+    {},
+  );
   const [preparePayrollLoading, setPreparePayrollLoading] = useState(false);
   const [rejectDialog, setRejectDialog] = useState<{
     open: boolean;
@@ -175,6 +186,15 @@ export function PendingApprovalsSection() {
       return;
     }
 
+    // Approval issues the franchisee's portal password — admin-typed, so it
+    // must validate before any backend call.
+    const passwordErrors = validatePasswordSet(
+      credentialPassword,
+      credentialConfirm,
+    );
+    setCredentialErrors(passwordErrors);
+    if (Object.keys(passwordErrors).length > 0) return;
+
     try {
       await createPayrollDetails(selectedApplication.id, {
         programPayroll: {
@@ -196,7 +216,11 @@ export function PendingApprovalsSection() {
         },
       });
 
-      await approveFranchiseAdmin(selectedApplication.id, row.programId);
+      await approveFranchiseAdmin(
+        selectedApplication.id,
+        credentialPassword,
+        row.programId,
+      );
 
       const selectedKitItems = kitRows.filter((r) => r.selected);
       if (selectedKitItems.length > 0) {
@@ -223,6 +247,9 @@ export function PendingApprovalsSection() {
         programPayroll: emptyProgramPayroll(),
       });
       setKitRows([]);
+      setCredentialPassword("");
+      setCredentialConfirm("");
+      setCredentialErrors({});
       triggerRefresh();
       toast.success("Agreement terms saved and application approved");
     } catch (error) {
@@ -319,6 +346,9 @@ export function PendingApprovalsSection() {
               programPayroll: emptyProgramPayroll(),
             });
             setKitRows([]);
+            setCredentialPassword("");
+            setCredentialConfirm("");
+            setCredentialErrors({});
           }
         }}
         subjectName={selectedApplication?.name ?? ""}
@@ -327,6 +357,40 @@ export function PendingApprovalsSection() {
         kitRows={kitRows}
         onKitRowsChange={setKitRows}
         onSubmit={submitPayrollDetails}
+        extraContent={
+          <div className="space-y-3">
+            <h3 className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+              <KeyRound className="h-4 w-4" />
+              Franchisee portal credentials
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Set the password the franchisee will use to log in. It is
+              emailed to them when the application is approved.
+            </p>
+            <PasswordSetFields
+              password={credentialPassword}
+              confirmPassword={credentialConfirm}
+              onPasswordChange={(value) => {
+                setCredentialPassword(value);
+                if (credentialErrors.password)
+                  setCredentialErrors((prev) => ({
+                    ...prev,
+                    password: undefined,
+                  }));
+              }}
+              onConfirmPasswordChange={(value) => {
+                setCredentialConfirm(value);
+                if (credentialErrors.confirmPassword)
+                  setCredentialErrors((prev) => ({
+                    ...prev,
+                    confirmPassword: undefined,
+                  }));
+              }}
+              errors={credentialErrors}
+              idPrefix="approve-franchisee"
+            />
+          </div>
+        }
       />
     </TablePageShell>
   );

@@ -35,6 +35,10 @@ import {
 } from "@/services/course-instructor.service";
 import { handleFormApiError } from "@/lib/form-errors";
 import { replaceStepErrors } from "@/lib/form-utils";
+import {
+  PasswordSetFields,
+  validatePasswordSet,
+} from "@/components/shared/password-set-fields";
 import { useUniquenessCheck } from "@/hooks/api/uniqueness.hooks";
 import { checkCourseInstructorEmail } from "@/services/uniqueness.service";
 import { SETUP_EXISTING_CI_STEPS as FORM_STEPS } from "@/lib/constants/education";
@@ -72,6 +76,8 @@ const STEP_FIELDS: Record<number, readonly string[]> = {
     "education",
     "occupation",
     "reference",
+    "password",
+    "confirmPassword",
   ],
   3: ["tenure", "agreementSignedAt", "receivables"],
 };
@@ -94,6 +100,8 @@ interface CIPersonal {
   education: string;
   occupation: string;
   reference: string;
+  password: string;
+  confirmPassword: string;
 }
 
 const emptyCI: CIPersonal = {
@@ -108,6 +116,8 @@ const emptyCI: CIPersonal = {
   education: "",
   occupation: "",
   reference: "",
+  password: "",
+  confirmPassword: "",
 };
 
 function defaultReceivable(levels: TrainingLevel[]): ReceivablePlanRow {
@@ -260,6 +270,10 @@ export default function SetupExistingCIDialog({
       if (!ciData.education.trim()) e.education = "Education required";
       if (!ciData.occupation.trim()) e.occupation = "Occupation required";
       if (!ciData.reference.trim()) e.reference = "Reference required";
+      Object.assign(
+        e,
+        validatePasswordSet(ciData.password, ciData.confirmPassword),
+      );
     }
     if (step === 3) {
       if (!tenure || tenure < 1) e.tenure = "Tenure must be at least 1 month";
@@ -315,6 +329,7 @@ export default function SetupExistingCIDialog({
           education: ciData.education,
           occupation: ciData.occupation,
           reference: ciData.reference,
+          password: ciData.password,
         },
         tenure,
         agreementSignedAt,
@@ -535,6 +550,25 @@ export default function SetupExistingCIDialog({
               rows={3}
             />
           </DialogFormField>
+          <div className="md:col-span-2 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Set the password the instructor will use to log in. It is
+              emailed to them once the setup completes.
+            </p>
+            <PasswordSetFields
+              password={ciData.password}
+              confirmPassword={ciData.confirmPassword}
+              onPasswordChange={(value) => updateCi({ password: value })}
+              onConfirmPasswordChange={(value) =>
+                updateCi({ confirmPassword: value })
+              }
+              errors={{
+                password: errors.password || undefined,
+                confirmPassword: errors.confirmPassword || undefined,
+              }}
+              idPrefix="setup-ci"
+            />
+          </div>
         </DialogFormGrid>
       )}
 

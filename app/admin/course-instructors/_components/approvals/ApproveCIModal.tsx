@@ -25,6 +25,10 @@ import {
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { APPROVE_CI_STEPS as FORM_STEPS } from "@/lib/constants/education";
 import {
+  PasswordSetFields,
+  validatePasswordSet,
+} from "@/components/shared/password-set-fields";
+import {
   ReceivablePlanBuilder,
   validateReceivablePlan,
   type ReceivablePlanRow,
@@ -60,6 +64,8 @@ export default function ApproveCIModal({
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tenure, setTenure] = useState(12);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [receivables, setReceivables] = useState<ReceivablePlanRow[]>([
     { label: "Receivable 1", levelFrom: 1, levelTo: 1, fee: "", paid: false },
   ]);
@@ -99,6 +105,8 @@ export default function ApproveCIModal({
     setCurrentStep(1);
     setLoading(false);
     setTenure(12);
+    setPassword("");
+    setConfirmPassword("");
     setErrors({});
     setReceivables([
       { label: "Receivable 1", levelFrom: 1, levelTo: 1, fee: "", paid: false },
@@ -109,6 +117,7 @@ export default function ApproveCIModal({
     const e: Record<string, string> = {};
     if (step === 1) {
       if (!tenure || tenure < 1) e.tenure = "Tenure must be at least 1 month";
+      Object.assign(e, validatePasswordSet(password, confirmPassword));
     }
     if (step === 2) {
       const planErr = validateReceivablePlan(receivables, sortedLevels);
@@ -136,6 +145,8 @@ export default function ApproveCIModal({
 
   const isDirty =
     tenure !== 12 ||
+    password !== "" ||
+    confirmPassword !== "" ||
     JSON.stringify(receivables) !== JSON.stringify(seedReceivables);
 
   const { requestClose, confirmOpen, setConfirmOpen, confirmAndDiscard } =
@@ -143,6 +154,10 @@ export default function ApproveCIModal({
 
   const handleSubmit = async () => {
     if (!instructor) return;
+    if (!validateStep(1)) {
+      setCurrentStep(1);
+      return;
+    }
     if (!validateStep(2)) return;
 
     setLoading(true);
@@ -151,6 +166,7 @@ export default function ApproveCIModal({
       // and the backend builds the receivable plan at agreement issuance.
       await approveCourseInstructor(instructor.id, {
         tenure,
+        password,
         trainingPlan: receivables.map((r, index) => ({
           order: index + 1,
           label: r.label.trim() || undefined,
@@ -225,6 +241,29 @@ export default function ApproveCIModal({
               />
             </DialogFormField>
           </DialogFormGrid>
+          <p className="text-sm text-muted-foreground">
+            Set the password the instructor will use to log in. It is emailed
+            to them on approval.
+          </p>
+          <PasswordSetFields
+            password={password}
+            confirmPassword={confirmPassword}
+            onPasswordChange={(value) => {
+              setPassword(value);
+              if (errors.password)
+                setErrors((prev) => ({ ...prev, password: "" }));
+            }}
+            onConfirmPasswordChange={(value) => {
+              setConfirmPassword(value);
+              if (errors.confirmPassword)
+                setErrors((prev) => ({ ...prev, confirmPassword: "" }));
+            }}
+            errors={{
+              password: errors.password || undefined,
+              confirmPassword: errors.confirmPassword || undefined,
+            }}
+            idPrefix="approve-ci"
+          />
         </div>
       )}
 

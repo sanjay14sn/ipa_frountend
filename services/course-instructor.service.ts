@@ -141,6 +141,8 @@ export interface ApproveCITrainingPlanRow {
  */
 export interface ApproveCourseInstructorRequest {
   tenure: number;
+  /** Admin-chosen portal password (no auto-generation). */
+  password: string;
   trainingPlan?: ApproveCITrainingPlanRow[];
 }
 
@@ -647,11 +649,14 @@ export async function transferCIHandler(
   }>(response);
 }
 
-async function resendCourseInstructorCredentialsEmail(
+/** Reissue: the admin-typed password replaces the current one and is re-emailed. */
+export async function resendCourseInstructorCredentialsEmail(
   courseInstructorId: number,
+  password: string,
 ): Promise<void> {
   await api.post(
     `/admin/course-instructor/${courseInstructorId}/resend-credentials-email`,
+    { password },
   );
 }
 
@@ -872,6 +877,8 @@ export interface SetupExistingCIPayload {
     education: string;
     occupation: string;
     reference: string;
+    /** Admin-chosen portal password (no auto-generation). */
+    password: string;
   };
   tenure: number;
   agreementSignedAt: string;

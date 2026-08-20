@@ -424,6 +424,8 @@ export interface SetupExistingFranchisePayload {
           education?: string;
           occupation?: string;
           reference?: string;
+          /** Admin-chosen portal password (no auto-generation). */
+          password: string;
         };
       };
   franchise: {
@@ -778,12 +780,15 @@ async function updateFranchiseStatus(
   throw new Error("Use approveFranchiseAdmin or rejectFranchiseAdmin");
 }
 
+/** Approval issues the franchisee's portal credentials with the admin-typed password. */
 export async function approveFranchiseAdmin(
   franchiseId: string,
+  password: string,
   programId?: number,
 ) {
   const response = await api.post(`/admin/franchise/${franchiseId}/approve`, {
     programId,
+    password,
   });
   return unwrapData(response);
 }
@@ -795,9 +800,14 @@ export async function rejectFranchise(franchiseId: string, reason: string) {
   return unwrapData(response);
 }
 
-export async function resendFranchiseeCredentials(franchiseId: string) {
+/** Reissue: the admin-typed password replaces the current one and is re-emailed. */
+export async function resendFranchiseeCredentials(
+  franchiseId: string,
+  password: string,
+) {
   const response = await api.post(
     `/admin/franchise/${franchiseId}/resend-credentials`,
+    { password },
   );
   return unwrapData(response);
 }

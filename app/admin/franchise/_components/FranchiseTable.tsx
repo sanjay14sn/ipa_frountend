@@ -7,7 +7,7 @@ import {
   type DataTableFilter,
   type DataTableSortOption,
 } from "@/components/shared";
-import { ConfirmDialog } from "@/components/shared/dialog";
+import { SetPasswordDialog } from "@/components/shared/set-password-dialog";
 import { Button } from "@/components/ui/button";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import {
@@ -113,12 +113,12 @@ export default function FranchiseTable({
     }
   };
 
-  const handleConfirmResend = async () => {
+  const handleConfirmResend = async (password: string) => {
     if (!resendTarget) return;
     setIsResending(true);
     try {
-      await resendFranchiseeCredentials(String(resendTarget.id));
-      toast.success("Credentials regenerated and emailed to the franchisee.");
+      await resendFranchiseeCredentials(String(resendTarget.id), password);
+      toast.success("New password set and emailed to the franchisee.");
       setResendTarget(null);
     } catch (error) {
       toast.error(
@@ -205,18 +205,19 @@ export default function FranchiseTable({
 
   return (
     <>
-      <ConfirmDialog
+      <SetPasswordDialog
         open={resendTarget !== null}
         onOpenChange={(open) => {
           if (!open && !isResending) setResendTarget(null);
         }}
-        title="Resend franchisee credentials?"
-        description={`This generates a new temporary password for ${
+        title="Resend franchisee credentials"
+        description={`Set a new portal password for ${
           resendTarget?.name ?? "this franchise"
-        }'s owner and emails it to them. Their current password stops working.`}
-        confirmLabel="Resend credentials"
-        onConfirm={handleConfirmResend}
-        isConfirming={isResending}
+        }'s owner and email it to them. Their current password stops working.`}
+        submitLabel="Set password and email"
+        onSubmit={handleConfirmResend}
+        isSubmitting={isResending}
+        formId="franchisee-resend-credentials"
       />
       <FranchiseHubTable
         variant="franchises"

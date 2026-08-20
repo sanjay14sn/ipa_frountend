@@ -13,6 +13,7 @@ import type {
 import {
   AdminCourseInstructorData,
   exportCourseInstructorsCsv,
+  resendCourseInstructorCredentialsEmail,
 } from "@/services/course-instructor.service";
 import { useAdminCIListByStatus } from "@/hooks/api/course-instructor.hooks";
 import { useFranchiseOptions } from "@/hooks/api/franchisee.hooks";
@@ -21,8 +22,9 @@ import { useListParams } from "@/hooks/use-list-params";
 import { getUserFriendlyMessage } from "@/lib/error-utils";
 import { toast } from "sonner";
 import CourseInstructorDetails from "./CourseInstructorDetails";
-import { BarChart2, Download, FileText, Loader2 } from "lucide-react";
+import { BarChart2, Download, FileText, KeyRound, Loader2 } from "lucide-react";
 import { AdminCIAgreementSheet } from "@/components/agreements/AdminCIAgreementSheet";
+import { SetPasswordDialog } from "@/components/shared/set-password-dialog";
 import { TrainingProgressModal } from "@/components/ci-training/TrainingProgressModal";
 
 const ITEMS_PER_PAGE = 10;
@@ -34,6 +36,11 @@ export default function ActiveCourseInstructorsTable() {
     programId?: number;
   } | null>(null);
   const [progressModal, setProgressModal] = useState<{ id: number; name: string; programId: number } | null>(null);
+  const [resendTarget, setResendTarget] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+  const [isResending, setIsResending] = useState(false);
 
   // List state lives in the URL; "active" prefix keeps the keys clear of the
   // other tabs' lists on the same hub URL.
@@ -77,6 +84,22 @@ export default function ActiveCourseInstructorsTable() {
       toast.error(getUserFriendlyMessage(error, "Failed to export CSV."));
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleConfirmResend = async (password: string) => {
+    if (!resendTarget) return;
+    setIsResending(true);
+    try {
+      await resendCourseInstructorCredentialsEmail(resendTarget.id, password);
+      toast.success("New password set and emailed to the instructor.");
+      setResendTarget(null);
+    } catch (error) {
+      toast.error(
+        getUserFriendlyMessage(error, "Failed to resend credentials."),
+      );
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -212,6 +235,19 @@ export default function ActiveCourseInstructorsTable() {
           >
             <FileText className="h-4 w-4" />
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            title="Resend credentials"
+            aria-label="Resend credentials"
+            onClick={() =>
+              setResendTarget({ id: instructor.id, name: instructor.name })
+            }
+          >
+            <KeyRound className="h-4 w-4" />
+          </Button>
         </div>
       ),
     },
@@ -295,6 +331,21 @@ export default function ActiveCourseInstructorsTable() {
       <AdminCIAgreementSheet
         instructor={agreementInstructor}
         onClose={() => setAgreementInstructor(null)}
+      />
+
+      <SetPasswordDialog
+        open={resendTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !isResending) setResendTarget(null);
+        }}
+        title="Resend instructor credentials"
+        description={`Set a new portal password for ${
+          resendTarget?.name ?? "this instructor"
+        } and email it to them. Their current password stops working.`}
+        submitLabel="Set password and email"
+        onSubmit={handleConfirmResend}
+        isSubmitting={isResending}
+        formId="ci-resend-credentials"
       />
 
       {progressModal && (
