@@ -33,7 +33,7 @@ import { useAgreementMine, useAgreementsMine } from "@/hooks/api/agreement.hooks
 import { useUser } from "@/context/user-context";
 import { deriveAgreementSummary } from "@/lib/agreement-summary";
 import { formatDate } from "@/lib/date-utils";
-import { formatRupees } from "@/lib/currency-utils";
+import { formatRupeesOrFree } from "@/lib/currency-utils";
 import { getErrorMessage, getUserFriendlyMessage } from "@/lib/error-utils";
 
 const RazorpayPayment = dynamic(
@@ -409,7 +409,7 @@ export function AgreementHero({
               <>
                 <p className="text-xl font-semibold leading-snug text-card-foreground">
                   {renewal.franchiseFee != null
-                    ? formatRupees(renewal.franchiseFee)
+                    ? formatRupeesOrFree(renewal.franchiseFee)
                     : "—"}
                 </p>
                 <p className="text-xs text-muted-foreground">

@@ -14,7 +14,7 @@ import { useUser } from "@/context/user-context";
 import { useMyProfilePhotoMutations } from "@/hooks/api/franchisee.hooks";
 import { uploadedFileSrc, validatePhotoFile } from "@/lib/uploads";
 import { formatDate } from "@/lib/date-utils";
-import { formatRupees } from "@/lib/currency-utils";
+import { formatRupeesOrFree } from "@/lib/currency-utils";
 
 interface PayrollTerms {
   program?: { name?: string } | null;
@@ -33,9 +33,9 @@ function PayrollTermsRow({ terms }: { terms: PayrollTerms }) {
         </p>
       ) : null}
       <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm">
-        <LabeledValue label="Fee" value={formatRupees(Number(terms.franchiseFee ?? 0))} />
-        <LabeledValue label="Monthly" value={formatRupees(Number(terms.monthlyFee ?? 0))} />
-        <LabeledValue label="Royalty" value={formatRupees(Number(terms.royalty ?? 0))} />
+        <LabeledValue label="Fee" value={formatRupeesOrFree(Number(terms.franchiseFee ?? 0))} />
+        <LabeledValue label="Monthly" value={formatRupeesOrFree(Number(terms.monthlyFee ?? 0))} />
+        <LabeledValue label="Royalty" value={formatRupeesOrFree(Number(terms.royalty ?? 0))} />
       </div>
     </div>
   );

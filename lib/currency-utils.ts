@@ -39,6 +39,16 @@ export function formatRupees(value?: number | null): string {
 }
 
 /**
+ * Fee-surface variant of {@link formatRupees}: a zero amount renders as
+ * "Free" so a no-cost fee reads as intentionally free rather than "₹0.00".
+ * Null/undefined/NaN still return "N/A" (unknown, not free).
+ */
+export function formatRupeesOrFree(value?: number | null): string {
+  if (value != null && Number(value) === 0) return "Free";
+  return formatRupees(value);
+}
+
+/**
  * Formats an amount in an arbitrary ISO currency (en-IN locale). Prefer
  * {@link formatRupees} — this exists only for surfaces that carry a dynamic
  * currency code (e.g. gateway payments).

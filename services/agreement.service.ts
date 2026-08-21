@@ -534,6 +534,17 @@ export async function submitFranchiseeSignatureWithStored(
   return unwrapData<AgreementRecord>(response);
 }
 
+/**
+ * Zero-fee agreements skip Razorpay entirely: the backend re-validates that
+ * the signed APPROVED agreement's fee is 0 and activates it directly.
+ */
+export async function activateFreeAgreementMine(
+  agreementId: number,
+): Promise<AgreementRecord> {
+  const response = await api.post(`/agreement/${agreementId}/activate-free`);
+  return unwrapData<AgreementRecord>(response);
+}
+
 /** Update the franchisee's on-file signature without changing agreement state.
  *  Used for already-signed/valid agreements where the signature file was never captured. */
 export async function updateFranchiseeSignatureOnly(

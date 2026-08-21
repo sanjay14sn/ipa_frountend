@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { formatRupees } from "./currency-utils";
+import { formatRupees, formatRupeesOrFree } from "./currency-utils";
 
 describe("formatRupees", () => {
   it("returns 'N/A' for null", () => {
@@ -39,5 +39,20 @@ describe("formatRupees", () => {
   it("handles negative numbers", () => {
     const result = formatRupees(-500);
     expect(result).toContain("500.00");
+  });
+});
+
+describe("formatRupeesOrFree", () => {
+  it("renders zero as 'Free'", () => {
+    expect(formatRupeesOrFree(0)).toBe("Free");
+  });
+
+  it("keeps 'N/A' for null/undefined (unknown, not free)", () => {
+    expect(formatRupeesOrFree(null)).toBe("N/A");
+    expect(formatRupeesOrFree(undefined)).toBe("N/A");
+  });
+
+  it("formats positive amounts like formatRupees", () => {
+    expect(formatRupeesOrFree(1234.5)).toBe(formatRupees(1234.5));
   });
 });

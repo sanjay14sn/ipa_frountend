@@ -219,11 +219,14 @@ function buildFranchiseFeeCardDisplay({
   upcomingAmount,
   upcomingDueAt,
   hasSchedule,
+  agreementFee,
 }: {
   paidAmount: number;
   upcomingAmount: number | null;
   upcomingDueAt: string | null;
   hasSchedule: boolean;
+  /** The active agreement's franchise fee — 0 renders the column as "Free". */
+  agreementFee: number | null;
 }): Pick<StatCellConfig, "value" | "sub"> {
   const hasUpcoming = upcomingAmount != null && upcomingAmount > 0;
   const upcomingLabel = hasUpcoming
@@ -244,6 +247,12 @@ function buildFranchiseFeeCardDisplay({
       value: formatRupees(upcomingAmount!),
       sub: upcomingDueAt ? `Due ${formatDate(upcomingDueAt)}` : undefined,
     };
+  }
+
+  // Nothing paid, nothing upcoming: a 0-fee agreement is free by design, not
+  // missing a schedule.
+  if (agreementFee != null && Number(agreementFee) === 0) {
+    return { value: "Free", sub: "No franchise fee for this agreement" };
   }
 
   if (!hasSchedule) {
@@ -435,6 +444,17 @@ export default function FranchiseeDashboard() {
     }
     return latest;
   }, [emiAgreementQuery.data?.payments]);
+  // The in-force franchise agreement's fee (0 = free) for the hero fee column.
+  const activeFranchiseFee = useMemo(() => {
+    const franchiseRows = (agreementsQuery.data ?? []).filter(
+      (row) => row.kind === "FRANCHISE",
+    );
+    const active =
+      franchiseRows.find((row) => row.status === "ACTIVE") ??
+      [...franchiseRows].sort((left, right) => right.id - left.id)[0] ??
+      null;
+    return active?.franchiseFee ?? null;
+  }, [agreementsQuery.data]);
   const franchiseFeeCard = useMemo(
     () =>
       buildFranchiseFeeCardDisplay({
@@ -442,8 +462,9 @@ export default function FranchiseeDashboard() {
         upcomingAmount: upcomingDue.amount,
         upcomingDueAt: upcomingDue.dueAt,
         hasSchedule: Boolean(emiAgreement),
+        agreementFee: activeFranchiseFee,
       }),
-    [franchiseFeePaid, upcomingDue, emiAgreement],
+    [franchiseFeePaid, upcomingDue, emiAgreement, activeFranchiseFee],
   );
   const emiOverdue = isFullInstallmentSummary(emiSummary)
     ? (emiSummary.totals.payableOverdueAmount ??

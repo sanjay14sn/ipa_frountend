@@ -10,7 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { GST_RATE_LABEL, getFranchiseFeePayable } from "@/lib/gst";
-import { formatRupees } from "@/lib/currency-utils";
+import { formatRupees, formatRupeesOrFree } from "@/lib/currency-utils";
 import { GstAmount } from "@/components/shared/gst-amount";
 import type {
   ReceivableCompactSummary,
@@ -44,6 +44,10 @@ interface PaymentBreakdownProps {
 
 const DEFAULT_L1_MONTHS = 4;
 const DEFAULT_L2_MONTHS = 3;
+
+/** Coerces loose payroll values the way `fmt` does, but renders ₹0 as "Free". */
+const fmtOrFree = (n: number | string | undefined | null) =>
+  formatRupeesOrFree(typeof n === "number" ? n : Number(n || 0));
 
 function getProgramFromPayroll(payroll: any) {
   return payroll?.program ?? null;
@@ -126,7 +130,7 @@ function renderGstAwareFeeValue({
   inclusive: boolean;
   fmt: (n: number | string | undefined | null) => string;
 }): React.ReactNode {
-  if (principal <= 0) return fmt(0);
+  if (principal <= 0) return fmtOrFree(principal);
   if (inclusive) return fmt(principal);
   const gst = Math.round(principal * 0.18 * 100) / 100;
   const payable = Math.round((principal + gst) * 100) / 100;
@@ -154,11 +158,23 @@ function LevelRecurringFeesBreakdown({ payroll }: { payroll: any }) {
   const program = getProgramFromPayroll(payroll);
   const { l1, l2 } = getRoyaltyDurationsMonths(program);
 
-  const rows: { label: string; amount: number; hasGst?: boolean }[] = [
-    { label: "Term fees", amount: termFees },
+  // Charges (term fees, royalty) render ₹0 as "Free"; the CI/franchise share
+  // rows are revenue splits, so a genuine ₹0 stays numeric there.
+  const rows: {
+    label: string;
+    amount: number;
+    hasGst?: boolean;
+    freeWhenZero?: boolean;
+  }[] = [
+    { label: "Term fees", amount: termFees, freeWhenZero: true },
     { label: "CI share", amount: ci },
     { label: "Franchise share", amount: franchise },
-    { label: "Royalty", amount: royalty, hasGst: royaltyGstExclusive },
+    {
+      label: "Royalty",
+      amount: royalty,
+      hasGst: royaltyGstExclusive,
+      freeWhenZero: true,
+    },
   ];
 
   const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -215,9 +231,11 @@ function LevelRecurringFeesBreakdown({ payroll }: { payroll: any }) {
                   </TableCell>
                   <TableCell className="text-right align-top tabular-nums">
                     <span className="block font-semibold text-card-foreground">
-                      {formatRupees(r.hasGst ? l1Payable : l1Net)}
+                      {r.freeWhenZero
+                        ? fmtOrFree(r.hasGst ? l1Payable : l1Net)
+                        : formatRupees(r.hasGst ? l1Payable : l1Net)}
                     </span>
-                    {r.hasGst ? (
+                    {r.hasGst && l1Net > 0 ? (
                       <span className="mt-0.5 block font-normal">
                         <GstAmount principal={l1Net} gst={l1Gst} mode="additive" size="xs" />
                       </span>
@@ -225,9 +243,11 @@ function LevelRecurringFeesBreakdown({ payroll }: { payroll: any }) {
                   </TableCell>
                   <TableCell className="text-right align-top tabular-nums">
                     <span className="block font-semibold text-card-foreground">
-                      {formatRupees(r.hasGst ? l2Payable : l2Net)}
+                      {r.freeWhenZero
+                        ? fmtOrFree(r.hasGst ? l2Payable : l2Net)
+                        : formatRupees(r.hasGst ? l2Payable : l2Net)}
                     </span>
-                    {r.hasGst ? (
+                    {r.hasGst && l2Net > 0 ? (
                       <span className="mt-0.5 block font-normal">
                         <GstAmount principal={l2Net} gst={l2Gst} mode="additive" size="xs" />
                       </span>
@@ -271,7 +291,7 @@ function ProgramSection({
           })}
         />
         {/* Kit cost is GST-exempt per business rule; render principal as-is. */}
-        <FeeCell label="Kit Cost" value={fmt(program.kitCost)} />
+        <FeeCell label="Kit Cost" value={fmtOrFree(program.kitCost)} />
         <FeeCell
           label="Material Cost"
           value={renderGstAwareFeeValue({
@@ -471,7 +491,8 @@ export default function PaymentBreakdown({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-card-foreground">
             {showInitialPayable ? "Total franchise fee" : "Franchise Fee"}
-            {feePayable.inclusive ? (
+            {/* GST badges are noise on a free fee — nothing is charged. */}
+            {feePayable.base <= 0 ? null : feePayable.inclusive ? (
               <Badge variant="secondary" className="font-normal">
                 GST inclusive
               </Badge>
@@ -490,7 +511,7 @@ export default function PaymentBreakdown({
                   : "text-xl font-semibold text-primary",
               )}
             >
-              {fmt(feePayable.base)}
+              {fmtOrFree(feePayable.base)}
             </span>
             {!feePayable.inclusive && feePayable.base > 0 ? (
               <span className="mt-1 block text-sm text-muted-foreground">

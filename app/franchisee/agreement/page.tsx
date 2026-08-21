@@ -36,6 +36,7 @@ import {
   verifyFranchiseFeePayment,
 } from "@/services/franchisee.service";
 import {
+  activateFreeAgreementMine,
   franchiseeProfileSignatureSrc,
   getFranchiseeAgreementContent,
   getReceivablePlanMine,
@@ -192,7 +193,13 @@ function AgreementWaitingView({ franchiseStatus }: { franchiseStatus: string | n
   );
 }
 
-function AgreementPaymentSuccessView({ isProgramAgreement }: { isProgramAgreement: boolean }) {
+function AgreementPaymentSuccessView({
+  isProgramAgreement,
+  isFreeAgreement,
+}: {
+  isProgramAgreement: boolean;
+  isFreeAgreement: boolean;
+}) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-lg overflow-hidden rounded-2xl border-border bg-card shadow-sm">
@@ -209,8 +216,12 @@ function AgreementPaymentSuccessView({ isProgramAgreement }: { isProgramAgreemen
         <CardContent className="px-5 py-5">
           <p className="mb-4 text-sm text-muted-foreground">
             {isProgramAgreement
-              ? "Your program agreement is signed and the payment is verified. The program scope is now active for your franchise."
-              : "Your agreement and payment are complete, and your franchise has been activated. You now have full access to your franchise dashboard."}
+              ? isFreeAgreement
+                ? "Your program agreement is signed and activated at no cost. The program scope is now active for your franchise."
+                : "Your program agreement is signed and the payment is verified. The program scope is now active for your franchise."
+              : isFreeAgreement
+                ? "Your agreement is complete and your franchise has been activated at no cost. You now have full access to your franchise dashboard."
+                : "Your agreement and payment are complete, and your franchise has been activated. You now have full access to your franchise dashboard."}
           </p>
           <p className="text-sm text-muted-foreground">
             Redirecting to your dashboard in a few seconds...
@@ -324,7 +335,9 @@ function AgreementStep4Payment({
   activationSyncing,
   signatureHint,
   payableHeadline,
+  isFreeAgreement,
   onPaymentSubmit,
+  onFreeActivate,
 }: {
   installmentInitialPayable: { kind: "down-payment" | "installment"; label: string; amount: number; principal: number; gst: number } | null;
   installmentSummary: ReceivableInstallmentSummary | ReceivableCompactSummary | null;
@@ -334,7 +347,9 @@ function AgreementStep4Payment({
   activationSyncing: boolean;
   signatureHint: string | null;
   payableHeadline: { label: string; amount: number; principal: number; gst: number } | null;
+  isFreeAgreement: boolean;
   onPaymentSubmit: () => void;
+  onFreeActivate: () => void;
 }) {
   return (
     <div className="space-y-6">
@@ -342,33 +357,46 @@ function AgreementStep4Payment({
         <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
           Step 4 of 4 · Final step
         </p>
-        <h2 className="mt-1 text-2xl font-normal text-card-foreground">Confirm and pay</h2>
+        <h2 className="mt-1 text-2xl font-normal text-card-foreground">
+          {isFreeAgreement ? "Confirm and activate" : "Confirm and pay"}
+        </h2>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          {installmentInitialPayable
-            ? `Settle the ${installmentInitialPayable.kind === "down-payment" ? "down payment" : "first installment"} to activate your franchise. The remaining principal is collected over the EMI schedule below.`
-            : "Complete the agreement payment to activate your franchise. Activation is confirmed after payment is verified."}
+          {isFreeAgreement
+            ? "This agreement is free of charge — no payment is required. Confirm below to activate."
+            : installmentInitialPayable
+              ? `Settle the ${installmentInitialPayable.kind === "down-payment" ? "down payment" : "first installment"} to activate your franchise. The remaining principal is collected over the EMI schedule below.`
+              : "Complete the agreement payment to activate your franchise. Activation is confirmed after payment is verified."}
         </p>
       </div>
-      <EmiTimeline
-        summary={installmentSummary}
-        gstFranchiseFee={feeAgreement?.gstFranchiseFee ?? null}
-        title="Your payment plan"
-      />
+      {isFreeAgreement ? null : (
+        <EmiTimeline
+          summary={installmentSummary}
+          gstFranchiseFee={feeAgreement?.gstFranchiseFee ?? null}
+          title="Your payment plan"
+        />
+      )}
       <PaymentAction
         agreementAccepted={agreementAccepted}
         isProcessingPayment={isProcessingPayment || activationSyncing}
-        onPaymentSubmit={onPaymentSubmit}
+        onPaymentSubmit={isFreeAgreement ? onFreeActivate : onPaymentSubmit}
         signatureHint={signatureHint}
         variant="final"
+        freeActivation={isFreeAgreement}
         payableAmount={payableHeadline?.amount ?? null}
         payablePrincipal={payableHeadline?.principal ?? null}
         payableGst={payableHeadline?.gst ?? null}
         payableLabel={payableHeadline?.label ?? null}
       />
       <div>
-        <h3 className="text-base font-medium text-card-foreground">What happens after you pay</h3>
+        <h3 className="text-base font-medium text-card-foreground">
+          {isFreeAgreement ? "What happens after activation" : "What happens after you pay"}
+        </h3>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          <PostPayStep step="Step 1" title="Payment verified" description="Usually within 2 minutes of a successful transaction." />
+          {isFreeAgreement ? (
+            <PostPayStep step="Step 1" title="Agreement activated" description="Immediately — no payment verification needed." />
+          ) : (
+            <PostPayStep step="Step 1" title="Payment verified" description="Usually within 2 minutes of a successful transaction." />
+          )}
           <PostPayStep step="Step 2" title="Franchise dashboard opens" description="You'll be redirected automatically — no extra steps." />
           <PostPayStep step="Step 3" title="Welcome email sent" description="Receipt, GST invoice and onboarding playbook." />
         </div>
@@ -544,6 +572,14 @@ function FranchiseAgreementContent() {
   })();
   const payableHeadline =
     installmentInitialPayable ?? nonInstallmentPayable;
+
+  // Zero-fee agreement: nothing to collect (no installment plan awaits an
+  // initial payable, and the agreed franchise fee is 0), so step 4 becomes a
+  // free activation confirmation instead of a Razorpay checkout.
+  const isFreeAgreement =
+    feeAgreement != null &&
+    installmentInitialPayable == null &&
+    !(Number(feeAgreement.franchiseFee ?? 0) > 0);
 
   const renewalAgreementId = useMemo(() => {
     if (!feeAgreement || feeAgreement.status !== "EXPIRED") return null;
@@ -1025,6 +1061,72 @@ function FranchiseAgreementContent() {
     }
   };
 
+  /**
+   * Zero-fee path: no Razorpay order — the backend validates fee=0 and flips
+   * the signed APPROVED agreement to ACTIVE directly. The post-activation
+   * choreography mirrors handlePaymentSuccess (invalidate, poll, redirect).
+   */
+  const handleFreeActivation = async () => {
+    if (!agreementAccepted) {
+      toast.error("Please accept the terms and conditions before proceeding.");
+      return;
+    }
+    if (!feeAgreement?.id) {
+      toast.error("Your agreement is still being prepared. Please try again later.");
+      return;
+    }
+    if (!isSigned) {
+      toast.error("Please sign the agreement before activating.");
+      return;
+    }
+
+    setIsProcessingPayment(true);
+    setActivationSyncing(true);
+    try {
+      await activateFreeAgreementMine(feeAgreement.id);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["agreements", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["agreements"] }),
+        queryClient.invalidateQueries({ queryKey: ["program-requests"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["auth", "franchisee-profile"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.agreements.detail(feeAgreement.id),
+        }),
+      ]);
+
+      if (isProgramAgreement) {
+        setShowPaymentSuccess(true);
+        setTimeout(() => {
+          router.push("/franchisee/dashboard");
+        }, 2000);
+        return;
+      }
+
+      const activated = await waitForActivation();
+      if (!activated) {
+        toast.success(
+          "Agreement activated. Your access is still syncing, please refresh shortly.",
+        );
+        await refreshFranchiseeState();
+        return;
+      }
+
+      setShowPaymentSuccess(true);
+      setTimeout(() => {
+        router.push("/franchisee/dashboard");
+      }, 3000);
+    } catch (error) {
+      sendClientLog({ level: "error", event: "agreement-free-activation-error", message: "Error activating zero-fee agreement", context: { error } });
+      toast.error(getErrorMessage(error, "Failed to activate the agreement."));
+    } finally {
+      setActivationSyncing(false);
+      setIsProcessingPayment(false);
+    }
+  };
+
   const handleViewFullSchedule = async () => {
     if (!feeAgreement?.id || fullReceivablePlanLoading) return;
     setFullReceivablePlanLoading(true);
@@ -1198,7 +1300,12 @@ function FranchiseAgreementContent() {
   ) as Parameters<typeof FranchiseeInformation>[0]["franchiseData"];
 
   if (showPaymentSuccess) {
-    return <AgreementPaymentSuccessView isProgramAgreement={isProgramAgreement} />;
+    return (
+      <AgreementPaymentSuccessView
+        isProgramAgreement={isProgramAgreement}
+        isFreeAgreement={isFreeAgreement}
+      />
+    );
   }
 
   const signatureHint = activationSyncing
@@ -1298,7 +1405,9 @@ function FranchiseAgreementContent() {
                 activationSyncing={activationSyncing}
                 signatureHint={signatureHint}
                 payableHeadline={payableHeadline}
+                isFreeAgreement={isFreeAgreement}
                 onPaymentSubmit={handlePaymentSubmit}
+                onFreeActivate={handleFreeActivation}
               />
             ) : null}
 

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { getFranchiseFeePayable } from "@/lib/gst";
-import { formatRupees } from "@/lib/currency-utils";
+import { formatRupees, formatRupeesOrFree } from "@/lib/currency-utils";
 import { type AgreementScheduleBView } from "@/services/agreement.service";
 import { ExpandableImage } from "@/components/shared";
 import { Download, Eye, IndianRupee, Loader2 } from "lucide-react";
@@ -92,7 +92,7 @@ function LevelRoyaltyCard({
           <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
             Term Fee
           </p>
-          <p className="text-xl font-semibold tabular-nums">{formatRupees(level.termFees)}</p>
+          <p className="text-xl font-semibold tabular-nums">{formatRupeesOrFree(level.termFees)}</p>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-2">
@@ -238,11 +238,11 @@ export function ScheduleBCard({
             </div>
             <div>
               <p className="text-3xl font-semibold tabular-nums tracking-tight">
-                {formatRupees(data.franchiseFee)}
+                {formatRupeesOrFree(data.franchiseFee)}
               </p>
               <p className="text-sm text-muted-foreground">franchise fee</p>
             </div>
-            {!feePayable.inclusive && (
+            {!feePayable.inclusive && feePayable.base > 0 && (
               <p className="text-sm text-muted-foreground">
                 + 18% GST{" "}
                 <span className="text-foreground font-medium">{formatRupees(feePayable.gst)}</span>
@@ -264,15 +264,15 @@ export function ScheduleBCard({
                 <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
                   Registration
                 </p>
-                <p className="font-semibold mt-0.5 tabular-nums">{formatRupees(data.kitCost)}</p>
+                <p className="font-semibold mt-0.5 tabular-nums">{formatRupeesOrFree(data.kitCost)}</p>
                 <p className="text-xs text-muted-foreground">one-time</p>
               </div>
               <div>
                 <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
                   Material Kit
                 </p>
-                <p className="font-semibold mt-0.5 tabular-nums">{formatRupees(data.materialCost)}</p>
-                {!data.gstMaterialCost && (
+                <p className="font-semibold mt-0.5 tabular-nums">{formatRupeesOrFree(data.materialCost)}</p>
+                {!data.gstMaterialCost && materialPayable.base > 0 && (
                   <p className="text-xs text-muted-foreground">+ GST {formatRupees(materialPayable.gst)}</p>
                 )}
               </div>

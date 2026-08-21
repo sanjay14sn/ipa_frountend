@@ -24,6 +24,12 @@ interface PaymentActionProps {
   payableGst?: number | null;
   /** Friendly description for what's being paid (e.g. "Down payment", "Installment 1"). */
   payableLabel?: string | null;
+  /**
+   * Zero-fee agreements: nothing is charged, so the card becomes a free
+   * activation confirmation — `onPaymentSubmit` then triggers direct
+   * activation instead of a Razorpay order.
+   */
+  freeActivation?: boolean;
 }
 
 export default function PaymentAction({
@@ -36,6 +42,7 @@ export default function PaymentAction({
   payablePrincipal,
   payableGst,
   payableLabel,
+  freeActivation = false,
 }: PaymentActionProps) {
   const showPayableHeadline =
     payableAmount != null && Number(payableAmount) > 0;
@@ -45,6 +52,64 @@ export default function PaymentAction({
     Number(payableGst) > 0 &&
     payablePrincipal != null;
   const isFinal = variant === "final";
+
+  // Zero-fee agreement — no Razorpay leg; confirm-to-activate card.
+  if (freeActivation) {
+    return (
+      <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              Amount due now
+            </p>
+            <p className="mt-0.5 text-2xl font-semibold text-card-foreground">
+              Free
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              This agreement carries no fee — nothing to pay.
+            </p>
+          </div>
+
+          <div className="flex flex-col items-stretch gap-1.5 md:items-end">
+            <Button
+              onClick={onPaymentSubmit}
+              disabled={
+                !agreementAccepted ||
+                isProcessingPayment ||
+                Boolean(signatureHint)
+              }
+              className="rounded-lg px-5 text-sm font-medium shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isProcessingPayment ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Activating…
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="mr-2 h-3.5 w-3.5" />
+                  Activate at no cost
+                </>
+              )}
+            </Button>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground md:justify-end">
+              <ShieldCheck className="h-3 w-3" />
+              <span>No payment required</span>
+            </div>
+          </div>
+        </div>
+
+        {!agreementAccepted ? (
+          <p className="mt-2 text-xs font-medium text-destructive">
+            Please accept the terms and conditions to proceed.
+          </p>
+        ) : null}
+        {signatureHint ? (
+          <p className="mt-2 text-xs font-medium text-amber-800">{signatureHint}</p>
+        ) : null}
+      </div>
+    );
+  }
 
   // Final step — compact, professional payment card.
   if (isFinal && showPayableHeadline) {
