@@ -16,11 +16,11 @@ describe("PaymentAction — free activation mode", () => {
       />,
     );
 
-    expect(screen.getByText("Free")).toBeInTheDocument();
     expect(screen.getByText("No payment required")).toBeInTheDocument();
+    expect(screen.getByText("Activation is immediate")).toBeInTheDocument();
     expect(screen.queryByText(/Razorpay/)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /activate at no cost/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^activate$/i }));
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
@@ -36,7 +36,7 @@ describe("PaymentAction — free activation mode", () => {
       />,
     );
 
-    const button = screen.getByRole("button", { name: /activate at no cost/i });
+    const button = screen.getByRole("button", { name: /^activate$/i });
     expect(button).toBeDisabled();
     expect(
       screen.getByText(/accept the terms and conditions/i),

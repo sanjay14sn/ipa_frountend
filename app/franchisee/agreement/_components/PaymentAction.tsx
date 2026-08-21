@@ -63,7 +63,7 @@ export default function PaymentAction({
               Amount due now
             </p>
             <p className="mt-0.5 text-2xl font-semibold text-card-foreground">
-              Free
+              No payment required
             </p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               This agreement carries no fee — nothing to pay.
@@ -88,13 +88,13 @@ export default function PaymentAction({
               ) : (
                 <>
                   <ShieldCheck className="mr-2 h-3.5 w-3.5" />
-                  Activate at no cost
+                  Activate
                 </>
               )}
             </Button>
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground md:justify-end">
               <ShieldCheck className="h-3 w-3" />
-              <span>No payment required</span>
+              <span>Activation is immediate</span>
             </div>
           </div>
         </div>

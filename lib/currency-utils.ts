@@ -40,11 +40,11 @@ export function formatRupees(value?: number | null): string {
 
 /**
  * Fee-surface variant of {@link formatRupees}: a zero amount renders as
- * "Free" so a no-cost fee reads as intentionally free rather than "₹0.00".
- * Null/undefined/NaN still return "N/A" (unknown, not free).
+ * "No payment required" so a no-cost fee reads as intentional rather than
+ * "₹0.00". Null/undefined/NaN still return "N/A" (unknown, not free).
  */
 export function formatRupeesOrFree(value?: number | null): string {
-  if (value != null && Number(value) === 0) return "Free";
+  if (value != null && Number(value) === 0) return "No payment required";
   return formatRupees(value);
 }
 

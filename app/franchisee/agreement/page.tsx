@@ -217,10 +217,10 @@ function AgreementPaymentSuccessView({
           <p className="mb-4 text-sm text-muted-foreground">
             {isProgramAgreement
               ? isFreeAgreement
-                ? "Your program agreement is signed and activated at no cost. The program scope is now active for your franchise."
+                ? "Your program agreement is signed and activated — no payment was required. The program scope is now active for your franchise."
                 : "Your program agreement is signed and the payment is verified. The program scope is now active for your franchise."
               : isFreeAgreement
-                ? "Your agreement is complete and your franchise has been activated at no cost. You now have full access to your franchise dashboard."
+                ? "Your agreement is complete and your franchise has been activated — no payment was required. You now have full access to your franchise dashboard."
                 : "Your agreement and payment are complete, and your franchise has been activated. You now have full access to your franchise dashboard."}
           </p>
           <p className="text-sm text-muted-foreground">
@@ -362,7 +362,7 @@ function AgreementStep4Payment({
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           {isFreeAgreement
-            ? "This agreement is free of charge — no payment is required. Confirm below to activate."
+            ? "No payment is required for this agreement. Confirm below to activate."
             : installmentInitialPayable
               ? `Settle the ${installmentInitialPayable.kind === "down-payment" ? "down payment" : "first installment"} to activate your franchise. The remaining principal is collected over the EMI schedule below.`
               : "Complete the agreement payment to activate your franchise. Activation is confirmed after payment is verified."}

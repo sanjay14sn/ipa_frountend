@@ -43,8 +43,8 @@ describe("formatRupees", () => {
 });
 
 describe("formatRupeesOrFree", () => {
-  it("renders zero as 'Free'", () => {
-    expect(formatRupeesOrFree(0)).toBe("Free");
+  it("renders zero as 'No payment required'", () => {
+    expect(formatRupeesOrFree(0)).toBe("No payment required");
   });
 
   it("keeps 'N/A' for null/undefined (unknown, not free)", () => {

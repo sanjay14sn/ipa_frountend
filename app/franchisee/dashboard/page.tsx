@@ -225,7 +225,7 @@ function buildFranchiseFeeCardDisplay({
   upcomingAmount: number | null;
   upcomingDueAt: string | null;
   hasSchedule: boolean;
-  /** The active agreement's franchise fee — 0 renders the column as "Free". */
+  /** The active agreement's franchise fee — 0 renders "No payment required". */
   agreementFee: number | null;
 }): Pick<StatCellConfig, "value" | "sub"> {
   const hasUpcoming = upcomingAmount != null && upcomingAmount > 0;
@@ -252,7 +252,10 @@ function buildFranchiseFeeCardDisplay({
   // Nothing paid, nothing upcoming: a 0-fee agreement is free by design, not
   // missing a schedule.
   if (agreementFee != null && Number(agreementFee) === 0) {
-    return { value: "Free", sub: "No franchise fee for this agreement" };
+    return {
+      value: "No payment required",
+      sub: "No franchise fee for this agreement",
+    };
   }
 
   if (!hasSchedule) {

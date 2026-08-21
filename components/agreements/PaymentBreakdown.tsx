@@ -45,7 +45,7 @@ interface PaymentBreakdownProps {
 const DEFAULT_L1_MONTHS = 4;
 const DEFAULT_L2_MONTHS = 3;
 
-/** Coerces loose payroll values the way `fmt` does, but renders ₹0 as "Free". */
+/** Coerces loose payroll values the way `fmt` does, but renders ₹0 as "No payment required". */
 const fmtOrFree = (n: number | string | undefined | null) =>
   formatRupeesOrFree(typeof n === "number" ? n : Number(n || 0));
 
@@ -158,8 +158,8 @@ function LevelRecurringFeesBreakdown({ payroll }: { payroll: any }) {
   const program = getProgramFromPayroll(payroll);
   const { l1, l2 } = getRoyaltyDurationsMonths(program);
 
-  // Charges (term fees, royalty) render ₹0 as "Free"; the CI/franchise share
-  // rows are revenue splits, so a genuine ₹0 stays numeric there.
+  // Charges (term fees, royalty) render ₹0 as "No payment required"; the
+  // CI/franchise share rows are revenue splits, so a genuine ₹0 stays numeric.
   const rows: {
     label: string;
     amount: number;
