@@ -19,6 +19,7 @@ import {
 } from "../services/notification.service";
 import { toast } from "sonner";
 import { useUser } from "./user-context";
+import { isFranchiseOperational } from "@/lib/auth";
 import { queryKeys } from "@/hooks/api/query-keys";
 import { sendClientLog } from "@/lib/client-telemetry";
 
@@ -70,14 +71,23 @@ export function NotificationProvider({
   const userId = user?.id ? parseInt(user.id, 10) : null;
   const userType = isNotificationUserType(user?.role) ? user.role : null;
 
+  // Every /notification route sits behind the backend's operational-access
+  // guard, so a pre-active franchisee (still in the sign-and-pay funnel)
+  // would get a guaranteed 403 on the list + unread-count queries — which
+  // the global QueryCache toasts, twice, on every login. Keep the bell fully
+  // dormant (queries + SSE) until the franchise is operational. Admin and
+  // explicit CI identities are unaffected.
+  const franchiseeNotOperational =
+    !identity && userType === "franchisee" && !isFranchiseOperational(user);
+
   const effectiveUserId = identity
     ? identity.userId
-    : isLoginPage
+    : isLoginPage || franchiseeNotOperational
       ? null
       : userId;
   const effectiveUserType = identity
     ? identity.userType
-    : isLoginPage
+    : isLoginPage || franchiseeNotOperational
       ? null
       : userType;
 
