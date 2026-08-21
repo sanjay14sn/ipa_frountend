@@ -73,8 +73,8 @@ function LevelRoyaltyCard({
       : 0;
   const ipaPayable = level.ipaShare + ipaGst;
 
-  const franchiseeTotal = level.franchiseShare * level.months;
-  const ciTotal = level.ciShare * level.months;
+  const franchiseeTotal = level.franchiseShare;
+  const ciTotal = level.ciShare;
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
