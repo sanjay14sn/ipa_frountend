@@ -107,7 +107,7 @@ test.describe("CI portal (authenticated)", () => {
   test.skip(!ciUser || !ciPass, "E2E_CI_USER / E2E_CI_PASS not set");
 
   test("login lands on the agreement or dashboard", async ({ page }) => {
-    await page.goto("/ci/login");
+    await page.goto("/ci-login");
     await page.fill("#email", ciUser!);
     await page.fill("#password", ciPass!);
     await page.click("button[type=submit]");

@@ -264,7 +264,7 @@ export function LoginCard({
             <Link href="/admin-login" className="text-primary hover:underline underline-offset-2">
               Admin
             </Link>
-            <Link href="/ci/login" className="text-primary hover:underline underline-offset-2">
+            <Link href="/ci-login" className="text-primary hover:underline underline-offset-2">
               Course Instructor
             </Link>
           </div>

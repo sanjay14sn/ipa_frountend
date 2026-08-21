@@ -143,6 +143,10 @@ const nextConfig = {
     // destination — same end state after login.
     return [
       { source: "/", destination: "/login", permanent: false },
+      // CI login moved out of the CI portal layout into the (auth) group so
+      // role-swapping between login pages stays inside one lightweight layout.
+      // Old emailed links (backend CI_LOGIN_URL) still point here.
+      { source: "/ci/login", destination: "/ci-login", permanent: false },
       { source: "/admin", destination: "/admin/dashboard", permanent: false },
       {
         source: "/admin/orders",

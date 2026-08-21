@@ -104,7 +104,7 @@ function getPortal(role: UserRole | ""): Portal {
 function loginPathForSession(role: UserRole | ""): string {
   const portal = getPortal(role);
   if (portal === "franchisee") return "/login";
-  if (portal === "ci") return "/ci/login";
+  if (portal === "ci") return "/ci-login";
   return "/admin-login";
 }
 

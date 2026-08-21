@@ -13,7 +13,7 @@ import { PortalSidebarBanner } from "@/components/layout/portal-sidebar";
 import { CI_NAV, CI_ONBOARDING_NAV } from "@/lib/navigation/nav-config";
 import { PageSkeleton } from "@/components/shared/skeletons";
 
-const UNLOCKED_PATHS = ["/ci/login", "/ci/agreement"];
+const UNLOCKED_PATHS = ["/ci/agreement"];
 
 function CIShell({ children }: { children: React.ReactNode }) {
   const { user, loading, agreementPhase, clear } = useCIAuth();
@@ -22,8 +22,10 @@ function CIShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading) return;
-    if (!user && pathname !== "/ci/login") {
-      router.replace("/ci/login");
+    if (!user) {
+      // The CI login page lives outside this layout at /ci-login (lightweight
+      // (auth) group) so visiting it never mounts this shell.
+      router.replace("/ci-login");
       return;
     }
     if (
@@ -44,21 +46,7 @@ function CIShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user && pathname !== "/ci/login") return null;
-
-  if (pathname === "/ci/login") {
-    return (
-      <PortalShell
-        variant="bare"
-        portal="ci"
-        homeHref="/ci/login"
-        brand={{ title: "CI Portal" }}
-        breadcrumbRoot={{ label: "CI Portal", href: "/ci/login" }}
-      >
-        {children}
-      </PortalShell>
-    );
-  }
+  if (!user) return null;
 
   // Agreement page gets a minimal shell (header + sign-out) until both
   // parties have signed. No default actions cluster: the notification bell
@@ -67,7 +55,7 @@ function CIShell({ children }: { children: React.ReactNode }) {
     const handleLogout = async () => {
       await logoutCI().catch(() => {});
       clear();
-      router.replace("/ci/login");
+      router.replace("/ci-login");
     };
     return (
       <PortalShell

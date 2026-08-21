@@ -132,7 +132,7 @@ function AdminLoginPageInner() {
               <Link href="/login" className="text-primary hover:underline underline-offset-2">
                 Franchisee
               </Link>
-              <Link href="/ci/login" className="text-primary hover:underline underline-offset-2">
+              <Link href="/ci-login" className="text-primary hover:underline underline-offset-2">
                 Course Instructor
               </Link>
             </div>

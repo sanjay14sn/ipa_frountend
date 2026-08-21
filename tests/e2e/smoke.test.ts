@@ -49,7 +49,25 @@ test("unauthenticated /franchisee redirects to login", async ({ page }) => {
 });
 
 /**
- * Smoke test 5: 404 page renders for unknown routes.
+ * Smoke test 5: CI login renders at /ci-login; the legacy /ci/login URL
+ * (still baked into old credential emails) 307s to it.
+ */
+test("ci login page renders and legacy /ci/login redirects", async ({ page }) => {
+  await page.goto("/ci/login");
+  await expect(page).toHaveURL(/\/ci-login/);
+  await expect(page.locator("form")).toBeVisible();
+});
+
+/**
+ * Smoke test 6: Unauthenticated access to the CI portal redirects to /ci-login.
+ */
+test("unauthenticated /ci redirects to ci login", async ({ page }) => {
+  await page.goto("/ci/dashboard");
+  await expect(page).toHaveURL(/\/ci-login/);
+});
+
+/**
+ * Smoke test 7: 404 page renders for unknown routes.
  */
 test("unknown route shows 404 page", async ({ page }) => {
   const response = await page.goto("/this-route-does-not-exist-at-all");

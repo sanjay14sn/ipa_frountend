@@ -104,7 +104,7 @@ export function PortalHeaderActions({
     // Navigate after the server has cleared the session cookies so the
     // proxy middleware allows the login page through.
     if (isCiPortal) {
-      router.push("/ci/login");
+      router.push("/ci-login");
     } else if (isAdminPortal) {
       router.push("/admin-login");
     } else {

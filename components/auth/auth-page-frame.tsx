@@ -6,9 +6,8 @@ export interface AuthPageFrameProps {
 
 /**
  * Shared chrome for the login pages: full-page centered column on the app
- * background with the IPA lockup above the card slot. Applied to /login and
- * /admin-login via app/(auth)/layout.tsx; /ci/login renders it directly
- * (it must stay inside the CI layout tree for CIAuthProvider).
+ * background with the IPA lockup above the card slot. Applied to /login,
+ * /admin-login and /ci-login via app/(auth)/layout.tsx.
  */
 export function AuthPageFrame({ children }: AuthPageFrameProps) {
   return (

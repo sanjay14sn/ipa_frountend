@@ -47,7 +47,7 @@ type Realm = keyof typeof SESSION_COOKIES;
 const LOGIN_PAGE_REALM: Record<string, Realm> = {
   "/login": "franchisee",
   "/admin-login": "admin",
-  "/ci/login": "ci",
+  "/ci-login": "ci",
 };
 
 function hasAdminAuthCookie(req: NextRequest): boolean {
@@ -87,14 +87,12 @@ function isProtectedAdminAppPath(pathname: string): boolean {
 }
 
 /**
- * CI area is under `/ci/…` but `/ci/login` is the auth page — exclude it so
- * unauthenticated visitors are not bounced in a loop.
+ * CI area is under `/ci/…`. The CI login page lives OUTSIDE it at /ci-login
+ * (the legacy /ci/login URL 307s there via next.config.mjs redirects, which
+ * run before this proxy), so the whole prefix is protected.
  */
 function isProtectedCiAppPath(pathname: string): boolean {
-  return (
-    (pathname === "/ci" || pathname.startsWith("/ci/")) &&
-    !pathname.startsWith("/ci/login")
-  );
+  return pathname === "/ci" || pathname.startsWith("/ci/");
 }
 
 /** Routes that require a logged-in session, mapped to their login redirect. */
@@ -144,7 +142,7 @@ export function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL("/admin/dashboard", req.url));
     }
   }
-  if (pathname === "/ci/login") {
+  if (pathname === "/ci-login") {
     if (hasCiAuthCookie(req)) {
       return NextResponse.redirect(new URL("/ci/dashboard", req.url));
     }
@@ -157,7 +155,7 @@ export function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
   if (!authenticated && isProtectedCiAppPath(pathname)) {
-    const loginUrl = new URL("/ci/login", req.url);
+    const loginUrl = new URL("/ci-login", req.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
