@@ -346,7 +346,8 @@ export function CertificateTemplateEditor({
                                 className="flex h-full w-full items-center justify-center whitespace-nowrap text-card-foreground"
                                 style={previewTextStyle(coord)}
                               >
-                                {sample}
+                                {/* Backend renderer prints all text in caps. */}
+                                {sample.toUpperCase()}
                               </span>
                             )
                           ) : null;
