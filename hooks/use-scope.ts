@@ -81,6 +81,7 @@ export function useProgramId(): number | null {
 export function useScopeAgreements() {
   const { user, loading } = useUser();
   const agreementId = useScopeStore((s) => s.agreementId);
+  const programId = useScopeStore((s) => s.programId);
   const setAgreement = useScopeStore((s) => s.setAgreement);
 
   const franchiseId = user?.franchiseId ?? null;
@@ -103,15 +104,27 @@ export function useScopeAgreements() {
 
   useEffect(() => {
     if (!isActiveFranchisee || agreements.length === 0) return;
-    const stillValid =
-      agreementId != null &&
-      agreements.some((row) => row.agreementId === agreementId);
-    if (stillValid) return;
+    if (agreementId != null) {
+      const matched = agreements.find((row) => row.agreementId === agreementId);
+      if (matched) {
+        const expectedProgramId = matched.programId ?? null;
+        if (programId !== expectedProgramId) {
+          setAgreement(agreementId, expectedProgramId);
+        }
+        return;
+      }
+    }
     const firstAgreement = agreements.find((row) => row.agreementId != null);
     const nextAgreementId = firstAgreement?.agreementId ?? null;
     const nextProgramId = firstAgreement?.programId ?? null;
     setAgreement(nextAgreementId, nextProgramId);
-  }, [agreements, agreementId, isActiveFranchisee, setAgreement]);
+  }, [
+    agreements,
+    agreementId,
+    programId,
+    isActiveFranchisee,
+    setAgreement,
+  ]);
 
   return {
     agreements,

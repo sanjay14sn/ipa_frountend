@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, Award, CalendarClock, CreditCard, Edit } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, Award, BookOpen, CalendarClock, CreditCard, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable, StatusBadge, type StatusTone } from "@/components/shared";
@@ -149,6 +150,20 @@ export default function StudentsTable({
       className: "text-center",
       render: (student) => (
         <div className="flex items-center justify-center gap-0.5">
+          {mode === "franchise" ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0 p-0"
+              asChild
+              title="Practice papers"
+              aria-label="Practice papers"
+            >
+              <Link href={`/franchisee/students/${student.id}/practice-papers`}>
+                <BookOpen className="h-3.5 w-3.5 text-violet-600" />
+              </Link>
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
             size="icon"

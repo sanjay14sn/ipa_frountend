@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button as _Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,8 +42,14 @@ import {
   ParentInfoFields,
   ContactInfoFields,
   ProgramSelectionFields,
+  StudentFeeSetupFields,
+  DEFAULT_FEE_SETUP,
+  buildFeeSetupPayload,
+  type StudentFeeSetupData,
   useCascadingSelects,
 } from "@/components/students/student-form";
+import { saveStudentFeeConfiguration } from "@/services/student-fee.service";
+import { addMonthsToDate, resolveLevelDurationMonths } from "@/lib/student-fee-calculations";
 
 
 interface AddStudentModalProps {
@@ -93,6 +99,9 @@ interface StudentFormData {
   previousInstructorId: number;
   idCardIssued: boolean;
   idCardIssueDate: string;
+
+  // Setup Fee
+  feeSetup: StudentFeeSetupData;
 }
 
 const INITIAL_FORM_DATA: StudentFormData = {
@@ -125,6 +134,7 @@ const INITIAL_FORM_DATA: StudentFormData = {
   previousInstructorId: 0,
   idCardIssued: false,
   idCardIssueDate: "",
+  feeSetup: { ...DEFAULT_FEE_SETUP },
 };
 
 export default function AddStudentModal({
@@ -170,6 +180,19 @@ export default function AddStudentModal({
     existing: formData.existing,
     franchiseId: user?.franchiseId ?? undefined,
   });
+
+  useEffect(() => {
+    if (currentStep !== 5 || !formData.dateOfJoining) return;
+    setFormData((prev) => ({
+      ...prev,
+      feeSetup: {
+        ...prev.feeSetup,
+        startDate: prev.feeSetup.startDate || prev.dateOfJoining,
+      },
+    }));
+  }, [currentStep, formData.dateOfJoining]);
+
+  const selectedLevel = levels.find((l) => l.id === formData.levelId) ?? null;
 
   const validateCurrentStep = () => {
     const newErrors: Record<string, string> = {};
@@ -283,6 +306,39 @@ export default function AddStudentModal({
             "Please provide reason for discontinuation";
         }
         break;
+
+      case 5: {
+        const { feeSetup } = formData;
+        if (!feeSetup.startDate) {
+          newErrors.startDate = "Start date is required";
+        }
+        if (feeSetup.registrationFee < 0) {
+          newErrors.registrationFee = "Registration fee cannot be negative";
+        }
+        if (feeSetup.feeRule !== "REG_ONLY" && feeSetup.courseFee <= 0) {
+          newErrors.courseFee = "Course fee is required";
+        }
+        const durationMonths =
+          feeSetup.durationOption === "level"
+            ? resolveLevelDurationMonths(
+                levels.find((l) => l.id === formData.levelId) ?? null,
+              )
+            : Math.max(1, feeSetup.customDurationMonths || 1);
+        const autoEnd = addMonthsToDate(feeSetup.startDate, durationMonths);
+        const endDate = feeSetup.isManualEndDate
+          ? feeSetup.manualEndDate
+          : autoEnd;
+        if (feeSetup.isManualEndDate && !feeSetup.manualEndDate) {
+          newErrors.manualEndDate = "End date is required";
+        } else if (
+          feeSetup.startDate &&
+          endDate &&
+          new Date(endDate) < new Date(feeSetup.startDate)
+        ) {
+          newErrors.manualEndDate = "End date cannot be before start date";
+        }
+        break;
+      }
     }
 
     setErrors(newErrors);
@@ -360,7 +416,11 @@ export default function AddStudentModal({
         previousLevel,
       };
 
-      await createStudentMutation.mutateAsync(studentData);
+      const createdStudent = await createStudentMutation.mutateAsync(studentData);
+      await saveStudentFeeConfiguration(
+        createdStudent.id,
+        buildFeeSetupPayload(formData.feeSetup, selectedLevel),
+      );
       setSubmitted(true);
       onSuccess();
     } catch (error) {
@@ -384,7 +444,14 @@ export default function AddStudentModal({
 
   const handleClose = () => {
     setCurrentStep(1);
-    const fresh = { ...INITIAL_FORM_DATA, dateOfJoining: new Date().toISOString().split("T")[0] };
+    const fresh = {
+      ...INITIAL_FORM_DATA,
+      dateOfJoining: new Date().toISOString().split("T")[0],
+      feeSetup: {
+        ...DEFAULT_FEE_SETUP,
+        startDate: new Date().toISOString().split("T")[0],
+      },
+    };
     setFormData(fresh);
     setPristineJson(JSON.stringify(fresh));
     setErrors({});
@@ -812,6 +879,21 @@ export default function AddStudentModal({
           </div>
         );
 
+      case 5:
+        return (
+          <StudentFeeSetupFields
+            value={formData.feeSetup}
+            onChange={(patch) =>
+              setFormData((prev) => ({
+                ...prev,
+                feeSetup: { ...prev.feeSetup, ...patch },
+              }))
+            }
+            level={selectedLevel}
+            errors={errors}
+          />
+        );
+
       default:
         return null;
     }
@@ -823,7 +905,7 @@ export default function AddStudentModal({
         open={open}
         onOpenChange={handleModalOpenChange}
         title="Student Registered Successfully!"
-        description="The student has been registered successfully. You can now view and manage the student from the students list."
+        description="The student has been registered and fee setup saved. You can view and manage them from the students list."
         actionLabel="Close"
         onAction={handleClose}
       />

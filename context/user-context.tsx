@@ -73,6 +73,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   // store changes (e.g. the user just logged in, the persisted store cleared,
   // or another tab cleared it).
   const scopeAgreementId = useScopeStore((s) => s.agreementId);
+  const scopeProgramId = useScopeStore((s) => s.programId);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -286,10 +287,18 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       (row) => row.kind !== "CI" && row.id != null,
     );
     if (candidates.length === 0) return;
-    const stillValid =
-      scopeAgreementId != null &&
-      candidates.some((row) => row.id === scopeAgreementId);
-    if (stillValid) return;
+    if (scopeAgreementId != null) {
+      const matched = candidates.find((row) => row.id === scopeAgreementId);
+      if (matched) {
+        const expectedProgramId = matched.programId ?? null;
+        if (scopeProgramId !== expectedProgramId) {
+          useScopeStore
+            .getState()
+            .setAgreement(scopeAgreementId, expectedProgramId);
+        }
+        return;
+      }
+    }
     const pick = candidates[0];
     useScopeStore
       .getState()
@@ -297,6 +306,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   }, [
     user,
     scopeAgreementId,
+    scopeProgramId,
   ]);
 
   useEffect(() => {

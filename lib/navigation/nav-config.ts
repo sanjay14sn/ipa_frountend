@@ -8,10 +8,12 @@ import {
   Globe,
   GraduationCap,
   LayoutDashboard,
+  Receipt,
   ShieldCheck,
   ShoppingCart,
   Upload,
   Users,
+  Trophy,
 } from "lucide-react";
 
 /**
@@ -27,12 +29,21 @@ import {
  * with their feature phases so nothing is ever unreachable in between.
  */
 
+export interface PortalNavChildItem {
+  title: string;
+  href: string;
+  /** "exact": active only on pathname === href. Default: prefix matching. */
+  match?: "exact" | "prefix";
+}
+
 export interface PortalNavItem {
   title: string;
   href: string;
   icon: LucideIcon;
   /** "exact": active only on pathname === href. Default: prefix matching. */
   match?: "exact" | "prefix";
+  /** Optional nested destinations rendered as an expandable sidebar group. */
+  children?: readonly PortalNavChildItem[];
 }
 
 export interface PortalNavSection {
@@ -42,17 +53,52 @@ export interface PortalNavSection {
 
 function freezeNav(sections: PortalNavSection[]): readonly PortalNavSection[] {
   for (const section of sections) {
-    for (const item of section.items) Object.freeze(item);
+    for (const item of section.items) {
+      if (item.children) {
+        for (const child of item.children) Object.freeze(child);
+        Object.freeze(item.children);
+      }
+      Object.freeze(item);
+    }
     Object.freeze(section.items);
     Object.freeze(section);
   }
   return Object.freeze(sections);
 }
 
+function isNavHrefActive(
+  pathname: string,
+  href: string,
+  match?: "exact" | "prefix",
+): boolean {
+  const base = href.split("?")[0];
+  if (match === "exact") return pathname === base;
+  return pathname === base || pathname.startsWith(`${base}/`);
+}
+
+export function isNavChildActive(
+  pathname: string,
+  child: PortalNavChildItem,
+): boolean {
+  return isNavHrefActive(pathname, child.href, child.match);
+}
+
+export function isNavGroupExpanded(
+  pathname: string,
+  item: PortalNavItem,
+): boolean {
+  if (!item.children?.length) return false;
+  return (
+    isNavHrefActive(pathname, item.href, "prefix") ||
+    item.children.some((child) => isNavChildActive(pathname, child))
+  );
+}
+
 export function isNavItemActive(pathname: string, item: PortalNavItem): boolean {
-  const href = item.href.split("?")[0];
-  if (item.match === "exact") return pathname === href;
-  return pathname === href || pathname.startsWith(`${href}/`);
+  if (item.children?.length) {
+    return isNavGroupExpanded(pathname, item);
+  }
+  return isNavHrefActive(pathname, item.href, item.match);
 }
 
 export const ADMIN_NAV = freezeNav([
@@ -72,6 +118,22 @@ export const ADMIN_NAV = freezeNav([
     items: [
       { title: "Franchise", href: "/admin/franchise", icon: Building2 },
       { title: "Students", href: "/admin/students", icon: Users },
+      {
+        title: "Competitions",
+        href: "/admin/competitions",
+        icon: Trophy,
+        children: [
+          {
+            title: "All competitions",
+            href: "/admin/competitions",
+            match: "exact",
+          },
+          { title: "Mapping", href: "/admin/competitions/mapping" },
+          { title: "Practice paper", href: "/admin/competitions/practice-paper" },
+          { title: "Certifications", href: "/admin/competitions/certifications" },
+          { title: "Practice pricing", href: "/admin/competitions/practice-pricing" },
+        ],
+      },
       {
         // ADM-18: CI agreements live inside this hub's `agreements` tab now.
         title: "Course Instructors",
@@ -119,6 +181,19 @@ export const SUPER_ADMIN_NAV = freezeNav([
         icon: BookOpen,
         match: "exact",
       },
+      {
+        title: "LMS",
+        href: "/admin/learning/book-master",
+        icon: ClipboardList,
+        children: [
+          {
+            title: "Book Master",
+            href: "/admin/learning/book-master",
+            match: "exact",
+          },
+          { title: "Student Progress", href: "/admin/learning/progress" },
+        ],
+      },
       { title: "Admins", href: "/admin/admins", icon: ShieldCheck },
     ],
   },
@@ -140,12 +215,42 @@ export const FRANCHISEE_NAV = freezeNav([
     title: "My business",
     items: [
       { title: "Students", href: "/franchisee/students", icon: Users },
+      { title: "Fees", href: "/franchisee/fees", icon: Receipt },
+      {
+        title: "Competitions",
+        href: "/franchisee/competitions",
+        icon: Trophy,
+        children: [
+          {
+            title: "Active competitions",
+            href: "/franchisee/competitions",
+            match: "exact",
+          },
+          { title: "Certifications", href: "/franchisee/competitions/certifications" },
+        ],
+      },
       {
         title: "Course Instructors",
         href: "/franchisee/course-instructors",
         icon: GraduationCap,
       },
       { title: "Orders", href: "/franchisee/orders", icon: ShoppingCart },
+    ],
+  },
+  {
+    title: "Learning",
+    items: [
+      {
+        title: "Assignments",
+        href: "/franchisee/learning/assignments",
+        icon: ClipboardList,
+      },
+      { title: "Batches", href: "/franchisee/learning/batches", icon: Users },
+      {
+        title: "Student Progress",
+        href: "/franchisee/learning/progress",
+        icon: BookOpen,
+      },
     ],
   },
 ]);

@@ -44,6 +44,7 @@ export {
   StatCardSkeleton,
   StatGridSkeleton,
   CardListSkeleton,
+  QuestionGeneratorPapersSkeleton,
 } from "./skeletons";
 export { PageHeaderCard } from "./page-header-card";
 export type { PageHeaderCardProps } from "./page-header-card";

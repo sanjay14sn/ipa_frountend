@@ -130,6 +130,27 @@ export function StatGridSkeleton({ count = 4 }: StatGridSkeletonProps) {
   );
 }
 
+/** Matches QuestionGeneratorPapersTable toolbar + list layout. */
+export function QuestionGeneratorPapersSkeleton() {
+  return (
+    <div
+      data-testid="question-generator-papers-skeleton"
+      className="flex flex-col gap-4 animate-in fade-in duration-200"
+    >
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <Skeleton className="h-9 w-full max-w-sm" />
+        <div className="flex flex-wrap items-center gap-2">
+          <Skeleton className="h-9 w-20" />
+          <Skeleton className="h-9 w-28" />
+          <Skeleton className="h-9 w-32" />
+          <Skeleton className="h-9 w-36" />
+        </div>
+      </div>
+      <TableSkeleton rows={7} cols={4} />
+    </div>
+  );
+}
+
 export interface CardListSkeletonProps {
   count?: number;
 }

@@ -5,6 +5,7 @@ import {
   CI_NAV,
   FRANCHISEE_NAV,
   getAdminNav,
+  isNavChildActive,
   isNavItemActive,
   SUPER_ADMIN_NAV,
   type PortalNavItem,
@@ -53,6 +54,19 @@ describe("isNavItemActive", () => {
       icon: findItem(ADMIN_NAV, "Operations").icon,
     };
     expect(isNavItemActive("/admin/operations", item)).toBe(true);
+  });
+
+  it("expands competitions groups on nested routes without matching the exact child", () => {
+    const competitions = findItem(ADMIN_NAV, "Competitions");
+    expect(isNavItemActive("/admin/competitions/mapping", competitions)).toBe(true);
+    expect(isNavItemActive("/admin/competitions/rules/12", competitions)).toBe(true);
+    expect(isNavChildActive("/admin/competitions", competitions.children![0]!)).toBe(true);
+    expect(isNavChildActive("/admin/competitions/mapping", competitions.children![0]!)).toBe(
+      false,
+    );
+    expect(isNavChildActive("/admin/competitions/mapping", competitions.children![1]!)).toBe(
+      true,
+    );
   });
 });
 
@@ -108,6 +122,12 @@ describe("frozen-ness", () => {
         expect(Object.isFrozen(section.items)).toBe(true);
         for (const item of section.items) {
           expect(Object.isFrozen(item)).toBe(true);
+          if (item.children) {
+            expect(Object.isFrozen(item.children)).toBe(true);
+            for (const child of item.children) {
+              expect(Object.isFrozen(child)).toBe(true);
+            }
+          }
         }
       }
     }

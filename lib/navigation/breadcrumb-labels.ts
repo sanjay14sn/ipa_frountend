@@ -26,6 +26,8 @@ export const SEGMENT_LABELS: Record<string, string> = {
   receivables: "Receivables",
   progress: "Progress",
   upcoming: "Upcoming",
+  "practice-papers": "Practice Papers",
+  "practice-pricing": "Practice Pricing",
 };
 
 /** Hub pathname → ?tab= value → label. */

@@ -1,4 +1,6 @@
 "use client";
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
@@ -19,6 +21,34 @@ interface StudentDetailsProps {
   student: StudentData;
   /** Picks the photo mutation audience routes; display is identical. */
   mode?: "franchise" | "admin";
+}
+
+function PasswordField({ password }: { password?: string }) {
+  const [showPassword, setShowPassword] = useState(false);
+
+  if (!password) {
+    return <DetailField label="Password" value="Not set" />;
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-muted-foreground">
+        Password
+      </span>
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-sm">
+          {showPassword ? password : "••••••••"}
+        </span>
+        <button
+          onClick={() => setShowPassword(!showPassword)}
+          className="text-muted-foreground hover:text-foreground p-1 transition-colors"
+          title={showPassword ? "Hide password" : "Show password"}
+        >
+          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function StudentDetails({
@@ -131,6 +161,15 @@ export default function StudentDetails({
             />
           </DetailFieldsGrid>
         </div>
+      </ExpandedDetailSection>
+
+      <Separator />
+
+      <ExpandedDetailSection title="App Access">
+        <DetailFieldsGrid columns={3}>
+          <DetailField label="App Login ID" value={student.rollNo || "—"} mono />
+          <PasswordField password={student.password} />
+        </DetailFieldsGrid>
       </ExpandedDetailSection>
     </ExpandedDetailSurface>
   );

@@ -1,6 +1,6 @@
 import { api } from "@/lib/axios";
-import { compactRequestParams, getPaginated, unwrapData } from "@/lib/unwrap-api";
 import { downloadCsvExport } from "@/lib/download";
+import { getPaginated, getPaginatedAll, unwrapData } from "@/lib/unwrap-api";
 import { withProgramScope } from "@/services/_scope";
 
 export interface Response {
@@ -51,7 +51,7 @@ export interface StudentData {
   mail: string;
   standard: string;
   levelId?: number;
-  level: StudentLevel | string | { id: number; name: string; code: string; streamId: number; displayOrder?: number };
+  level: StudentLevel | string | { id: number; name: string; code: string; streamId: number; durationInMonths?: number; displayOrder?: number };
   stream: StudentStream | string;
   status: StudentStatus;
   idIssued: StudentIdStatus;
@@ -68,6 +68,15 @@ export interface StudentData {
   agreementStatus?: string | null;
   /** uploads/-relative profile photo path; null = initials monogram. */
   photoPath?: string | null;
+  /** App login password (plain text). */
+  password?: string;
+  feeConfiguration?: {
+    configured: boolean;
+    nextDueDate: string | null;
+    nextDueAmount: number | null;
+    totalPayable: number | null;
+    feeRule?: string;
+  } | null;
 }
 
 export interface StudentsResponse {
@@ -153,6 +162,7 @@ function normalizeStudentLevel(
       name: String(level.name ?? level.code ?? row.levelName ?? "N/A"),
       code: String(level.code ?? level.name ?? row.levelName ?? "N/A"),
       streamId: Number(level.streamId ?? 0),
+      durationInMonths: level.durationInMonths != null ? Number(level.durationInMonths) : (level.duration != null ? Number(level.duration) : 3),
       displayOrder: level.displayOrder != null ? Number(level.displayOrder) : undefined,
     };
   }
@@ -164,6 +174,7 @@ function normalizeStudentLevel(
       name: String(row.levelName ?? row.levelCode ?? "N/A"),
       code: String(row.levelCode ?? row.levelName ?? "N/A"),
       streamId: Number(row.streamId ?? 0),
+      durationInMonths: row.durationInMonths != null ? Number(row.durationInMonths) : 3,
     };
   }
 
@@ -232,6 +243,11 @@ export function mapStudentRow(row: Record<string, unknown>): StudentData {
     updatedBy: Number(row.updatedBy ?? 0),
     materialsOrdered: Boolean(row.materialsOrdered ?? false),
     photoPath: row.photoPath != null ? String(row.photoPath) : null,
+    password: row.password ? String(row.password) : undefined,
+    feeConfiguration:
+      row.feeConfiguration != null && typeof row.feeConfiguration === "object"
+        ? (row.feeConfiguration as StudentData["feeConfiguration"])
+        : undefined,
   };
 }
 
@@ -313,12 +329,9 @@ function mapStudentDataToUpdateBody(
 export async function getAllStudents(
   params?: StudentPaginationParams,
 ): Promise<StudentsResponse> {
-  const merged: StudentPaginationParams = withProgramScope({
-    page: params?.page ?? 1,
-    limit: params?.limit ?? 100,
-    ...params,
-  });
-  const { rows } = await getPaginated("/student", merged);
+  const scoped = withProgramScope({ ...params });
+  const { page: _page, limit: _limit, ...filters } = scoped;
+  const { rows } = await getPaginatedAll("/student", filters);
   const list = rows.map((r) => mapStudentRow(r as Record<string, unknown>));
   return { result: list };
 }

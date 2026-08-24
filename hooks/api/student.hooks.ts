@@ -60,16 +60,7 @@ export { type StudentData } from "@/services/student.service";
 
 function wantsStudentPagination(params?: StudentPaginationParams): boolean {
   if (params == null) return false;
-  return (
-    params.page != null ||
-    params.limit != null ||
-    (params.search != null && params.search !== "") ||
-    (params.status != null && params.status !== "") ||
-    params.sortBy != null ||
-    params.sortOrder != null ||
-    params.agreementId != null ||
-    params.programId != null
-  );
+  return params.page != null || params.limit != null;
 }
 
 export function useStudents(params?: StudentPaginationParams) {

@@ -3,6 +3,7 @@ import { downloadCsvExport } from "@/lib/download";
 import {
   compactRequestParams,
   getPaginated,
+  getPaginatedAll,
   normalizePaginatedResult,
   unwrapData,
 } from "@/lib/unwrap-api";
@@ -369,12 +370,9 @@ export interface CourseInstructorListParams {
 export async function getAllCourseInstructors(
   params?: CourseInstructorListParams,
 ): Promise<CourseInstructorsResponse> {
-  const merged: CourseInstructorListParams = withProgramScope({
-    page: params?.page ?? 1,
-    limit: params?.limit ?? 100,
-    ...params,
-  });
-  const { rows } = await getPaginated("/course-instructor", merged);
+  const scoped = withProgramScope({ ...params });
+  const { page: _page, limit: _limit, ...filters } = scoped;
+  const { rows } = await getPaginatedAll("/course-instructor", filters);
   const list = rows.map((r) => mapRow(r as Record<string, unknown>));
   return { result: list };
 }

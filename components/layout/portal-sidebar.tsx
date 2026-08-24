@@ -3,6 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { ChevronRight } from "lucide-react";
 
 import {
   Sidebar,
@@ -14,13 +16,110 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
 import {
+  isNavChildActive,
+  isNavGroupExpanded,
   isNavItemActive,
+  type PortalNavItem,
   type PortalNavSection,
 } from "@/lib/navigation/nav-config";
 import { cn } from "@/lib/utils";
+
+function SidebarNavItem({ item, pathname }: { item: PortalNavItem; pathname: string }) {
+  const groupActive = isNavItemActive(pathname, item);
+  const defaultExpanded = isNavGroupExpanded(pathname, item);
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  useEffect(() => {
+    if (defaultExpanded) setExpanded(true);
+  }, [defaultExpanded]);
+
+  if (!item.children?.length) {
+    const active = isNavItemActive(pathname, item);
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          asChild
+          isActive={active}
+          tooltip={item.title}
+          className={cn(
+            "relative transition-colors text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+            active &&
+              "!bg-sidebar-accent !text-white data-[active=true]:!bg-sidebar-accent data-[active=true]:!text-white",
+          )}
+        >
+          <Link
+            href={item.href}
+            aria-current={active ? "page" : undefined}
+            data-tour={`nav:${item.href}`}
+          >
+            {active ? (
+              <span
+                aria-hidden
+                className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-sidebar-primary"
+              />
+            ) : null}
+            <item.icon className="shrink-0" />
+            <span>{item.title}</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  }
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        type="button"
+        isActive={groupActive}
+        tooltip={item.title}
+        onClick={() => setExpanded((open) => !open)}
+        className={cn(
+          "relative transition-colors text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          groupActive &&
+            "!bg-sidebar-accent !text-white data-[active=true]:!bg-sidebar-accent data-[active=true]:!text-white",
+        )}
+      >
+        {groupActive ? (
+          <span
+            aria-hidden
+            className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-sidebar-primary"
+          />
+        ) : null}
+        <item.icon className="shrink-0" />
+        <span className="flex-1 truncate">{item.title}</span>
+        <ChevronRight
+          className={cn("size-4 shrink-0 transition-transform", expanded && "rotate-90")}
+        />
+      </SidebarMenuButton>
+      {expanded ? (
+        <SidebarMenuSub>
+          {item.children.map((child) => {
+            const childActive = isNavChildActive(pathname, child);
+            return (
+              <SidebarMenuSubItem key={child.title}>
+                <SidebarMenuSubButton asChild isActive={childActive}>
+                  <Link
+                    href={child.href}
+                    aria-current={childActive ? "page" : undefined}
+                    data-tour={`nav:${child.href}`}
+                  >
+                    <span>{child.title}</span>
+                  </Link>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            );
+          })}
+        </SidebarMenuSub>
+      ) : null}
+    </SidebarMenuItem>
+  );
+}
 
 export interface PortalSidebarProps {
   nav: readonly PortalNavSection[];
@@ -97,39 +196,9 @@ export function PortalSidebar({
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
-                {group.items.map((item) => {
-                  const active = isNavItemActive(pathname, item);
-                  return (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={active}
-                        tooltip={item.title}
-                        className={cn(
-                          "relative transition-colors text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                          active &&
-                            "!bg-sidebar-accent !text-white data-[active=true]:!bg-sidebar-accent data-[active=true]:!text-white",
-                        )}
-                      >
-                        <Link
-                          href={item.href}
-                          aria-current={active ? "page" : undefined}
-                          data-tour={`nav:${item.href}`}
-                        >
-                          {/* Yellow 2px active indicator bar. */}
-                          {active ? (
-                            <span
-                              aria-hidden
-                              className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-sidebar-primary"
-                            />
-                          ) : null}
-                          <item.icon className="shrink-0" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
+                {group.items.map((item) => (
+                  <SidebarNavItem key={item.title} item={item} pathname={pathname} />
+                ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

@@ -7,7 +7,7 @@ export function unwrapData<T>(response: { data: unknown }): T {
     success?: unknown;
     data?: unknown;
   };
-  if (d && typeof d === "object" && "result" in d) {
+  if (d && typeof d === "object" && "result" in d && d.result !== undefined) {
     return d.result as T;
   }
   /** ipa-new / legacy `{ success: true, data: T }` when interceptor did not normalize. */
@@ -15,11 +15,18 @@ export function unwrapData<T>(response: { data: unknown }): T {
     d &&
     typeof d === "object" &&
     d.success === true &&
-    "data" in d
+    "data" in d &&
+    d.data !== undefined
   ) {
     return d.data as T;
   }
   return d as T;
+}
+
+/** Unwrap a list endpoint — never returns undefined (React Query requirement). */
+export function unwrapList<T>(response: { data: unknown }): T[] {
+  const payload = unwrapData<unknown>(response);
+  return Array.isArray(payload) ? (payload as T[]) : [];
 }
 
 /** ipa-new paginated list shape inside `result`. */
@@ -87,10 +94,59 @@ async function getUnwrapped<T>(url: string, params?: object): Promise<T> {
   return unwrapData<T>(response);
 }
 
+/** Must match backend `MAX_PAGE_LIMIT` in pagination.dto.ts */
+export const MAX_API_PAGE_LIMIT = 100;
+
+function clampPaginationParams(params?: object): object | undefined {
+  if (!params || typeof params !== "object") return params;
+  const p = { ...(params as Record<string, unknown>) };
+  if (p.limit != null) {
+    const n = Number(p.limit);
+    if (Number.isFinite(n) && n > MAX_API_PAGE_LIMIT) {
+      p.limit = MAX_API_PAGE_LIMIT;
+    }
+  }
+  return p;
+}
+
+/** GET every page of a list endpoint (respects backend page-size cap). */
+export async function getPaginatedAll<T = unknown>(
+  url: string,
+  params?: object,
+): Promise<PaginatedResult<T>> {
+  const base = (clampPaginationParams(params) ?? {}) as Record<string, unknown>;
+  const { page: _page, limit: _limit, ...filters } = base;
+
+  const rows: T[] = [];
+  let page = 1;
+  let total = Number.POSITIVE_INFINITY;
+
+  while (rows.length < total) {
+    const chunk = await getPaginated<T>(url, {
+      ...filters,
+      page,
+      limit: MAX_API_PAGE_LIMIT,
+    });
+    total = chunk.total;
+    if (!chunk.rows.length) break;
+    rows.push(...chunk.rows);
+    page += 1;
+  }
+
+  return {
+    rows,
+    total: rows.length,
+    page: 1,
+    limit: rows.length || MAX_API_PAGE_LIMIT,
+  };
+}
+
 /** GET a paginated list endpoint and normalize to `{ rows, total, page, limit }`. */
 export async function getPaginated<T = unknown>(
   url: string,
   params?: object,
 ): Promise<PaginatedResult<T>> {
-  return normalizePaginatedResult<T>(await getUnwrapped<unknown>(url, params));
+  return normalizePaginatedResult<T>(
+    await getUnwrapped<unknown>(url, clampPaginationParams(params)),
+  );
 }

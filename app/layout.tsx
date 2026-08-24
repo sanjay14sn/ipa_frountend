@@ -83,6 +83,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${dmSans.variable} ${jetbrainsMono.variable} ${caveat.variable}`}
+      suppressHydrationWarning
     >
       <body>
         <PointerEventsGuard />

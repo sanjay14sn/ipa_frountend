@@ -75,6 +75,7 @@ export const STUDENT_FORM_STEPS: StepDef[] = [
   { id: 2, title: "Parent Details" },
   { id: 3, title: "Contact & Address" },
   { id: 4, title: "Academic Details" },
+  { id: 5, title: "Setup Fee" },
 ];
 
 /**
