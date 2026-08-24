@@ -43,8 +43,8 @@ export default function TermsAndConditionsPage() {
             , {COMPANY_ADDRESS}.
           </li>
           <li>
-            <strong>&ldquo;Country&rdquo;</strong> refers to: Tamil Nadu,
-            India.
+            <strong>&ldquo;Country&rdquo;</strong> refers to: India, and in
+            specific, the State of Tamil Nadu.
           </li>
           <li>
             <strong>&ldquo;Device&rdquo;</strong> means any device that can

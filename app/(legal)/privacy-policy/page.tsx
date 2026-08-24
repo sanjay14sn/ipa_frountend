@@ -55,8 +55,8 @@ export default function PrivacyPolicyPage() {
             website among its many uses.
           </li>
           <li>
-            <strong>&ldquo;Country&rdquo;</strong> refers to: Tamil Nadu,
-            India.
+            <strong>&ldquo;Country&rdquo;</strong> refers to: India, and in
+            specific, the State of Tamil Nadu.
           </li>
           <li>
             <strong>&ldquo;Device&rdquo;</strong> means any device that can
