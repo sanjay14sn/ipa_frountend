@@ -25,10 +25,11 @@ export const MARKETING_SITE_URL = "https://www.playabacusindia.com";
 /** Shown as "Last updated" on every legal page. */
 export const LEGAL_LAST_UPDATED = "August 24, 2026";
 
-/** The four policy pages, in display order (auth footer + legal-page footer). */
+/** The public compliance pages, in display order (auth footer + legal-page footer). */
 export const LEGAL_PAGES = [
   { href: "/terms-and-conditions", label: "Terms & Conditions" },
   { href: "/privacy-policy", label: "Privacy Policy" },
   { href: "/refund-policy", label: "Refund Policy" },
   { href: "/cancellation-policy", label: "Cancellation Policy" },
+  { href: "/contact-us", label: "Contact Us" },
 ] as const;

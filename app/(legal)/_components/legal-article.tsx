@@ -8,6 +8,8 @@ import {
 export interface LegalArticleProps {
   title: string;
   children: React.ReactNode;
+  /** Contact page is not a versioned policy — it hides the updated line. */
+  showLastUpdated?: boolean;
 }
 
 /**
@@ -16,7 +18,11 @@ export interface LegalArticleProps {
  * subtree via descendant variants, so the long documents stay readable
  * markup instead of per-paragraph components.
  */
-export function LegalArticle({ title, children }: LegalArticleProps) {
+export function LegalArticle({
+  title,
+  children,
+  showLastUpdated = true,
+}: LegalArticleProps) {
   return (
     <article
       data-testid="legal-article"
@@ -31,9 +37,13 @@ export function LegalArticle({ title, children }: LegalArticleProps) {
       ].join(" ")}
     >
       <h1 className="text-2xl font-semibold text-primary">{title}</h1>
-      <p className="mt-2 mb-8 text-xs text-muted-foreground">
-        Last updated on {LEGAL_LAST_UPDATED}
-      </p>
+      {showLastUpdated ? (
+        <p className="mt-2 mb-8 text-xs text-muted-foreground">
+          Last updated on {LEGAL_LAST_UPDATED}
+        </p>
+      ) : (
+        <div className="mb-8" />
+      )}
       {children}
     </article>
   );

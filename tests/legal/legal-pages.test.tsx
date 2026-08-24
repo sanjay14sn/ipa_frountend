@@ -4,6 +4,7 @@ import TermsAndConditionsPage from "@/app/(legal)/terms-and-conditions/page";
 import PrivacyPolicyPage from "@/app/(legal)/privacy-policy/page";
 import RefundPolicyPage from "@/app/(legal)/refund-policy/page";
 import CancellationPolicyPage from "@/app/(legal)/cancellation-policy/page";
+import ContactUsPage from "@/app/(legal)/contact-us/page";
 import { CONTACT_EMAIL, LEGAL_PAGES } from "@/lib/legal";
 
 /**
@@ -17,6 +18,7 @@ describe("legal pages", () => {
     { Page: PrivacyPolicyPage, title: "Privacy Policy" },
     { Page: RefundPolicyPage, title: "Refund Policy" },
     { Page: CancellationPolicyPage, title: "Cancellation Policy" },
+    { Page: ContactUsPage, title: "Contact Us" },
   ] as const;
 
   it.each(pages)("$title renders its heading and contact email", ({
@@ -45,12 +47,13 @@ describe("legal pages", () => {
     }
   });
 
-  it("LEGAL_PAGES covers the four routes Razorpay verifies", () => {
+  it("LEGAL_PAGES covers the routes Razorpay verifies", () => {
     expect(LEGAL_PAGES.map((p) => p.href)).toEqual([
       "/terms-and-conditions",
       "/privacy-policy",
       "/refund-policy",
       "/cancellation-policy",
+      "/contact-us",
     ]);
   });
 });
