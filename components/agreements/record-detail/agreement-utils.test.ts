@@ -304,6 +304,45 @@ describe("getAgreementActionVisibility", () => {
       ).manageKitItems,
     ).toBe(true);
   });
+
+  it("recordFeePayment: admin-only, signed APPROVED lump-sum with a positive fee", () => {
+    const base = {
+      ...makeAgreement({ status: "APPROVED" }),
+      signed: true,
+      installment: false,
+      franchiseFee: 100000,
+    };
+    expect(
+      getAgreementActionVisibility(base, "admin").recordFeePayment,
+    ).toBe(true);
+    expect(
+      getAgreementActionVisibility(base, "franchisee").recordFeePayment,
+    ).toBe(false);
+    expect(
+      getAgreementActionVisibility({ ...base, signed: false }, "admin")
+        .recordFeePayment,
+    ).toBe(false);
+    expect(
+      getAgreementActionVisibility({ ...base, installment: true }, "admin")
+        .recordFeePayment,
+    ).toBe(false);
+    expect(
+      getAgreementActionVisibility({ ...base, franchiseFee: 0 }, "admin")
+        .recordFeePayment,
+    ).toBe(false);
+    expect(
+      getAgreementActionVisibility(
+        { ...base, status: "ACTIVE" as const },
+        "admin",
+      ).recordFeePayment,
+    ).toBe(false);
+    expect(
+      getAgreementActionVisibility(
+        { ...base, kind: "CI" as const },
+        "admin",
+      ).recordFeePayment,
+    ).toBe(false);
+  });
 });
 
 describe("agreementOutstandingEmi", () => {

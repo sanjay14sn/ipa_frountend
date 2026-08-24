@@ -150,6 +150,12 @@ export interface AgreementActionVisibility {
    * SUPERSEDED/VOID — mirrors the backend override on PATCH /admin/agreement/:id.
    */
   editTerms: boolean;
+  /**
+   * Admin offline collection of the LUMP-SUM fee: a signed APPROVED non-CI
+   * agreement with a positive fee and no installment plan (installment fees
+   * are recorded per schedule item instead).
+   */
+  recordFeePayment: boolean;
 }
 
 /**
@@ -168,6 +174,8 @@ export function getAgreementActionVisibility(
     | "receivables"
     | "signed"
     | "fullySigned"
+    | "installment"
+    | "franchiseFee"
   >,
   role: "admin" | "franchisee",
   opts: { superAdmin?: boolean } = {},
@@ -184,6 +192,7 @@ export function getAgreementActionVisibility(
       void: false,
       renew: false,
       editTerms: false,
+      recordFeePayment: false,
     };
   }
 
@@ -204,6 +213,7 @@ export function getAgreementActionVisibility(
       void: false,
       renew: false,
       editTerms: false,
+      recordFeePayment: false,
     };
   }
 
@@ -236,6 +246,14 @@ export function getAgreementActionVisibility(
       (opts.superAdmin
         ? status !== "VOID"
         : status === "DRAFT" || (status === "APPROVED" && !signed)),
+    // "Signed · awaiting payment" — the backend re-validates all of this and
+    // additionally rejects agreements that own a receivable plan.
+    recordFeePayment:
+      agreement.kind !== "CI" &&
+      status === "APPROVED" &&
+      signed &&
+      agreement.installment !== true &&
+      Number(agreement.franchiseFee ?? 0) > 0,
   };
 }
 

@@ -7,10 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { formatRupees } from "@/lib/currency-utils";
 import { PAYMENT_MODES, PAYMENT_MODE_LABELS } from "@/lib/constants/payments";
-import type { ReceivableSummaryItem } from "@/services/agreement.service";
+
+/** Minimal shape the dialog reads — receivable items and the lump-sum agreement fee both satisfy it. */
+export interface RecordPaymentDialogItem {
+  label: string;
+  amount: number;
+  payableAmount?: number;
+}
 
 interface RecordReceivablePaymentDialogProps {
-  item: ReceivableSummaryItem | null;
+  item: RecordPaymentDialogItem | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSubmit: (data: {

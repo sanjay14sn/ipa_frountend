@@ -797,6 +797,21 @@ export async function sendReceivableReminder(itemId: number): Promise<void> {
   await api.post(`/admin/receivables/item/${itemId}/remind`);
 }
 
+/**
+ * Admin: record an offline LUMP-SUM fee payment (non-installment agreements).
+ * The backend creates a completed manual payment and activates the agreement
+ * through the same capture event as a Razorpay payment.
+ */
+export async function recordAgreementFeePayment(
+  agreementId: number,
+  body: { paidAt: string; mode: string; reference?: string },
+): Promise<void> {
+  await api.post(
+    `/admin/billing/agreement/${agreementId}/record-fee-payment`,
+    body,
+  );
+}
+
 /** One row in the agreement switcher feed (mirrors backend `AgreementSwitcherItem`). */
 export interface AgreementSwitcherItem {
   kind: "agreement" | "request";

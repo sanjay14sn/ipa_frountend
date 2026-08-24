@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Eye, Loader2, PlayCircle } from "lucide-react";
+import { Banknote, Download, Eye, Loader2, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,13 +12,25 @@ import {
   type AgreementRecord,
 } from "@/services/agreement.service";
 import { getErrorMessage } from "@/lib/error-utils";
-import { useReactivateAgreementMutation } from "@/hooks/api/agreement.hooks";
+import { getFranchiseFeePayable } from "@/lib/gst";
+import {
+  useReactivateAgreementMutation,
+  useRecordAgreementFeePaymentMutation,
+} from "@/hooks/api/agreement.hooks";
 import {
   agreementStatusBadge,
   getAgreementActionVisibility,
 } from "@/components/agreements/record-detail/agreement-utils";
 import { IssueRenewalButton } from "@/components/agreements/IssueRenewalButton";
 import { ConfirmDialog } from "@/components/shared/dialog";
+import { RecordReceivablePaymentDialog } from "./RecordReceivablePaymentDialog";
+
+/** Display label matching the payment type the backend records. */
+function feeLabel(agreement: AgreementRecord): string {
+  if (agreement.origin === "RENEWAL") return "Renewal fee";
+  if (agreement.kind === "PROGRAM") return "Program fee";
+  return "Franchise fee";
+}
 
 /**
  * Context-aware admin action toolbar for one agreement's detail surface. Holds
@@ -34,8 +46,14 @@ export function AgreementActionBar({ agreement }: { agreement: AgreementRecord }
   const [downloading, setDownloading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [reactivateOpen, setReactivateOpen] = useState(false);
+  const [recordFeeOpen, setRecordFeeOpen] = useState(false);
 
   const reactivate = useReactivateAgreementMutation(agreement.id);
+  const recordFee = useRecordAgreementFeePaymentMutation(agreement.id);
+  const feePayable = getFranchiseFeePayable(
+    agreement.franchiseFee,
+    agreement.gstFranchiseFee,
+  );
 
   async function handleDownload() {
     setDownloading(true);
@@ -103,6 +121,20 @@ export function AgreementActionBar({ agreement }: { agreement: AgreementRecord }
         </Button>
       ) : null}
 
+      {vis.recordFeePayment ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="rounded-lg"
+          onClick={() => setRecordFeeOpen(true)}
+          disabled={recordFee.isPending}
+        >
+          <Banknote className="mr-2 h-4 w-4" />
+          Record Fee Payment
+        </Button>
+      ) : null}
+
       {vis.renew ? <IssueRenewalButton agreement={agreement} /> : null}
       <FilePreviewDialog
         files={[
@@ -114,6 +146,20 @@ export function AgreementActionBar({ agreement }: { agreement: AgreementRecord }
         index={previewOpen ? 0 : null}
         onIndexChange={() => {}}
         onClose={() => setPreviewOpen(false)}
+      />
+      <RecordReceivablePaymentDialog
+        item={{
+          label: feeLabel(agreement),
+          amount: feePayable.base,
+          payableAmount: feePayable.payable,
+        }}
+        open={recordFeeOpen}
+        onOpenChange={setRecordFeeOpen}
+        onSubmit={async (data) => {
+          await recordFee.mutateAsync(data);
+          setRecordFeeOpen(false);
+        }}
+        isSubmitting={recordFee.isPending}
       />
       <ConfirmDialog
         open={reactivateOpen}

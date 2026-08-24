@@ -11,6 +11,7 @@ import {
   waiveReceivableItem,
   updateReceivableItemDueDate,
   recordReceivablePayment,
+  recordAgreementFeePayment,
   sendReceivableReminder,
   dispatchFranchiseKit,
   suspendAgreementAdmin,
@@ -185,6 +186,30 @@ export function useRecordReceivablePaymentMutation(agreementId: number) {
       await client.invalidateQueries({
         queryKey: queryKeys.agreements.detail(agreementId),
       });
+      toast.success("Payment recorded");
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error, "Failed to record payment"));
+    },
+  });
+}
+
+/**
+ * Admin: offline lump-sum fee collection. Lists are invalidated too because a
+ * successful record activates the agreement (status change on the rows).
+ */
+export function useRecordAgreementFeePaymentMutation(agreementId: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { paidAt: string; mode: string; reference?: string }) =>
+      recordAgreementFeePayment(agreementId, body),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: queryKeys.agreements.detail(agreementId),
+        }),
+        client.invalidateQueries({ queryKey: ["agreements", "list"] }),
+      ]);
       toast.success("Payment recorded");
     },
     onError: (error) => {
