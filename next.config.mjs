@@ -270,6 +270,15 @@ const nextConfig = {
       },
     ];
   },
+  async rewrites() {
+    const apiOrigin = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:5500";
+    return [
+      {
+        source: "/api/proxy/:path*",
+        destination: `${apiOrigin}/:path*`,
+      },
+    ];
+  },
 };
 
 // Run `ANALYZE=true pnpm build` to open bundle analysis in the browser.

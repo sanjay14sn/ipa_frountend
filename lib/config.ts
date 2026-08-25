@@ -20,11 +20,15 @@ const isDev = process.env.NODE_ENV !== "production";
    );
  }
  
- export const API_BASE_URL = requireEnv(
-   "NEXT_PUBLIC_API_URL",
-   process.env.NEXT_PUBLIC_API_URL,
-   "http://localhost:5500"
- );
+const isClient = typeof window !== "undefined";
+
+const rawApiUrl = requireEnv(
+  "NEXT_PUBLIC_API_URL",
+  process.env.NEXT_PUBLIC_API_URL,
+  "http://localhost:5500"
+);
+
+export const API_BASE_URL = isClient ? "/api/proxy" : rawApiUrl;
  
 // Optional at build time — only needed at runtime when opening a payment modal.
 export const RAZORPAY_KEY_ID =
