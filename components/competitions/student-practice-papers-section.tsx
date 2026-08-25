@@ -39,12 +39,6 @@ type StudentPracticeAccess = {
   }>;
 };
 
-declare global {
-  interface Window {
-    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
-  }
-}
-
 function loadRazorpayScript() {
   return new Promise<void>((resolve, reject) => {
     if (window.Razorpay) {
