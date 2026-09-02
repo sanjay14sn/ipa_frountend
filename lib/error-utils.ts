@@ -355,7 +355,9 @@ function resolveMessage(parsed: ParsedError, fallback: string): string {
     return 'Could not reach the server. Please check your connection and try again.';
   }
   if (parsed.isTimeout) return 'Request timed out. Please try again.';
-  if (parsed.statusText) return parsed.statusText;
+  if (parsed.statusText && parsed.statusText.toLowerCase() !== 'internal server error') {
+    return parsed.statusText;
+  }
 
   return fallback;
 }

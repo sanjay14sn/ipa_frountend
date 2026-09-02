@@ -222,3 +222,214 @@ export async function fetchFranchiseLearningProgress(studentId?: number) {
   });
   return unwrapList<LearningProgressRow>(response);
 }
+
+// ── Class Schedule & Attendance Types & Services ──────────────────────────────
+
+export interface SessionAttendanceRoster {
+  studentId: number;
+  studentName: string;
+  studentRollNo: string;
+  status: "PRESENT" | "ABSENT" | "LATE" | "LEAVE";
+  remarks?: string | null;
+}
+
+export interface ClassSession {
+  id: number;
+  batchId?: number | null;
+  batchName: string;
+  subject: string;
+  dayOfWeek: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  roomNo: string;
+  instructorName: string;
+  isAttendanceMarked: boolean;
+  roster: SessionAttendanceRoster[];
+}
+
+const SESSIONS_STORAGE_KEY = "franchise_class_sessions_v1";
+
+function getStoredClassSessions(): ClassSession[] {
+  if (typeof window === "undefined") return MOCK_CLASS_SESSIONS;
+  try {
+    const raw = localStorage.getItem(SESSIONS_STORAGE_KEY);
+    if (!raw) {
+      localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(MOCK_CLASS_SESSIONS));
+      return MOCK_CLASS_SESSIONS;
+    }
+    return JSON.parse(raw) as ClassSession[];
+  } catch {
+    return MOCK_CLASS_SESSIONS;
+  }
+}
+
+function saveStoredClassSessions(sessions: ClassSession[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions));
+  } catch {
+    /* ignore storage write error */
+  }
+}
+
+export async function fetchFranchiseClassSessions(day?: string) {
+  try {
+    const response = await api.get("/learning/franchise/sessions", {
+      params: day && day !== "All" ? { day } : undefined,
+    });
+    return unwrapList<ClassSession>(response);
+  } catch {
+    const sessions = getStoredClassSessions();
+    return sessions.filter((s) => !day || day === "All" || s.dayOfWeek === day);
+  }
+}
+
+export async function createFranchiseClassSession(payload: {
+  batchName: string;
+  subject: string;
+  dayOfWeek: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  roomNo: string;
+  instructorName: string;
+  roster?: SessionAttendanceRoster[];
+}) {
+  try {
+    const response = await api.post("/learning/franchise/sessions", payload);
+    return unwrapData<ClassSession>(response);
+  } catch {
+    const sessions = getStoredClassSessions();
+    const newSession: ClassSession = {
+      id: Date.now(),
+      batchName: payload.batchName,
+      subject: payload.subject,
+      dayOfWeek: payload.dayOfWeek,
+      date: payload.date,
+      startTime: payload.startTime,
+      endTime: payload.endTime,
+      roomNo: payload.roomNo,
+      instructorName: payload.instructorName,
+      isAttendanceMarked: false,
+      roster: payload.roster && payload.roster.length > 0 ? payload.roster : [
+        { studentId: 101, studentName: "Arjun Kumar", studentRollNo: "IPA2023-01", status: "PRESENT" },
+        { studentId: 102, studentName: "Rohan Sharma", studentRollNo: "IPA2023-02", status: "PRESENT" },
+        { studentId: 103, studentName: "Priya Dharshini", studentRollNo: "IPA2023-03", status: "PRESENT" },
+        { studentId: 104, studentName: "Karthik Raja", studentRollNo: "IPA2023-04", status: "PRESENT" },
+      ],
+    };
+    sessions.unshift(newSession);
+    saveStoredClassSessions(sessions);
+    return newSession;
+  }
+}
+
+export async function saveFranchiseSessionAttendance(
+  sessionId: number,
+  roster: SessionAttendanceRoster[],
+) {
+  try {
+    const response = await api.put(`/learning/franchise/sessions/${sessionId}/attendance`, { roster });
+    return unwrapData<ClassSession>(response);
+  } catch {
+    const sessions = getStoredClassSessions();
+    const match = sessions.find((s) => String(s.id) === String(sessionId));
+    if (match) {
+      match.isAttendanceMarked = true;
+      match.roster = roster;
+      saveStoredClassSessions(sessions);
+    }
+    return match;
+  }
+}
+
+export async function updateFranchiseClassSession(
+  sessionId: number,
+  payload: Partial<ClassSession>,
+) {
+  try {
+    const response = await api.put(`/learning/franchise/sessions/${sessionId}`, payload);
+    return unwrapData<ClassSession>(response);
+  } catch {
+    const sessions = getStoredClassSessions();
+    const index = sessions.findIndex((s) => String(s.id) === String(sessionId));
+    if (index !== -1) {
+      sessions[index] = { ...sessions[index], ...payload };
+      saveStoredClassSessions(sessions);
+      return sessions[index];
+    }
+    return null;
+  }
+}
+
+export async function deleteFranchiseClassSession(sessionId: number) {
+  try {
+    const response = await api.delete(`/learning/franchise/sessions/${sessionId}`);
+    return unwrapData<{ success: boolean }>(response);
+  } catch {
+    const sessions = getStoredClassSessions();
+    const filtered = sessions.filter((s) => String(s.id) !== String(sessionId));
+    saveStoredClassSessions(filtered);
+    return { success: true };
+  }
+}
+
+
+
+const MOCK_CLASS_SESSIONS: ClassSession[] = [
+  {
+    id: 1,
+    batchName: "Batch A – Level 4",
+    subject: "Abacus Level 4",
+    dayOfWeek: "Mon",
+    date: "2026-09-01",
+    startTime: "17:00",
+    endTime: "18:00",
+    roomNo: "Room 102",
+    instructorName: "Mrs. S. Meenakshi",
+    isAttendanceMarked: true,
+    roster: [
+      { studentId: 101, studentName: "Arjun Kumar", studentRollNo: "IPA2023-01", status: "PRESENT" },
+      { studentId: 102, studentName: "Rohan Sharma", studentRollNo: "IPA2023-02", status: "PRESENT" },
+      { studentId: 103, studentName: "Priya Dharshini", studentRollNo: "IPA2023-03", status: "ABSENT" },
+      { studentId: 104, studentName: "Karthik Raja", studentRollNo: "IPA2023-04", status: "PRESENT" },
+      { studentId: 105, studentName: "Ananya V", studentRollNo: "IPA2023-05", status: "LEAVE" },
+    ],
+  },
+  {
+    id: 2,
+    batchName: "Batch B – Mental Math",
+    subject: "Mental Speed Drills",
+    dayOfWeek: "Mon",
+    date: "2026-09-01",
+    startTime: "18:15",
+    endTime: "19:15",
+    roomNo: "Lab B",
+    instructorName: "Mr. Rajesh K",
+    isAttendanceMarked: false,
+    roster: [
+      { studentId: 106, studentName: "Siddharth M", studentRollNo: "IPA2023-06", status: "PRESENT" },
+      { studentId: 107, studentName: "Kavya S", studentRollNo: "IPA2023-07", status: "PRESENT" },
+      { studentId: 108, studentName: "Nivin P", studentRollNo: "IPA2023-08", status: "PRESENT" },
+    ],
+  },
+  {
+    id: 3,
+    batchName: "Batch A – Level 4",
+    subject: "Abacus Speed Test & Practice",
+    dayOfWeek: "Wed",
+    date: "2026-09-03",
+    startTime: "17:00",
+    endTime: "18:00",
+    roomNo: "Room 102",
+    instructorName: "Mrs. S. Meenakshi",
+    isAttendanceMarked: false,
+    roster: [
+      { studentId: 101, studentName: "Arjun Kumar", studentRollNo: "IPA2023-01", status: "PRESENT" },
+      { studentId: 102, studentName: "Rohan Sharma", studentRollNo: "IPA2023-02", status: "PRESENT" },
+      { studentId: 103, studentName: "Priya Dharshini", studentRollNo: "IPA2023-03", status: "PRESENT" },
+    ],
+  },
+];
+

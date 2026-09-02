@@ -2,7 +2,8 @@
 
 import { Suspense, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PlusCircle, Trash2, Users, Power } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CalendarDays, PlusCircle, Power, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -108,6 +109,7 @@ function BatchDialog({
 }
 
 function BatchesSection() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<LearningBatch | null>(null);
@@ -146,7 +148,20 @@ function BatchesSection() {
         key: "actions",
         header: "",
         render: (row) => (
-          <div className="flex justify-end gap-1">
+          <div className="flex items-center justify-end gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs font-semibold text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl shadow-2xs transition-all"
+              onClick={() => {
+                router.push(
+                  `/franchisee/learning/attendance?openSchedule=true&batchId=${row.id}&batchName=${encodeURIComponent(row.name)}`,
+                );
+              }}
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              Schedule Class
+            </Button>
             <RowActionButton icon={Users} label="Edit" onClick={() => { setEditing(row); setDialogOpen(true); }} />
             {row.isActive && (
               <RowActionButton icon={Power} label="Deactivate" onClick={() => deactivateMutation.mutate(row.id)} />
@@ -163,7 +178,7 @@ function BatchesSection() {
         ),
       },
     ],
-    [deactivateMutation, deleteMutation],
+    [deactivateMutation, deleteMutation, router],
   );
 
   return (

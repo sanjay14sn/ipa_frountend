@@ -8,6 +8,7 @@ import {
   Globe,
   GraduationCap,
   LayoutDashboard,
+  MessageSquare,
   Receipt,
   ShieldCheck,
   ShoppingCart,
@@ -234,6 +235,7 @@ export const FRANCHISEE_NAV = freezeNav([
         href: "/franchisee/course-instructors",
         icon: GraduationCap,
       },
+      { title: "Parent Messages", href: "/franchisee/messages", icon: MessageSquare },
       { title: "Orders", href: "/franchisee/orders", icon: ShoppingCart },
     ],
   },
@@ -247,6 +249,11 @@ export const FRANCHISEE_NAV = freezeNav([
       },
       { title: "Batches", href: "/franchisee/learning/batches", icon: Users },
       {
+        title: "Schedule & Attendance",
+        href: "/franchisee/learning/attendance",
+        icon: Calendar,
+      },
+      {
         title: "Student Progress",
         href: "/franchisee/learning/progress",
         icon: BookOpen,
@@ -254,6 +261,7 @@ export const FRANCHISEE_NAV = freezeNav([
     ],
   },
 ]);
+
 
 export const FRANCHISEE_ONBOARDING_NAV = freezeNav([
   {
