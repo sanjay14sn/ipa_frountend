@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { useUser } from "@/context/user-context";
 import { useStudents } from "@/hooks/api/student.hooks";
+import { API_BASE_URL } from "@/lib/config";
 
 interface MessageItem {
   id?: number;
@@ -44,6 +45,18 @@ interface ParentThread {
   messages: MessageItem[];
 }
 
+function getSocketUrl(): string {
+  if (typeof window === "undefined") return "http://localhost:5500";
+  if (process.env.NEXT_PUBLIC_SOCKET_URL?.trim()) {
+    return process.env.NEXT_PUBLIC_SOCKET_URL.trim();
+  }
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") {
+    return process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:5500";
+  }
+  return process.env.NEXT_PUBLIC_API_URL?.trim() || window.location.origin;
+}
+
 export default function FranchiseParentMessagesPage() {
   const { user } = useUser();
   const franchiseId = user?.franchiseId ?? "";
@@ -58,9 +71,8 @@ export default function FranchiseParentMessagesPage() {
   const [loading, setLoading] = useState(true);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
-  const backendUrl = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:5500";
 
-  // Fetch real threads from backend DB
+  // Fetch real threads from backend DB via API_BASE_URL proxy (/api/proxy)
   const fetchThreads = useCallback(async () => {
     if (!franchiseId) {
       setLoading(false);
@@ -68,7 +80,7 @@ export default function FranchiseParentMessagesPage() {
     }
     try {
       const res = await fetch(
-        `${backendUrl}/communications/messages/franchise/${franchiseId}`
+        `${API_BASE_URL}/communications/messages/franchise/${franchiseId}`
       );
       if (res.ok) {
         const json = await res.json();
@@ -79,7 +91,7 @@ export default function FranchiseParentMessagesPage() {
       // Server might be down
     }
     setLoading(false);
-  }, [franchiseId, backendUrl]);
+  }, [franchiseId]);
 
   useEffect(() => {
     fetchThreads();
@@ -186,11 +198,12 @@ export default function FranchiseParentMessagesPage() {
     });
   }, []);
 
-  // Connect Socket.io to NestJS backend
+  // Connect Socket.io to backend
   useEffect(() => {
     if (!franchiseId) return;
 
-    const newSocket = io(`${backendUrl}/messaging`, {
+    const socketUrl = getSocketUrl();
+    const newSocket = io(`${socketUrl}/messaging`, {
       transports: ["websocket", "polling"],
     });
 
@@ -218,7 +231,7 @@ export default function FranchiseParentMessagesPage() {
     return () => {
       newSocket.disconnect();
     };
-  }, [franchiseId, backendUrl, mergeIncomingMessage]);
+  }, [franchiseId, mergeIncomingMessage]);
 
   // Scroll to bottom on message updates
   useEffect(() => {
@@ -260,7 +273,7 @@ export default function FranchiseParentMessagesPage() {
       });
     } else {
       try {
-        await fetch(`${backendUrl}/communications/messages`, {
+        await fetch(`${API_BASE_URL}/communications/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(newMsg),
@@ -273,7 +286,7 @@ export default function FranchiseParentMessagesPage() {
 
   const handleDeleteSingleMessage = async (msgId: number) => {
     try {
-      await fetch(`${backendUrl}/communications/messages/${msgId}`, {
+      await fetch(`${API_BASE_URL}/communications/messages/${msgId}`, {
         method: "DELETE",
       });
       setDbThreads((prev) =>
@@ -291,7 +304,7 @@ export default function FranchiseParentMessagesPage() {
   const handleClearChat = async (studentId: number) => {
     if (!confirm("Are you sure you want to clear this entire conversation?")) return;
     try {
-      await fetch(`${backendUrl}/communications/messages/student/${studentId}`, {
+      await fetch(`${API_BASE_URL}/communications/messages/student/${studentId}`, {
         method: "DELETE",
       });
       setDbThreads((prev) => prev.filter((t) => t.studentId !== studentId));
