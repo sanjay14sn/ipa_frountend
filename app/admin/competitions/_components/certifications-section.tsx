@@ -33,6 +33,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDate } from "@/lib/date-utils";
+// eslint-disable-next-line no-restricted-imports -- sanctioned raw usage for custom modal layout
 import {
   Dialog,
   DialogContent,
@@ -61,15 +63,6 @@ import {
   type CertificateRequest,
   type CertificateRequestStatus,
 } from "@/services/certificate-request.service";
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-function formatDate(value?: string | null): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-}
 
 interface StatusConfig {
   label: string;
@@ -749,7 +742,7 @@ export function CertificationsSection() {
         open={!!rejectingReq}
         onOpenChange={(v) => !v && setRejectingReq(null)}
         onDone={() => {
-          queryClient.invalidateQueries({ queryKey: ["admin-certificate-requests"] });
+          queryClient.invalidateQueries({ queryKey: ["admin-cert-requests"] });
           setSelectedIds([]);
         }}
       />
@@ -759,7 +752,7 @@ export function CertificationsSection() {
         open={bulkApproving}
         onOpenChange={setBulkApproving}
         onDone={() => {
-          queryClient.invalidateQueries({ queryKey: ["admin-certificate-requests"] });
+          queryClient.invalidateQueries({ queryKey: ["admin-cert-requests"] });
           setSelectedIds([]);
         }}
       />
