@@ -32,6 +32,9 @@ export interface LearningBatch {
   levelId?: number | null;
   levelName?: string | null;
   coordinatorInstructorId?: number | null;
+  coordinatorInstructorName?: string | null;
+  coordinatorInstructorPhone?: string | null;
+  coordinatorInstructorCode?: string | null;
   isActive: boolean;
   studentIds: number[];
   students: Array<{ id: number; name: string; rollNo: string; levelId: number }>;
@@ -54,7 +57,7 @@ export interface LearningAssignment {
   dueDate: string;
   instructions?: string | null;
   priority: "NORMAL" | "IMPORTANT";
-  status: "ACTIVE" | "CANCELLED" | "COMPLETED";
+  status: "ACTIVE" | "CANCELLED" | "COMPLETED" | "CLOSED";
   completionSummary: string;
   students: Array<{
     id: number;

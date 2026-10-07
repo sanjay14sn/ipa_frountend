@@ -75,6 +75,10 @@ export interface StudentData {
     nextDueDate: string | null;
     nextDueAmount: number | null;
     totalPayable: number | null;
+    /** Registration + full course fee (entire plan). */
+    planTotal?: number | null;
+    /** Recurring monthly installment after registration / first month. */
+    monthlyInstallment?: number | null;
     feeRule?: string;
   } | null;
 }
@@ -181,6 +185,34 @@ function normalizeStudentLevel(
   return StudentLevel.EL1;
 }
 
+function normalizeFeeConfiguration(
+  raw: unknown,
+): StudentData["feeConfiguration"] | undefined {
+  if (raw == null || typeof raw !== "object") return undefined;
+  const f = raw as Record<string, unknown>;
+  return {
+    configured: Boolean(f.configured),
+    nextDueDate: f.nextDueDate != null ? String(f.nextDueDate) : null,
+    nextDueAmount:
+      f.nextDueAmount != null && f.nextDueAmount !== ""
+        ? Number(f.nextDueAmount)
+        : null,
+    totalPayable:
+      f.totalPayable != null && f.totalPayable !== ""
+        ? Number(f.totalPayable)
+        : null,
+    feeRule: f.feeRule != null ? String(f.feeRule) : undefined,
+    planTotal:
+      f.planTotal != null && f.planTotal !== ""
+        ? Number(f.planTotal)
+        : undefined,
+    monthlyInstallment:
+      f.monthlyInstallment != null && f.monthlyInstallment !== ""
+        ? Number(f.monthlyInstallment)
+        : undefined,
+  };
+}
+
 function normalizeStudentStream(row: Record<string, unknown>): string {
   const rawLevel = row.level;
   const level =
@@ -244,10 +276,7 @@ export function mapStudentRow(row: Record<string, unknown>): StudentData {
     materialsOrdered: Boolean(row.materialsOrdered ?? false),
     photoPath: row.photoPath != null ? String(row.photoPath) : null,
     password: row.password ? String(row.password) : undefined,
-    feeConfiguration:
-      row.feeConfiguration != null && typeof row.feeConfiguration === "object"
-        ? (row.feeConfiguration as StudentData["feeConfiguration"])
-        : undefined,
+    feeConfiguration: normalizeFeeConfiguration(row.feeConfiguration),
   };
 }
 

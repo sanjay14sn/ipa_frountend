@@ -41,7 +41,7 @@ function FeesPageContent() {
       {/* PAGE HEADER */}
       <PageHeaderCard
         title="Student Fee Setup & Configuration"
-        description="Configure fee rules, level fees, and course timelines for enrolled students."
+        description="Configure registration and level fees, and course timelines for enrolled students."
       />
 
       {/* STUDENT SELECTOR SECTION */}

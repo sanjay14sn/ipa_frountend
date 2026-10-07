@@ -33,20 +33,38 @@ export interface StudentFeeSetupData {
   sessionsOption: SessionCountOption;
   customSessions: number;
   installmentDays: number;
+  firstInstallmentDate: string;
 }
+
+function todayIso(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+function daysBetweenIso(start: string, end: string): number {
+  const [sy, sm, sd] = start.split("-").map(Number);
+  const [ey, em, ed] = end.split("-").map(Number);
+  if (!sy || !sm || !sd || !ey || !em || !ed) return 30;
+  const startUtc = Date.UTC(sy, sm - 1, sd);
+  const endUtc = Date.UTC(ey, em - 1, ed);
+  return Math.round((endUtc - startUtc) / 86_400_000);
+}
+
+const defaultStartDate = todayIso();
+const defaultFirstInstallmentDate = addMonthsToDate(defaultStartDate, 1);
 
 export const DEFAULT_FEE_SETUP: StudentFeeSetupData = {
   feeRule: "REG_PLUS_FULL_COURSE",
   registrationFee: 1000,
   courseFee: 6000,
-  startDate: new Date().toISOString().split("T")[0],
+  startDate: defaultStartDate,
   isManualEndDate: false,
   manualEndDate: "",
   durationOption: "level",
   customDurationMonths: 4,
   sessionsOption: "4",
   customSessions: 8,
-  installmentDays: 30,
+  installmentDays: Math.max(1, daysBetweenIso(defaultStartDate, defaultFirstInstallmentDate)),
+  firstInstallmentDate: defaultFirstInstallmentDate,
 };
 
 interface StudentFeeSetupFieldsProps {
@@ -129,11 +147,6 @@ export function StudentFeeSetupFields({
               title: "Registration Only",
               desc: "Registration now, installments later",
             },
-            {
-              id: "CUSTOM",
-              title: "Custom Rule",
-              desc: "Custom fee schedule",
-            },
           ].map((rule) => {
             const isSelected = value.feeRule === rule.id;
             return (
@@ -199,21 +212,31 @@ export function StudentFeeSetupFields({
         </div>
       </div>
 
-      {(value.feeRule === "REG_ONLY" ||
-        value.feeRule === "REG_PLUS_FIRST_MONTH") && (
+      {value.feeRule !== "REG_PLUS_FULL_COURSE" && (
         <div className="space-y-1.5 max-w-xs">
-          <Label htmlFor="installmentDays">Installment Due After (days)</Label>
+          <Label htmlFor="firstInstallmentDate">First Installment Date</Label>
           <Input
-            id="installmentDays"
-            type="number"
-            min={1}
-            max={365}
-            value={value.installmentDays}
-            onChange={(e) =>
+            id="firstInstallmentDate"
+            type="date"
+            min={value.startDate || undefined}
+            value={value.firstInstallmentDate}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (!next) return;
+              const gap = daysBetweenIso(value.startDate, next);
+              if (gap < 1) {
+                const shifted = addMonthsToDate(value.startDate, 1);
+                onChange({
+                  firstInstallmentDate: shifted,
+                  installmentDays: Math.max(1, daysBetweenIso(value.startDate, shifted)),
+                });
+                return;
+              }
               onChange({
-                installmentDays: Math.max(1, Number(e.target.value) || 30),
-              })
-            }
+                firstInstallmentDate: next,
+                installmentDays: gap,
+              });
+            }}
           />
         </div>
       )}
@@ -248,7 +271,23 @@ export function StudentFeeSetupFields({
             id="feeStartDate"
             type="date"
             value={value.startDate}
-            onChange={(e) => onChange({ startDate: e.target.value })}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (
+                next &&
+                value.firstInstallmentDate &&
+                daysBetweenIso(next, value.firstInstallmentDate) < 1
+              ) {
+                const shifted = addMonthsToDate(next, 1);
+                onChange({
+                  startDate: next,
+                  firstInstallmentDate: shifted,
+                  installmentDays: Math.max(1, daysBetweenIso(next, shifted)),
+                });
+                return;
+              }
+              onChange({ startDate: next });
+            }}
             className={errors.startDate ? "border-red-500" : ""}
           />
           {errors.startDate && (
@@ -400,6 +439,12 @@ export function buildFeeSetupPayload(
   const effectiveEndDate = value.isManualEndDate
     ? value.manualEndDate
     : autoEndDate;
+  const installmentDate =
+    value.firstInstallmentDate || addMonthsToDate(value.startDate || todayIso(), 1);
+  const installmentDays = Math.max(
+    1,
+    daysBetweenIso(value.startDate, installmentDate),
+  );
 
   return {
     feeRule: value.feeRule,
@@ -412,6 +457,6 @@ export function buildFeeSetupPayload(
     durationMonths: effectiveMonths,
     sessionsOption: value.sessionsOption,
     sessionsPerMonth: effectiveSessionsPerMonth,
-    installmentDays: value.installmentDays,
+    installmentDays,
   };
 }

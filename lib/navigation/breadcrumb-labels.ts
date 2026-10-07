@@ -27,6 +27,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   progress: "Progress",
   upcoming: "Upcoming",
   "practice-papers": "Practice Papers",
+  "fee-dues": "Fee Dues",
   "practice-pricing": "Practice Pricing",
 };
 

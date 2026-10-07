@@ -16,6 +16,7 @@ export const queryKeys = {
     all: ["students"] as const,
     detail: (id: number) => ["students", id] as const,
     lifecycle: (id: number) => ["students", id, "lifecycle"] as const,
+    feeSummaries: ["students", "fee-summaries"] as const,
   },
   studentAdmin: {
     requestedIds: ["students", "requested-ids"] as const,

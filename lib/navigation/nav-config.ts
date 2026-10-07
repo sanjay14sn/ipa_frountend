@@ -15,6 +15,7 @@ import {
   Upload,
   Users,
   Trophy,
+  Banknote,
 } from "lucide-react";
 
 /**
@@ -217,6 +218,7 @@ export const FRANCHISEE_NAV = freezeNav([
     items: [
       { title: "Students", href: "/franchisee/students", icon: Users },
       { title: "Fees", href: "/franchisee/fees", icon: Receipt },
+      { title: "Fee Dues", href: "/franchisee/fee-dues", icon: Banknote },
       {
         title: "Competitions",
         href: "/franchisee/competitions",

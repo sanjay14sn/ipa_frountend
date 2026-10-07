@@ -1,16 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Calculator,
   Calendar as CalendarIcon,
-  CheckCircle2,
   Clock,
   Coins,
-  DollarSign,
-  HelpCircle,
-  Receipt,
   Save,
   Sparkles,
 } from "lucide-react";
@@ -18,8 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -36,20 +32,57 @@ import {
   resolveLevelDurationMonths,
   type FeeRuleType,
 } from "@/lib/student-fee-calculations";
+import { queryKeys } from "@/hooks/api/query-keys";
 
 export type { FeeRuleType };
 
 export type SessionCountOption = "3" | "4" | "5" | "custom";
 export type CourseDurationOption = "level" | "custom";
 
+const FEE_RULE_OPTIONS: { value: FeeRuleType; label: string }[] = [
+  { value: "REG_PLUS_FULL_COURSE", label: "Registration + Full Fee" },
+  { value: "REG_PLUS_FIRST_MONTH", label: "Registration + First Month" },
+  { value: "REG_ONLY", label: "Registration Only" },
+];
+
+function selectableFeeRule(rule: FeeRuleType): FeeRuleType {
+  return FEE_RULE_OPTIONS.some((option) => option.value === rule)
+    ? rule
+    : "REG_PLUS_FIRST_MONTH";
+}
+
+function addDaysIso(isoDate: string, days: number): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  if (!year || !month || !day) return isoDate;
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() + days);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function daysBetweenIso(start: string, end: string): number {
+  const [sy, sm, sd] = start.split("-").map(Number);
+  const [ey, em, ed] = end.split("-").map(Number);
+  if (!sy || !sm || !sd || !ey || !em || !ed) return 30;
+  const startUtc = Date.UTC(sy, sm - 1, sd);
+  const endUtc = Date.UTC(ey, em - 1, ed);
+  return Math.round((endUtc - startUtc) / 86_400_000);
+}
+
 interface FeeConfigurationFormProps {
   student: StudentData;
 }
 
 export function FeeConfigurationForm({ student }: FeeConfigurationFormProps) {
-  // Section 1 - Fee Configuration State
-  const [feeRule, setFeeRule] = useState<FeeRuleType>("REG_PLUS_FULL_COURSE");
+  const queryClient = useQueryClient();
+
+  const [feeRule, setFeeRule] = useState<FeeRuleType>("REG_PLUS_FIRST_MONTH");
   const [installmentDays, setInstallmentDays] = useState<number>(30);
+  const [firstInstallmentDate, setFirstInstallmentDate] = useState<string>(() =>
+    addDaysIso(new Date().toISOString().split("T")[0], 30),
+  );
   
   const [registrationFee, setRegistrationFee] = useState<number>(1000);
   const [courseFee, setCourseFee] = useState<number>(6000);
@@ -92,7 +125,7 @@ export function FeeConfigurationForm({ student }: FeeConfigurationFormProps) {
         const existing = await fetchStudentFeeConfiguration(student.id);
         if (cancelled || !existing) return;
 
-        setFeeRule(existing.feeRule);
+        setFeeRule(selectableFeeRule(existing.feeRule));
         setRegistrationFee(parseFeeAmount(existing.registrationFee));
         setCourseFee(parseFeeAmount(existing.courseFee));
         setStartDate(existing.startDate);
@@ -102,7 +135,9 @@ export function FeeConfigurationForm({ student }: FeeConfigurationFormProps) {
         setCustomDurationMonths(existing.durationMonths);
         setSessionsOption(existing.sessionsOption);
         setCustomSessions(existing.sessionsPerMonth);
-        setInstallmentDays(existing.installmentDays ?? 30);
+        const savedGap = existing.installmentDays ?? 30;
+        setInstallmentDays(savedGap);
+        setFirstInstallmentDate(addDaysIso(existing.startDate, savedGap));
       } catch (err) {
         if (!cancelled) {
           console.error("Failed to load fee configuration", err);
@@ -150,6 +185,12 @@ export function FeeConfigurationForm({ student }: FeeConfigurationFormProps) {
     [feeRule, registrationFee, courseFee, effectiveMonths],
   );
 
+  const planTotal = useMemo(
+    () =>
+      parseFeeAmount(registrationFee) + parseFeeAmount(courseFee),
+    [registrationFee, courseFee],
+  );
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -169,10 +210,16 @@ export function FeeConfigurationForm({ student }: FeeConfigurationFormProps) {
         installmentDays,
       });
 
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.students.feeSummaries,
+        }),
+        queryClient.invalidateQueries({ queryKey: ["student-fee-history"] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
+      ]);
+
       toast.success("Fee Configuration Saved Successfully!", {
-        description: `Configured ₹${feeCalculation.totalPayable.toLocaleString(
-          "en-IN"
-        )} for ${student.name} (${student.rollNo}).`,
+        description: `Fee Dues and installment history will use this plan (₹${planTotal.toLocaleString("en-IN")} total).`,
       });
     } catch (err) {
       toast.error("Failed to save fee configuration", {
@@ -206,73 +253,23 @@ export function FeeConfigurationForm({ student }: FeeConfigurationFormProps) {
                 </CardDescription>
               </div>
             </div>
-            <Badge variant="outline" className="bg-background text-xs font-semibold">
-              Step 1 of 2
-            </Badge>
           </div>
         </CardHeader>
 
         <CardContent className="p-6 space-y-6">
-          {/* Fee Rule Selection */}
-          <div className="space-y-3">
-            <Label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-              Fee Rule
-              <span className="text-xs text-muted-foreground font-normal">(Select payment structure)</span>
-            </Label>
-
-            <RadioGroup
-              value={feeRule}
-              onValueChange={(val) => setFeeRule(val as FeeRuleType)}
-              className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
-            >
-              {[
-                {
-                  id: "REG_PLUS_FULL_COURSE",
-                  title: "Reg. + Full Course",
-                  desc: "Registration Fee + Full Course Fee upfront",
-                },
-                {
-                  id: "REG_PLUS_FIRST_MONTH",
-                  title: "Reg. + 1st Month",
-                  desc: "Registration Fee + First Month installment",
-                },
-                {
-                  id: "REG_ONLY",
-                  title: "Registration Only",
-                  desc: "Reg Fee now, first installment after due period",
-                },
-                {
-                  id: "CUSTOM",
-                  title: "Custom Rule",
-                  desc: "Fully customizable custom fee schedule",
-                },
-              ].map((rule) => {
-                const isSelected = feeRule === rule.id;
-                return (
-                  <Label
-                    key={rule.id}
-                    htmlFor={rule.id}
-                    className={`flex flex-col h-full justify-between rounded-xl border p-4 cursor-pointer transition-all ${
-                      isSelected
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                        : "border-border/60 hover:border-border hover:bg-muted/20"
-                    }`}
-                  >
-                    <RadioGroupItem value={rule.id} id={rule.id} className="sr-only" />
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-sm text-foreground">{rule.title}</span>
-                        {isSelected && <CheckCircle2 className="h-4 w-4 text-primary" />}
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{rule.desc}</p>
-                    </div>
-                  </Label>
-                );
-              })}
-            </RadioGroup>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {FEE_RULE_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                variant={feeRule === option.value ? "default" : "outline"}
+                onClick={() => setFeeRule(option.value)}
+                className="h-auto min-h-12 whitespace-normal px-3 py-2 text-center text-sm font-semibold"
+              >
+                {option.label}
+              </Button>
+            ))}
           </div>
-
-          <Separator className="bg-border/60" />
 
           {/* Fee Amounts Grid */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -305,7 +302,6 @@ export function FeeConfigurationForm({ student }: FeeConfigurationFormProps) {
                   id="courseFee"
                   type="number"
                   min={0}
-                  disabled={feeRule === "REG_ONLY"}
                   value={courseFee || ""}
                   onChange={(e) => setCourseFee(parseFeeAmount(e.target.value))}
                   className="pl-7 h-10"
@@ -356,24 +352,55 @@ export function FeeConfigurationForm({ student }: FeeConfigurationFormProps) {
                   </p>
                 </div>
               </div>
+
+              <div className="rounded-lg border border-border/70 bg-muted/20 p-3 text-xs">
+                <p className="font-semibold text-foreground">
+                  Full plan total (Fee Dues): {formatRupees(planTotal)}
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  Registration {formatRupees(registrationFee)} + course{" "}
+                  {formatRupees(courseFee)} over {effectiveMonths} month
+                  {effectiveMonths === 1 ? "" : "s"}
+                  {feeRule === "REG_ONLY"
+                    ? ` · ${effectiveMonths} monthly installment${effectiveMonths === 1 ? "" : "s"} of ${formatRupees(feeCalculation.monthlyFee)} after registration`
+                    : feeRule === "REG_PLUS_FIRST_MONTH"
+                      ? ` · due now ${formatRupees(feeCalculation.totalPayable)} (reg + 1st month), then ${Math.max(0, effectiveMonths - 1)} monthly installment${effectiveMonths - 1 === 1 ? "" : "s"} of ${formatRupees(feeCalculation.monthlyFee)}`
+                      : null}
+                </p>
+                <Button variant="link" className="mt-1 h-auto p-0 text-primary" asChild>
+                  <Link href={`/franchisee/fee-dues/${student.id}`}>
+                    View Fee Dues &amp; installment history
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
 
-          {(feeRule === "REG_ONLY" || feeRule === "REG_PLUS_FIRST_MONTH") && (
-            <div className="space-y-1.5 max-w-xs">
-              <Label htmlFor="installmentDays" className="text-xs font-semibold text-foreground">
-                Installment Due After (days)
-              </Label>
-              <Input
-                id="installmentDays"
-                type="number"
-                min={1}
-                max={365}
-                value={installmentDays}
-                onChange={(e) => setInstallmentDays(Math.max(1, Number(e.target.value) || 30))}
-                className="h-10"
-              />
-            </div>
+          {feeRule !== "REG_PLUS_FULL_COURSE" && (
+          <div className="space-y-1.5 max-w-xs">
+            <Label htmlFor="firstInstallmentDate" className="text-xs font-semibold text-foreground">
+              First Installment Date
+            </Label>
+            <Input
+              id="firstInstallmentDate"
+              type="date"
+              min={startDate || undefined}
+              value={firstInstallmentDate}
+              onChange={(e) => {
+                const next = e.target.value;
+                if (!next) return;
+                const gap = daysBetweenIso(startDate, next);
+                if (gap < 1) {
+                  setFirstInstallmentDate(addDaysIso(startDate, 1));
+                  setInstallmentDays(1);
+                  return;
+                }
+                setFirstInstallmentDate(next);
+                setInstallmentDays(Math.min(365, gap));
+              }}
+              className="h-10"
+            />
+          </div>
           )}
         </CardContent>
       </Card>
@@ -393,9 +420,6 @@ export function FeeConfigurationForm({ student }: FeeConfigurationFormProps) {
                 </CardDescription>
               </div>
             </div>
-            <Badge variant="outline" className="bg-background text-xs font-semibold">
-              Step 2 of 2
-            </Badge>
           </div>
         </CardHeader>
 
@@ -410,7 +434,13 @@ export function FeeConfigurationForm({ student }: FeeConfigurationFormProps) {
                 id="startDate"
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setStartDate(next);
+                  if (daysBetweenIso(next, firstInstallmentDate) < 1) {
+                    setFirstInstallmentDate(addDaysIso(next, installmentDays || 30));
+                  }
+                }}
                 className="h-10"
               />
             </div>

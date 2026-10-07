@@ -54,6 +54,7 @@ import {
   type DataTableColumn,
 } from "@/components/shared";
 import { useStudents } from "@/hooks/api/student.hooks";
+import { getAllCourseInstructors } from "@/services/course-instructor.service";
 import {
   createFranchiseClassSession,
   deleteFranchiseClassSession,
@@ -397,6 +398,14 @@ function ScheduleDialog({
     queryKey: ["franchise-learning-batches"],
     queryFn: () => fetchFranchiseBatches(true),
   });
+  const { data: instructors = [] } = useQuery({
+    queryKey: ["franchise-course-instructors"],
+    queryFn: async () => {
+      const res = await getAllCourseInstructors();
+      return (res.result ?? []).filter((instructor) => instructor.status === "Approved");
+    },
+    enabled: open,
+  });
 
   const { students: realFranchiseStudents = [] } = useStudents();
 
@@ -409,7 +418,7 @@ function ScheduleDialog({
   const [startTime, setStartTime] = useState("17:00");
   const [endTime, setEndTime] = useState("18:00");
   const [roomNo, setRoomNo] = useState("Room 101");
-  const [instructorName, setInstructorName] = useState("Mrs. S. Meenakshi");
+  const [instructorName, setInstructorName] = useState("");
 
   const [selectStudentsOpen, setSelectStudentsOpen] = useState(false);
   const [customSelectedStudentIds, setCustomSelectedStudentIds] = useState<number[]>([103, 102, 101]);
@@ -455,14 +464,9 @@ function ScheduleDialog({
         setStartTime("17:00");
         setEndTime("18:00");
         setRoomNo("Room 101");
-        setInstructorName("Mrs. S. Meenakshi");
+        setInstructorName("");
         setCustomRoster(null);
-        setCustomSelectedStudentIds([103, 102, 101]);
-        setSelectionMode("BATCH");
-        setRoomNo("Room 101");
-        setInstructorName("Mrs. S. Meenakshi");
-        setCustomRoster(null);
-        setCustomSelectedStudentIds([103, 102, 101]);
+        setCustomSelectedStudentIds([]);
         setSelectionMode("BATCH");
         if (queryBatchId && queryBatchName) {
           setSelectedBatchId(queryBatchId);
@@ -483,6 +487,19 @@ function ScheduleDialog({
     () => batches.find((b) => String(b.id) === selectedBatchId),
     [batches, selectedBatchId],
   );
+
+  useEffect(() => {
+    if (!open || initialSession || selectionMode !== "BATCH") return;
+    if (selectedBatch?.coordinatorInstructorName) {
+      setInstructorName(selectedBatch.coordinatorInstructorName);
+    }
+  }, [
+    open,
+    initialSession,
+    selectionMode,
+    selectedBatch?.id,
+    selectedBatch?.coordinatorInstructorName,
+  ]);
 
   // Automatically calculate roster based on selectionMode
   const batchRoster: SessionAttendanceRoster[] = useMemo(() => {
@@ -536,8 +553,10 @@ function ScheduleDialog({
     const found = batches.find((b) => String(b.id) === val);
     if (found) {
       setBatchName(found.name);
+      setInstructorName(found.coordinatorInstructorName ?? "");
     } else {
       setBatchName(val);
+      setInstructorName("");
     }
   };
 
@@ -912,9 +931,17 @@ function ScheduleDialog({
                       value={instructorName}
                       onChange={(e) => setInstructorName(e.target.value)}
                     >
-                      <option value="Mrs. S. Meenakshi">Mrs. S. Meenakshi</option>
-                      <option value="Mr. Rajesh K">Mr. Rajesh K</option>
-                      <option value="Ms. Anitha P">Ms. Anitha P</option>
+                      <option value="">Select course instructor</option>
+                      {instructors.map((instructor) => (
+                        <option key={instructor.id} value={instructor.name}>
+                          {instructor.name}
+                          {instructor.instructorId ? ` — ${instructor.instructorId}` : ""}
+                        </option>
+                      ))}
+                      {instructorName &&
+                      !instructors.some((instructor) => instructor.name === instructorName) ? (
+                        <option value={instructorName}>{instructorName}</option>
+                      ) : null}
                     </select>
                     <ChevronDown className="h-4 w-4 text-gray-400 mr-3 pointer-events-none" />
                   </div>
@@ -962,7 +989,7 @@ function ScheduleDialog({
                 <div className="flex items-center gap-2 sm:pl-3 pt-2 sm:pt-0">
                   <User className="h-4 w-4 text-indigo-600 shrink-0" />
                   <div>
-                    <div className="font-bold text-indigo-950">{instructorName}</div>
+                    <div className="font-bold text-indigo-950">{instructorName || "—"}</div>
                     <div className="text-[10px] text-indigo-600 font-medium">Instructor</div>
                   </div>
                 </div>
@@ -984,7 +1011,7 @@ function ScheduleDialog({
               type="button"
               className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-7 font-semibold shadow-md flex items-center gap-2 transition-all"
               onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending}
+              disabled={saveMutation.isPending || !instructorName.trim()}
             >
               <Save className="h-4 w-4" /> Save Schedule
             </Button>

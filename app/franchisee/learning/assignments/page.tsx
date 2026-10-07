@@ -46,7 +46,12 @@ import {
   type LearningAssignment,
   type LearningBook,
 } from "@/services/learning.service";
-import { formatDate } from "@/lib/date-utils";
+import { formatDate, isCalendarDateBeforeToday } from "@/lib/date-utils";
+
+function assignmentDisplayStatus(row: LearningAssignment): LearningAssignment["status"] {
+  if (row.status === "ACTIVE" && isCalendarDateBeforeToday(row.dueDate)) return "CLOSED";
+  return row.status;
+}
 
 function todayIso() {
   return new Date().toISOString().split("T")[0];
@@ -539,12 +544,17 @@ function AssignmentsSection() {
   const [statusFilter, setStatusFilter] = useState("ALL");
 
   const { data: assignments = [], isLoading } = useQuery({
-    queryKey: ["franchise-learning-assignments", statusFilter],
-    queryFn: () =>
-      fetchFranchiseAssignments(
-        statusFilter === "ALL" ? undefined : { status: statusFilter },
-      ),
+    queryKey: ["franchise-learning-assignments"],
+    queryFn: () => fetchFranchiseAssignments(),
   });
+  const visibleAssignments = useMemo(
+    () =>
+      assignments.filter((row) => {
+        const status = assignmentDisplayStatus(row);
+        return statusFilter === "ALL" || status === statusFilter;
+      }),
+    [assignments, statusFilter],
+  );
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["franchise-learning-assignments"] });
@@ -573,18 +583,29 @@ function AssignmentsSection() {
       {
         key: "status",
         header: "Status",
-        render: (row) => (
-          <Badge variant={row.status === "COMPLETED" ? "default" : row.status === "CANCELLED" ? "secondary" : "outline"}>
-            {row.status === "ACTIVE" ? row.completionSummary : row.status}
-          </Badge>
-        ),
+        render: (row) => {
+          const status = assignmentDisplayStatus(row);
+          return (
+            <Badge
+              variant={
+                status === "COMPLETED"
+                  ? "default"
+                  : status === "CANCELLED" || status === "CLOSED"
+                    ? "secondary"
+                    : "outline"
+              }
+            >
+              {status === "ACTIVE" ? row.completionSummary : status === "CLOSED" ? "Closed" : status}
+            </Badge>
+          );
+        },
       },
       {
         key: "actions",
         header: "",
         render: (row) => (
           <div className="flex justify-end gap-1">
-            {row.status === "ACTIVE" && row.students[0] && (
+            {assignmentDisplayStatus(row) === "ACTIVE" && row.students[0] && (
               <RowActionButton
                 icon={CheckCircle2}
                 label="Mark first complete"
@@ -596,7 +617,7 @@ function AssignmentsSection() {
                 }
               />
             )}
-            {row.status === "ACTIVE" && (
+            {assignmentDisplayStatus(row) === "ACTIVE" && (
               <RowActionButton icon={XCircle} label="Cancel" onClick={() => cancelMutation.mutate(row.id)} />
             )}
             <RowActionButton
@@ -630,6 +651,7 @@ function AssignmentsSection() {
           <SelectContent>
             <SelectItem value="ALL">All statuses</SelectItem>
             <SelectItem value="ACTIVE">Active</SelectItem>
+            <SelectItem value="CLOSED">Closed</SelectItem>
             <SelectItem value="COMPLETED">Completed</SelectItem>
             <SelectItem value="CANCELLED">Cancelled</SelectItem>
           </SelectContent>
@@ -639,7 +661,7 @@ function AssignmentsSection() {
         <PageSkeleton />
       ) : (
         <DataTable
-          data={assignments}
+          data={visibleAssignments}
           loading={isLoading}
           columns={columns}
           getRowId={(row) => String(row.id)}

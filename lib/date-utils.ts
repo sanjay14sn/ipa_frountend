@@ -12,6 +12,25 @@
  *   - Any inline age-from-DOB calculation → `calculateAge(dateOfBirth)`
  */
 
+export function toDateOnly(value?: string | Date | null): string | null {
+  if (!value) return null;
+  const match = String(value).match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) return match[1];
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+export function isCalendarDateBeforeToday(value?: string | Date | null): boolean {
+  const dateOnly = toDateOnly(value);
+  if (!dateOnly) return false;
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return dateOnly < today;
+}
+
 /**
  * Formats a date string (ISO 8601 or any `new Date()`-parseable format) to a
  * human-readable date in `DD Mon YYYY` style (e.g. "15 Jan 2025").
