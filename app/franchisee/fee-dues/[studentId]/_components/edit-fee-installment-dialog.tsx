@@ -125,7 +125,7 @@ export function EditFeeInstallmentDialog({
       submitLabel="Save changes"
       canSubmit={Boolean(row) && !isSubmitting}
     >
-      <DialogFormField label="Amount" htmlFor={`${formId}-amount`} required>
+      <DialogFormField label="Amount" id={`${formId}-amount`} required>
         <Input
           id={`${formId}-amount`}
           type="number"
@@ -135,7 +135,7 @@ export function EditFeeInstallmentDialog({
           onChange={(e) => setAmount(e.target.value)}
         />
       </DialogFormField>
-      <DialogFormField label="Due date" htmlFor={`${formId}-due`} required>
+      <DialogFormField label="Due date" id={`${formId}-due`} required>
         <Input
           id={`${formId}-due`}
           type="date"
@@ -143,7 +143,7 @@ export function EditFeeInstallmentDialog({
           onChange={(e) => setDueDate(e.target.value)}
         />
       </DialogFormField>
-      <DialogFormField label="Paid" htmlFor={`${formId}-paid-flag`} required>
+      <DialogFormField label="Paid" id={`${formId}-paid-flag`} required>
         <Select
           value={isPaid}
           onValueChange={(value) => setIsPaid(value as "yes" | "no")}
@@ -158,7 +158,7 @@ export function EditFeeInstallmentDialog({
         </Select>
       </DialogFormField>
       {isPaid === "yes" ? (
-        <DialogFormField label="Paid on" htmlFor={`${formId}-paid`} required>
+        <DialogFormField label="Paid on" id={`${formId}-paid`} required>
           <Input
             id={`${formId}-paid`}
             type="date"
