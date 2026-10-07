@@ -1,7 +1,12 @@
+import { isAxiosError } from "axios";
 import { api } from "@/lib/axios";
 import { unwrapData } from "@/lib/unwrap-api";
 import { buildStudentFeeHistoryFromConfig } from "@/lib/student-fee-history.utils";
-import { mapStudentRow } from "@/services/student-list.service";
+import {
+  getAllStudents,
+  mapStudentRow,
+  type StudentData,
+} from "@/services/student-list.service";
 import type { FeeRuleType, SessionCountOption, CourseDurationOption } from "@/app/franchisee/fees/_components/fee-configuration-form";
 
 /** Per-student fee snapshot for list / Fee Dues views. */
@@ -82,10 +87,84 @@ export async function fetchStudentFeeHistory(
   }
 }
 
+function isFeeSummariesEndpointMissing(error: unknown): boolean {
+  if (!isAxiosError(error)) return false;
+  if (error.response?.status === 404) return true;
+  const message = String(
+    (error.response?.data as { message?: string } | undefined)?.message ?? "",
+  );
+  return message.includes("/student/fees/summaries");
+}
+
+function toListSummaryFromConfig(
+  studentId: number,
+  config: StudentFeeConfigurationResponse | null,
+  embedded?: StudentData["feeConfiguration"],
+): StudentFeeListSummary {
+  if (embedded?.configured) {
+    return {
+      studentId,
+      configured: true,
+      nextDueDate: embedded.nextDueDate ?? null,
+      nextDueAmount: embedded.nextDueAmount ?? null,
+      totalPayable: embedded.totalPayable ?? null,
+      planTotal: embedded.planTotal ?? null,
+      monthlyInstallment: embedded.monthlyInstallment ?? null,
+      feeRule: embedded.feeRule,
+    };
+  }
+  if (!config) {
+    return {
+      studentId,
+      configured: false,
+      nextDueDate: null,
+      nextDueAmount: null,
+      totalPayable: null,
+    };
+  }
+  const registrationFee = Number(config.registrationFee);
+  const courseFee = Number(config.courseFee);
+  return {
+    studentId: config.studentId,
+    configured: true,
+    nextDueDate: config.nextDueDate,
+    nextDueAmount:
+      config.nextDueAmount != null ? Number(config.nextDueAmount) : null,
+    totalPayable: Number(config.totalPayable),
+    planTotal: registrationFee + courseFee,
+    monthlyInstallment: Number(config.monthlyFee),
+    feeRule: config.feeRule,
+  };
+}
+
+/** Older backends expose per-student `/student/:id/fees` but not the bulk summaries route. */
+async function listStudentFeeSummariesLegacy(): Promise<StudentFeeListSummary[]> {
+  const { result: students } = await getAllStudents({ status: "active" });
+  return Promise.all(
+    students.map(async (student) => {
+      const embedded = student.feeConfiguration;
+      if (embedded?.configured) {
+        return toListSummaryFromConfig(student.id, null, embedded);
+      }
+      try {
+        const config = await fetchStudentFeeConfiguration(student.id);
+        return toListSummaryFromConfig(student.id, config, embedded);
+      } catch {
+        return toListSummaryFromConfig(student.id, null, embedded);
+      }
+    }),
+  );
+}
+
 export async function listStudentFeeSummaries(): Promise<StudentFeeListSummary[]> {
-  const response = await api.get("/student/fees/summaries");
-  const payload = unwrapData<StudentFeeListSummary[] | null>(response);
-  return Array.isArray(payload) ? payload : [];
+  try {
+    const response = await api.get("/student/fees/summaries");
+    const payload = unwrapData<StudentFeeListSummary[] | null>(response);
+    return Array.isArray(payload) ? payload : [];
+  } catch (error) {
+    if (!isFeeSummariesEndpointMissing(error)) throw error;
+    return listStudentFeeSummariesLegacy();
+  }
 }
 
 export interface StudentFeeConfigurationResponse {
