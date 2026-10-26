@@ -11,17 +11,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  */
 function getApiOriginForCsp() {
   const raw = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (raw) {
+  if (raw && !raw.includes("localhost")) {
     try {
       return new URL(raw).origin;
     } catch {
       return null;
     }
   }
-  if (process.env.NODE_ENV !== "production") {
-    return "http://localhost:5500";
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
+    return "https://api.playabacusindia.com";
   }
-  return null;
+  return "http://localhost:5500";
 }
 
 /**
@@ -271,7 +271,14 @@ const nextConfig = {
     ];
   },
   async rewrites() {
-    const apiOrigin = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:5500";
+    let apiOrigin = process.env.NEXT_PUBLIC_API_URL?.trim();
+    if (!apiOrigin || apiOrigin.includes("localhost")) {
+      if (process.env.VERCEL || process.env.NODE_ENV === "production") {
+        apiOrigin = "https://api.playabacusindia.com";
+      } else {
+        apiOrigin = "http://localhost:5500";
+      }
+    }
     return [
       {
         source: "/api/proxy/:path*",

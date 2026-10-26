@@ -22,10 +22,20 @@ const isDev = process.env.NODE_ENV !== "production";
  
 const isClient = typeof window !== "undefined";
 
+const isProductionOrVercel = !isDev || process.env.VERCEL === "1";
+const defaultFallback = isProductionOrVercel
+  ? "https://api.playabacusindia.com"
+  : "http://localhost:5500";
+
+let envApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+if (isProductionOrVercel && (!envApiUrl || envApiUrl.includes("localhost"))) {
+  envApiUrl = "https://api.playabacusindia.com";
+}
+
 const rawApiUrl = requireEnv(
   "NEXT_PUBLIC_API_URL",
-  process.env.NEXT_PUBLIC_API_URL,
-  "http://localhost:5500"
+  envApiUrl,
+  defaultFallback
 );
 
 export const API_BASE_URL = isClient ? "/api/proxy" : rawApiUrl;
