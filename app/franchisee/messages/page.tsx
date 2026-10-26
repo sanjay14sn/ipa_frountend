@@ -52,7 +52,9 @@ function getSocketUrl(): string {
   }
   const host = window.location.hostname;
   if (host === "localhost" || host === "127.0.0.1") {
-    return process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:5500";
+    // The phone talks to this computer. The public API URL is a different
+    // process, so live events sent there never reach an open chat.
+    return "http://localhost:5500";
   }
   return process.env.NEXT_PUBLIC_API_URL?.trim() || window.location.origin;
 }

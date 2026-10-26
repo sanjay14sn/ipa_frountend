@@ -7,6 +7,7 @@ import {
   FileText,
   Globe,
   GraduationCap,
+  IdCard,
   LayoutDashboard,
   MessageSquare,
   Receipt,
@@ -217,6 +218,7 @@ export const FRANCHISEE_NAV = freezeNav([
     title: "My business",
     items: [
       { title: "Students", href: "/franchisee/students", icon: Users },
+      { title: "ID Cards", href: "/franchisee/id-cards", icon: IdCard },
       { title: "Fees", href: "/franchisee/fees", icon: Receipt },
       { title: "Fee Dues", href: "/franchisee/fee-dues", icon: Banknote },
       {

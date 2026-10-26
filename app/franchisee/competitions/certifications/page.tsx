@@ -1,10 +1,20 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useMemo, useState, Suspense } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Award, PlusCircle, Clock, CheckCircle2, XCircle, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import {
+  Award,
+  PlusCircle,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -80,7 +90,16 @@ function getStatusConfig(status: CertificateRequestStatus): StatusConfig {
 
 interface CompetitionOption {
   id: number;
-  title: string;
+  title?: string;
+  name?: string;
+}
+
+function competitionLabel(c: CompetitionOption): string {
+  return (
+    c.title?.trim() ||
+    c.name?.trim() ||
+    `Competition #${c.id}`
+  );
 }
 
 interface StudentOption {
@@ -94,6 +113,9 @@ interface StudentOption {
 function RequestCertificateDialog({ onSuccess }: { onSuccess: () => void }) {
   const [open, setOpen] = useState(false);
   const [competitionId, setCompetitionId] = useState<string>("");
+  const [competitionSearch, setCompetitionSearch] = useState("");
+  const [showCompetitionSuggestions, setShowCompetitionSuggestions] =
+    useState(false);
   const [studentId, setStudentId] = useState<string>("");
 
   // Fetch opted-in competitions
@@ -107,7 +129,35 @@ function RequestCertificateDialog({ onSuccess }: { onSuccess: () => void }) {
     enabled: open,
   });
 
-  const competitions = (competitionsData ?? []).filter((c: any) => c.isApprovedByFranchise);
+  const competitions = (competitionsData ?? []).filter(
+    (c: CompetitionOption & { isApprovedByFranchise?: boolean }) =>
+      c.isApprovedByFranchise,
+  );
+
+  const filteredCompetitions = useMemo(() => {
+    const query = competitionSearch.trim().toLowerCase();
+    if (!query) return competitions;
+    return competitions.filter((c) =>
+      competitionLabel(c).toLowerCase().includes(query),
+    );
+  }, [competitions, competitionSearch]);
+
+  const pickCompetition = (c: CompetitionOption) => {
+    setCompetitionId(String(c.id));
+    setCompetitionSearch(competitionLabel(c));
+    setStudentId("");
+    setShowCompetitionSuggestions(false);
+  };
+
+  const resolveCompetitionId = (): string | null => {
+    if (competitionId) return competitionId;
+    const query = competitionSearch.trim().toLowerCase();
+    if (!query) return null;
+    const exact = competitions.find(
+      (c) => competitionLabel(c).toLowerCase() === query,
+    );
+    return exact ? String(exact.id) : null;
+  };
 
   // Fetch paid registrations for selected competition
   const { data: registrationsData, isLoading: loadingStudents } = useQuery({
@@ -132,12 +182,13 @@ function RequestCertificateDialog({ onSuccess }: { onSuccess: () => void }) {
   const students = registrationsData ?? [];
 
   const mutation = useMutation({
-    mutationFn: () =>
-      submitCertificateRequest(Number(studentId), Number(competitionId)),
+    mutationFn: (vars: { studentId: number; competitionId: number }) =>
+      submitCertificateRequest(vars.studentId, vars.competitionId),
     onSuccess: () => {
       toast.success("Certificate request submitted successfully!");
       setOpen(false);
       setCompetitionId("");
+      setCompetitionSearch("");
       setStudentId("");
       onSuccess();
     },
@@ -149,17 +200,30 @@ function RequestCertificateDialog({ onSuccess }: { onSuccess: () => void }) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (mutation.isPending) return;
-    if (!competitionId || !studentId) {
-      toast.error("Please select both a competition and a student.");
+    const resolvedCompetitionId = resolveCompetitionId();
+    if (!resolvedCompetitionId || !studentId) {
+      toast.error(
+        resolvedCompetitionId
+          ? "Please select a student."
+          : "Type a competition name and pick a match from the list.",
+      );
       return;
     }
-    mutation.mutate();
+    if (resolvedCompetitionId !== competitionId) {
+      setCompetitionId(resolvedCompetitionId);
+    }
+    mutation.mutate({
+      studentId: Number(studentId),
+      competitionId: Number(resolvedCompetitionId),
+    });
   };
 
   const handleOpenChange = (v: boolean) => {
     setOpen(v);
     if (!v) {
       setCompetitionId("");
+      setCompetitionSearch("");
+      setShowCompetitionSuggestions(false);
       setStudentId("");
     }
   };
@@ -184,30 +248,59 @@ function RequestCertificateDialog({ onSuccess }: { onSuccess: () => void }) {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="competition-select">Competition</Label>
-              <Select
-                value={competitionId}
-                onValueChange={(v) => {
-                  setCompetitionId(v);
-                  setStudentId("");
-                }}
-              >
-                <SelectTrigger id="competition-select">
-                  <SelectValue placeholder="Select a competition…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {competitions.length === 0 ? (
-                    <div className="p-3 text-sm text-muted-foreground text-center">
+              <div className="relative">
+                <Input
+                  id="competition-select"
+                  value={competitionSearch}
+                  onChange={(e) => {
+                    setCompetitionSearch(e.target.value);
+                    setCompetitionId("");
+                    setStudentId("");
+                    setShowCompetitionSuggestions(true);
+                  }}
+                  onFocus={() => setShowCompetitionSuggestions(true)}
+                  onBlur={() => {
+                    window.setTimeout(
+                      () => setShowCompetitionSuggestions(false),
+                      150,
+                    );
+                  }}
+                  placeholder="Type competition name…"
+                  autoComplete="off"
+                />
+                {showCompetitionSuggestions &&
+                  (competitions.length === 0 ? (
+                    <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover px-3 py-2 text-sm text-muted-foreground shadow-md">
                       No opted-in competitions found.
                     </div>
+                  ) : filteredCompetitions.length > 0 ? (
+                    <ul
+                      className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border bg-popover py-1 shadow-md"
+                      role="listbox"
+                    >
+                      {filteredCompetitions.map((c) => (
+                        <li key={c.id} role="option">
+                          <button
+                            type="button"
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => pickCompetition(c)}
+                          >
+                            {competitionLabel(c)}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   ) : (
-                    competitions.map((c: any) => (
-                      <SelectItem key={c.id} value={String(c.id)}>
-                        {c.title}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                    <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover px-3 py-2 text-sm text-muted-foreground shadow-md">
+                      No competition matches your search.
+                    </div>
+                  ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Start typing, then choose a matching competition from the list
+                below the field.
+              </p>
             </div>
 
             <div className="grid gap-2">

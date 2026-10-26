@@ -11,6 +11,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
   franchise: "Franchise",
   students: "Students",
+  "id-cards": "ID Cards",
   "course-instructors": "Course Instructors",
   "ci-agreements": "CI Agreements",
   operations: "Operations",

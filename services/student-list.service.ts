@@ -318,6 +318,7 @@ const FRANCHISEE_UPDATE_KEYS = [
   "motherContactNo",
   "email",
   "standard",
+  "password",
 ] as const;
 
 const ADMIN_UPDATE_KEYS = [
